@@ -86,7 +86,7 @@ export default function VehicleCard({ vehicle, onAction }: VehicleCardProps) {
           onClick={() => onAction?.(vehicle)}
           className="w-full py-2.5 rounded-xl text-sm font-semibold border border-zinc-700 text-zinc-300 hover:bg-amber-500 hover:text-zinc-950 hover:border-amber-500 transition-all duration-200"
         >
-          {vehicle.mode === "aluguer" ? "Reservar Agora" : "Ver Detalhes"}
+          {vehicle.mode === "aluguer" ? "Reservar Agora" : "Comprar"}
         </button>
       </div>
     </div>

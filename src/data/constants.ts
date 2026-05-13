@@ -33,7 +33,6 @@ export const STEPS = [
 export const PAYMENT_METHODS = [
   { name: "M-Pesa",        color: "#E30613", desc: "Pagamento instantâneo via Vodacom M-Pesa" },
   { name: "e-Mola",        color: "#0066CC", desc: "Transferência segura via Movitel e-Mola"  },
-  { name: "mKesh",         color: "#FF6600", desc: "Pagamento via Millennium BIM mKesh"        },
   { name: "Débito Direto", color: "#22C55E", desc: "Desconto mensal no salário (Estado)"       },
 ];
 

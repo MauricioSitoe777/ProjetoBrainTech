@@ -11,7 +11,7 @@ const CONTACTS = [
   "info@rentcar.co.mz",
 ] as const;
 
-const PAYMENT_BADGES = ["M-Pesa", "e-Mola", "mKesh"] as const;
+const PAYMENT_BADGES = ["M-Pesa", "e-Mola"] as const;
 
 /**
  * Site footer with brand blurb, service links, contact details
