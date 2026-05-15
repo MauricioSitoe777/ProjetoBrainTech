@@ -67,7 +67,7 @@ export default function PaymentsSection() {
             >
               Pague 
               <br />
-              enquanto usa!!!
+              Enquanto Usa
             </h3>
             <p className="text-zinc-400 text-base max-w-xl mx-auto mb-8">
               Desconto direto no salário. Taxas preferenciais e prazo
