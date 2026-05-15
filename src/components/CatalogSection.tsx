@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { VEHICLES } from "../data/constants";
+import type { Vehicle } from "../data/constants";
 import VehicleCard from "./VehicleCard";
+import { BookingPanel } from "./reservations/BookingPanel";
 import { useScrollTo } from "../hooks";
 
 type Mode = "todos" | "aluguer" | "compra";
@@ -38,6 +40,7 @@ export default function CatalogSection({
   const scrollTo = useScrollTo();
   const [mode, setMode] = useState<Mode>("todos");
   const [cat,  setCat]  = useState<Cat>(null);
+  const [bookingVehicle, setBookingVehicle] = useState<Vehicle | null>(null);
 
   const handleMode = (m: Mode) => {
     setMode(m);
@@ -50,7 +53,12 @@ export default function CatalogSection({
     return true;
   });
 
-  const handleAction = (vehicle: (typeof VEHICLES)[number]) => {
+  const handleAction = (vehicle: Vehicle) => {
+    if (vehicle.mode === "aluguer") {
+      setBookingVehicle(vehicle);
+      return;
+    }
+
     const mt = Number(String(vehicle.price).replace(/[^\d]/g, "")) || 0;
     const payload = {
       id: vehicle.id,
@@ -182,6 +190,13 @@ export default function CatalogSection({
         )}
 
       </div>
+
+      {bookingVehicle && (
+        <BookingPanel
+          vehicle={bookingVehicle}
+          onClose={() => setBookingVehicle(null)}
+        />
+      )}
     </section>
   );
 }

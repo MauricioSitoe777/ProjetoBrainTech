@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 
 /**
  * Minimal client-side router based on window.location.pathname.
- * Supports: "/" (landing) and "/admin" (user management).
+ * Supports: "/" (landing), "/admin" (users) and "/admin/reservas" (reservations).
  */
 export function useRoute() {
   const [path, setPath] = useState(() => window.location.pathname);

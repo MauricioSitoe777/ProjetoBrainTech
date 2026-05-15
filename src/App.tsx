@@ -13,12 +13,16 @@ import { UsersProvider } from "./context/UsersContext";
 import { LoginPage } from "./pages/LoginPage";
 import { UsersPage } from "./pages/UsersPage";
 import { ClientProfilePage } from "./pages/ClientProfilePage";
+import { ReservationsPage } from "./pages/ReservationsPage";
+import { ReservationsProvider } from "./context/ReservationsContext";
 
 // ─── Admin shell (login gate) ────────────────────────────────────────────────
 function AdminShell({ onExit }: { onExit: () => void }) {
   const { user } = useAuth();
+  const { path } = useRoute();
   if (!user) return <LoginPage onCancel={onExit} />;
   if (user.role === "cliente") return <ClientProfilePage onExit={onExit} />;
+  if (path.startsWith("/admin/reservas")) return <ReservationsPage onExit={onExit} />;
   return <UsersPage onExit={onExit} />;
 }
 
@@ -103,11 +107,13 @@ export default function App() {
   return (
     <AuthProvider>
       <UsersProvider>
-        {isAdmin ? (
-          <AdminShell onExit={() => navigate("/")} />
-        ) : (
-          <LandingPage onOpenAdmin={() => navigate("/admin")} />
-        )}
+        <ReservationsProvider>
+          {isAdmin ? (
+            <AdminShell onExit={() => navigate("/")} />
+          ) : (
+            <LandingPage onOpenAdmin={() => navigate("/admin")} />
+          )}
+        </ReservationsProvider>
       </UsersProvider>
     </AuthProvider>
   );
