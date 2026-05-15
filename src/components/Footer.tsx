@@ -6,16 +6,13 @@ const SERVICES = [
 ] as const;
 
 const CONTACTS = [
-  "Maputo · Av. Julius Nyerere",
-  "+258 84 000 0000",
+  "Maputo · Av. 25 de Setembro",
+  "+258 86 884 4283",
   "info@rentcar.co.mz",
 ] as const;
 
-const PAYMENT_BADGES = ["M-Pesa", "e-Mola"] as const;
-
 /**
- * Site footer with brand blurb, service links, contact details
- * and payment method badges.
+ * Site footer with brand blurb, service links and contact details.
  */
 export default function Footer() {
   return (
@@ -69,20 +66,10 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-zinc-900 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="text-zinc-600 text-xs">
+        <div className="border-t border-zinc-900 pt-6">
+          <p className="text-zinc-600 text-xs">
             © 2026 RentCar &amp; Vendas Moçambique. Todos os direitos reservados.
-          </div>
-          <div className="flex items-center gap-3">
-            {PAYMENT_BADGES.map((p) => (
-              <span
-                key={p}
-                className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-500 text-xs font-medium"
-              >
-                {p}
-              </span>
-            ))}
-          </div>
+          </p>
         </div>
 
       </div>
