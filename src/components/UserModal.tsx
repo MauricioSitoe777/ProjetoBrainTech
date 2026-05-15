@@ -9,7 +9,6 @@ interface UserModalProps {
 
 const ROLES: { value: UserRole; label: string }[] = [
   { value: 'admin', label: 'Administrador' },
-  { value: 'gestor', label: 'Gestor' },
   { value: 'cliente', label: 'Cliente' },
 ];
 

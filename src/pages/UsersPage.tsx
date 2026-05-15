@@ -7,7 +7,6 @@ import type { User, UserRole, UserStatus } from '../types/user';
 
 const roleConfig = {
   admin: { label: 'Admin', className: 'bg-purple-400/10 text-purple-400 border-purple-400/20' },
-  gestor: { label: 'Gestor', className: 'bg-blue-400/10 text-blue-400 border-blue-400/20' },
   cliente: { label: 'Cliente', className: 'bg-zinc-700 text-zinc-300 border-zinc-600' },
 };
 
@@ -72,7 +71,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
     setDeleteConfirm(null);
   };
 
-  const canManage = authUser?.role === 'admin' || authUser?.role === 'gestor';
+  const canManage = authUser?.role === 'admin';
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
@@ -151,7 +150,6 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
           >
             <option value="todos">Todos os papéis</option>
             <option value="admin">Administrador</option>
-            <option value="gestor">Gestor</option>
             <option value="cliente">Cliente</option>
           </select>
           <select
@@ -280,7 +278,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
           onClose={() => { setShowModal(false); setEditingUser(null); }}
         />
       )}
-      {detailUser && (
+      {detailUser && authUser?.role === 'admin' && (
         <UserDetail
           user={detailUser}
           onClose={() => setDetailUser(null)}

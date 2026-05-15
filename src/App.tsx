@@ -12,11 +12,14 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { UsersProvider } from "./context/UsersContext";
 import { LoginPage } from "./pages/LoginPage";
 import { UsersPage } from "./pages/UsersPage";
+import { ClientProfilePage } from "./pages/ClientProfilePage";
 
 // ─── Admin shell (login gate) ────────────────────────────────────────────────
 function AdminShell({ onExit }: { onExit: () => void }) {
   const { user } = useAuth();
-  return user ? <UsersPage onExit={onExit} /> : <LoginPage onCancel={onExit} />;
+  if (!user) return <LoginPage onCancel={onExit} />;
+  if (user.role === "cliente") return <ClientProfilePage onExit={onExit} />;
+  return <UsersPage onExit={onExit} />;
 }
 
 // ─── Landing page (original, untouched) ──────────────────────────────────────

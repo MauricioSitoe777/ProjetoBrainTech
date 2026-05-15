@@ -12,7 +12,6 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 const DEMO_ACCOUNTS = [
   { id: '1', nome: 'António Silva', email: 'admin@rentcar.mz', password: 'admin123', role: 'admin' as const },
-  { id: '2', nome: 'Maria João', email: 'gestor@rentcar.mz', password: 'gestor123', role: 'gestor' as const },
   { id: '3', nome: 'Carlos Machava', email: 'cliente@rentcar.mz', password: 'cliente123', role: 'cliente' as const },
 ];
 

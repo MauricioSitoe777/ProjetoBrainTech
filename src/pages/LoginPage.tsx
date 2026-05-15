@@ -15,10 +15,9 @@ export function LoginPage({ onCancel }: { onCancel?: () => void }) {
     if (!ok) setError('Email ou palavra-passe incorretos.');
   };
 
-  const demoLogin = (type: 'admin' | 'gestor' | 'cliente') => {
+  const demoLogin = (type: 'admin' | 'cliente') => {
     const accounts = {
       admin: { email: 'admin@rentcar.mz', password: 'admin123' },
-      gestor: { email: 'gestor@rentcar.mz', password: 'gestor123' },
       cliente: { email: 'cliente@rentcar.mz', password: 'cliente123' },
     };
     setEmail(accounts[type].email);
@@ -110,7 +109,7 @@ export function LoginPage({ onCancel }: { onCancel?: () => void }) {
           <div className="mt-6 pt-6 border-t border-zinc-800">
             <p className="text-xs text-zinc-500 mb-3">Contas de demonstração:</p>
             <div className="flex gap-2">
-              {(['admin', 'gestor', 'cliente'] as const).map(type => (
+              {(['admin', 'cliente'] as const).map(type => (
                 <button
                   key={type}
                   onClick={() => demoLogin(type)}
