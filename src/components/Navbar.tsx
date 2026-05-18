@@ -48,7 +48,7 @@ export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdm
             <li key={id}>
               <button
                 onClick={() => handleNav(id)}
-                className="text-zinc-200 hover:text-white text-sm font-medium transition-colors tracking-wide"
+                className="text-zinc-200 hover:text-white text-sm font-bold transition-colors tracking-wide"
               >
                 {label}
               </button>
@@ -117,7 +117,7 @@ export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdm
             <button
               key={id}
               onClick={() => handleNav(id)}
-              className="text-zinc-300 hover:text-amber-500 text-left text-base font-medium transition-colors"
+              className="text-zinc-300 hover:text-amber-500 text-left text-base font-bold transition-colors"
             >
               {label}
             </button>
