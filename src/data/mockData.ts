@@ -92,6 +92,19 @@ export const mockUsers: User[] = [
     bi: '007890123G',
     endereco: 'Av. Karl Marx, Maputo',
   },
+  {
+    id: '8',
+    nome: 'Ricardo Langa',
+    email: 'ricardo.langa@email.com',
+    telefone: '+258 84 890 1234',
+    role: 'admin',
+    status: 'ativo',
+    dataCriacao: '2024-08-10',
+    ultimoAcesso: '2025-05-10',
+    totalAlugueres: 0,
+    bi: '008901234H',
+    endereco: 'Av. das Industrias, Matola',
+  },
 ];
 
 export const mockAlugueres: Aluguer[] = [

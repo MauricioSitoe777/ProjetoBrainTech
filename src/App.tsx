@@ -22,6 +22,10 @@ function AdminShell({ onExit }: { onExit: () => void }) {
   const { path } = useRoute();
   if (!user) return <LoginPage onCancel={onExit} />;
   if (user.role === "cliente") return <ClientProfilePage onExit={onExit} />;
+  
+  // Admins vão para utilizadores por defeito
+  if (path === "/admin") return <UsersPage onExit={onExit} />;
+  
   if (path.startsWith("/admin/reservas")) return <ReservationsPage onExit={onExit} />;
   return <UsersPage onExit={onExit} />;
 }
@@ -83,7 +87,7 @@ function LandingPage({
                   type="button"
                   aria-label="Fechar"
                   onClick={() => setFlowModalOpen(false)}
-                  className="w-10 h-10 rounded-full border border-zinc-800 bg-zinc-950/60 text-zinc-400 hover:text-white hover:border-zinc-600 transition flex items-center justify-center"
+                  className="w-10 h-10 rounded-full border border-zinc-800 bg-zinc-950/60 text-white hover:text-white hover:border-zinc-600 transition flex items-center justify-center"
                 >
                   ×
                 </button>

@@ -38,21 +38,21 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
               Rent<span className="text-amber-500">Car</span>
             </span>
             <span className="text-zinc-700">·</span>
-            <span className="text-sm text-zinc-400">A minha conta</span>
+            <span className="text-sm text-white">A minha conta</span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-zinc-400 hidden sm:block">{authUser?.nome}</span>
+            <span className="text-xs text-white hidden sm:block">{authUser?.nome}</span>
             {onExit && (
               <button
                 onClick={onExit}
-                className="text-zinc-500 hover:text-zinc-200 transition-colors text-sm flex items-center gap-1"
+                className="text-zinc-200 hover:text-white transition-colors text-sm flex items-center gap-1"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
                 Site
               </button>
             )}
             <div className="w-px h-4 bg-zinc-800" />
-            <button onClick={logout} className="text-zinc-400 hover:text-white transition-colors text-sm">
+            <button onClick={logout} className="text-white hover:text-amber-400 transition-colors text-sm">
               Sair
             </button>
           </div>
@@ -61,7 +61,7 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
         {!profile ? (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 text-center text-zinc-500 text-sm">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 text-center text-zinc-300 text-sm">
             Perfil não encontrado. Contacte o suporte.
           </div>
         ) : (
@@ -72,7 +72,7 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
               <h3 className="text-sm font-medium text-white mb-4">As minhas reservas</h3>
               {reservations.length === 0 ? (
-                <p className="text-sm text-zinc-500">Ainda não tem reservas registadas.</p>
+                <p className="text-sm text-zinc-300">Ainda não tem reservas registadas.</p>
               ) : (
                 <div className="space-y-2">
                   {reservations.map(r => {
@@ -81,7 +81,7 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
                       <div key={r.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-zinc-800/40 rounded-xl px-4 py-3 border border-zinc-800">
                         <div>
                           <p className="text-sm font-medium text-white">{vehicleName(r.vehicleId)}</p>
-                          <p className="text-xs text-zinc-500">{r.dataInicio} → {r.dataFim}</p>
+                          <p className="text-xs text-zinc-300">{r.dataInicio} → {r.dataFim}</p>
                         </div>
                         <div className="flex items-center gap-3">
                           <span className={`text-xs border rounded-md px-2 py-0.5 ${st.className}`}>{st.label}</span>

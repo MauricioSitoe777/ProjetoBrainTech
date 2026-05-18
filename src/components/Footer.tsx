@@ -16,10 +16,10 @@ const CONTACTS = [
  */
 export default function Footer() {
   return (
-    <footer className="bg-zinc-950 border-t border-zinc-900 py-12">
+    <footer className="bg-zinc-950 border-t border-zinc-900 py-10">
       <div className="max-w-7xl mx-auto px-6">
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
 
           {/* Brand */}
           <div className="md:col-span-2">
@@ -36,7 +36,7 @@ export default function Footer() {
                 Rent<span className="text-amber-500">Car</span>
               </span>
             </div>
-            <p className="text-zinc-500 text-sm leading-relaxed max-w-sm">
+            <p className="text-zinc-200 text-sm leading-relaxed max-w-sm">
               Ecossistema híbrido de gestão automóvel em Moçambique.
               Aluguer, venda e financiamento digital.
             </p>
@@ -48,7 +48,7 @@ export default function Footer() {
             {SERVICES.map((s) => (
               <div
                 key={s}
-                className="text-zinc-500 text-sm mb-2 hover:text-zinc-300 cursor-pointer transition-colors"
+                className="text-zinc-200 text-sm mb-2 hover:text-white cursor-pointer transition-colors"
               >
                 {s}
               </div>
@@ -59,7 +59,7 @@ export default function Footer() {
           <div>
             <div className="text-white font-semibold text-sm mb-4">Contacto</div>
             {CONTACTS.map((c) => (
-              <div key={c} className="text-zinc-500 text-sm mb-2">{c}</div>
+              <div key={c} className="text-zinc-200 text-sm mb-2">{c}</div>
             ))}
           </div>
 
@@ -67,7 +67,7 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="border-t border-zinc-900 pt-6">
-          <p className="text-zinc-600 text-xs">
+          <p className="text-zinc-400 text-xs">
             © 2026 RentCar &amp; Vendas Moçambique. Todos os direitos reservados.
           </p>
         </div>

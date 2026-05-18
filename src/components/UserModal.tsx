@@ -72,7 +72,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
           <h2 className="text-lg font-semibold text-white">
             {user ? 'Editar utilizador' : 'Novo utilizador'}
           </h2>
-          <button onClick={onClose} className="text-zinc-400 hover:text-white transition-colors">
+          <button onClick={onClose} className="text-zinc-200 hover:text-white transition-colors">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18"/>
               <line x1="6" y1="6" x2="18" y2="18"/>
@@ -83,7 +83,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <label className="block text-xs text-zinc-400 mb-1">Nome completo *</label>
+              <label className="block text-xs text-white mb-1">Nome completo *</label>
               <input
                 {...field('nome')}
                 placeholder="Nome do utilizador"
@@ -93,7 +93,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
             </div>
 
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Email *</label>
+              <label className="block text-xs text-white mb-1">Email *</label>
               <input
                 {...field('email')}
                 type="email"
@@ -104,7 +104,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
             </div>
 
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Telefone *</label>
+              <label className="block text-xs text-white mb-1">Telefone *</label>
               <input
                 {...field('telefone')}
                 placeholder="+258 84 000 0000"
@@ -114,7 +114,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
             </div>
 
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Papel</label>
+              <label className="block text-xs text-white mb-1">Papel</label>
               <select
                 {...field('role')}
                 className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500 transition-colors"
@@ -124,7 +124,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
             </div>
 
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Estado</label>
+              <label className="block text-xs text-white mb-1">Estado</label>
               <select
                 {...field('status')}
                 className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500 transition-colors"
@@ -134,7 +134,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
             </div>
 
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Bilhete de identidade</label>
+              <label className="block text-xs text-white mb-1">Bilhete de identidade</label>
               <input
                 {...field('bi')}
                 placeholder="000000000A"
@@ -143,7 +143,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
             </div>
 
             <div className="col-span-2">
-              <label className="block text-xs text-zinc-400 mb-1">Endereço</label>
+              <label className="block text-xs text-white mb-1">Endereço</label>
               <input
                 {...field('endereco')}
                 placeholder="Av. ..., Maputo"
@@ -157,7 +157,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg py-2.5 text-sm transition-colors"
+            className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg py-2.5 text-sm transition-colors"
           >
             Cancelar
           </button>

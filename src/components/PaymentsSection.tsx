@@ -8,11 +8,11 @@ export default function PaymentsSection() {
   const scrollTo = useScrollTo();
 
   return (
-    <section id="pagamentos" className="py-28 bg-zinc-900/30">
+    <section id="pagamentos" className="py-20 bg-zinc-900/30">
       <div className="max-w-7xl mx-auto px-6">
 
         {/* Section header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <div className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-3">
             Pagamentos
           </div>
@@ -35,23 +35,31 @@ export default function PaymentsSection() {
               className="group rounded-2xl bg-zinc-900 border border-zinc-800 p-6 hover:border-zinc-600 transition-all duration-300 hover:-translate-y-1"
             >
               <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center mb-5 font-black text-sm"
+                className="w-12 h-12 rounded-xl flex items-center justify-center mb-5 overflow-hidden p-2"
                 style={{
-                  backgroundColor: m.color + "20",
-                  border: `1px solid ${m.color}40`,
-                  color: m.color,
+                  backgroundColor: m.color + "15",
+                  border: `1px solid ${m.color}30`,
                 }}
               >
-                {m.name.slice(0, 2)}
+                <img
+                  src={(m as any).logo}
+                  alt={m.name}
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    // Fallback se a imagem falhar
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.parentElement!.innerHTML = `<span style="color: ${m.color}; font-weight: bold;">${m.name.slice(0, 2)}</span>`;
+                  }}
+                />
               </div>
               <h3 className="text-white font-bold text-base mb-2">{m.name}</h3>
-              <p className="text-zinc-500 text-sm leading-relaxed">{m.desc}</p>
+              <p className="text-zinc-300 text-sm leading-relaxed">{m.desc}</p>
             </div>
           ))}
         </div>
 
         {/* Civil-servant promo banner */}
-        <div className="mt-16 rounded-3xl border border-amber-500/20 bg-amber-500/5 p-8 md:p-12 text-center relative overflow-hidden">
+        <div className="mt-12 rounded-3xl border border-amber-500/20 bg-amber-500/5 p-8 md:p-12 text-center relative overflow-hidden">
           <div
             className="absolute inset-0 opacity-5 pointer-events-none"
             style={{ backgroundImage: "radial-gradient(circle at 50% 50%, #f59e0b, transparent 60%)" }}

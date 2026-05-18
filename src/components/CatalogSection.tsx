@@ -83,11 +83,11 @@ export default function CatalogSection({
   };
 
   return (
-    <section id="catalogo" className="py-28 bg-zinc-950">
+    <section id="catalogo" className="py-20 bg-zinc-950">
       <div className="max-w-7xl mx-auto px-6">
 
         {/* ── Header ── */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
           <div>
             <div className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-3">
               Catálogo
@@ -98,7 +98,7 @@ export default function CatalogSection({
             >
               Frota Disponível
             </h2>
-            <p className="text-zinc-400 text-base mt-3 max-w-md">
+            <p className="text-zinc-200 text-base mt-3 max-w-md">
               Defina o destino, nós tratamos do caminho. Comece aqui.
             </p>
           </div>
@@ -112,7 +112,7 @@ export default function CatalogSection({
                 className={`px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
                   mode === f.key
                     ? "bg-amber-500 text-zinc-950"
-                    : "bg-zinc-900 text-zinc-400 border border-zinc-800 hover:border-zinc-600 hover:text-white"
+                    : "bg-zinc-900 text-zinc-200 border border-zinc-800 hover:border-zinc-600 hover:text-white"
                 }`}
               >
                 {f.label}
@@ -130,7 +130,7 @@ export default function CatalogSection({
               className={`px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
                 cat === null
                   ? "bg-zinc-700 text-white border border-zinc-600"
-                  : "bg-zinc-900 text-zinc-500 border border-zinc-800 hover:border-zinc-600 hover:text-white"
+                  : "bg-zinc-900 text-zinc-300 border border-zinc-800 hover:border-zinc-600 hover:text-white"
               }`}
             >
               Todas
@@ -143,7 +143,7 @@ export default function CatalogSection({
                 className={`px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 ${
                   cat === f.key
                     ? "bg-zinc-700 text-white border border-zinc-500"
-                    : "bg-zinc-900 text-zinc-500 border border-zinc-800 hover:border-zinc-600 hover:text-white"
+                    : "bg-zinc-900 text-zinc-300 border border-zinc-800 hover:border-zinc-600 hover:text-white"
                 }`}
               >
                 <span>{f.emoji}</span>
@@ -154,13 +154,13 @@ export default function CatalogSection({
         )}
 
         {/* ── Results count ── */}
-        <p className="text-zinc-600 text-xs mb-2 uppercase tracking-widest">
+        <p className="text-zinc-400 text-xs mb-2 uppercase tracking-widest">
           {filtered.length} veículo{filtered.length !== 1 ? "s" : ""} encontrado{filtered.length !== 1 ? "s" : ""}
         </p>
 
         {/* ── Category description ── */}
         {cat && CAT_DESCRIPTIONS[cat] && (
-          <p className="text-zinc-400 text-base mb-6 max-w-2xl leading-relaxed"
+          <p className="text-zinc-200 text-base mb-6 max-w-2xl leading-relaxed"
              style={{ animation: 'fadeIn .3s ease' }}>
             {CAT_DESCRIPTIONS[cat]}
           </p>
@@ -177,12 +177,12 @@ export default function CatalogSection({
         ) : (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
             <div className="text-zinc-600 text-5xl">🚗</div>
-            <p className="text-zinc-500 text-base">
+            <p className="text-zinc-200 text-base">
               Nenhum veículo encontrado para esta selecção.
             </p>
             <button
               onClick={() => { setMode("todos"); setCat(null); }}
-              className="mt-2 px-5 py-2 rounded-full text-sm font-semibold bg-zinc-900 text-zinc-400 border border-zinc-800 hover:border-zinc-600 hover:text-white transition-all"
+              className="mt-2 px-5 py-2 rounded-full text-sm font-semibold bg-zinc-900 text-zinc-200 border border-zinc-800 hover:border-zinc-600 hover:text-white transition-all"
             >
               Ver todos
             </button>

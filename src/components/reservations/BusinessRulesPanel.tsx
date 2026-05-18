@@ -25,7 +25,7 @@ export function BusinessRulesPanel() {
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
       <h3 className="text-sm font-semibold text-white mb-1">Regras de negócio</h3>
-      <p className="text-xs text-zinc-500 mb-6">Validação automática em novas reservas e no catálogo público.</p>
+      <p className="text-xs text-zinc-300 mb-6">Validação automática em novas reservas e no catálogo público.</p>
       <div className="grid sm:grid-cols-2 gap-4">
         {FIELDS.map(({ key, label, type, hint }) => (
           <div key={key} className={type === 'boolean' ? 'sm:col-span-2' : ''}>

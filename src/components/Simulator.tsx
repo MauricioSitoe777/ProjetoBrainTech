@@ -1,6 +1,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useCurrencyFormatter } from "../hooks";
+import { useAuth } from "../context/AuthContext";
+import { useReservations } from "../context/ReservationsContext";
 
 const TAXA_MENSAL = 0.015;
 const MAX_MESES_PRESTACOES = 12;
@@ -16,8 +18,8 @@ type DocumentKey =
   | "contrato_trabalho";
 
 const CATEGORY_LABEL: Record<Category, string> = {
-  func_publico: "Funcionário Público",
-  func_privado: "Funcionário Privado",
+  func_publico: "Público",
+  func_privado: "Privado",
   empreendedor: "Empreendedor",
 };
 
@@ -64,7 +66,7 @@ function TextField({
 }) {
   return (
     <div>
-      <label className="text-zinc-400 text-sm font-medium block mb-2">{label}</label>
+      <label className="text-white text-sm font-medium block mb-2">{label}</label>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -112,7 +114,7 @@ function NumberField({
 
   return (
     <div>
-      <label className="text-zinc-400 text-sm font-medium block mb-2">{label}</label>
+      <label className="text-white text-sm font-medium block mb-2">{label}</label>
       <div className="flex items-center gap-3 rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 focus-within:border-zinc-600">
         <input
           type="number"
@@ -124,7 +126,7 @@ function NumberField({
           onFocus={(e) => e.currentTarget.select()}
           className="w-full bg-transparent text-sm text-white outline-none"
         />
-        {suffix ? <span className="text-zinc-500 text-xs font-semibold">{suffix}</span> : null}
+        {suffix ? <span className="text-zinc-300 text-xs font-semibold">{suffix}</span> : null}
       </div>
     </div>
   );
@@ -140,12 +142,21 @@ function pmtMonthly(principal: number, months: number, monthlyRate: number): num
 
 export default function Simulator({ showClose = true }: { showClose?: boolean }) {
   const fmt = useCurrencyFormatter();
+  const { user: authUser } = useAuth();
+  const { createReservation } = useReservations();
 
   const [flow, setFlow] = useState<FlowType>("compra");
   const [category, setCategory] = useState<Category>("func_publico");
 
   const [clientName, setClientName] = useState("");
   const [clientContact, setClientContact] = useState("");
+
+  useEffect(() => {
+    if (authUser) {
+      setClientName(authUser.nome);
+      setClientContact(authUser.email);
+    }
+  }, [authUser]);
 
   // Compra
   const [vehiclePrice, setVehiclePrice] = useState(1_500_000);
@@ -286,10 +297,29 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
     };
 
     setHistory((h) => [entry, ...h].slice(0, 30));
+
+    // Se estiver logado e for aluguer, criar reserva real
+    if (authUser && flow === "aluguer") {
+      const start = new Date();
+      const end = new Date();
+      end.setDate(start.getDate() + Math.max(1, Math.round(days)));
+
+      createReservation({
+        vehicleId: 4, // Exemplo: Toyota Hilux ou o selecionado se tivéssemos o ID
+        userId: authUser.id,
+        clientName: authUser.nome,
+        clientEmail: authUser.email,
+        dataInicio: start.toISOString().split('T')[0],
+        dataFim: end.toISOString().split('T')[0],
+        status: 'pendente',
+        valorTotal: rentTotalPayNow,
+        deposito: deposit,
+      });
+    }
   };
 
   return (
-    <section id="simulador" className="py-28 bg-zinc-950 relative overflow-hidden">
+    <section id="simulador" className="py-20 bg-zinc-950 relative overflow-hidden">
       {/* Ambient glow */}
       <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-5 pointer-events-none"
@@ -308,14 +338,14 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                 // ignore
               }
             }}
-            className="absolute right-6 top-0 -translate-y-2 w-10 h-10 rounded-full border border-zinc-800 bg-zinc-950/60 text-zinc-400 hover:text-white hover:border-zinc-600 transition flex items-center justify-center"
+            className="absolute right-6 top-0 -translate-y-2 w-10 h-10 rounded-full border border-zinc-800 bg-zinc-950/60 text-white hover:text-white hover:border-zinc-600 transition flex items-center justify-center"
           >
             ×
           </button>
         ) : null}
 
         {/* Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <div className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-3">
             Compra & Aluguer
           </div>
@@ -325,7 +355,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
           >
             Simulador
           </h2>
-          <p className="text-zinc-400 text-base mt-4 max-w-xl mx-auto">
+          <p className="text-zinc-200 text-base mt-4 max-w-xl mx-auto">
             Escolha a categoria do cliente, submeta documentos e simule pagamentos (compra) ou custos (aluguer).
           </p>
         </div>
@@ -337,7 +367,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
 
             {/* Serviço */}
             <div>
-              <label className="text-zinc-400 text-sm font-medium block mb-3">Serviço</label>
+              <label className="text-white text-lg font-bold block mb-3">Serviço</label>
               <div className="grid grid-cols-2 gap-2">
                 {([
                   { key: "compra", label: "Compra (Venda)" },
@@ -349,7 +379,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                     className={`py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
                       flow === o.key
                         ? "bg-amber-500 text-zinc-950"
-                        : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                        : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
                     }`}
                   >
                     {o.label}
@@ -360,7 +390,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
 
             {/* Categoria */}
             <div>
-              <label className="text-zinc-400 text-sm font-medium block mb-3">Categoria</label>
+              <label className="text-white text-sm font-medium block mb-3">Funcionário</label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {(Object.keys(CATEGORY_LABEL) as Category[]).map((k) => (
                   <button
@@ -369,7 +399,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                     className={`py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
                       category === k
                         ? "bg-zinc-700 text-white border border-zinc-600"
-                        : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                        : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
                     }`}
                   >
                     {CATEGORY_LABEL[k]}
@@ -417,7 +447,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                 </div>
 
                 <div>
-                  <label className="text-zinc-400 text-sm font-medium block mb-3">Plano de Pagamento</label>
+                  <label className="text-white text-sm font-medium block mb-3">Plano de Pagamento</label>
                   <div className="grid grid-cols-2 gap-2">
                     {([
                       { key: "pronto", label: "Pronto pagamento" },
@@ -429,14 +459,14 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                         className={`py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
                           paymentPlan === o.key
                             ? "bg-amber-500 text-zinc-950"
-                            : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                            : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
                         }`}
                       >
                         {o.label}
                       </button>
                     ))}
                   </div>
-                  <div className="text-zinc-500 text-xs mt-2">
+                  <div className="text-zinc-300 text-xs mt-2">
                     Prestações: máximo {MAX_MESES_PRESTACOES} meses.
                   </div>
                 </div>
@@ -526,8 +556,8 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
             {/* Documentos */}
             <div>
               <div className="flex items-end justify-between gap-6 mb-3">
-                <label className="text-zinc-400 text-sm font-medium block">Documentos do cliente</label>
-                <div className={`text-xs font-semibold ${docsOk ? "text-emerald-400" : "text-zinc-500"}`}>
+                <label className="text-white text-sm font-medium block">Documentos do cliente</label>
+                <div className={`text-xs font-semibold ${docsOk ? "text-emerald-400" : "text-zinc-300"}`}>
                   {docsOk ? "Completo" : "Obrigatórios pendentes"}
                 </div>
               </div>
@@ -544,8 +574,8 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                         checked
                           ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
                           : required
-                          ? "bg-zinc-950/30 border-amber-500/20 text-zinc-200 hover:border-amber-500/40"
-                          : "bg-zinc-950/30 border-zinc-800 text-zinc-500 hover:border-zinc-700"
+                          ? "bg-zinc-950/30 border-amber-500/20 text-white hover:border-amber-500/40"
+                          : "bg-zinc-950/30 border-zinc-800 text-zinc-300 hover:border-zinc-700"
                       }`}
                     >
                       <span className="flex items-center gap-2">
@@ -553,7 +583,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                         {DOC_LABEL[k]}
                         {required ? <span className="text-amber-400 text-xs font-black ml-1">OBRIG.</span> : null}
                       </span>
-                      <span className={checked ? "text-emerald-400" : "text-zinc-600"}>
+                      <span className={checked ? "text-emerald-400" : "text-zinc-400"}>
                         {checked ? "✓" : "—"}
                       </span>
                     </button>
@@ -566,7 +596,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
           {/* ── Result panel ── */}
           <div className="bg-zinc-900 rounded-3xl border border-zinc-800 p-8 flex flex-col justify-between">
             <div>
-              <div className="text-zinc-500 text-sm mb-2">
+              <div className="text-zinc-300 text-sm mb-2">
                 {flow === "compra"
                   ? paymentPlan === "prestacoes"
                     ? "Prestação Mensal Estimada"
@@ -582,9 +612,9 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                     ? fmt(purchasePMT)
                     : fmt(vehiclePrice)
                   : fmt(rentTotalPayNow)}
-                <span className="text-2xl text-zinc-600 ml-2">MT</span>
+                <span className="text-2xl text-zinc-400 ml-2">MT</span>
               </div>
-              <div className="text-zinc-500 text-xs mt-2">
+              <div className="text-zinc-300 text-xs mt-2">
                 {flow === "compra" && paymentPlan === "prestacoes"
                   ? `Taxa referência: ${(TAXA_MENSAL * 100).toFixed(1)}% /mês · ${Math.min(MAX_MESES_PRESTACOES, Math.max(1, Math.round(mesesPrestacoes)))} meses`
                   : flow === "compra"
@@ -605,7 +635,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                 <div className={`text-sm font-bold mb-1 ${eligivel ? "text-emerald-400" : "text-red-400"}`}>
                   {eligivel ? "✓ Elegível para prestações" : "✗ Rendimento insuficiente"}
                 </div>
-                <div className="text-zinc-400 text-xs leading-relaxed">
+                <div className="text-zinc-200 text-xs leading-relaxed">
                   {eligivel
                     ? `A prestação (${fmt(purchasePMT)} MT) está dentro do limite de 30% do salário (${fmt(maxPmt)} MT).`
                     : `A prestação (${fmt(purchasePMT)} MT) excede 30% do salário. Reduza o valor ou aumente o prazo.`}
@@ -631,7 +661,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                   ] as [string, string][])
               ).map(([label, val]) => (
                 <div key={label} className="bg-zinc-800/50 rounded-xl p-3">
-                  <div className="text-zinc-500 text-xs">{label}</div>
+                  <div className="text-zinc-300 text-xs">{label}</div>
                   <div className="text-white font-bold text-sm mt-1">{val}</div>
                 </div>
               ))}
@@ -643,7 +673,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
               className={`mt-6 w-full py-3.5 rounded-xl font-bold text-sm transition-all duration-200 ${
                 canSubmit
                   ? "bg-amber-500 text-zinc-950 hover:bg-amber-400 hover:scale-[1.02] active:scale-[0.98]"
-                  : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+                  : "bg-zinc-800 text-zinc-300 cursor-not-allowed"
               }`}
             >
               Guardar no histórico
@@ -652,17 +682,17 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
             {/* Histórico */}
             <div className="mt-6">
               <div className="flex items-center justify-between">
-                <div className="text-zinc-400 text-sm font-bold">Histórico do Cliente</div>
+                <div className="text-white text-sm font-bold">Histórico do Cliente</div>
                 <button
                   onClick={() => setHistory([])}
-                  className="text-xs font-bold text-zinc-500 hover:text-zinc-300"
+                  className="text-xs font-bold text-zinc-300 hover:text-zinc-300"
                 >
                   Limpar
                 </button>
               </div>
 
               {history.length === 0 ? (
-                <div className="mt-3 text-zinc-600 text-sm">
+                <div className="mt-3 text-zinc-200 text-sm">
                   Ainda sem registos. Preencha e clique em "Guardar no histórico".
                 </div>
               ) : (
@@ -672,7 +702,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <div className="text-white font-bold text-sm">{h.clientName}</div>
-                          <div className="text-zinc-500 text-xs mt-0.5">
+                          <div className="text-zinc-300 text-xs mt-0.5">
                             {new Date(h.createdAt).toLocaleString("pt-MZ")} · {h.flow === "compra" ? "Compra" : "Aluguer"} · {CATEGORY_LABEL[h.category]}
                           </div>
                         </div>
@@ -681,9 +711,9 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                             {h.flow === "compra"
                               ? fmt(h.values.purchaseTotal ?? h.values.vehiclePrice ?? 0)
                               : fmt(h.values.rentTotalPayNow ?? 0)}
-                            <span className="text-zinc-600 font-bold ml-1">MT</span>
+                            <span className="text-zinc-400 font-bold ml-1">MT</span>
                           </div>
-                          <div className="text-zinc-600 text-xs">
+                          <div className="text-zinc-400 text-xs">
                             {h.flow === "compra"
                               ? h.paymentPlan === "prestacoes"
                                 ? `${h.mesesPrestacoes} meses`
@@ -692,7 +722,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                           </div>
                         </div>
                       </div>
-                      <div className="mt-3 text-zinc-500 text-xs leading-relaxed">
+                      <div className="mt-3 text-zinc-300 text-xs leading-relaxed">
                         Docs: {h.submittedDocs.length > 0 ? h.submittedDocs.map((d) => DOC_LABEL[d]).join(", ") : "—"}
                         {h.clientContact ? ` · Contacto: ${h.clientContact}` : ""}
                       </div>

@@ -109,7 +109,7 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
         <div className="flex items-center justify-between p-6 border-b border-zinc-800 sticky top-0 bg-zinc-900 z-10">
           <div>
             <h2 className="text-lg font-semibold text-white">Reservar viatura</h2>
-            <p className="text-xs text-zinc-500 mt-0.5">{vehicle.name} · {vehicle.price}</p>
+            <p className="text-xs text-zinc-300 mt-0.5">{vehicle.name} · {vehicle.price}</p>
           </div>
           <button type="button" onClick={onClose} className="text-zinc-400 hover:text-white text-xl">×</button>
         </div>

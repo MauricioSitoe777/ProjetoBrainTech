@@ -5,11 +5,11 @@ import { STEPS } from "../data/constants";
  */
 export default function HowItWorks() {
   return (
-    <section id="como-funciona" className="py-28 bg-zinc-900/50">
+    <section id="como-funciona" className="py-20 bg-zinc-900/50">
       <div className="max-w-7xl mx-auto px-6">
 
         {/* Section header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <div className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-3">
             Processo
           </div>
@@ -19,7 +19,7 @@ export default function HowItWorks() {
           >
             Como Funciona
           </h2>
-          <p className="text-zinc-400 text-base mt-4 max-w-xl mx-auto">
+          <p className="text-zinc-200 text-base mt-4 max-w-xl mx-auto">
             Do catálogo às chaves na mão, o processo é 100% digital e transparente.
           </p>
         </div>
@@ -45,7 +45,7 @@ export default function HowItWorks() {
                 </div>
 
                 <h3 className="text-white font-bold text-base mb-2">{step.title}</h3>
-                <p className="text-zinc-500 text-sm leading-relaxed">{step.desc}</p>
+                <p className="text-zinc-300 text-sm leading-relaxed">{step.desc}</p>
               </div>
             </div>
           ))}

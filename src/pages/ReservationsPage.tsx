@@ -62,7 +62,7 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
             { label: 'Bloqueios', value: stats.bloqueios, color: 'text-red-400' },
           ].map(s => (
             <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-              <p className="text-xs text-zinc-500">{s.label}</p>
+              <p className="text-xs text-zinc-300">{s.label}</p>
               <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
             </div>
           ))}
@@ -76,7 +76,7 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
               className={`text-sm px-4 py-2 rounded-lg transition-colors ${
                 tab === t.key
                   ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20'
-                  : 'bg-zinc-900 text-zinc-400 border border-zinc-800 hover:text-zinc-200'
+                  : 'bg-zinc-900 text-white border border-zinc-800 hover:text-zinc-200'
               }`}
             >
               {t.label}
@@ -88,7 +88,7 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
           <div className="grid lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1 space-y-4">
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <label className="block text-xs text-zinc-500 mb-2">Viatura</label>
+                <label className="block text-xs text-white mb-2">Viatura</label>
                 <select
                   value={selectedVehicle ?? ''}
                   onChange={e => setSelectedVehicle(e.target.value ? Number(e.target.value) : null)}
@@ -119,7 +119,7 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
               <select
                 value={filterStatus}
                 onChange={e => setFilterStatus(e.target.value as ReservationStatus | 'todos')}
-                className="bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-lg px-3 py-2 text-sm"
+                className="bg-zinc-900 border border-zinc-800 text-white rounded-lg px-3 py-2 text-sm"
               >
                 <option value="todos">Todos os estados</option>
                 {(Object.keys(STATUS_CFG) as ReservationStatus[]).map(s => (
@@ -129,7 +129,7 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
               <select
                 value={selectedVehicle ?? ''}
                 onChange={e => setSelectedVehicle(e.target.value ? Number(e.target.value) : null)}
-                className="bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-lg px-3 py-2 text-sm"
+                className="bg-zinc-900 border border-zinc-800 text-white rounded-lg px-3 py-2 text-sm"
               >
                 <option value="">Todas as viaturas</option>
                 {rentalVehicles.map(v => (
@@ -141,17 +141,17 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-zinc-800">
-                    <th className="text-left px-4 py-3 text-xs text-zinc-500 uppercase">Cliente</th>
-                    <th className="text-left px-4 py-3 text-xs text-zinc-500 uppercase hidden md:table-cell">Viatura</th>
-                    <th className="text-left px-4 py-3 text-xs text-zinc-500 uppercase">Período</th>
-                    <th className="text-left px-4 py-3 text-xs text-zinc-500 uppercase">Estado</th>
-                    <th className="text-right px-4 py-3 text-xs text-zinc-500 uppercase">Ações</th>
+                    <th className="text-left px-4 py-3 text-xs text-zinc-300 uppercase">Cliente</th>
+                    <th className="text-left px-4 py-3 text-xs text-zinc-300 uppercase hidden md:table-cell">Viatura</th>
+                    <th className="text-left px-4 py-3 text-xs text-zinc-300 uppercase">Período</th>
+                    <th className="text-left px-4 py-3 text-xs text-zinc-300 uppercase">Estado</th>
+                    <th className="text-right px-4 py-3 text-xs text-zinc-300 uppercase">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800">
                   {filteredReservations.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="text-center py-10 text-zinc-500 text-sm">Sem reservas</td>
+                      <td colSpan={5} className="text-center py-10 text-zinc-400 text-sm">Sem reservas</td>
                     </tr>
                   )}
                   {filteredReservations.map(r => {
@@ -160,10 +160,10 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
                       <tr key={r.id} className="hover:bg-zinc-800/40">
                         <td className="px-4 py-3">
                           <p className="text-sm text-white">{r.clientName}</p>
-                          <p className="text-xs text-zinc-500">{r.clientPhone ?? r.clientEmail ?? '—'}</p>
+                          <p className="text-xs text-zinc-300">{r.clientPhone ?? r.clientEmail ?? '—'}</p>
                         </td>
-                        <td className="px-4 py-3 hidden md:table-cell text-sm text-zinc-400">{vehicleName(r.vehicleId)}</td>
-                        <td className="px-4 py-3 text-sm text-zinc-300">{r.dataInicio} → {r.dataFim}</td>
+                        <td className="px-4 py-3 hidden md:table-cell text-sm text-white">{vehicleName(r.vehicleId)}</td>
+                        <td className="px-4 py-3 text-sm text-white">{r.dataInicio} → {r.dataFim}</td>
                         <td className="px-4 py-3">
                           <span className={`text-xs border rounded-md px-2 py-0.5 ${st.className}`}>{st.label}</span>
                         </td>
@@ -222,13 +222,13 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
             </button>
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl divide-y divide-zinc-800">
               {blocks.length === 0 && (
-                <p className="text-center py-10 text-zinc-500 text-sm">Sem bloqueios activos</p>
+                <p className="text-center py-10 text-zinc-400 text-sm">Sem bloqueios activos</p>
               )}
               {blocks.map(b => (
                 <div key={b.id} className="flex items-center justify-between px-4 py-3 gap-4">
                   <div>
                     <p className="text-sm text-white capitalize">{b.motivo.replace('_', ' ')}</p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-zinc-300">
                       {b.vehicleId === null ? 'Toda a frota' : vehicleName(b.vehicleId)} · {b.dataInicio} → {b.dataFim}
                     </p>
                     {b.descricao && <p className="text-xs text-zinc-600 mt-0.5">{b.descricao}</p>}

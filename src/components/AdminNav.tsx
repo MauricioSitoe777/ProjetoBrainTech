@@ -2,7 +2,7 @@ import { useAuth } from '../context/AuthContext';
 import { useRoute } from '../hooks/useRoute';
 
 const roleConfig = {
-  admin: { label: 'Admin', className: 'bg-purple-400/10 text-purple-400 border-purple-400/20' },
+  admin: { label: 'Administrador', className: 'bg-purple-400/10 text-purple-400 border-purple-400/20' },
   cliente: { label: 'Cliente', className: 'bg-zinc-700 text-zinc-300 border-zinc-600' },
 };
 
@@ -33,24 +33,24 @@ export function AdminNav({ subtitle, onExit }: AdminNavProps) {
               Rent<span className="text-amber-500">Car</span>
             </span>
             <span className="text-zinc-700 hidden sm:inline">·</span>
-            <span className="text-sm text-zinc-400 truncate hidden sm:inline">{subtitle}</span>
+            <span className="text-sm text-white truncate hidden sm:inline">{subtitle}</span>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <span className="text-xs text-zinc-400 hidden md:block">{authUser?.nome}</span>
+            <span className="text-xs text-white hidden md:block">{authUser?.nome}</span>
             <span className={`text-xs border rounded-md px-2 py-0.5 ${roleConfig[authUser?.role || 'cliente'].className}`}>
               {roleConfig[authUser?.role || 'cliente'].label}
             </span>
             {onExit && (
               <button
                 onClick={onExit}
-                className="text-zinc-500 hover:text-zinc-200 transition-colors text-sm flex items-center gap-1"
+                className="text-zinc-200 hover:text-white transition-colors text-sm flex items-center gap-1"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
                 <span className="hidden sm:inline">Site</span>
               </button>
             )}
             <div className="w-px h-4 bg-zinc-800" />
-            <button onClick={logout} className="text-zinc-400 hover:text-white transition-colors text-sm">
+            <button onClick={logout} className="text-white hover:text-amber-400 transition-colors text-sm">
               Sair
             </button>
           </div>
@@ -60,7 +60,7 @@ export function AdminNav({ subtitle, onExit }: AdminNavProps) {
             <button
               onClick={() => navigate('/admin')}
               className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
-                !isReservas ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' : 'text-zinc-500 hover:text-zinc-300'
+                !isReservas ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' : 'text-zinc-300 hover:text-white'
               }`}
             >
               Utilizadores
@@ -68,7 +68,7 @@ export function AdminNav({ subtitle, onExit }: AdminNavProps) {
             <button
               onClick={() => navigate('/admin/reservas')}
               className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
-                isReservas ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' : 'text-zinc-500 hover:text-zinc-300'
+                isReservas ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' : 'text-zinc-300 hover:text-white'
               }`}
             >
               Reservas &amp; Disponibilidade

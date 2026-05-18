@@ -8,7 +8,7 @@ import {
 } from '../../lib/availability';
 
 const STATUS_STYLES = {
-  livre: 'bg-zinc-800/60 text-zinc-500',
+  livre: 'bg-zinc-800/60 text-zinc-400',
   reservado: 'bg-amber-400/15 text-amber-400 border border-amber-400/25',
   bloqueado: 'bg-red-400/15 text-red-400 border border-red-400/25',
 };
@@ -42,14 +42,14 @@ export function AvailabilityCalendar({ vehicleId, onSelectDate }: AvailabilityCa
   };
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden max-w-sm mx-auto lg:mx-0">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-800">
         <button type="button" onClick={prevMonth} className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800">‹</button>
         <span className="text-sm font-medium text-white capitalize">{getMonthLabel(year, month)}</span>
         <button type="button" onClick={nextMonth} className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800">›</button>
       </div>
 
-      <div className="p-4">
+      <div className="p-3">
         <div className="grid grid-cols-7 gap-1 mb-2">
           {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => (
             <div key={d} className="text-center text-[10px] text-zinc-600 font-medium py-1">{d}</div>
@@ -92,7 +92,7 @@ export function AvailabilityCalendar({ vehicleId, onSelectDate }: AvailabilityCa
         </div>
         <div className="flex flex-wrap gap-3 mt-4 pt-3 border-t border-zinc-800">
           {(Object.entries(STATUS_STYLES) as [keyof typeof STATUS_STYLES, string][]).map(([k, _]) => (
-            <div key={k} className="flex items-center gap-1.5 text-[10px] text-zinc-500 capitalize">
+            <div key={k} className="flex items-center gap-1.5 text-[10px] text-zinc-300 capitalize">
               <span className={`w-2 h-2 rounded-sm ${STATUS_STYLES[k].split(' ')[0]}`} />
               {k}
             </div>

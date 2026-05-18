@@ -33,9 +33,24 @@ export const STEPS = [
 ];
 
 export const PAYMENT_METHODS = [
-  { name: "M-Pesa",        color: "#E30613", desc: "Pagamento instantâneo via Vodacom M-Pesa" },
-  { name: "e-Mola",        color: "#0066CC", desc: "Transferência segura via Movitel e-Mola"  },
-  { name: "Débito Direto", color: "#22C55E", desc: "Desconto mensal no salário (Estado)"       },
+  { 
+    name: "M-Pesa", 
+    color: "#E30613", 
+    desc: "Pagamento instantâneo via Vodacom M-Pesa",
+    logo: "https://idolo.co.mz/wp-content/uploads/2024/07/MPESA.png" 
+  },
+  { 
+    name: "e-Mola", 
+    color: "#FFD700", 
+    desc: "Transferência segura via Movitel e-Mola",
+    logo: "https://play-lh.googleusercontent.com/2TGAhJ55tiyhCwW0ZM43deGv4lUTFTBMoq83mnAO6-bU5hi2NPyKX8BN8iKt13irK7Y" 
+  },
+  { 
+    name: "Débito Direto", 
+    color: "#22C55E", 
+    desc: "Desconto mensal no salário (Estado)",
+    logo: "https://cdn-icons-png.flaticon.com/512/8007/8007010.png" 
+  },
 ];
 
 export const NAV_LINKS = [

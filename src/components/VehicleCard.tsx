@@ -43,7 +43,7 @@ export default function VehicleCard({ vehicle, onAction }: VehicleCardProps) {
           <div className="w-full h-full bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 flex items-center justify-center">
             <div className="flex flex-col items-center gap-3">
               <div className="text-4xl filter grayscale opacity-50">🚗</div>
-              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter">Imagem Indisponível</span>
+              <span className="text-[10px] text-zinc-300 font-bold uppercase tracking-tighter">Imagem Indisponível</span>
             </div>
           </div>
         )}
@@ -61,7 +61,7 @@ export default function VehicleCard({ vehicle, onAction }: VehicleCardProps) {
         </div>
 
         {/* Category badge */}
-        <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-semibold bg-zinc-950/70 text-zinc-300 border border-zinc-700/50">
+        <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-semibold bg-zinc-950/70 text-white border border-zinc-700/50">
           {vehicle.cat}
         </div>
       </div>
@@ -71,7 +71,7 @@ export default function VehicleCard({ vehicle, onAction }: VehicleCardProps) {
         <div className="flex items-start justify-between mb-3">
           <div>
             <h3 className="text-white font-bold text-base">{vehicle.name}</h3>
-            <p className="text-zinc-500 text-xs mt-0.5">
+            <p className="text-zinc-300 text-xs mt-0.5">
               {vehicle.year} · {vehicle.fuel} · {vehicle.seats} lugares
             </p>
           </div>
@@ -84,7 +84,7 @@ export default function VehicleCard({ vehicle, onAction }: VehicleCardProps) {
 
         <button
           onClick={() => onAction?.(vehicle)}
-          className="w-full py-2.5 rounded-xl text-sm font-semibold border border-zinc-700 text-zinc-300 hover:bg-amber-500 hover:text-zinc-950 hover:border-amber-500 transition-all duration-200"
+          className="w-full py-2.5 rounded-xl text-sm font-semibold border border-zinc-700 text-white hover:bg-amber-500 hover:text-zinc-950 hover:border-amber-500 transition-all duration-200"
         >
           {vehicle.mode === "aluguer" ? "Reservar Agora" : "Comprar"}
         </button>

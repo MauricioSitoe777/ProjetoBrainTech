@@ -7,7 +7,7 @@ import { AdminNav } from '../components/AdminNav';
 import type { User, UserRole, UserStatus } from '../types/user';
 
 const roleConfig = {
-  admin: { label: 'Admin', className: 'bg-purple-400/10 text-purple-400 border-purple-400/20' },
+  admin: { label: 'Administrador', className: 'bg-purple-400/10 text-purple-400 border-purple-400/20' },
   cliente: { label: 'Cliente', className: 'bg-zinc-700 text-zinc-300 border-zinc-600' },
 };
 
@@ -88,7 +88,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
             { label: 'Suspensos', value: stats.suspensos, color: 'text-red-400' },
           ].map(s => (
             <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-              <p className="text-xs text-zinc-500">{s.label}</p>
+              <p className="text-xs text-zinc-300">{s.label}</p>
               <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
             </div>
           ))}
@@ -97,7 +97,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
         {/* Toolbar */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -108,7 +108,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
           <select
             value={filterRole}
             onChange={e => setFilterRole(e.target.value as UserRole | 'todos')}
-            className="bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 transition-colors"
+            className="bg-zinc-900 border border-zinc-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 transition-colors"
           >
             <option value="todos">Todos os papéis</option>
             <option value="admin">Administrador</option>
@@ -117,7 +117,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value as UserStatus | 'todos')}
-            className="bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 transition-colors"
+            className="bg-zinc-900 border border-zinc-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 transition-colors"
           >
             <option value="todos">Todos os estados</option>
             <option value="ativo">Ativo</option>
@@ -141,18 +141,18 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-zinc-800">
-                  <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">Utilizador</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider hidden sm:table-cell">Papel</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider hidden md:table-cell">Telefone</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">Estado</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider hidden lg:table-cell">Último acesso</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">Ações</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider">Utilizador</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider hidden sm:table-cell">Papel</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider hidden md:table-cell">Telefone</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider">Estado</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider hidden lg:table-cell">Último acesso</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800">
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="text-center py-12 text-zinc-500 text-sm">
+                    <td colSpan={6} className="text-center py-12 text-zinc-400 text-sm">
                       Nenhum utilizador encontrado
                     </td>
                   </tr>
@@ -172,26 +172,26 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                           </div>
                           <div>
                             <p className="text-sm font-medium text-white group-hover:text-amber-400 transition-colors">{u.nome}</p>
-                            <p className="text-xs text-zinc-500">{u.email}</p>
+                            <p className="text-xs text-zinc-400">{u.email}</p>
                           </div>
                         </button>
                       </td>
                       <td className="px-4 py-3 hidden sm:table-cell">
                         <span className={`text-xs border rounded-md px-2 py-0.5 ${role.className}`}>{role.label}</span>
                       </td>
-                      <td className="px-4 py-3 hidden md:table-cell text-sm text-zinc-400">{u.telefone}</td>
+                      <td className="px-4 py-3 hidden md:table-cell text-sm text-white">{u.telefone}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
                           <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`}></span>
-                          <span className="text-xs text-zinc-400">{status.label}</span>
+                          <span className="text-xs text-white">{status.label}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 hidden lg:table-cell text-xs text-zinc-500">{u.ultimoAcesso}</td>
+                      <td className="px-4 py-3 hidden lg:table-cell text-xs text-zinc-400">{u.ultimoAcesso}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => setDetailUser(u)}
-                            className="p-1.5 text-zinc-500 hover:text-zinc-200 transition-colors rounded-lg hover:bg-zinc-700"
+                            className="p-1.5 text-zinc-400 hover:text-zinc-200 transition-colors rounded-lg hover:bg-zinc-700"
                             title="Ver detalhes"
                           >
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -200,7 +200,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                             <>
                               <button
                                 onClick={() => handleEdit(u)}
-                                className="p-1.5 text-zinc-500 hover:text-zinc-200 transition-colors rounded-lg hover:bg-zinc-700"
+                                className="p-1.5 text-zinc-400 hover:text-zinc-200 transition-colors rounded-lg hover:bg-zinc-700"
                                 title="Editar"
                               >
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -208,7 +208,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                               {authUser?.role === 'admin' && u.id !== authUser.id && (
                                 <button
                                   onClick={() => setDeleteConfirm(u.id)}
-                                  className="p-1.5 text-zinc-500 hover:text-red-400 transition-colors rounded-lg hover:bg-red-400/10"
+                                  className="p-1.5 text-zinc-400 hover:text-red-400 transition-colors rounded-lg hover:bg-red-400/10"
                                   title="Eliminar"
                                 >
                                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
@@ -225,7 +225,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
             </table>
           </div>
           {filtered.length > 0 && (
-            <div className="px-4 py-3 border-t border-zinc-800 text-xs text-zinc-500">
+            <div className="px-4 py-3 border-t border-zinc-800 text-xs text-zinc-400">
               {filtered.length} de {users.length} utilizadores
             </div>
           )}
@@ -256,9 +256,9 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
             <h3 className="text-white font-semibold mb-1">Eliminar utilizador</h3>
-            <p className="text-zinc-400 text-sm mb-6">Esta ação é permanente e não pode ser desfeita.</p>
+            <p className="text-white text-sm mb-6">Esta ação é permanente e não pode ser desfeita.</p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteConfirm(null)} className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg py-2 text-sm transition-colors">Cancelar</button>
+              <button onClick={() => setDeleteConfirm(null)} className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg py-2 text-sm transition-colors">Cancelar</button>
               <button onClick={() => handleDelete(deleteConfirm)} className="flex-1 bg-red-500 hover:bg-red-400 text-white font-medium rounded-lg py-2 text-sm transition-colors">Eliminar</button>
             </div>
           </div>
