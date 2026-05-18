@@ -21,8 +21,8 @@ export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdm
   return (
     <nav
       className={`fixed top-0 left-0 right-0 z-50 border-b transition-colors duration-300 ${_scrolled
-          ? "bg-zinc-950/90 backdrop-blur-xl border-zinc-800"
-          : "bg-zinc-950 border-zinc-900"
+        ? "bg-zinc-950/90 backdrop-blur-xl border-zinc-800"
+        : "bg-zinc-950 border-zinc-900"
         }`}
     >
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -90,7 +90,7 @@ export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdm
             onClick={() => handleNav("simulador")}
             className="px-5 py-2 text-sm font-semibold rounded-full bg-amber-500 text-zinc-950 hover:bg-amber-400 transition-all duration-200 hover:scale-105 active:scale-95"
           >
-            Simular tudo ggg
+            Simular agora
           </button>
         </div>
 
