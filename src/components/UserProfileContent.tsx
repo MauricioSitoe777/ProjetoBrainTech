@@ -88,7 +88,6 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
         ) : (
           <div className="space-y-2">
             {alugueres.map(a => {
-              const st = statusAluguer[a.status];
               return (
                 <div key={a.id} className="flex items-center justify-between bg-zinc-800/40 rounded-xl px-4 py-3 border border-zinc-800">
                   <div>
