@@ -15,6 +15,7 @@ import { UsersPage } from "./pages/UsersPage";
 import { ClientProfilePage } from "./pages/ClientProfilePage";
 import { ReservationsPage } from "./pages/ReservationsPage";
 import { ReservationsProvider } from "./context/ReservationsContext";
+import { NotificationsProvider } from "./context/NotificationsContext";
 
 // ─── Admin shell (login gate) ────────────────────────────────────────────────
 function AdminShell({ onExit }: { onExit: () => void }) {
@@ -111,13 +112,15 @@ export default function App() {
   return (
     <AuthProvider>
       <UsersProvider>
-        <ReservationsProvider>
-          {isAdmin ? (
-            <AdminShell onExit={() => navigate("/")} />
-          ) : (
-            <LandingPage onOpenAdmin={() => navigate("/admin")} />
-          )}
-        </ReservationsProvider>
+        <NotificationsProvider>
+          <ReservationsProvider>
+            {isAdmin ? (
+              <AdminShell onExit={() => navigate("/")} />
+            ) : (
+              <LandingPage onOpenAdmin={() => navigate("/admin")} />
+            )}
+          </ReservationsProvider>
+        </NotificationsProvider>
       </UsersProvider>
     </AuthProvider>
   );

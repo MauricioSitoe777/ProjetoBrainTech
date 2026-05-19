@@ -22,12 +22,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [allUsers, setAllUsers] = useState<User[]>(() => {
-    const saved = localStorage.getItem('rentcar:users:v1');
+    const saved = localStorage.getItem('rentcar:users:v2');
     return saved ? JSON.parse(saved) : initialMockUsers;
   });
 
   useEffect(() => {
-    localStorage.setItem('rentcar:users:v1', JSON.stringify(allUsers));
+    localStorage.setItem('rentcar:users:v2', JSON.stringify(allUsers));
   }, [allUsers]);
 
   const login = async (email: string, password: string): Promise<boolean> => {

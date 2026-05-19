@@ -4,6 +4,7 @@ import { useReservations } from '../context/ReservationsContext';
 import { UserProfileContent } from '../components/UserProfileContent';
 import { VEHICLES } from '../data/constants';
 import type { ReservationStatus } from '../types/reservation';
+import { NotificationBell } from '../components/NotificationBell';
 
 const RES_STATUS: Record<ReservationStatus, { label: string; className: string }> = {
   pendente: { label: 'Pendente', className: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
@@ -52,6 +53,8 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
               </button>
             )}
             <div className="w-px h-4 bg-zinc-800" />
+            <NotificationBell />
+            <div className="w-px h-4 bg-zinc-800" />
             <button onClick={logout} className="text-white hover:text-amber-400 transition-colors text-sm">
               Sair
             </button>
@@ -70,22 +73,41 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
               <UserProfileContent user={profile} showRole={false} />
             </div>
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-              <h3 className="text-sm font-medium text-white mb-4">As minhas reservas</h3>
+              <h3 className="text-sm font-medium text-white mb-4">As minhas reservas & compras</h3>
               {reservations.length === 0 ? (
-                <p className="text-sm text-zinc-300">Ainda não tem reservas registadas.</p>
+                <p className="text-sm text-zinc-300">Ainda não tem reservas ou compras registadas.</p>
               ) : (
                 <div className="space-y-2">
                   {reservations.map(r => {
                     const st = RES_STATUS[r.status];
+                    const vehicle = VEHICLES.find(v => v.id === r.vehicleId);
+                    const isPurchase = vehicle?.mode === 'compra';
                     return (
                       <div key={r.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-zinc-800/40 rounded-xl px-4 py-3 border border-zinc-800">
                         <div>
-                          <p className="text-sm font-medium text-white">{vehicleName(r.vehicleId)}</p>
-                          <p className="text-xs text-zinc-300">{r.dataInicio} → {r.dataFim}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-white">{vehicleName(r.vehicleId)}</p>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase ${
+                              isPurchase
+                                ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                                : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                            }`}>
+                              {isPurchase ? 'Compra' : 'Aluguer'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-zinc-300">
+                            {isPurchase ? `Adquirido em ${r.dataInicio}` : `${r.dataInicio} → ${r.dataFim}`}
+                          </p>
+                          {!isPurchase && r.localLevantamento && (
+                            <p className="text-[10px] text-zinc-400 mt-1">
+                              📍 Levantamento: {r.localLevantamento} <br />
+                              🏁 Devolução: {r.localDevolucao}
+                            </p>
+                          )}
                         </div>
                         <div className="flex items-center gap-3">
                           <span className={`text-xs border rounded-md px-2 py-0.5 ${st.className}`}>{st.label}</span>
-                          <span className="text-sm text-amber-400">{r.valorTotal.toLocaleString()} MT</span>
+                          <span className="text-sm text-amber-400 font-bold">{r.valorTotal.toLocaleString("pt-PT")} MT</span>
                         </div>
                       </div>
                     );

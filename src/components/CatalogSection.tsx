@@ -22,12 +22,37 @@ const MODE_FILTERS: { key: Mode; label: string }[] = [
   { key: "compra",  label: "Compra"  },
 ];
 
-const CAT_FILTERS: { key: Cat; label: string; emoji: string }[] = [
-  { key: "suv",      label: "SUVs & Crossovers",   emoji: "🏔️" },
-  { key: "pickup",   label: "Pick-ups",           emoji: "🛻" },
-  { key: "sedan",    label: "Sedans",              emoji: "🚗" },
-  { key: "hatchback",label: "Hatchbacks",          emoji: "🚙" },
-  { key: "van",      label: "Vans / Minivans",     emoji: "🚐" },
+const CAT_FILTERS: { key: Cat; label: string; img: string; blend?: boolean }[] = [
+  {
+    key: "suv",
+    label: "SUVs & Crossovers",
+    img: "https://img.pikbest.com/png-images/20260210/red-suv-car-isolated-on-transparent-background_15826901.jpg!f305cw",
+    blend: true,
+  },
+  {
+    key: "pickup",
+    label: "Pick-ups",
+    img: "/pickup_cyan.png",
+    blend: false,
+  },
+  {
+    key: "sedan",
+    label: "Sedans",
+    img: "https://static.vecteezy.com/system/resources/thumbnails/066/972/267/small_2x/3d-luxury-sedan-car-front-view-realistic-vehicle-render-on-transparent-background-free-png.png",
+    blend: false,
+  },
+  {
+    key: "hatchback",
+    label: "Hatchbacks",
+    img: "https://png.pngtree.com/png-vector/20241116/ourmid/pngtree-3d-white-hatchback-car-side-view-on-transparent-background-png-image_14454813.png",
+    blend: true,
+  },
+  {
+    key: "van",
+    label: "Vans / Minivans",
+    img: "/van_transparent.png",
+    blend: false,
+  },
 ];
 
 export default function CatalogSection({
@@ -123,31 +148,60 @@ export default function CatalogSection({
 
         {/* ── Category pills (visible only for Aluguer / Compra) ── */}
         {mode !== "todos" && (
-          <div className="flex flex-wrap gap-2 mb-8">
+          <div className="flex flex-wrap gap-3 mb-8 items-center">
             {/* Reset pill */}
             <button
               onClick={() => setCat(null)}
-              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
+              className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-bold transition-all duration-200 border h-14 ${
                 cat === null
-                  ? "bg-zinc-700 text-white border border-zinc-600"
-                  : "bg-zinc-900 text-zinc-300 border border-zinc-800 hover:border-zinc-600 hover:text-white"
+                  ? "bg-zinc-700 text-white border-zinc-500 shadow-lg shadow-zinc-900/50"
+                  : "bg-zinc-900/60 text-zinc-400 border-zinc-800 hover:border-zinc-600 hover:text-zinc-200 hover:bg-zinc-800/80"
               }`}
             >
-              Todas
+              <div className="w-12 h-10 flex items-center justify-center shrink-0 relative overflow-visible">
+                {/* 3D Hatchback (left layered) */}
+                <img
+                  src="https://png.pngtree.com/png-vector/20241116/ourmid/pngtree-3d-white-hatchback-car-side-view-on-transparent-background-png-image_14454813.png"
+                  alt="Hatchback"
+                  className="absolute w-7 h-auto object-contain left-[-2px] bottom-[1px] mix-blend-screen scale-110 z-10"
+                />
+                {/* 3D SUV (middle/background layered) */}
+                <img
+                  src="https://img.pikbest.com/png-images/20260210/red-suv-car-isolated-on-transparent-background_15826901.jpg!f305cw"
+                  alt="SUV"
+                  className="absolute w-7 h-auto object-contain left-[10px] top-[1px] mix-blend-screen scale-110 z-0 opacity-70"
+                />
+                {/* 3D Pickup (right layered) */}
+                <img
+                  src="/pickup_cyan.png"
+                  alt="Pickup"
+                  className="absolute w-7 h-auto object-contain right-[-2px] bottom-[1px] scale-110 z-20"
+                />
+              </div>
+              <span>Todas</span>
             </button>
 
             {CAT_FILTERS.map((f) => (
               <button
                 key={f.key}
                 onClick={() => setCat(f.key)}
-                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 ${
+                className={`flex items-center gap-3 px-4 py-2 rounded-2xl text-xs font-bold transition-all duration-200 border h-14 overflow-hidden relative ${
                   cat === f.key
-                    ? "bg-zinc-700 text-white border border-zinc-500"
-                    : "bg-zinc-900 text-zinc-300 border border-zinc-800 hover:border-zinc-600 hover:text-white"
+                    ? "bg-zinc-700/80 text-white border-amber-500/60 shadow-lg shadow-amber-500/10"
+                    : "bg-zinc-900/60 text-zinc-400 border-zinc-800 hover:border-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/80"
                 }`}
               >
-                <span>{f.emoji}</span>
-                {f.label}
+                <div className="w-12 h-10 flex items-center justify-center relative overflow-hidden shrink-0">
+                  <img
+                    src={f.img}
+                    alt={f.label}
+                    className={`h-full w-auto object-contain transition-transform duration-300 hover:scale-110 ${
+                      f.blend ? "mix-blend-screen" : ""
+                    }`}
+                    style={f.blend ? {} : { filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.6))" }}
+                  />
+                </div>
+                <span className="leading-tight text-left font-semibold">{f.label}</span>
               </button>
             ))}
           </div>

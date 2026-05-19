@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { Vehicle } from '../../data/constants';
 import { useReservations } from '../../context/ReservationsContext';
 import { useAuth } from '../../context/AuthContext';
@@ -10,7 +10,7 @@ interface BookingPanelProps {
 }
 
 export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps) {
-  const { user } = useAuth();
+  const { user, allUsers } = useAuth();
   const {
     validateDates,
     checkAvailability,
@@ -21,11 +21,43 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
 
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
+  const [localLevantamento, setLocalLevantamento] = useState('Escritório Central (Av. Julius Nyerere, Maputo)');
+  const [localDevolucao, setLocalDevolucao] = useState('Escritório Central (Av. Julius Nyerere, Maputo)');
   const [clientName, setClientName] = useState(user?.nome ?? '');
   const [clientPhone, setClientPhone] = useState('');
   const [clientEmail, setClientEmail] = useState(user?.email ?? '');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Auto-preencher dados se o utilizador logado for alterado/carregado
+  useEffect(() => {
+    if (user && allUsers) {
+      const fullUser = allUsers.find(u => u.id === user.id);
+      if (fullUser) {
+        if (!clientName) setClientName(fullUser.nome);
+        if (!clientEmail) setClientEmail(fullUser.email);
+        if (!clientPhone) setClientPhone(fullUser.telefone);
+      }
+    }
+  }, [user, allUsers]);
+
+  const suggestions = useMemo(() => {
+    if (!allUsers) return [];
+    const query = clientName.trim().toLowerCase();
+    if (!query) return [];
+    return allUsers.filter(u => 
+      u.nome.toLowerCase().includes(query)
+    );
+  }, [clientName, allUsers]);
+
+  const handleSelectUser = (selectedUser: typeof allUsers[0]) => {
+    setClientName(selectedUser.nome);
+    setClientPhone(selectedUser.telefone || '');
+    setClientEmail(selectedUser.email || '');
+    setShowSuggestions(false);
+  };
 
   const dateValidation = useMemo(
     () => (dataInicio && dataFim ? validateDates(dataInicio, dataFim) : null),
@@ -76,6 +108,8 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
       status: 'pendente',
       valorTotal: quote.total,
       deposito: quote.deposito,
+      localLevantamento,
+      localDevolucao,
     });
 
     if (!result.ok) {
@@ -126,6 +160,37 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1">Local de levantamento (Pickup Location)</label>
+              <select
+                value={localLevantamento}
+                onChange={e => setLocalLevantamento(e.target.value)}
+                className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400"
+              >
+                <option value="Aeroporto de Maputo (MPM)">Aeroporto de Maputo (MPM)</option>
+                <option value="Escritório Central (Av. Julius Nyerere, Maputo)">Escritório Central (Av. Julius Nyerere, Maputo)</option>
+                <option value="Matola (Bairro Central)">Matola (Bairro Central)</option>
+                <option value="Entrega ao Domicílio (Maputo)">Entrega ao Domicílio (Maputo)</option>
+                <option value="Entrega ao Domicílio (Matola)">Entrega ao Domicílio (Matola)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1">Local de devolução (Return Location)</label>
+              <select
+                value={localDevolucao}
+                onChange={e => setLocalDevolucao(e.target.value)}
+                className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400"
+              >
+                <option value="Aeroporto de Maputo (MPM)">Aeroporto de Maputo (MPM)</option>
+                <option value="Escritório Central (Av. Julius Nyerere, Maputo)">Escritório Central (Av. Julius Nyerere, Maputo)</option>
+                <option value="Matola (Bairro Central)">Matola (Bairro Central)</option>
+                <option value="Entrega ao Domicílio (Maputo)">Entrega ao Domicílio (Maputo)</option>
+                <option value="Entrega ao Domicílio (Matola)">Entrega ao Domicílio (Matola)</option>
+              </select>
+            </div>
+          </div>
+
           {dateValidation && !dateValidation.valid && (
             <ul className="text-xs text-red-400 space-y-1 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
               {dateValidation.errors.map(err => <li key={err}>{err}</li>)}
@@ -141,34 +206,75 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
           {quote && (
             <div className="bg-zinc-800/50 border border-zinc-800 rounded-xl p-4 space-y-2 text-sm">
               <div className="flex justify-between text-zinc-400">
-                <span>{quote.days} dia(s) × {quote.dailyRate.toLocaleString()} MT</span>
-                <span>{quote.subtotal.toLocaleString()} MT</span>
+                <span>{quote.days} dia(s) × {quote.dailyRate.toLocaleString("pt-PT")} MT</span>
+                <span>{quote.subtotal.toLocaleString("pt-PT")} MT</span>
               </div>
               {quote.desconto > 0 && (
                 <div className="flex justify-between text-emerald-400">
                   <span>Desconto</span>
-                  <span>-{quote.desconto.toLocaleString()} MT</span>
+                  <span>-{quote.desconto.toLocaleString("pt-PT")} MT</span>
                 </div>
               )}
               <div className="flex justify-between text-zinc-400 text-xs">
                 <span>Taxas + depósito ({rules.depositoPercentual}%)</span>
-                <span>{(quote.total - quote.subtotal + quote.desconto).toLocaleString()} MT</span>
+                <span>{(quote.total - quote.subtotal + quote.desconto).toLocaleString("pt-PT")} MT</span>
               </div>
               <div className="flex justify-between text-white font-semibold pt-2 border-t border-zinc-700">
                 <span>Total estimado</span>
-                <span className="text-amber-400">{quote.total.toLocaleString()} MT</span>
+                <span className="text-amber-400">{quote.total.toLocaleString("pt-PT")} MT</span>
               </div>
             </div>
           )}
 
-          <div>
+          <div className="relative">
             <label className="block text-xs text-zinc-400 mb-1">Nome *</label>
-            <input value={clientName} onChange={e => setClientName(e.target.value)} required className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm" />
+            <input
+              value={clientName}
+              onChange={e => {
+                setClientName(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              required
+              placeholder="Digite para pesquisar registos..."
+              className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400"
+            />
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute left-0 right-0 mt-1 bg-zinc-800 border border-zinc-700 rounded-lg max-h-48 overflow-y-auto z-20 shadow-xl divide-y divide-zinc-700">
+                {suggestions.map(u => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => handleSelectUser(u)}
+                    className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-700/50 flex items-center justify-between transition-colors"
+                  >
+                    <div>
+                      <p className="font-semibold text-white">{u.nome}</p>
+                      <p className="text-[10px] text-zinc-400">{u.email}</p>
+                    </div>
+                    <span className="text-[10px] text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20">
+                      {u.telefone || 'Sem Telefone'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-zinc-400 mb-1">Telefone</label>
-              <input value={clientPhone} onChange={e => setClientPhone(e.target.value)} className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm" />
+              <input
+                value={clientPhone}
+                onChange={e => {
+                  let val = e.target.value;
+                  if (val && !val.startsWith('+') && /^\d/.test(val)) {
+                    val = '+258 ' + val;
+                  }
+                  setClientPhone(val);
+                }}
+                className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm"
+              />
             </div>
             <div>
               <label className="block text-xs text-zinc-400 mb-1">Email</label>

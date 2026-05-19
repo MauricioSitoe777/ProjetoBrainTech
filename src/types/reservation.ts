@@ -21,6 +21,8 @@ export interface Reservation {
   deposito: number;
   createdAt: string;
   notas?: string;
+  localLevantamento?: string;
+  localDevolucao?: string;
 }
 
 export interface BlockedPeriod {

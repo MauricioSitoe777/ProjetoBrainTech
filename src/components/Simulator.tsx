@@ -82,7 +82,6 @@ function NumberField({
   value,
   onChange,
   min,
-  step,
   suffix,
 }: {
   label: string;
@@ -92,24 +91,35 @@ function NumberField({
   step?: number;
   suffix?: string;
 }) {
-  const [raw, setRaw] = useState(String(Number.isFinite(value) ? value : 0));
+  const formatNumber = (num: number) => {
+    if (!Number.isFinite(num)) return "0";
+    return new Intl.NumberFormat("pt-PT").format(num);
+  };
+
+  const [raw, setRaw] = useState(formatNumber(value));
 
   useEffect(() => {
-    setRaw(String(Number.isFinite(value) ? value : 0));
+    setRaw(formatNumber(value));
   }, [value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const str = e.target.value;
-    setRaw(str);
-    const num = parseFloat(str);
-    if (!isNaN(num)) onChange(num);
+    const inputVal = e.target.value;
+    const cleaned = inputVal.replace(/\D/g, "");
+    if (cleaned === "") {
+      setRaw("");
+      onChange(0);
+      return;
+    }
+    const num = parseInt(cleaned, 10);
+    setRaw(formatNumber(num));
+    onChange(num);
   };
 
   const handleBlur = () => {
-    const num = parseFloat(raw);
-    const safe = isNaN(num) ? (min ?? 0) : num;
-    setRaw(String(safe));
-    onChange(safe);
+    let num = parseInt(raw.replace(/\D/g, ""), 10);
+    if (isNaN(num)) num = min ?? 0;
+    setRaw(formatNumber(num));
+    onChange(num);
   };
 
   return (
@@ -117,10 +127,8 @@ function NumberField({
       <label className="text-white text-sm font-medium block mb-2">{label}</label>
       <div className="flex items-center gap-3 rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 focus-within:border-zinc-600">
         <input
-          type="number"
+          type="text"
           value={raw}
-          min={min}
-          step={step}
           onChange={handleChange}
           onBlur={handleBlur}
           onFocus={(e) => e.currentTarget.select()}
@@ -142,21 +150,42 @@ function pmtMonthly(principal: number, months: number, monthlyRate: number): num
 
 export default function Simulator({ showClose = true }: { showClose?: boolean }) {
   const fmt = useCurrencyFormatter();
-  const { user: authUser } = useAuth();
+  const { user: authUser, allUsers } = useAuth();
   const { createReservation } = useReservations();
 
   const [flow, setFlow] = useState<FlowType>("compra");
   const [category, setCategory] = useState<Category>("func_publico");
+  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
 
   const [clientName, setClientName] = useState("");
   const [clientContact, setClientContact] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
+  // Auto-preencher dados se o utilizador logado for alterado/carregado
   useEffect(() => {
-    if (authUser) {
-      setClientName(authUser.nome);
-      setClientContact(authUser.email);
+    if (authUser && allUsers) {
+      const fullUser = allUsers.find(u => u.id === authUser.id);
+      if (fullUser) {
+        setClientName(fullUser.nome);
+        setClientContact(fullUser.telefone || fullUser.email || "");
+      }
     }
-  }, [authUser]);
+  }, [authUser, allUsers]);
+
+  const suggestions = useMemo(() => {
+    if (!allUsers) return [];
+    const query = clientName.trim().toLowerCase();
+    if (!query) return [];
+    return allUsers.filter(u => 
+      u.nome.toLowerCase().includes(query)
+    );
+  }, [clientName, allUsers]);
+
+  const handleSelectUser = (selectedUser: typeof allUsers[0]) => {
+    setClientName(selectedUser.nome);
+    setClientContact(selectedUser.telefone || selectedUser.email || "");
+    setShowSuggestions(false);
+  };
 
   // Compra
   const [vehiclePrice, setVehiclePrice] = useState(1_500_000);
@@ -180,10 +209,15 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
         localStorage.getItem("rentcar:selectedVehicle:v1");
       if (!raw) return;
       const parsed = JSON.parse(raw) as {
+        id?: number;
         mode?: "aluguer" | "compra";
         dailyRate?: number;
         vehiclePrice?: number;
       };
+
+      if (parsed.id) {
+        setSelectedVehicleId(parsed.id);
+      }
 
       if (parsed.mode === "aluguer") {
         setFlow("aluguer");
@@ -298,23 +332,40 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
 
     setHistory((h) => [entry, ...h].slice(0, 30));
 
-    // Se estiver logado e for aluguer, criar reserva real
-    if (authUser && flow === "aluguer") {
+    // Se estiver logado, criar transação real (reserva ou compra)
+    if (authUser) {
       const start = new Date();
-      const end = new Date();
-      end.setDate(start.getDate() + Math.max(1, Math.round(days)));
+      if (flow === "aluguer") {
+        const end = new Date();
+        end.setDate(start.getDate() + Math.max(1, Math.round(days)));
 
-      createReservation({
-        vehicleId: 4, // Exemplo: Toyota Hilux ou o selecionado se tivéssemos o ID
-        userId: authUser.id,
-        clientName: authUser.nome,
-        clientEmail: authUser.email,
-        dataInicio: start.toISOString().split('T')[0],
-        dataFim: end.toISOString().split('T')[0],
-        status: 'pendente',
-        valorTotal: rentTotalPayNow,
-        deposito: deposit,
-      });
+        createReservation({
+          vehicleId: selectedVehicleId ?? 4,
+          userId: authUser.id,
+          clientName: authUser.nome,
+          clientEmail: authUser.email,
+          dataInicio: start.toISOString().split('T')[0],
+          dataFim: end.toISOString().split('T')[0],
+          status: 'pendente',
+          valorTotal: rentTotalPayNow,
+          deposito: deposit,
+          localLevantamento: 'Escritório Central (Av. Julius Nyerere, Maputo)',
+          localDevolucao: 'Escritório Central (Av. Julius Nyerere, Maputo)',
+        });
+      } else if (flow === "compra") {
+        createReservation({
+          vehicleId: selectedVehicleId ?? 2,
+          userId: authUser.id,
+          clientName: authUser.nome,
+          clientEmail: authUser.email,
+          dataInicio: start.toISOString().split('T')[0],
+          dataFim: start.toISOString().split('T')[0],
+          status: 'pendente',
+          valorTotal: purchaseTotal,
+          deposito: paymentPlan === "prestacoes" ? purchasePMT : purchaseTotal,
+          notas: `Compra via plano: ${paymentPlan === "prestacoes" ? `${mesesPrestacoes} prestações` : "Pronto pagamento"}`,
+        });
+      }
     }
   };
 
@@ -408,21 +459,54 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
               </div>
             </div>
 
-            {/* Cliente */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <TextField
-                label="Nome do cliente"
-                value={clientName}
-                onChange={setClientName}
-                placeholder="Ex: Ana Mussa"
-              />
-              <TextField
-                label="Contacto (opcional)"
-                value={clientContact}
-                onChange={setClientContact}
-                placeholder="Ex: +258 84..."
-              />
-            </div>
+             {/* Cliente */}
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div className="relative">
+                 <label className="text-white text-sm font-medium block mb-2">Nome do cliente</label>
+                 <input
+                   value={clientName}
+                   onChange={(e) => {
+                     setClientName(e.target.value);
+                     setShowSuggestions(true);
+                   }}
+                   onFocus={() => setShowSuggestions(true)}
+                   onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                   placeholder="Ex: Ana Mussa"
+                   className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600"
+                 />
+                 {showSuggestions && suggestions.length > 0 && (
+                   <div className="absolute left-0 right-0 mt-1 bg-zinc-900 border border-zinc-800 rounded-xl max-h-48 overflow-y-auto z-20 shadow-xl divide-y divide-zinc-800">
+                     {suggestions.map(u => (
+                       <button
+                         key={u.id}
+                         type="button"
+                         onClick={() => handleSelectUser(u)}
+                         className="w-full text-left px-4 py-2.5 text-xs hover:bg-zinc-800/50 flex items-center justify-between transition-colors"
+                       >
+                         <div>
+                           <p className="font-semibold text-white">{u.nome}</p>
+                           <p className="text-[10px] text-zinc-400">{u.email}</p>
+                         </div>
+                         <span className="text-[10px] text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20">
+                           {u.telefone || 'Sem Telefone'}
+                         </span>
+                       </button>
+                     ))}
+                   </div>
+                 )}
+               </div>
+               <TextField
+                 label="Contacto (opcional)"
+                 value={clientContact}
+                 onChange={(val) => {
+                   if (val && !val.startsWith('+') && /^\d/.test(val)) {
+                     val = '+258 ' + val;
+                   }
+                   setClientContact(val);
+                 }}
+                 placeholder="Ex: +258 84..."
+               />
+             </div>
 
             {/* Compra */}
             {flow === "compra" ? (

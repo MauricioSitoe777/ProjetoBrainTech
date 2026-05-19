@@ -61,8 +61,15 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
 
   const field = (key: keyof typeof form) => ({
     value: form[key],
-    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
-      setForm(prev => ({ ...prev, [key]: e.target.value })),
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+      let val = e.target.value;
+      if (key === 'telefone' && !user) {
+        if (val && !val.startsWith('+') && /^\d/.test(val)) {
+          val = '+258 ' + val;
+        }
+      }
+      setForm(prev => ({ ...prev, [key]: val }));
+    }
   });
 
   return (

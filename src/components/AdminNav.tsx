@@ -1,5 +1,6 @@
 import { useAuth } from '../context/AuthContext';
 import { useRoute } from '../hooks/useRoute';
+import { NotificationBell } from './NotificationBell';
 
 const roleConfig = {
   admin: { label: 'Administrador', className: 'bg-purple-400/10 text-purple-400 border-purple-400/20' },
@@ -49,6 +50,8 @@ export function AdminNav({ subtitle, onExit }: AdminNavProps) {
                 <span className="hidden sm:inline">Site</span>
               </button>
             )}
+            <div className="w-px h-4 bg-zinc-800" />
+            <NotificationBell />
             <div className="w-px h-4 bg-zinc-800" />
             <button onClick={logout} className="text-white hover:text-amber-400 transition-colors text-sm">
               Sair

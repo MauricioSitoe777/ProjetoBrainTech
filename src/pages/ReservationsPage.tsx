@@ -132,8 +132,8 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
                 className="bg-zinc-900 border border-zinc-800 text-white rounded-lg px-3 py-2 text-sm"
               >
                 <option value="">Todas as viaturas</option>
-                {rentalVehicles.map(v => (
-                  <option key={v.id} value={v.id}>{v.name}</option>
+                {VEHICLES.map(v => (
+                  <option key={v.id} value={v.id}>{v.name} ({v.mode === 'compra' ? 'Compra' : 'Aluguer'})</option>
                 ))}
               </select>
             </div>
@@ -156,50 +156,109 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
                   )}
                   {filteredReservations.map(r => {
                     const st = STATUS_CFG[r.status];
+                    const vehicle = VEHICLES.find(v => v.id === r.vehicleId);
+                    const isPurchase = vehicle?.mode === 'compra';
                     return (
                       <tr key={r.id} className="hover:bg-zinc-800/40">
                         <td className="px-4 py-3">
                           <p className="text-sm text-white">{r.clientName}</p>
                           <p className="text-xs text-zinc-300">{r.clientPhone ?? r.clientEmail ?? '—'}</p>
                         </td>
-                        <td className="px-4 py-3 hidden md:table-cell text-sm text-white">{vehicleName(r.vehicleId)}</td>
-                        <td className="px-4 py-3 text-sm text-white">{r.dataInicio} → {r.dataFim}</td>
+                        <td className="px-4 py-3 hidden md:table-cell text-sm text-white">
+                          <div>
+                            <p className="font-medium text-white">{vehicleName(r.vehicleId)}</p>
+                            <span className={`text-[9px] px-1 py-0.2 rounded font-bold uppercase ${
+                              isPurchase
+                                ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                                : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                            }`}>
+                              {isPurchase ? 'Compra' : 'Aluguer'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="text-sm text-white">
+                            {isPurchase ? `Compra efetuada em ${r.dataInicio}` : `${r.dataInicio} → ${r.dataFim}`}
+                          </p>
+                          {!isPurchase && r.localLevantamento && (
+                            <p className="text-[10px] text-zinc-400 mt-1 leading-normal">
+                              📍 Levantamento: {r.localLevantamento} <br />
+                              🏁 Devolução: {r.localDevolucao}
+                            </p>
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           <span className={`text-xs border rounded-md px-2 py-0.5 ${st.className}`}>{st.label}</span>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex justify-end gap-1 flex-wrap">
-                            {r.status === 'pendente' && (
-                              <button
-                                onClick={() => updateReservation(r.id, { status: 'confirmada' })}
-                                className="text-xs px-2 py-1 rounded bg-emerald-400/10 text-emerald-400 hover:bg-emerald-400/20"
-                              >
-                                Confirmar
-                              </button>
-                            )}
-                            {r.status === 'confirmada' && (
-                              <button
-                                onClick={() => updateReservation(r.id, { status: 'ativa' })}
-                                className="text-xs px-2 py-1 rounded bg-blue-400/10 text-blue-400 hover:bg-blue-400/20"
-                              >
-                                Activar
-                              </button>
-                            )}
-                            {r.status === 'ativa' && (
-                              <button
-                                onClick={() => updateReservation(r.id, { status: 'concluida' })}
-                                className="text-xs px-2 py-1 rounded bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
-                              >
-                                Concluir
-                              </button>
-                            )}
-                            {r.status !== 'cancelada' && r.status !== 'concluida' && (
-                              <button
-                                onClick={() => cancelReservation(r.id)}
-                                className="text-xs px-2 py-1 rounded bg-red-400/10 text-red-400 hover:bg-red-400/20"
-                              >
-                                Cancelar
-                              </button>
+                            {isPurchase ? (
+                              // Se for COMPRA
+                              <>
+                                {r.status === 'pendente' && (
+                                  <>
+                                    <button
+                                      onClick={() => updateReservation(r.id, { status: 'concluida' })}
+                                      className="text-xs px-2 py-1 rounded bg-emerald-400/10 text-emerald-400 hover:bg-emerald-400/20"
+                                    >
+                                      Concluir Venda
+                                    </button>
+                                    <button
+                                      onClick={() => cancelReservation(r.id)}
+                                      className="text-xs px-2 py-1 rounded bg-red-400/10 text-red-400 hover:bg-red-400/20"
+                                    >
+                                      Cancelar Venda
+                                    </button>
+                                  </>
+                                )}
+                                {r.status !== 'pendente' && (
+                                  <span className="text-xs text-zinc-500 italic">—</span>
+                                )}
+                              </>
+                            ) : (
+                              // Se for ALUGUER
+                              <>
+                                {r.status === 'pendente' && (
+                                  <>
+                                    <button
+                                      onClick={() => updateReservation(r.id, { status: 'confirmada' })}
+                                      className="text-xs px-2 py-1 rounded bg-emerald-400/10 text-emerald-400 hover:bg-emerald-400/20"
+                                    >
+                                      Confirmar
+                                    </button>
+                                    <button
+                                      onClick={() => updateReservation(r.id, { status: 'concluida' })}
+                                      className="text-xs px-2 py-1 rounded bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
+                                    >
+                                      Concluir
+                                    </button>
+                                  </>
+                                )}
+                                {r.status === 'confirmada' && (
+                                  <button
+                                    onClick={() => updateReservation(r.id, { status: 'ativa' })}
+                                    className="text-xs px-2 py-1 rounded bg-blue-400/10 text-blue-400 hover:bg-blue-400/20"
+                                  >
+                                    Activar
+                                  </button>
+                                )}
+                                {r.status === 'ativa' && (
+                                  <button
+                                    onClick={() => updateReservation(r.id, { status: 'concluida' })}
+                                    className="text-xs px-2 py-1 rounded bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
+                                  >
+                                    Concluir
+                                  </button>
+                                )}
+                                {r.status !== 'cancelada' && r.status !== 'concluida' && (
+                                  <button
+                                    onClick={() => cancelReservation(r.id)}
+                                    className="text-xs px-2 py-1 rounded bg-red-400/10 text-red-400 hover:bg-red-400/20"
+                                  >
+                                    Cancelar
+                                  </button>
+                                )}
+                              </>
                             )}
                           </div>
                         </td>
