@@ -16,6 +16,8 @@ export function AdminNav({ subtitle, onExit }: AdminNavProps) {
   const { user: authUser, logout } = useAuth();
   const { path, navigate } = useRoute();
   const isReservas = path.startsWith('/admin/reservas');
+  const isFrota = path.startsWith('/admin/frota');
+  const isUsers = path === '/admin' || (!isReservas && !isFrota);
 
   return (
     <nav className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-sm sticky top-0 z-10">
@@ -63,10 +65,18 @@ export function AdminNav({ subtitle, onExit }: AdminNavProps) {
             <button
               onClick={() => navigate('/admin')}
               className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
-                !isReservas ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' : 'text-zinc-300 hover:text-white'
+                isUsers ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' : 'text-zinc-300 hover:text-white'
               }`}
             >
               Utilizadores
+            </button>
+            <button
+              onClick={() => navigate('/admin/frota')}
+              className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
+                isFrota ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' : 'text-zinc-300 hover:text-white'
+              }`}
+            >
+              Frota
             </button>
             <button
               onClick={() => navigate('/admin/reservas')}

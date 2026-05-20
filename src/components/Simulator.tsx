@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useCurrencyFormatter } from "../hooks";
 import { useAuth } from "../context/AuthContext";
 import { useReservations } from "../context/ReservationsContext";
+import { useVehicles } from "../context/VehiclesContext";
 
 const TAXA_MENSAL = 0.015;
 const MAX_MESES_PRESTACOES = 12;
@@ -152,6 +153,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
   const fmt = useCurrencyFormatter();
   const { user: authUser, allUsers } = useAuth();
   const { createReservation } = useReservations();
+  const { vehicles } = useVehicles();
 
   const [flow, setFlow] = useState<FlowType>("compra");
   const [category, setCategory] = useState<Category>("func_publico");
@@ -339,8 +341,10 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
         const end = new Date();
         end.setDate(start.getDate() + Math.max(1, Math.round(days)));
 
+        const defaultAluguerVehicle = vehicles.find(v => v.mode === 'aluguer');
+
         createReservation({
-          vehicleId: selectedVehicleId ?? 4,
+          vehicleId: selectedVehicleId ?? defaultAluguerVehicle?.id ?? 1,
           userId: authUser.id,
           clientName: authUser.nome,
           clientEmail: authUser.email,
@@ -353,8 +357,9 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
           localDevolucao: 'Escritório Central (Av. Julius Nyerere, Maputo)',
         });
       } else if (flow === "compra") {
+        const defaultCompraVehicle = vehicles.find(v => v.mode === 'compra');
         createReservation({
-          vehicleId: selectedVehicleId ?? 2,
+          vehicleId: selectedVehicleId ?? defaultCompraVehicle?.id ?? 2,
           userId: authUser.id,
           clientName: authUser.nome,
           clientEmail: authUser.email,

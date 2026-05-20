@@ -1,6 +1,6 @@
 import type { User } from '../types/user';
 import { useReservations } from '../context/ReservationsContext';
-import { VEHICLES } from '../data/constants';
+import { useVehicles } from '../context/VehiclesContext';
 import { useAuth } from '../context/AuthContext';
 
 interface UserProfileContentProps {
@@ -24,6 +24,7 @@ function initials(nome: string) {
 
 export function UserProfileContent({ user, showRole = true }: UserProfileContentProps) {
   const { reservations, updateReservation, cancelReservation } = useReservations();
+  const { vehicles } = useVehicles();
   const { user: authUser } = useAuth();
   const isAdmin = authUser?.role === 'admin';
   
@@ -32,12 +33,12 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
   
   // Separar alugueres e compras com base no modo do veículo
   const alugueres = userReservations.filter(r => {
-    const v = VEHICLES.find(veh => veh.id === r.vehicleId);
+    const v = vehicles.find(veh => veh.id === r.vehicleId);
     return !v || v.mode === 'aluguer';
   });
   
   const compras = userReservations.filter(r => {
-    const v = VEHICLES.find(veh => veh.id === r.vehicleId);
+    const v = vehicles.find(veh => veh.id === r.vehicleId);
     return v?.mode === 'compra';
   });
 
@@ -46,9 +47,9 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
   const totalComprasGasto = compras.filter(c => c.status === 'concluida' || c.status === 'confirmada' || c.status === 'ativa').reduce((s, c) => s + c.valorTotal, 0);
   const totalGasto = totalAlugueresGasto + totalComprasGasto;
 
-  const getVehicleName = (id: number) => VEHICLES.find(v => v.id === id)?.name || `Viatura #${id}`;
+  const getVehicleName = (id: number) => vehicles.find(v => v.id === id)?.name || `Viatura #${id}`;
   const getVehiclePlate = (id: number) => {
-    const v = VEHICLES.find(v => v.id === id);
+    const v = vehicles.find(v => v.id === id);
     if (v?.mode === 'compra') return 'Matrícula Pendente';
     return id === 4 ? 'MPC-1234-MP' : '—';
   };
@@ -112,7 +113,7 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
         ) : (
           <div className="space-y-2">
             {userReservations.map(a => {
-              const vehicle = VEHICLES.find(v => v.id === a.vehicleId);
+              const vehicle = vehicles.find(v => v.id === a.vehicleId);
               const isPurchase = vehicle?.mode === 'compra';
               return (
                 <div key={a.id} className="flex items-center justify-between bg-zinc-800/40 rounded-xl px-4 py-3 border border-zinc-800">

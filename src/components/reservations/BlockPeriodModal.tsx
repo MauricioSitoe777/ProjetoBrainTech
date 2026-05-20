@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { VEHICLES } from '../../data/constants';
+import { useVehicles } from '../../context/VehiclesContext';
 import type { BlockReason } from '../../types/reservation';
 import { useReservations } from '../../context/ReservationsContext';
 
@@ -16,6 +16,7 @@ const MOTIVOS: { value: BlockReason; label: string }[] = [
 ];
 
 export function BlockPeriodModal({ onClose, defaultVehicleId = null }: BlockPeriodModalProps) {
+  const { vehicles } = useVehicles();
   const { addBlock } = useReservations();
   const [vehicleId, setVehicleId] = useState<string>(defaultVehicleId === null ? 'all' : String(defaultVehicleId));
   const [dataInicio, setDataInicio] = useState('');
@@ -41,7 +42,7 @@ export function BlockPeriodModal({ onClose, defaultVehicleId = null }: BlockPeri
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl">
         <div className="flex items-center justify-between p-6 border-b border-zinc-800">
           <h2 className="text-lg font-semibold text-white">Bloquear período</h2>
-          <button type="button" onClick={onClose} className="text-zinc-400 hover:text-white">×</button>
+          <button type="button" onClick={onClose} className="text-zinc-400 hover:text-white text-xl">×</button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
@@ -52,7 +53,7 @@ export function BlockPeriodModal({ onClose, defaultVehicleId = null }: BlockPeri
               className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm"
             >
               <option value="all">Toda a frota</option>
-              {VEHICLES.filter(v => v.mode === 'aluguer').map(v => (
+              {vehicles.filter(v => v.mode === 'aluguer').map(v => (
                 <option key={v.id} value={v.id}>{v.name}</option>
               ))}
             </select>

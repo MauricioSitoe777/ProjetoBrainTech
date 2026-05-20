@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { VEHICLES } from "../data/constants";
-import type { Vehicle } from "../data/constants";
+import { useVehicles } from "../context/VehiclesContext";
+import type { Vehicle } from "../types/vehicle";
 import VehicleCard from "./VehicleCard";
 import { BookingPanel } from "./reservations/BookingPanel";
 import { useScrollTo } from "../hooks";
@@ -63,6 +63,7 @@ export default function CatalogSection({
   onOpenFlowModal?: () => void;
 }) {
   const scrollTo = useScrollTo();
+  const { vehicles } = useVehicles();
   const [mode, setMode] = useState<Mode>("todos");
   const [cat,  setCat]  = useState<Cat>(null);
   const [bookingVehicle, setBookingVehicle] = useState<Vehicle | null>(null);
@@ -72,7 +73,7 @@ export default function CatalogSection({
     setCat(null);
   };
 
-  const filtered = VEHICLES.filter((v) => {
+  const filtered = vehicles.filter((v) => {
     if (mode !== "todos" && v.mode !== mode) return false;
     if (cat  && v.cat  !== cat)              return false;
     return true;
@@ -88,8 +89,8 @@ export default function CatalogSection({
     const payload = {
       id: vehicle.id,
       mode: vehicle.mode as "aluguer" | "compra",
-      dailyRate: vehicle.mode === "aluguer" ? mt : undefined,
-      vehiclePrice: vehicle.mode === "compra" ? mt : undefined,
+      dailyRate: vehicle.mode === ("aluguer" as string) ? mt : undefined,
+      vehiclePrice: vehicle.mode === ("compra" as string) ? mt : undefined,
     };
 
     try {

@@ -19,7 +19,7 @@ import {
 } from '../lib/availability';
 import { calculateRentalTotal, parseDailyRateFromPrice } from '../lib/rentalPricing';
 import { useAuth } from './AuthContext';
-import { VEHICLES } from '../data/constants';
+import { useVehicles } from './VehiclesContext';
 import { useNotifications } from './NotificationsContext';
 
 interface ReservationsContextType {
@@ -43,6 +43,7 @@ const ReservationsContext = createContext<ReservationsContextType | null>(null);
 
 export function ReservationsProvider({ children }: { children: ReactNode }) {
   const { user: authUser } = useAuth();
+  const { vehicles } = useVehicles();
   const { addNotification } = useNotifications();
   
   const [reservations, setReservations] = useState<Reservation[]>(() => {
@@ -69,7 +70,7 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
     validateDateRange(start, end, rules);
 
   const createReservation = (data: Omit<Reservation, 'id' | 'createdAt'>) => {
-    const vehicle = VEHICLES.find(v => v.id === data.vehicleId);
+    const vehicle = vehicles.find(v => v.id === data.vehicleId);
     const isPurchase = vehicle?.mode === 'compra';
 
     if (!isPurchase) {
@@ -116,7 +117,7 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
 
         // Notificar o cliente caso o admin altere o estado
         if (data.status && data.status !== r.status) {
-          const vehicle = VEHICLES.find(v => v.id === r.vehicleId);
+          const vehicle = vehicles.find(v => v.id === r.vehicleId);
           const isPurchase = vehicle?.mode === 'compra';
           const operacaoLabel = isPurchase ? 'Compra' : 'Aluguer';
           const vehicleName = vehicle?.name || `Viatura #${r.vehicleId}`;
@@ -146,7 +147,7 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
         const next = { ...r, status: 'cancelada' as ReservationStatus };
 
         // Notificar o cliente sobre o cancelamento
-        const vehicle = VEHICLES.find(v => v.id === r.vehicleId);
+        const vehicle = vehicles.find(v => v.id === r.vehicleId);
         const isPurchase = vehicle?.mode === 'compra';
         const operacaoLabel = isPurchase ? 'Compra' : 'Aluguer';
         const vehicleName = vehicle?.name || `Viatura #${r.vehicleId}`;
@@ -182,7 +183,7 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
   };
 
   const quoteRental = (vehicleId: number, start: string, end: string) => {
-    const vehicle = VEHICLES.find(v => v.id === vehicleId);
+    const vehicle = vehicles.find(v => v.id === vehicleId);
     if (!vehicle || vehicle.mode !== 'aluguer') return null;
     const dateCheck = validateDates(start, end);
     if (!dateCheck.valid) return null;

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Vehicle } from "../data/constants";
+import type { Vehicle } from "../types/vehicle";
 
 interface VehicleCardProps {
   vehicle: Vehicle;

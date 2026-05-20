@@ -1,8 +1,8 @@
 import { useAuth } from '../context/AuthContext';
 import { useUsers } from '../context/UsersContext';
 import { useReservations } from '../context/ReservationsContext';
+import { useVehicles } from '../context/VehiclesContext';
 import { UserProfileContent } from '../components/UserProfileContent';
-import { VEHICLES } from '../data/constants';
 import type { ReservationStatus } from '../types/reservation';
 import { NotificationBell } from '../components/NotificationBell';
 
@@ -18,9 +18,10 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
   const { user: authUser, logout } = useAuth();
   const { getUser } = useUsers();
   const { reservations } = useReservations();
+  const { vehicles } = useVehicles();
 
   const profile = authUser ? getUser(authUser.id) : undefined;
-  const vehicleName = (id: number) => VEHICLES.find(v => v.id === id)?.name ?? `Viatura #${id}`;
+  const vehicleName = (id: number) => vehicles.find(v => v.id === id)?.name ?? `Viatura #${id}`;
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
@@ -80,7 +81,7 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
                 <div className="space-y-2">
                   {reservations.map(r => {
                     const st = RES_STATUS[r.status];
-                    const vehicle = VEHICLES.find(v => v.id === r.vehicleId);
+                    const vehicle = vehicles.find(v => v.id === r.vehicleId);
                     const isPurchase = vehicle?.mode === 'compra';
                     return (
                       <div key={r.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-zinc-800/40 rounded-xl px-4 py-3 border border-zinc-800">

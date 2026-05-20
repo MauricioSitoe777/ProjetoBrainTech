@@ -10,8 +10,10 @@ import PaymentsSection from "./components/PaymentsSection";
 import Footer          from "./components/Footer";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { UsersProvider } from "./context/UsersContext";
+import { VehiclesProvider } from "./context/VehiclesContext";
 import { LoginPage } from "./pages/LoginPage";
 import { UsersPage } from "./pages/UsersPage";
+import { VehiclesPage } from "./pages/VehiclesPage";
 import { ClientProfilePage } from "./pages/ClientProfilePage";
 import { ReservationsPage } from "./pages/ReservationsPage";
 import { ReservationsProvider } from "./context/ReservationsContext";
@@ -26,7 +28,7 @@ function AdminShell({ onExit }: { onExit: () => void }) {
   
   // Admins vão para utilizadores por defeito
   if (path === "/admin") return <UsersPage onExit={onExit} />;
-  
+  if (path.startsWith("/admin/frota")) return <VehiclesPage onExit={onExit} />;
   if (path.startsWith("/admin/reservas")) return <ReservationsPage onExit={onExit} />;
   return <UsersPage onExit={onExit} />;
 }
@@ -111,17 +113,19 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <UsersProvider>
-        <NotificationsProvider>
-          <ReservationsProvider>
-            {isAdmin ? (
-              <AdminShell onExit={() => navigate("/")} />
-            ) : (
-              <LandingPage onOpenAdmin={() => navigate("/admin")} />
-            )}
-          </ReservationsProvider>
-        </NotificationsProvider>
-      </UsersProvider>
+      <VehiclesProvider>
+        <UsersProvider>
+          <NotificationsProvider>
+            <ReservationsProvider>
+              {isAdmin ? (
+                <AdminShell onExit={() => navigate("/")} />
+              ) : (
+                <LandingPage onOpenAdmin={() => navigate("/admin")} />
+              )}
+            </ReservationsProvider>
+          </NotificationsProvider>
+        </UsersProvider>
+      </VehiclesProvider>
     </AuthProvider>
   );
 }

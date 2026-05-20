@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { VEHICLES } from '../../data/constants';
+import { useVehicles } from '../../context/VehiclesContext';
 import { useReservations } from '../../context/ReservationsContext';
 import {
   dateStatusForVehicle,
@@ -22,11 +22,12 @@ export function AvailabilityCalendar({ vehicleId, onSelectDate }: AvailabilityCa
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
+  const { vehicles } = useVehicles();
   const { reservations, blocks } = useReservations();
 
   const rentalVehicles = useMemo(
-    () => VEHICLES.filter(v => v.mode === 'aluguer'),
-    [],
+    () => vehicles.filter(v => v.mode === 'aluguer'),
+    [vehicles],
   );
 
   const dates = useMemo(() => getDatesInMonth(year, month), [year, month]);
@@ -91,7 +92,7 @@ export function AvailabilityCalendar({ vehicleId, onSelectDate }: AvailabilityCa
           })}
         </div>
         <div className="flex flex-wrap gap-3 mt-4 pt-3 border-t border-zinc-800">
-          {(Object.entries(STATUS_STYLES) as [keyof typeof STATUS_STYLES, string][]).map(([k, _]) => (
+          {(Object.entries(STATUS_STYLES) as [keyof typeof STATUS_STYLES, string][]).map(([k]) => (
             <div key={k} className="flex items-center gap-1.5 text-[10px] text-zinc-300 capitalize">
               <span className={`w-2 h-2 rounded-sm ${STATUS_STYLES[k].split(' ')[0]}`} />
               {k}
