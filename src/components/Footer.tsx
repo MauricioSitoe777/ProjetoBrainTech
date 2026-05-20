@@ -1,8 +1,7 @@
 const SERVICES = [
   "Aluguer de Viaturas",
   "Venda de Veículos",
-  "Financiamento",
-  "Frota Empresarial",
+  "Aluguer para Empresas",
 ] as const;
 
 const CONTACTS = [

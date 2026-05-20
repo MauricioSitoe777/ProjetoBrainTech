@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { VEHICLES } from "../data/constants";
 import type { Vehicle } from "../data/constants";
 import VehicleCard from "./VehicleCard";
 import { BookingPanel } from "./reservations/BookingPanel";
