@@ -16,6 +16,8 @@ import { ClientProfilePage } from "./pages/ClientProfilePage";
 import { ReservationsPage } from "./pages/ReservationsPage";
 import { ReservationsProvider } from "./context/ReservationsContext";
 import { NotificationsProvider } from "./context/NotificationsContext";
+import { VehiclesProvider } from "./context/VehiclesContext";
+import { VehiclesPage } from "./pages/VehiclesPage";
 
 // ─── Admin shell (login gate) ────────────────────────────────────────────────
 function AdminShell({ onExit }: { onExit: () => void }) {
@@ -28,6 +30,7 @@ function AdminShell({ onExit }: { onExit: () => void }) {
   if (path === "/admin") return <UsersPage onExit={onExit} />;
   
   if (path.startsWith("/admin/reservas")) return <ReservationsPage onExit={onExit} />;
+  if (path.startsWith("/admin/veiculos")) return <VehiclesPage onExit={onExit} />;
   return <UsersPage onExit={onExit} />;
 }
 
@@ -67,10 +70,10 @@ function LandingPage({
           onShowSimulator={() => setShowSimulator(true)}
           onOpenFlowModal={() => setFlowModalOpen(true)}
         />
-        <HowItWorks />
+        <HowItWorks onShowSimulator={() => setShowSimulator(true)} />
         <div id="simulador" />
         {showSimulator ? <Simulator /> : null}
-        <PaymentsSection />
+        <PaymentsSection onShowSimulator={() => setShowSimulator(true)} />
       </main>
       <Footer />
 
@@ -114,11 +117,13 @@ export default function App() {
       <UsersProvider>
         <NotificationsProvider>
           <ReservationsProvider>
-            {isAdmin ? (
-              <AdminShell onExit={() => navigate("/")} />
-            ) : (
-              <LandingPage onOpenAdmin={() => navigate("/admin")} />
-            )}
+            <VehiclesProvider>
+              {isAdmin ? (
+                <AdminShell onExit={() => navigate("/")} />
+              ) : (
+                <LandingPage onOpenAdmin={() => navigate("/admin")} />
+              )}
+            </VehiclesProvider>
           </ReservationsProvider>
         </NotificationsProvider>
       </UsersProvider>

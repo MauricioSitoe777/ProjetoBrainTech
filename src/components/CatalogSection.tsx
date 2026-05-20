@@ -4,6 +4,7 @@ import type { Vehicle } from "../data/constants";
 import VehicleCard from "./VehicleCard";
 import { BookingPanel } from "./reservations/BookingPanel";
 import { useScrollTo } from "../hooks";
+import { useVehicles } from "../context/VehiclesContext";
 
 type Mode = "todos" | "aluguer" | "compra";
 type Cat  = "suv" | "pickup" | "sedan" | "hatchback" | "van" | null;
@@ -63,6 +64,7 @@ export default function CatalogSection({
   onOpenFlowModal?: () => void;
 }) {
   const scrollTo = useScrollTo();
+  const { vehicles: dynamicVehicles } = useVehicles();
   const [mode, setMode] = useState<Mode>("todos");
   const [cat,  setCat]  = useState<Cat>(null);
   const [bookingVehicle, setBookingVehicle] = useState<Vehicle | null>(null);
@@ -72,7 +74,9 @@ export default function CatalogSection({
     setCat(null);
   };
 
-  const filtered = VEHICLES.filter((v) => {
+  const allVehicles = dynamicVehicles as unknown as Vehicle[];
+
+  const filtered = allVehicles.filter((v) => {
     if (mode !== "todos" && v.mode !== mode) return false;
     if (cat  && v.cat  !== cat)              return false;
     return true;
@@ -108,7 +112,7 @@ export default function CatalogSection({
   };
 
   return (
-    <section id="catalogo" className="py-20 bg-zinc-950">
+    <section id="catalogo" className="py-12 bg-zinc-950">
       <div className="max-w-7xl mx-auto px-6">
 
         {/* ── Header ── */}

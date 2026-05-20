@@ -4,11 +4,15 @@ import { useScrollTo } from "../hooks";
 /**
  * Payment methods grid + civil-servant promotional CTA banner.
  */
-export default function PaymentsSection() {
+export default function PaymentsSection({
+  onShowSimulator,
+}: {
+  onShowSimulator?: () => void;
+}) {
   const scrollTo = useScrollTo();
 
   return (
-    <section id="pagamentos" className="py-20 bg-zinc-900/30">
+    <section id="pagamentos" className="py-12 bg-zinc-900/30">
       <div className="max-w-7xl mx-auto px-6">
 
         {/* Section header */}
@@ -82,7 +86,10 @@ export default function PaymentsSection() {
               até 12 meses sem entrada.
             </p>
             <button
-              onClick={() => scrollTo("simulador")}
+              onClick={() => {
+                onShowSimulator?.();
+                scrollTo("simulador");
+              }}
               className="inline-flex items-center gap-2 px-8 py-4 rounded-full font-bold text-base bg-amber-500 text-zinc-950 hover:bg-amber-400 transition-all duration-200 hover:scale-105 active:scale-95"
             >
               Simular Agora

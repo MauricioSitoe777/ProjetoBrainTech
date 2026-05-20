@@ -58,21 +58,30 @@ function TextField({
   value,
   onChange,
   placeholder,
+  prefix,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  prefix?: string;
 }) {
   return (
     <div>
       <label className="text-white text-sm font-medium block mb-2">{label}</label>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600"
-      />
+      <div className="flex items-center w-full rounded-xl bg-zinc-950/40 border border-zinc-800 focus-within:border-zinc-600 overflow-hidden">
+        {prefix && (
+          <div className="pl-4 pr-2 py-3 text-sm text-zinc-400 font-semibold bg-zinc-900/50 border-r border-zinc-800">
+            {prefix}
+          </div>
+        )}
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="w-full bg-transparent px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none"
+        />
+      </div>
     </div>
   );
 }
@@ -83,6 +92,7 @@ function NumberField({
   onChange,
   min,
   suffix,
+  disabled,
 }: {
   label: string;
   value: number;
@@ -90,6 +100,7 @@ function NumberField({
   min?: number;
   step?: number;
   suffix?: string;
+  disabled?: boolean;
 }) {
   const formatNumber = (num: number) => {
     if (!Number.isFinite(num)) return "0";
@@ -125,14 +136,15 @@ function NumberField({
   return (
     <div>
       <label className="text-white text-sm font-medium block mb-2">{label}</label>
-      <div className="flex items-center gap-3 rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 focus-within:border-zinc-600">
+      <div className={`flex items-center gap-3 rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 ${disabled ? 'opacity-60 cursor-not-allowed' : 'focus-within:border-zinc-600'}`}>
         <input
           type="text"
           value={raw}
           onChange={handleChange}
           onBlur={handleBlur}
-          onFocus={(e) => e.currentTarget.select()}
-          className="w-full bg-transparent text-sm text-white outline-none"
+          onFocus={(e) => !disabled && e.currentTarget.select()}
+          disabled={disabled}
+          className={`w-full bg-transparent text-sm text-white outline-none ${disabled ? 'cursor-not-allowed' : ''}`}
         />
         {suffix ? <span className="text-zinc-300 text-xs font-semibold">{suffix}</span> : null}
       </div>
@@ -152,10 +164,21 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
   const fmt = useCurrencyFormatter();
   const { user: authUser, allUsers } = useAuth();
   const { createReservation } = useReservations();
+  
+  const isAdmin = authUser?.role === "admin";
 
   const [flow, setFlow] = useState<FlowType>("compra");
   const [category, setCategory] = useState<Category>("func_publico");
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
+
+  const formatContact = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, 9);
+    let formatted = '';
+    if (digits.length > 0) formatted = digits.slice(0, 2);
+    if (digits.length > 2) formatted += ' ' + digits.slice(2, 5);
+    if (digits.length > 5) formatted += ' ' + digits.slice(5, 9);
+    return formatted;
+  };
 
   const [clientName, setClientName] = useState("");
   const [clientContact, setClientContact] = useState("");
@@ -167,7 +190,8 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
       const fullUser = allUsers.find(u => u.id === authUser.id);
       if (fullUser) {
         setClientName(fullUser.nome);
-        setClientContact(fullUser.telefone || fullUser.email || "");
+        const contact = fullUser.telefone || fullUser.email || "";
+        setClientContact(formatContact(contact.replace(/^\+258\s*/, "")));
       }
     }
   }, [authUser, allUsers]);
@@ -176,14 +200,15 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
     if (!allUsers) return [];
     const query = clientName.trim().toLowerCase();
     if (!query) return [];
-    return allUsers.filter(u => 
+    return allUsers.filter(u =>
       u.nome.toLowerCase().includes(query)
     );
   }, [clientName, allUsers]);
 
   const handleSelectUser = (selectedUser: typeof allUsers[0]) => {
     setClientName(selectedUser.nome);
-    setClientContact(selectedUser.telefone || selectedUser.email || "");
+    const contact = selectedUser.telefone || selectedUser.email || "";
+    setClientContact(formatContact(contact.replace(/^\+258\s*/, "")));
     setShowSuggestions(false);
   };
 
@@ -301,24 +326,24 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
       flow === "compra"
         ? { vehiclePrice, income, purchasePMT, purchaseTotal }
         : {
-            days: Math.max(1, Math.round(days)),
-            dailyRate,
-            discountPct: Math.min(100, Math.max(0, discountPct)),
-            rentDailySubtotal,
-            rentDiscount,
-            rentDailyAfterDiscount,
-            cleaningFee,
-            logisticsFee,
-            otherFees,
-            deposit,
-            rentTotalPayNow,
-          };
+          days: Math.max(1, Math.round(days)),
+          dailyRate,
+          discountPct: Math.min(100, Math.max(0, discountPct)),
+          rentDailySubtotal,
+          rentDiscount,
+          rentDailyAfterDiscount,
+          cleaningFee,
+          logisticsFee,
+          otherFees,
+          deposit,
+          rentTotalPayNow,
+        };
 
     const entry: HistoryEntry = {
       id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
       createdAt: Date.now(),
       clientName: clientName.trim(),
-      clientContact: clientContact.trim(),
+      clientContact: clientContact.trim() ? `+258 ${clientContact.trim()}` : "",
       flow,
       category,
       paymentPlan: flow === "compra" ? paymentPlan : "pronto",
@@ -370,7 +395,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
   };
 
   return (
-    <section id="simulador" className="py-20 bg-zinc-950 relative overflow-hidden">
+    <section id="simulador" className="py-12 bg-zinc-950 relative overflow-hidden">
       {/* Ambient glow */}
       <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-5 pointer-events-none"
@@ -389,7 +414,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                 // ignore
               }
             }}
-            className="absolute right-6 top-0 -translate-y-2 w-10 h-10 rounded-full border border-zinc-800 bg-zinc-950/60 text-white hover:text-white hover:border-zinc-600 transition flex items-center justify-center"
+            className="absolute right-6 top-0 -translate-y-2 w-10 h-10 rounded-full bg-white text-zinc-950 hover:bg-zinc-200 shadow-lg transition flex items-center justify-center text-xl font-bold"
           >
             ×
           </button>
@@ -427,11 +452,10 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                   <button
                     key={o.key}
                     onClick={() => setFlow(o.key)}
-                    className={`py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
-                      flow === o.key
-                        ? "bg-amber-500 text-zinc-950"
-                        : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
-                    }`}
+                    className={`py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${flow === o.key
+                      ? "bg-amber-500 text-zinc-950"
+                      : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
+                      }`}
                   >
                     {o.label}
                   </button>
@@ -442,71 +466,70 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
             {/* Categoria */}
             <div>
               <label className="text-white text-sm font-medium block mb-3">Funcionário</label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                {(Object.keys(CATEGORY_LABEL) as Category[]).map((k) => (
-                  <button
-                    key={k}
-                    onClick={() => setCategory(k)}
-                    className={`py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
-                      category === k
-                        ? "bg-zinc-700 text-white border border-zinc-600"
-                        : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
-                    }`}
-                  >
-                    {CATEGORY_LABEL[k]}
-                  </button>
-                ))}
+              <div className="relative">
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as Category)}
+                  className="w-full appearance-none rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white font-semibold outline-none focus:border-zinc-600 cursor-pointer"
+                >
+                  {(Object.keys(CATEGORY_LABEL) as Category[]).map((k) => (
+                    <option key={k} value={k} className="bg-zinc-900 text-white">
+                      {CATEGORY_LABEL[k]}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-zinc-400">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
               </div>
             </div>
 
-             {/* Cliente */}
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <div className="relative">
-                 <label className="text-white text-sm font-medium block mb-2">Nome do cliente</label>
-                 <input
-                   value={clientName}
-                   onChange={(e) => {
-                     setClientName(e.target.value);
-                     setShowSuggestions(true);
-                   }}
-                   onFocus={() => setShowSuggestions(true)}
-                   onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                   placeholder="Ex: Ana Mussa"
-                   className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600"
-                 />
-                 {showSuggestions && suggestions.length > 0 && (
-                   <div className="absolute left-0 right-0 mt-1 bg-zinc-900 border border-zinc-800 rounded-xl max-h-48 overflow-y-auto z-20 shadow-xl divide-y divide-zinc-800">
-                     {suggestions.map(u => (
-                       <button
-                         key={u.id}
-                         type="button"
-                         onClick={() => handleSelectUser(u)}
-                         className="w-full text-left px-4 py-2.5 text-xs hover:bg-zinc-800/50 flex items-center justify-between transition-colors"
-                       >
-                         <div>
-                           <p className="font-semibold text-white">{u.nome}</p>
-                           <p className="text-[10px] text-zinc-400">{u.email}</p>
-                         </div>
-                         <span className="text-[10px] text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20">
-                           {u.telefone || 'Sem Telefone'}
-                         </span>
-                       </button>
-                     ))}
-                   </div>
-                 )}
-               </div>
-               <TextField
-                 label="Contacto (opcional)"
-                 value={clientContact}
-                 onChange={(val) => {
-                   if (val && !val.startsWith('+') && /^\d/.test(val)) {
-                     val = '+258 ' + val;
-                   }
-                   setClientContact(val);
-                 }}
-                 placeholder="Ex: +258 84..."
-               />
-             </div>
+            {/* Cliente */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="relative">
+                <label className="text-white text-sm font-medium block mb-2">Nome do cliente</label>
+                <input
+                  value={clientName}
+                  onChange={(e) => {
+                    setClientName(e.target.value);
+                    setShowSuggestions(true);
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  placeholder="Ex: Ana Mussa"
+                  className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600"
+                />
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 mt-1 bg-zinc-900 border border-zinc-800 rounded-xl max-h-48 overflow-y-auto z-20 shadow-xl divide-y divide-zinc-800">
+                    {suggestions.map(u => (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onClick={() => handleSelectUser(u)}
+                        className="w-full text-left px-4 py-2.5 text-xs hover:bg-zinc-800/50 flex items-center justify-between transition-colors"
+                      >
+                        <div>
+                          <p className="font-semibold text-white">{u.nome}</p>
+                          <p className="text-[10px] text-zinc-400">{u.email}</p>
+                        </div>
+                        <span className="text-[10px] text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20">
+                          {u.telefone || 'Sem Telefone'}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <TextField
+                label="Contacto"
+                value={clientContact}
+                onChange={(val) => setClientContact(formatContact(val))}
+                placeholder="Ex: 84..."
+                prefix="+258"
+              />
+            </div>
 
             {/* Compra */}
             {flow === "compra" ? (
@@ -523,7 +546,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                   <NumberField
                     label="Rendimento Mensal"
                     value={income}
-                    onChange={(v) => setIncome(Math.min(300_000, Math.max(0, v)))}
+                    onChange={(v) => setIncome(Math.min(100_000_000, Math.max(0, v)))}
                     min={0}
                     step={5_000}
                     suffix="MT"
@@ -540,11 +563,10 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                       <button
                         key={o.key}
                         onClick={() => setPaymentPlan(o.key)}
-                        className={`py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
-                          paymentPlan === o.key
-                            ? "bg-amber-500 text-zinc-950"
-                            : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
-                        }`}
+                        className={`py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${paymentPlan === o.key
+                          ? "bg-amber-500 text-zinc-950"
+                          : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
+                          }`}
                       >
                         {o.label}
                       </button>
@@ -585,6 +607,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                     min={0}
                     step={100}
                     suffix="MT/dia"
+                    disabled={!isAdmin}
                   />
                 </div>
 
@@ -595,6 +618,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                   min={0}
                   step={1}
                   suffix="%"
+                  disabled={!isAdmin}
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -603,20 +627,10 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                     value={cleaningFee}
                     onChange={(v) => setCleaningFee(Math.max(0, v))}
                     min={0}
-                    step={100}
+                    step={50}
                     suffix="MT"
+                    disabled={!isAdmin}
                   />
-                  <NumberField
-                    label="Caução"
-                    value={deposit}
-                    onChange={(v) => setDeposit(Math.max(0, v))}
-                    min={0}
-                    step={100}
-                    suffix="MT"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <NumberField
                     label="Taxa de logística"
                     value={logisticsFee}
@@ -624,6 +638,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                     min={0}
                     step={100}
                     suffix="MT"
+                    disabled={!isAdmin}
                   />
                   <NumberField
                     label="Outras taxas"
@@ -632,6 +647,16 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                     min={0}
                     step={100}
                     suffix="MT"
+                    disabled={!isAdmin}
+                  />
+                  <NumberField
+                    label="Caução"
+                    value={deposit}
+                    onChange={(v) => setDeposit(Math.max(0, v))}
+                    min={0}
+                    step={500}
+                    suffix="MT"
+                    disabled={!isAdmin}
                   />
                 </div>
               </>
@@ -654,13 +679,12 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                     <button
                       key={k}
                       onClick={() => setDocs((d) => ({ ...d, [k]: !d[k] }))}
-                      className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl border text-sm font-semibold transition-all ${
-                        checked
-                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
-                          : required
+                      className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl border text-sm font-semibold transition-all ${checked
+                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
+                        : required
                           ? "bg-zinc-950/30 border-amber-500/20 text-white hover:border-amber-500/40"
                           : "bg-zinc-950/30 border-zinc-800 text-zinc-300 hover:border-zinc-700"
-                      }`}
+                        }`}
                     >
                       <span className="flex items-center gap-2">
                         <span className={`inline-block w-2.5 h-2.5 rounded-full ${required ? "bg-amber-500" : "bg-zinc-700"}`} />
@@ -702,19 +726,18 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                 {flow === "compra" && paymentPlan === "prestacoes"
                   ? `Taxa referência: ${(TAXA_MENSAL * 100).toFixed(1)}% /mês · ${Math.min(MAX_MESES_PRESTACOES, Math.max(1, Math.round(mesesPrestacoes)))} meses`
                   : flow === "compra"
-                  ? "Pagamento à vista (sem prestações)."
-                  : "Inclui diárias (com desconto), taxas e caução."}
+                    ? "Pagamento à vista (sem prestações)."
+                    : "Inclui diárias (com desconto), taxas e caução."}
               </div>
             </div>
 
             {/* Elegibilidade */}
             {flow === "compra" && paymentPlan === "prestacoes" ? (
               <div
-                className={`mt-8 rounded-2xl p-5 border ${
-                  eligivel
-                    ? "bg-emerald-500/10 border-emerald-500/30"
-                    : "bg-red-500/10 border-red-500/30"
-                }`}
+                className={`mt-8 rounded-2xl p-5 border ${eligivel
+                  ? "bg-emerald-500/10 border-emerald-500/30"
+                  : "bg-red-500/10 border-red-500/30"
+                  }`}
               >
                 <div className={`text-sm font-bold mb-1 ${eligivel ? "text-emerald-400" : "text-red-400"}`}>
                   {eligivel ? "✓ Elegível para prestações" : "✗ Rendimento insuficiente"}
@@ -732,17 +755,17 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
               {(flow === "compra"
                 ? paymentPlan === "prestacoes"
                   ? ([
-                      ["Valor do Veículo", `${fmt(vehiclePrice)} MT`],
-                      ["Total a Pagar", `${fmt(purchaseTotal)} MT`],
-                    ] as [string, string][])
-                  : ([
-                      ["Valor do Veículo", `${fmt(vehiclePrice)} MT`],
-                      ["Total a Pagar", `${fmt(vehiclePrice)} MT`],
-                    ] as [string, string][])
-                : ([
-                    ["Diárias (c/ desconto)", `${fmt(rentDailyAfterDiscount)} MT`],
-                    ["Caução", `${fmt(deposit)} MT`],
+                    ["Valor do Veículo", `${fmt(vehiclePrice)} MT`],
+                    ["Total a Pagar", `${fmt(purchaseTotal)} MT`],
                   ] as [string, string][])
+                  : ([
+                    ["Valor do Veículo", `${fmt(vehiclePrice)} MT`],
+                    ["Total a Pagar", `${fmt(vehiclePrice)} MT`],
+                  ] as [string, string][])
+                : ([
+                  ["Diárias (c/ desconto)", `${fmt(rentDailyAfterDiscount)} MT`],
+                  ["Caução", `${fmt(deposit)} MT`],
+                ] as [string, string][])
               ).map(([label, val]) => (
                 <div key={label} className="bg-zinc-800/50 rounded-xl p-3">
                   <div className="text-zinc-300 text-xs">{label}</div>
@@ -754,11 +777,10 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
             <button
               onClick={handleSubmit}
               disabled={!canSubmit}
-              className={`mt-6 w-full py-3.5 rounded-xl font-bold text-sm transition-all duration-200 ${
-                canSubmit
-                  ? "bg-amber-500 text-zinc-950 hover:bg-amber-400 hover:scale-[1.02] active:scale-[0.98]"
-                  : "bg-zinc-800 text-zinc-300 cursor-not-allowed"
-              }`}
+              className={`mt-6 w-full py-3.5 rounded-xl font-bold text-sm transition-all duration-200 ${canSubmit
+                ? "bg-amber-500 text-zinc-950 hover:bg-amber-400 hover:scale-[1.02] active:scale-[0.98]"
+                : "bg-zinc-800 text-zinc-300 cursor-not-allowed"
+                }`}
             >
               Guardar no histórico
             </button>

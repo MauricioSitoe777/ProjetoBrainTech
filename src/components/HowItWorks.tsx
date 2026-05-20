@@ -1,11 +1,17 @@
 import { STEPS } from "../data/constants";
 import { useEffect, useRef, useState } from "react";
+import { useScrollTo } from "../hooks";
 
 /**
  * Premium four-step process explainer with animated connecting lines,
  * glowing icons, and scroll-triggered entrance animations.
  */
-export default function HowItWorks() {
+export default function HowItWorks({
+  onShowSimulator,
+}: {
+  onShowSimulator?: () => void;
+}) {
+  const scrollTo = useScrollTo();
   const sectionRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
@@ -19,7 +25,7 @@ export default function HowItWorks() {
   }, []);
 
   return (
-    <section id="como-funciona" className="py-24 relative overflow-hidden bg-zinc-950">
+    <section id="como-funciona" className="py-12 relative overflow-hidden bg-zinc-950">
       {/* ── Ambient background glows ── */}
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] pointer-events-none"
@@ -178,15 +184,19 @@ export default function HowItWorks() {
           <p className="text-zinc-500 text-sm mb-4">
             Pronto para começar?
           </p>
-          <a
-            href="#simulador"
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              onShowSimulator?.();
+              scrollTo("simulador");
+            }}
             className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-zinc-950 font-bold text-sm px-7 py-3 rounded-full hover:from-amber-400 hover:to-orange-400 transition-all duration-300 hover:scale-105 active:scale-95 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40"
           >
             Simular agora
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-          </a>
+          </button>
         </div>
       </div>
     </section>
