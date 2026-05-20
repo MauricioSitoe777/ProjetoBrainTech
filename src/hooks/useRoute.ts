@@ -16,6 +16,7 @@ export function useRoute() {
   const navigate = (to: string) => {
     window.history.pushState({}, "", to);
     setPath(to);
+    window.dispatchEvent(new PopStateEvent("popstate"));
     window.scrollTo(0, 0);
   };
 

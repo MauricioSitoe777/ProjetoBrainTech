@@ -4,14 +4,18 @@ import { VEHICLES } from '../data/constants';
 export interface VehicleData {
   id: number;
   name: string;
+  brand: string;
   cat: string;
   mode: string;
   price: string;
+  description?: string;
   img: string;
   images: string[];
   fuel: string;
   seats: number;
   year: number;
+  discount?: number; // percentage
+  available?: boolean;
 }
 
 interface VehiclesContextType {

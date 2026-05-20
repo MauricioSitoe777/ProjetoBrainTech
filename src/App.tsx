@@ -18,6 +18,7 @@ import { ReservationsProvider } from "./context/ReservationsContext";
 import { NotificationsProvider } from "./context/NotificationsContext";
 import { VehiclesProvider } from "./context/VehiclesContext";
 import { VehiclesPage } from "./pages/VehiclesPage";
+import VehicleDetailsPage from "./components/VehicleDetailsPage";
 
 // ─── Admin shell (login gate) ────────────────────────────────────────────────
 function AdminShell({ onExit }: { onExit: () => void }) {
@@ -50,8 +51,15 @@ function LandingPage({
       setShowSimulator(false);
       setFlowModalOpen(false);
     };
+    const openFlowHandler = () => {
+      setFlowModalOpen(true);
+    };
     window.addEventListener("rentcar:close-simulator", handler as EventListener);
-    return () => window.removeEventListener("rentcar:close-simulator", handler as EventListener);
+    window.addEventListener("rentcar:open-flow-modal", openFlowHandler as EventListener);
+    return () => {
+      window.removeEventListener("rentcar:close-simulator", handler as EventListener);
+      window.removeEventListener("rentcar:open-flow-modal", openFlowHandler as EventListener);
+    };
   }, []);
 
   return (
@@ -111,6 +119,8 @@ function LandingPage({
 export default function App() {
   const { path, navigate } = useRoute();
   const isAdmin = path.startsWith("/admin");
+  const isVehicleDetails = path.startsWith("/veiculo/");
+  const vehicleId = isVehicleDetails ? parseInt(path.split("/").pop() || "0") : 0;
 
   return (
     <AuthProvider>
@@ -120,8 +130,21 @@ export default function App() {
             <VehiclesProvider>
               {isAdmin ? (
                 <AdminShell onExit={() => navigate("/")} />
+              ) : isVehicleDetails ? (
+                <VehicleDetailsPage 
+                  vehicleId={vehicleId} 
+                  onExit={() => navigate("/")}
+                  onOpenFlowModal={() => {
+                    navigate("/");
+                    setTimeout(() => {
+                      window.dispatchEvent(new CustomEvent("rentcar:open-flow-modal"));
+                    }, 100);
+                  }}
+                />
               ) : (
-                <LandingPage onOpenAdmin={() => navigate("/admin")} />
+                <LandingPage 
+                  onOpenAdmin={() => navigate("/admin")} 
+                />
               )}
             </VehiclesProvider>
           </ReservationsProvider>

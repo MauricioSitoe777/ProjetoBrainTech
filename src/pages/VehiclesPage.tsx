@@ -7,7 +7,7 @@ const MODES = ['aluguer', 'compra'];
 const FUELS = ['Diesel', 'Gasolina', 'Híbrido', 'Eléctrico'];
 
 const emptyForm: Omit<VehicleData, 'id'> = {
-  name: '', cat: 'suv', mode: 'aluguer', price: '', img: '', images: [], fuel: 'Gasolina', seats: 5, year: 2024,
+  name: '', brand: '', cat: 'suv', mode: 'aluguer', price: '', description: '', img: '', images: [], fuel: 'Gasolina', seats: 5, year: 2024, discount: 0, available: true,
 };
 
 export function VehiclesPage({ onExit }: { onExit: () => void }) {
@@ -30,7 +30,21 @@ export function VehiclesPage({ onExit }: { onExit: () => void }) {
 
   const openEdit = (v: VehicleData) => {
     setEditId(v.id);
-    setForm({ name: v.name, cat: v.cat, mode: v.mode, price: v.price, img: v.img, images: [...v.images], fuel: v.fuel, seats: v.seats, year: v.year });
+    setForm({ 
+      name: v.name, 
+      brand: v.brand,
+      cat: v.cat, 
+      mode: v.mode, 
+      price: v.price, 
+      description: v.description ?? '',
+      img: v.img, 
+      images: [...v.images], 
+      fuel: v.fuel, 
+      seats: v.seats, 
+      year: v.year,
+      discount: v.discount ?? 0,
+      available: v.available ?? true
+    });
     setImageInput('');
     setShowForm(true);
   };
@@ -58,7 +72,7 @@ export function VehiclesPage({ onExit }: { onExit: () => void }) {
   };
 
   const handleSubmit = () => {
-    if (!form.name.trim() || !form.price.trim()) return;
+    if (!form.name.trim() || !form.price.trim() || !form.brand.trim()) return;
     const finalForm = {
       ...form,
       img: form.img || (form.images[0] ?? ''),
@@ -206,15 +220,26 @@ export function VehiclesPage({ onExit }: { onExit: () => void }) {
             </div>
 
             <div className="p-6 flex flex-col gap-4">
-              {/* Nome */}
-              <div>
-                <label className="text-white text-sm font-medium block mb-1.5">Nome do veículo *</label>
-                <input
-                  value={form.name}
-                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="Ex: Toyota Land Cruiser Prado"
-                  className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600"
-                />
+              {/* Nome e Marca */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-white text-sm font-medium block mb-1.5">Nome do veículo *</label>
+                  <input
+                    value={form.name}
+                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                    placeholder="Ex: Land Cruiser Prado"
+                    className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600"
+                  />
+                </div>
+                <div>
+                  <label className="text-white text-sm font-medium block mb-1.5">Marca *</label>
+                  <input
+                    value={form.brand}
+                    onChange={e => setForm(f => ({ ...f, brand: e.target.value }))}
+                    placeholder="Ex: Toyota"
+                    className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600"
+                  />
+                </div>
               </div>
 
               {/* Categoria + Modo */}
@@ -286,6 +311,42 @@ export function VehiclesPage({ onExit }: { onExit: () => void }) {
                 </div>
               </div>
 
+              {/* Desconto + Disponibilidade */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-white text-sm font-medium block mb-1.5">Desconto (%)</label>
+                  <input
+                    type="number"
+                    value={form.discount}
+                    onChange={e => setForm(f => ({ ...f, discount: Math.max(0, parseInt(e.target.value) || 0) }))}
+                    className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white outline-none focus:border-zinc-600"
+                  />
+                </div>
+                <div className="flex flex-col justify-end">
+                  <label className="flex items-center gap-3 cursor-pointer h-full pb-2">
+                    <input
+                      type="checkbox"
+                      checked={form.available}
+                      onChange={e => setForm(f => ({ ...f, available: e.target.checked }))}
+                      className="w-4 h-4 rounded border-zinc-800 bg-zinc-950 text-amber-500"
+                    />
+                    <span className="text-white text-sm font-medium">Disponível</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Descrição */}
+              <div>
+                <label className="text-white text-sm font-medium block mb-1.5">Descrição detalhada</label>
+                <textarea
+                  value={form.description}
+                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                  placeholder="Descreva as características, vantagens e detalhes do veículo..."
+                  rows={4}
+                  className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600 resize-none"
+                />
+              </div>
+
               {/* Imagens */}
               <div>
                 <label className="text-white text-sm font-medium block mb-1.5">Imagens ({form.images.length})</label>
@@ -347,9 +408,9 @@ export function VehiclesPage({ onExit }: { onExit: () => void }) {
                 </button>
                 <button
                   onClick={handleSubmit}
-                  disabled={!form.name.trim() || !form.price.trim()}
+                  disabled={!form.name.trim() || !form.price.trim() || !form.brand.trim()}
                   className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition ${
-                    form.name.trim() && form.price.trim()
+                    form.name.trim() && form.price.trim() && form.brand.trim()
                       ? 'bg-amber-500 text-zinc-950 hover:bg-amber-400'
                       : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
                   }`}

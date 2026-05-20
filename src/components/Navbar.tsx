@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { NAV_LINKS } from "../data/constants";
 import { useScrollTo } from "../hooks";
+import { useRoute } from "../hooks/useRoute";
 
 interface NavbarProps {
   scrolled: boolean;
@@ -11,11 +12,22 @@ interface NavbarProps {
 export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdmin }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const scrollTo = useScrollTo();
+  const { path, navigate } = useRoute();
 
   const handleNav = (id: string) => {
-    if (id === "simulador") onShowSimulator?.();
-    scrollTo(id);
     setMenuOpen(false);
+
+    if (path !== "/") {
+      navigate("/");
+      // Aguarda a navegação e renderização da landing page antes de fazer scroll
+      setTimeout(() => {
+        if (id === "simulador") onShowSimulator?.();
+        scrollTo(id);
+      }, 100);
+    } else {
+      if (id === "simulador") onShowSimulator?.();
+      scrollTo(id);
+    }
   };
 
   return (
@@ -28,8 +40,11 @@ export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdm
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
 
         {/* Logo */}
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center">
+        <div 
+          className="flex items-center gap-2 cursor-pointer group"
+          onClick={() => navigate("/")}
+        >
+          <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
               <path d="M5 17H3a2 2 0 01-2-2V9a2 2 0 012-2h11l5 5v3a2 2 0 01-2 2h-1M14 17a2 2 0 11-4 0 2 2 0 014 0zM8 17a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
