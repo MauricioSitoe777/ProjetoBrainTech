@@ -48,39 +48,6 @@ type HistoryEntry = {
 
 const HISTORY_KEY = "rentcar:clientHistory:v1";
 
-function TextField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  prefix,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  prefix?: string;
-}) {
-  return (
-    <div>
-      <label className="text-white text-sm font-medium block mb-2">{label}</label>
-      <div className="flex items-center w-full rounded-xl bg-zinc-950/40 border border-zinc-800 focus-within:border-zinc-600 overflow-hidden">
-        {prefix && (
-          <div className="pl-4 pr-2 py-3 text-sm text-zinc-400 font-semibold bg-zinc-900/50 border-r border-zinc-800">
-            {prefix}
-          </div>
-        )}
-        <input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className="w-full bg-transparent px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none"
-        />
-      </div>
-    </div>
-  );
-}
-
 function NumberField({
   label,
   value,
