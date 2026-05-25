@@ -77,13 +77,13 @@ export default function PaymentsSection({
               className="text-white text-3xl md:text-4xl font-black mb-4"
               style={{ fontFamily: "'Archivo', sans-serif" }}
             >
-              Pague 
+              Aluguer
               <br />
-              Enquanto Usa
+              Simplificado
             </h3>
             <p className="text-zinc-400 text-base max-w-xl mx-auto mb-8">
-              Desconto direto no salário. Taxas preferenciais e prazo
-              até 12 meses sem entrada.
+              Taxas preferenciais para funcionários públicos e privados.
+              Simule agora o custo do seu aluguer com total transparência.
             </p>
             <button
               onClick={() => {

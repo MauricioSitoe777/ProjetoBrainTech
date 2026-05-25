@@ -7,12 +7,9 @@ import { useUsers } from "../context/UsersContext";
 import { useRoute } from "../hooks/useRoute";
 import { CATEGORY_LABEL, DOC_LABEL } from "../data/constants";
 
-const TAXA_MENSAL = 0.015;
-const MAX_MESES_PRESTACOES = 12;
-
-type FlowType = "compra" | "aluguer";
+type FlowType = "aluguer";
 type Category = "func_publico" | "func_privado" | "empreendedor";
-type PaymentPlan = "pronto" | "prestacoes";
+type PaymentPlan = "pronto";
 
 type DocumentKey =
   | "bi"
@@ -21,18 +18,6 @@ type DocumentKey =
   | "contrato_trabalho"
   | "carta_conducao"
   | "declaracao_bairro";
-
-const REQUIRED_DOCS_VENDA: Record<Category, readonly DocumentKey[]> = {
-  func_publico: ["bi", "nuit", "declaracao_rendimento"],
-  func_privado: ["contrato_trabalho", "bi", "nuit", "declaracao_rendimento"],
-  empreendedor: ["bi", "nuit"],
-} as const;
-
-const REQUIRED_DOCS_VENDA_PRONTO: Record<Category, readonly DocumentKey[]> = {
-  func_publico: ["bi", "nuit", "declaracao_bairro"],
-  func_privado: ["bi", "nuit", "declaracao_bairro"],
-  empreendedor: ["bi", "nuit", "declaracao_bairro"],
-} as const;
 
 const REQUIRED_DOCS_ALUGUER: Record<Category, readonly DocumentKey[]> = {
   func_publico: ["bi", "nuit", "carta_conducao"],
@@ -121,14 +106,6 @@ function NumberField({
   );
 }
 
-function pmtMonthly(principal: number, months: number, monthlyRate: number): number {
-  if (!(principal > 0) || !(months > 0)) return 0;
-  const r = monthlyRate;
-  if (r === 0) return principal / months;
-  const pow = Math.pow(1 + r, months);
-  return (principal * r * pow) / (pow - 1);
-}
-
 export default function Simulator({ showClose = true }: { showClose?: boolean }) {
   const fmt = useCurrencyFormatter();
   const { user: authUser, allUsers } = useAuth();
@@ -145,7 +122,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
   
   const isAdmin = authUser?.role === "admin";
 
-  const [flow, setFlow] = useState<FlowType>("compra");
+  const flow: FlowType = "aluguer";
   const [category, setCategory] = useState<Category>("func_publico");
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
 
@@ -161,6 +138,15 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
   const [clientName, setClientName] = useState("");
   const [clientContact, setClientContact] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const [docs, setDocs] = useState<Record<DocumentKey, boolean>>({
+    bi: false,
+    nuit: false,
+    declaracao_rendimento: false,
+    contrato_trabalho: false,
+    carta_conducao: false,
+    declaracao_bairro: false,
+  });
 
   // Auto-preencher dados se o utilizador logado for alterado/carregado
   useEffect(() => {
@@ -198,12 +184,6 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
     setShowSuggestions(false);
   };
 
-  // Compra
-  const [vehiclePrice, setVehiclePrice] = useState(1_500_000);
-  const [income, setIncome] = useState(80_000);
-  const [paymentPlan, setPaymentPlan] = useState<PaymentPlan>("prestacoes");
-  const [mesesPrestacoes, setMesesPrestacoes] = useState(12);
-
   // Aluguer
   const [days, setDays] = useState(3);
   const [dailyRate, setDailyRate] = useState(8_500);
@@ -231,56 +211,20 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
       }
 
       if (parsed.mode === "aluguer") {
-        setFlow("aluguer");
         if (typeof parsed.dailyRate === "number" && Number.isFinite(parsed.dailyRate) && parsed.dailyRate > 0) {
           setDailyRate(parsed.dailyRate);
         }
-      } else if (parsed.mode === "compra") {
-        setFlow("compra");
-        if (typeof parsed.vehiclePrice === "number" && Number.isFinite(parsed.vehiclePrice) && parsed.vehiclePrice > 0) {
-          setVehiclePrice(parsed.vehiclePrice);
-        }
-        setPaymentPlan("prestacoes");
       }
     } catch {
       // ignore
     }
   }, []);
 
-  const [docs, setDocs] = useState<Record<DocumentKey, boolean>>({
-    bi: false,
-    nuit: false,
-    declaracao_rendimento: false,
-    contrato_trabalho: false,
-    carta_conducao: false,
-    declaracao_bairro: false,
-  });
-
   const requiredDocs = useMemo(() => {
-    if (flow === "compra") {
-      return paymentPlan === "pronto" ? REQUIRED_DOCS_VENDA_PRONTO[category] : REQUIRED_DOCS_VENDA[category];
-    }
     return REQUIRED_DOCS_ALUGUER[category];
-  }, [flow, category, paymentPlan]);
+  }, [category]);
 
   const docsOk = requiredDocs.every((k) => docs[k]);
-
-  const purchasePMT = useMemo(() => {
-    if (flow !== "compra") return 0;
-    if (paymentPlan !== "prestacoes") return 0;
-    const n = Math.min(MAX_MESES_PRESTACOES, Math.max(1, Math.round(mesesPrestacoes)));
-    return pmtMonthly(vehiclePrice, n, TAXA_MENSAL);
-  }, [flow, paymentPlan, mesesPrestacoes, vehiclePrice]);
-
-  const purchaseTotal = useMemo(() => {
-    if (flow !== "compra") return 0;
-    if (paymentPlan === "pronto") return vehiclePrice;
-    const n = Math.min(MAX_MESES_PRESTACOES, Math.max(1, Math.round(mesesPrestacoes)));
-    return purchasePMT * n;
-  }, [flow, paymentPlan, vehiclePrice, purchasePMT, mesesPrestacoes]);
-
-  const maxPmt = income * 0.3;
-  const eligivel = flow === "compra" && paymentPlan === "prestacoes" ? purchasePMT <= maxPmt : true;
 
   const rentDailySubtotal = dailyRate * Math.max(1, Math.round(days));
   const rentDiscount = rentDailySubtotal * (Math.min(100, Math.max(0, discountPct)) / 100);
@@ -306,7 +250,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
     }
   }, [history]);
 
-  const canSubmit = clientName.trim().length >= 2 && docsOk && (flow === "aluguer" || eligivel);
+  const canSubmit = clientName.trim().length >= 2 && docsOk;
 
   const handleSubmit = () => {
     if (!canSubmit) return;
@@ -318,22 +262,19 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
 
     const submittedDocs = (Object.keys(docs) as DocumentKey[]).filter((k) => docs[k]);
 
-    const values: Record<string, number> =
-      flow === "compra"
-        ? { vehiclePrice, income, purchasePMT, purchaseTotal }
-        : {
-          days: Math.max(1, Math.round(days)),
-          dailyRate,
-          discountPct: Math.min(100, Math.max(0, discountPct)),
-          rentDailySubtotal,
-          rentDiscount,
-          rentDailyAfterDiscount,
-          cleaningFee,
-          logisticsFee,
-          otherFees,
-          deposit,
-          rentTotalPayNow,
-        };
+    const values: Record<string, number> = {
+      days: Math.max(1, Math.round(days)),
+      dailyRate,
+      discountPct: Math.min(100, Math.max(0, discountPct)),
+      rentDailySubtotal,
+      rentDiscount,
+      rentDailyAfterDiscount,
+      cleaningFee,
+      logisticsFee,
+      otherFees,
+      deposit,
+      rentTotalPayNow,
+    };
 
     const entry: HistoryEntry = {
       id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -342,11 +283,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
       clientContact: clientContact.trim() ? `+258 ${clientContact.trim()}` : "",
       flow,
       category,
-      paymentPlan: flow === "compra" ? paymentPlan : "pronto",
-      mesesPrestacoes:
-        flow === "compra" && paymentPlan === "prestacoes"
-          ? Math.min(MAX_MESES_PRESTACOES, Math.max(1, Math.round(mesesPrestacoes)))
-          : undefined,
+      paymentPlan: "pronto",
       values,
       submittedDocs,
     };
@@ -366,44 +303,25 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
       });
 
       const start = new Date();
-      if (flow === "aluguer") {
-        const end = new Date();
-        end.setDate(start.getDate() + Math.max(1, Math.round(days)));
+      const end = new Date();
+      end.setDate(start.getDate() + Math.max(1, Math.round(days)));
 
-        createReservation({
-          vehicleId: selectedVehicleId ?? 4,
-          userId: authUser.id,
-          clientName: authUser.nome,
-          clientEmail: authUser.email,
-          dataInicio: start.toISOString().split('T')[0],
-          dataFim: end.toISOString().split('T')[0],
-          horaLevantamento: "09:00",
-          horaDevolucao: "17:00",
-          motivoViagem: "Simulação via sistema",
-          status: 'pendente',
-          valorTotal: rentTotalPayNow,
-          deposito: deposit,
-          localLevantamento: 'Escritório Central (Av. Julius Nyerere, Maputo)',
-          localDevolucao: 'Escritório Central (Av. Julius Nyerere, Maputo)',
-        });
-      } else if (flow === "compra") {
-        createReservation({
-          vehicleId: selectedVehicleId ?? 2,
-          userId: authUser.id,
-          clientName: authUser.nome,
-          clientEmail: authUser.email,
-          dataInicio: start.toISOString().split('T')[0],
-          dataFim: start.toISOString().split('T')[0],
-          horaLevantamento: "09:00",
-          horaDevolucao: "09:00",
-          status: 'pendente',
-          valorTotal: purchaseTotal,
-          deposito: paymentPlan === "prestacoes" ? purchasePMT : purchaseTotal,
-          notas: `Compra via plano: ${paymentPlan === "prestacoes" ? `${mesesPrestacoes} prestações` : "Pronto pagamento"}`,
-          totalPrestacoes: paymentPlan === "prestacoes" ? mesesPrestacoes : undefined,
-          prestacoesPagas: paymentPlan === "prestacoes" ? 0 : undefined,
-        });
-      }
+      createReservation({
+        vehicleId: selectedVehicleId ?? 4,
+        userId: authUser.id,
+        clientName: authUser.nome,
+        clientEmail: authUser.email,
+        dataInicio: start.toISOString().split('T')[0],
+        dataFim: end.toISOString().split('T')[0],
+        horaLevantamento: "09:00",
+        horaDevolucao: "17:00",
+        motivoViagem: "Simulação via sistema",
+        status: 'pendente',
+        valorTotal: rentTotalPayNow,
+        deposito: deposit,
+        localLevantamento: 'Escritório Central (Av. Julius Nyerere, Maputo)',
+        localDevolucao: 'Escritório Central (Av. Julius Nyerere, Maputo)',
+      });
     }
   };
 
@@ -436,16 +354,16 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
         {/* Header */}
         <div className="text-center mb-12">
           <div className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-3">
-            Compra & Aluguer
+            Aluguer
           </div>
           <h2
             className="text-white text-4xl md:text-5xl font-black"
             style={{ fontFamily: "'Archivo', sans-serif" }}
           >
-            Simulador
+            Simulador de Aluguer
           </h2>
           <p className="text-zinc-200 text-base mt-4 max-w-xl mx-auto">
-            Escolha a categoria do cliente, submeta documentos e simule pagamentos (compra) ou custos (aluguer).
+            Escolha a categoria do cliente, submeta documentos e simule os custos do seu aluguer.
           </p>
         </div>
 
@@ -453,28 +371,6 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
 
           {/* ── Controls panel ── */}
           <div className="bg-zinc-900 rounded-3xl border border-zinc-800 p-8 flex flex-col gap-8">
-
-            {/* Serviço */}
-            <div>
-              <label className="text-white text-lg font-bold block mb-3">Serviço</label>
-              <div className="grid grid-cols-2 gap-2">
-                {([
-                  { key: "compra", label: "Compra (Venda)" },
-                  { key: "aluguer", label: "Aluguer" },
-                ] as const).map((o) => (
-                  <button
-                    key={o.key}
-                    onClick={() => setFlow(o.key)}
-                    className={`py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${flow === o.key
-                      ? "bg-amber-500 text-zinc-950"
-                      : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
-                      }`}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
-            </div>
 
             {/* Categoria */}
             <div>
@@ -570,136 +466,75 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
               </div>
             </div>
 
-            {/* Compra */}
-            {flow === "compra" ? (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <NumberField
-                    label="Valor do Veículo"
-                    value={vehiclePrice}
-                    onChange={(v) => setVehiclePrice(Math.min(8_000_000, Math.max(0, v)))}
-                    min={0}
-                    step={50_000}
-                    suffix="MT"
-                  />
-                  <NumberField
-                    label="Rendimento Mensal"
-                    value={income}
-                    onChange={(v) => setIncome(Math.min(100_000_000, Math.max(0, v)))}
-                    min={0}
-                    step={5_000}
-                    suffix="MT"
-                  />
-                </div>
+            {/* Aluguer */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <NumberField
+                label="Dias"
+                value={days}
+                onChange={(v) => setDays(Math.max(1, Math.round(v)))}
+                min={1}
+                step={1}
+                suffix="dias"
+              />
+              <NumberField
+                label="Custo diário"
+                value={dailyRate}
+                onChange={(v) => setDailyRate(Math.max(0, v))}
+                min={0}
+                step={100}
+                suffix="MT/dia"
+                disabled={!isAdmin}
+              />
+            </div>
 
-                <div>
-                  <label className="text-white text-sm font-medium block mb-3">Plano de Pagamento</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {([
-                      { key: "pronto", label: "Pronto pagamento" },
-                      { key: "prestacoes", label: "Por prestações" },
-                    ] as const).map((o) => (
-                      <button
-                        key={o.key}
-                        onClick={() => setPaymentPlan(o.key)}
-                        className={`py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${paymentPlan === o.key
-                          ? "bg-amber-500 text-zinc-950"
-                          : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
-                          }`}
-                      >
-                        {o.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="text-zinc-300 text-xs mt-2">
-                    Prestações: máximo {MAX_MESES_PRESTACOES} meses.
-                  </div>
-                </div>
+            <NumberField
+              label="Desconto"
+              value={discountPct}
+              onChange={(v) => setDiscountPct(Math.min(100, Math.max(0, v)))}
+              min={0}
+              step={1}
+              suffix="%"
+              disabled={!isAdmin}
+            />
 
-                {paymentPlan === "prestacoes" ? (
-                  <NumberField
-                    label="Meses"
-                    value={mesesPrestacoes}
-                    onChange={(v) => setMesesPrestacoes(Math.min(MAX_MESES_PRESTACOES, Math.max(1, Math.round(v))))}
-                    min={1}
-                    step={1}
-                    suffix="meses"
-                  />
-                ) : null}
-              </>
-            ) : (
-              <>
-                {/* Aluguer */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <NumberField
-                    label="Dias"
-                    value={days}
-                    onChange={(v) => setDays(Math.max(1, Math.round(v)))}
-                    min={1}
-                    step={1}
-                    suffix="dias"
-                  />
-                  <NumberField
-                    label="Custo diário"
-                    value={dailyRate}
-                    onChange={(v) => setDailyRate(Math.max(0, v))}
-                    min={0}
-                    step={100}
-                    suffix="MT/dia"
-                    disabled={!isAdmin}
-                  />
-                </div>
-
-                <NumberField
-                  label="Desconto"
-                  value={discountPct}
-                  onChange={(v) => setDiscountPct(Math.min(100, Math.max(0, v)))}
-                  min={0}
-                  step={1}
-                  suffix="%"
-                  disabled={!isAdmin}
-                />
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <NumberField
-                    label="Taxa de limpeza"
-                    value={cleaningFee}
-                    onChange={(v) => setCleaningFee(Math.max(0, v))}
-                    min={0}
-                    step={50}
-                    suffix="MT"
-                    disabled={!isAdmin}
-                  />
-                  <NumberField
-                    label="Taxa de logística"
-                    value={logisticsFee}
-                    onChange={(v) => setLogisticsFee(Math.max(0, v))}
-                    min={0}
-                    step={100}
-                    suffix="MT"
-                    disabled={!isAdmin}
-                  />
-                  <NumberField
-                    label="Outras taxas"
-                    value={otherFees}
-                    onChange={(v) => setOtherFees(Math.max(0, v))}
-                    min={0}
-                    step={100}
-                    suffix="MT"
-                    disabled={!isAdmin}
-                  />
-                  <NumberField
-                    label="Caução"
-                    value={deposit}
-                    onChange={(v) => setDeposit(Math.max(0, v))}
-                    min={0}
-                    step={500}
-                    suffix="MT"
-                    disabled={!isAdmin}
-                  />
-                </div>
-              </>
-            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <NumberField
+                label="Taxa de limpeza"
+                value={cleaningFee}
+                onChange={(v) => setCleaningFee(Math.max(0, v))}
+                min={0}
+                step={50}
+                suffix="MT"
+                disabled={!isAdmin}
+              />
+              <NumberField
+                label="Taxa de logística"
+                value={logisticsFee}
+                onChange={(v) => setLogisticsFee(Math.max(0, v))}
+                min={0}
+                step={100}
+                suffix="MT"
+                disabled={!isAdmin}
+              />
+              <NumberField
+                label="Outras taxas"
+                value={otherFees}
+                onChange={(v) => setOtherFees(Math.max(0, v))}
+                min={0}
+                step={100}
+                suffix="MT"
+                disabled={!isAdmin}
+              />
+              <NumberField
+                label="Caução"
+                value={deposit}
+                onChange={(v) => setDeposit(Math.max(0, v))}
+                min={0}
+                step={500}
+                suffix="MT"
+                disabled={!isAdmin}
+              />
+            </div>
 
             {/* Documentos */}
             <div>
@@ -748,68 +583,26 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
           <div className="bg-zinc-900 rounded-3xl border border-zinc-800 p-8 flex flex-col justify-between">
             <div>
               <div className="text-zinc-300 text-sm mb-2">
-                {flow === "compra"
-                  ? paymentPlan === "prestacoes"
-                    ? "Prestação Mensal Estimada"
-                    : "Total (Pronto pagamento)"
-                  : "Total a pagar (no levantamento)"}
+                Total a pagar (no levantamento)
               </div>
               <div
                 className="text-5xl font-black text-white mb-1"
                 style={{ fontFamily: "'Archivo', sans-serif" }}
               >
-                {flow === "compra"
-                  ? paymentPlan === "prestacoes"
-                    ? fmt(purchasePMT)
-                    : fmt(vehiclePrice)
-                  : fmt(rentTotalPayNow)}
+                {fmt(rentTotalPayNow)}
                 <span className="text-2xl text-zinc-400 ml-2">MT</span>
               </div>
               <div className="text-zinc-300 text-xs mt-2">
-                {flow === "compra" && paymentPlan === "prestacoes"
-                  ? `Taxa referência: ${(TAXA_MENSAL * 100).toFixed(1)}% /mês · ${Math.min(MAX_MESES_PRESTACOES, Math.max(1, Math.round(mesesPrestacoes)))} meses`
-                  : flow === "compra"
-                    ? "Pagamento à vista (sem prestações)."
-                    : "Inclui diárias (com desconto), taxas e caução."}
+                Inclui diárias (com desconto), taxas e caução.
               </div>
             </div>
 
-            {/* Elegibilidade */}
-            {flow === "compra" && paymentPlan === "prestacoes" ? (
-              <div
-                className={`mt-8 rounded-2xl p-5 border ${eligivel
-                  ? "bg-emerald-500/10 border-emerald-500/30"
-                  : "bg-red-500/10 border-red-500/30"
-                  }`}
-              >
-                <div className={`text-sm font-bold mb-1 ${eligivel ? "text-emerald-400" : "text-red-400"}`}>
-                  {eligivel ? "✓ Elegível para prestações" : "✗ Rendimento insuficiente"}
-                </div>
-                <div className="text-zinc-200 text-xs leading-relaxed">
-                  {eligivel
-                    ? `A prestação (${fmt(purchasePMT)} MT) está dentro do limite de 30% do salário (${fmt(maxPmt)} MT).`
-                    : `A prestação (${fmt(purchasePMT)} MT) excede 30% do salário. Reduza o valor ou aumente o prazo.`}
-                </div>
-              </div>
-            ) : null}
-
             {/* Resumo */}
             <div className="mt-6 grid grid-cols-2 gap-3">
-              {(flow === "compra"
-                ? paymentPlan === "prestacoes"
-                  ? ([
-                    ["Valor do Veículo", `${fmt(vehiclePrice)} MT`],
-                    ["Prestação Mensal", `${fmt(purchasePMT)} MT`],
-                  ] as [string, string][])
-                  : ([
-                    ["Valor do Veículo", `${fmt(vehiclePrice)} MT`],
-                    ["Total a Pagar", `${fmt(vehiclePrice)} MT`],
-                  ] as [string, string][])
-                : ([
-                  ["Diárias (c/ desconto)", `${fmt(rentDailyAfterDiscount)} MT`],
-                  ["Caução", `${fmt(deposit)} MT`],
-                ] as [string, string][])
-              ).map(([label, val]) => (
+              {([
+                ["Diárias (c/ desconto)", `${fmt(rentDailyAfterDiscount)} MT`],
+                ["Caução", `${fmt(deposit)} MT`],
+              ] as [string, string][]).map(([label, val]) => (
                 <div key={label} className="bg-zinc-800/50 rounded-xl p-3">
                   <div className="text-zinc-300 text-xs">{label}</div>
                   <div className="text-white font-bold text-sm mt-1">{val}</div>
@@ -852,26 +645,18 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                         <div>
                           <div className="text-white font-bold text-sm">{h.clientName}</div>
                           <div className="text-zinc-300 text-xs mt-0.5">
-                            {new Date(h.createdAt).toLocaleString("pt-MZ")} · {h.flow === "compra" ? "Compra" : "Aluguer"} · {CATEGORY_LABEL[h.category]}
+                            {new Date(h.createdAt).toLocaleString("pt-MZ")} · Aluguer · {CATEGORY_LABEL[h.category]}
                           </div>
                         </div>
                         <div className="text-right">
                           <div className="text-amber-400 font-black text-sm">
-                            {h.flow === "compra"
-                              ? h.paymentPlan === "prestacoes"
-                                ? fmt(h.values.purchasePMT)
-                                : fmt(h.values.vehiclePrice ?? 0)
-                              : fmt(h.values.rentTotalPayNow ?? 0)}
+                            {fmt(h.values.rentTotalPayNow ?? 0)}
                             <span className="text-zinc-400 font-bold ml-1">
-                              {h.flow === "compra" && h.paymentPlan === "prestacoes" ? "MT/mês" : "MT"}
+                              MT
                             </span>
                           </div>
                           <div className="text-zinc-400 text-xs">
-                            {h.flow === "compra"
-                              ? h.paymentPlan === "prestacoes"
-                                ? `Preço do Carro: ${fmt(h.values.vehiclePrice)} MT · ${h.mesesPrestacoes} meses`
-                                : "Pronto"
-                              : `${h.values.days ?? ""} dias`}
+                            {h.values.days ?? ""} dias
                           </div>
                         </div>
                       </div>

@@ -3,7 +3,7 @@ import { useScrollTo } from "../hooks";
 
 const PHRASES = [
   { text: "Alugue", anim: "enterLeft" },
-  { text: "compra", anim: "enterUp" },
+  { text: "connosco", anim: "enterUp" },
   { text: "com a", anim: "enterRight" },
 ] as const;
 
@@ -125,7 +125,7 @@ export default function Hero({ onShowSimulator }: { onShowSimulator?: () => void
             className="px-8 py-4 rounded-full font-bold text-base border border-white/20 text-zinc-300 hover:border-amber-500/50 hover:text-white backdrop-blur-sm bg-white/5 transition-all duration-200"
             style={{ fontFamily: "'Archivo', sans-serif" }}
           >
-            Simular Prestações
+            Simular Aluguer
           </button>
         </div>
       </div>

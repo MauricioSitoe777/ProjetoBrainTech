@@ -60,17 +60,15 @@ export default function VehicleDetailsPage({
       return;
     }
 
-    if (vehicle.mode === "aluguer") {
-      setBookingVehicle(vehicle);
+    if (vehicle.mode === "compra") {
       return;
     }
 
     const mt = Number(String(vehicle.price).replace(/[^\d]/g, "")) || 0;
     const payload = {
       id: vehicle.id,
-      mode: vehicle.mode as "aluguer" | "compra",
-      dailyRate: vehicle.mode === "aluguer" ? mt : undefined,
-      vehiclePrice: vehicle.mode === "compra" ? mt : undefined,
+      mode: "aluguer" as const,
+      dailyRate: mt,
     };
 
     try {

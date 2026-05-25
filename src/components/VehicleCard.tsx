@@ -108,18 +108,20 @@ export default function VehicleCard({ vehicle, onAction }: VehicleCardProps) {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onAction?.(vehicle);
+            if (vehicle.mode === "aluguer") {
+              onAction?.(vehicle);
+            }
           }}
-          disabled={vehicle.mode === "aluguer" && vehicle.available === false}
+          disabled={vehicle.mode === "compra" || (vehicle.mode === "aluguer" && vehicle.available === false)}
           className={`w-full py-4 rounded-2xl text-xs font-black uppercase tracking-widest border transition-all duration-300 ${
-            vehicle.mode === "aluguer" && vehicle.available === false
+            (vehicle.mode === "aluguer" && vehicle.available === false) || vehicle.mode === "compra"
               ? "border-zinc-800 bg-zinc-900/50 text-zinc-600 cursor-not-allowed"
               : "border-zinc-800 text-white hover:bg-amber-500 hover:text-zinc-950 hover:border-amber-500 hover:shadow-lg hover:shadow-amber-500/20"
           }`}
         >
           {vehicle.mode === "aluguer" 
             ? (vehicle.available === false ? "Indisponível" : "Reservar Agora") 
-            : "Comprar"}
+            : "Brevemente"}
         </button>
       </div>
     </div>

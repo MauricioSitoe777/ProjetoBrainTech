@@ -147,7 +147,7 @@ export type Vehicle = (typeof VEHICLES)[number];
 
 export const STEPS = [
   { n: "01", title: "Escolha o Veículo",       desc: "Filtre por categoria, preço ou modalidade no catálogo digital.",               icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" },
-  { n: "02", title: "Calcule Prestações",      desc: "Simulações para funcionários públicos e privados, com descontos exclusivos para clientes.",      icon: "M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z" },
+  { n: "02", title: "Simule o Aluguer",        desc: "Simulações para funcionários públicos e privados, com taxas personalizadas.",      icon: "M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z" },
   { n: "03", title: "Pague como quiser",      desc: "Pagamento digital — M-Pesa, e-Mola ou transferência bancária.",           icon: "M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" },
   { n: "04", title: "Receba as Chaves",        desc: "Entrega rápida em Maputo — receba o seu veículo com total comodidade.",               icon: "M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" },
 ];
@@ -176,7 +176,7 @@ export const PAYMENT_METHODS = [
 export const NAV_LINKS = [
   ["catalogo",      "Catálogo"],
   ["como-funciona", "Como Funciona"],
-  ["simulador",     "Simulador"],
+  ["simulador",     "Simulador de Aluguer"],
   ["pagamentos",    "Pagamentos"],
 ];
 

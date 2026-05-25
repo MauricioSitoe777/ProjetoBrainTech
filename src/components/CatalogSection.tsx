@@ -12,7 +12,6 @@ type Cat  = "suv" | "pickup" | "sedan" | "hatchback" | "van" | null;
 
 const MODE_FILTERS: { key: Mode; label: string }[] = [
   { key: "todos", label: "Todos" },
-  { key: "compra", label: "Compra" },
   { key: "aluguer", label: "Aluguer" },
 ];
 
@@ -130,17 +129,15 @@ export default function CatalogSection({
       return;
     }
 
-    if (vehicle.mode === "aluguer") {
-      setBookingVehicle(vehicle);
+    if (vehicle.mode === "compra") {
       return;
     }
 
     const mt = Number(String(vehicle.price).replace(/[^\d]/g, "")) || 0;
     const payload = {
       id: vehicle.id,
-      mode: vehicle.mode as "aluguer" | "compra",
-      dailyRate: vehicle.mode === "aluguer" ? mt : undefined,
-      vehiclePrice: vehicle.mode === "compra" ? mt : undefined,
+      mode: "aluguer" as const,
+      dailyRate: mt,
     };
 
     try {
