@@ -1,6 +1,6 @@
 import type { User } from '../types/user';
 import { useReservations } from '../context/ReservationsContext';
-import { VEHICLES } from '../data/constants';
+import { VEHICLES, CATEGORY_LABEL, DOC_LABEL } from '../data/constants';
 import { useAuth } from '../context/AuthContext';
 
 interface UserProfileContentProps {
@@ -89,11 +89,11 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
 
       <div className="grid grid-cols-2 gap-3">
         {[
-          { label: 'Telefone', value: user.telefone },
+          { label: 'Telefone', value: user.telefone || '—' },
+          { label: 'Categoria', value: user.category ? CATEGORY_LABEL[user.category] : 'Não definida' },
           { label: 'BI', value: user.bi || '—' },
-          { label: 'Endereço', value: user.endereco || '—' },
+          { label: 'NUIT', value: user.nuit || '—' },
           { label: 'Membro desde', value: user.dataCriacao },
-          { label: 'Último acesso', value: user.ultimoAcesso },
           { label: 'Estado', value: user.status === 'ativo' ? 'Ativo' : user.status === 'inativo' ? 'Inativo' : 'Suspenso' },
         ].map(item => (
           <div key={item.label}>
@@ -102,6 +102,27 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
           </div>
         ))}
       </div>
+
+      {user.documentos && Object.keys(user.documentos).length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium text-white mb-3">Documentos Arquivados</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {(Object.entries(user.documentos) as [keyof typeof DOC_LABEL, boolean][]).map(([key, exists]) => (
+              <div 
+                key={key} 
+                className={`flex items-center justify-between px-3 py-2 rounded-lg border text-xs ${
+                  exists 
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
+                    : 'bg-zinc-800/30 border-zinc-800 text-zinc-500'
+                }`}
+              >
+                <span>{DOC_LABEL[key] || key}</span>
+                <span>{exists ? '✓' : '—'}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div>
         <h3 className="text-sm font-medium text-white mb-3">Histórico de Transações</h3>

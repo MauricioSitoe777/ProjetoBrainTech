@@ -5,6 +5,7 @@ import { UserModal } from '../components/UserModal';
 import { UserDetail } from '../components/UserDetail';
 import { AdminNav } from '../components/AdminNav';
 import type { User, UserRole, UserStatus } from '../types/user';
+import { CATEGORY_LABEL } from '../data/constants';
 
 const roleConfig = {
   admin: { label: 'Administrador', className: 'bg-purple-400/10 text-purple-400 border-purple-400/20' },
@@ -143,6 +144,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                 <tr className="border-b border-zinc-800">
                   <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider">Utilizador</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider hidden sm:table-cell">Papel</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider hidden md:table-cell">Categoria</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider hidden md:table-cell">Telefone</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider">Estado</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider hidden lg:table-cell">Último acesso</th>
@@ -178,6 +180,9 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                       </td>
                       <td className="px-4 py-3 hidden sm:table-cell">
                         <span className={`text-xs border rounded-md px-2 py-0.5 ${role.className}`}>{role.label}</span>
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell text-sm text-zinc-300">
+                        {u.category ? CATEGORY_LABEL[u.category] : '—'}
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell text-sm text-white">{u.telefone}</td>
                       <td className="px-4 py-3">

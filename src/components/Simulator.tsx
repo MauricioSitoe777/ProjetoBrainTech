@@ -3,6 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useCurrencyFormatter } from "../hooks";
 import { useAuth } from "../context/AuthContext";
 import { useReservations } from "../context/ReservationsContext";
+import { useUsers } from "../context/UsersContext";
+import { useRoute } from "../hooks/useRoute";
+import { CATEGORY_LABEL, DOC_LABEL } from "../data/constants";
 
 const TAXA_MENSAL = 0.015;
 const MAX_MESES_PRESTACOES = 12;
@@ -15,28 +18,20 @@ type DocumentKey =
   | "bi"
   | "nuit"
   | "declaracao_rendimento"
-  | "contrato_trabalho";
-
-const CATEGORY_LABEL: Record<Category, string> = {
-  func_publico: "Público",
-  func_privado: "Privado",
-  empreendedor: "Empreendedor",
-};
-
-const DOC_LABEL: Record<DocumentKey, string> = {
-  bi: "B.I",
-  nuit: "NUIT",
-  declaracao_rendimento: "Declaração de Rendimento",
-  contrato_trabalho: "Contrato de trabalho",
-};
+  | "contrato_trabalho"
+  | "carta_conducao";
 
 const REQUIRED_DOCS_VENDA: Record<Category, readonly DocumentKey[]> = {
   func_publico: ["bi", "nuit", "declaracao_rendimento"],
   func_privado: ["contrato_trabalho", "bi", "nuit", "declaracao_rendimento"],
-  empreendedor: ["declaracao_rendimento"],
+  empreendedor: ["bi", "nuit"],
 } as const;
 
-const REQUIRED_DOCS_ALUGUER = REQUIRED_DOCS_VENDA;
+const REQUIRED_DOCS_ALUGUER: Record<Category, readonly DocumentKey[]> = {
+  func_publico: ["bi", "nuit", "carta_conducao"],
+  func_privado: ["bi", "nuit", "carta_conducao"],
+  empreendedor: ["bi", "nuit", "carta_conducao"],
+} as const;
 
 type HistoryEntry = {
   id: string;
@@ -163,7 +158,16 @@ function pmtMonthly(principal: number, months: number, monthlyRate: number): num
 export default function Simulator({ showClose = true }: { showClose?: boolean }) {
   const fmt = useCurrencyFormatter();
   const { user: authUser, allUsers } = useAuth();
+  const { updateUser, getUser } = useUsers();
   const { createReservation } = useReservations();
+  const { navigate } = useRoute();
+
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
+  // Get full user data from context to have documents
+  const currentUser = useMemo(() => {
+    return authUser ? getUser(authUser.id) : undefined;
+  }, [authUser, getUser]);
   
   const isAdmin = authUser?.role === "admin";
 
@@ -186,15 +190,23 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
 
   // Auto-preencher dados se o utilizador logado for alterado/carregado
   useEffect(() => {
-    if (authUser && allUsers) {
-      const fullUser = allUsers.find(u => u.id === authUser.id);
-      if (fullUser) {
-        setClientName(fullUser.nome);
-        const contact = fullUser.telefone || fullUser.email || "";
-        setClientContact(formatContact(contact.replace(/^\+258\s*/, "")));
+    if (currentUser) {
+      setClientName(currentUser.nome);
+      const contact = currentUser.telefone || currentUser.email || "";
+      setClientContact(formatContact(contact.replace(/^\+258\s*/, "")));
+      
+      if (currentUser.category) {
+        setCategory(currentUser.category as Category);
+      }
+      
+      if (currentUser.documentos) {
+        setDocs(prev => ({
+          ...prev,
+          ...currentUser.documentos
+        }));
       }
     }
-  }, [authUser, allUsers]);
+  }, [currentUser]);
 
   const suggestions = useMemo(() => {
     if (!allUsers) return [];
@@ -266,6 +278,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
     nuit: false,
     declaracao_rendimento: false,
     contrato_trabalho: false,
+    carta_conducao: false,
   });
 
   const requiredDocs = useMemo(() => {
@@ -320,6 +333,12 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
 
   const handleSubmit = () => {
     if (!canSubmit) return;
+
+    if (!authUser) {
+      setShowLoginPrompt(true);
+      return;
+    }
+
     const submittedDocs = (Object.keys(docs) as DocumentKey[]).filter((k) => docs[k]);
 
     const values: Record<string, number> =
@@ -357,8 +376,18 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
 
     setHistory((h) => [entry, ...h].slice(0, 30));
 
-    // Se estiver logado, criar transação real (reserva ou compra)
+    // Se estiver logado, atualizar documentos no perfil e criar transação real
     if (authUser) {
+      // Persistir dados no perfil do utilizador (categoria, contacto e documentos)
+      updateUser(authUser.id, {
+        category,
+        telefone: clientContact.trim() ? `+258 ${clientContact.trim()}` : undefined,
+        documentos: {
+          ...currentUser?.documentos,
+          ...docs
+        }
+      });
+
       const start = new Date();
       if (flow === "aluguer") {
         const end = new Date();
@@ -371,6 +400,9 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
           clientEmail: authUser.email,
           dataInicio: start.toISOString().split('T')[0],
           dataFim: end.toISOString().split('T')[0],
+          horaLevantamento: "09:00",
+          horaDevolucao: "17:00",
+          motivoViagem: "Simulação via sistema",
           status: 'pendente',
           valorTotal: rentTotalPayNow,
           deposito: deposit,
@@ -385,6 +417,8 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
           clientEmail: authUser.email,
           dataInicio: start.toISOString().split('T')[0],
           dataFim: start.toISOString().split('T')[0],
+          horaLevantamento: "09:00",
+          horaDevolucao: "09:00",
           status: 'pendente',
           valorTotal: purchaseTotal,
           deposito: paymentPlan === "prestacoes" ? purchasePMT : purchaseTotal,
@@ -465,12 +499,22 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
 
             {/* Categoria */}
             <div>
-              <label className="text-white text-sm font-medium block mb-3">Funcionário</label>
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-white text-sm font-medium block">Funcionário</label>
+                {currentUser?.category && (
+                  <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20">
+                    Definido no Perfil
+                  </span>
+                )}
+              </div>
               <div className="relative">
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value as Category)}
-                  className="w-full appearance-none rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white font-semibold outline-none focus:border-zinc-600 cursor-pointer"
+                  disabled={!!currentUser?.category}
+                  className={`w-full appearance-none rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white font-semibold outline-none focus:border-zinc-600 ${
+                    currentUser?.category ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                  }`}
                 >
                   {(Object.keys(CATEGORY_LABEL) as Category[]).map((k) => (
                     <option key={k} value={k} className="bg-zinc-900 text-white">
@@ -478,11 +522,13 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                     </option>
                   ))}
                 </select>
-                <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-zinc-400">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
+                {!currentUser?.category && (
+                  <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-zinc-400">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -493,15 +539,19 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                 <input
                   value={clientName}
                   onChange={(e) => {
+                    if (authUser) return;
                     setClientName(e.target.value);
                     setShowSuggestions(true);
                   }}
-                  onFocus={() => setShowSuggestions(true)}
+                  onFocus={() => !authUser && setShowSuggestions(true)}
                   onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   placeholder="Ex: Ana Mussa"
-                  className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600"
+                  readOnly={!!authUser}
+                  className={`w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600 ${
+                    authUser ? 'opacity-60 cursor-not-allowed' : ''
+                  }`}
                 />
-                {showSuggestions && suggestions.length > 0 && (
+                {showSuggestions && suggestions.length > 0 && !authUser && (
                   <div className="absolute left-0 right-0 mt-1 bg-zinc-900 border border-zinc-800 rounded-xl max-h-48 overflow-y-auto z-20 shadow-xl divide-y divide-zinc-800">
                     {suggestions.map(u => (
                       <button
@@ -522,13 +572,23 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                   </div>
                 )}
               </div>
-              <TextField
-                label="Contacto"
-                value={clientContact}
-                onChange={(val) => setClientContact(formatContact(val))}
-                placeholder="Ex: 84..."
-                prefix="+258"
-              />
+              <div className="relative">
+                <label className="text-white text-sm font-medium block mb-2">Contacto</label>
+                <div className="flex items-center w-full rounded-xl bg-zinc-950/40 border border-zinc-800 focus-within:border-zinc-600 overflow-hidden">
+                  <div className="pl-4 pr-2 py-3 text-sm text-zinc-400 font-semibold bg-zinc-900/50 border-r border-zinc-800">
+                    +258
+                  </div>
+                  <input
+                    value={clientContact}
+                    onChange={(e) => !authUser && setClientContact(formatContact(e.target.value))}
+                    placeholder="Ex: 84..."
+                    readOnly={!!authUser}
+                    className={`w-full bg-transparent px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none ${
+                      authUser ? 'opacity-60 cursor-not-allowed' : ''
+                    }`}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Compra */}
@@ -672,24 +732,28 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {(Object.keys(DOC_LABEL) as DocumentKey[]).map((k) => {
-                  const required = requiredDocs.includes(k);
+                {requiredDocs.map((k) => {
                   const checked = docs[k];
+                  const alreadyOnFile = currentUser?.documentos?.[k] === true;
+                  
                   return (
                     <button
                       key={k}
                       onClick={() => setDocs((d) => ({ ...d, [k]: !d[k] }))}
                       className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl border text-sm font-semibold transition-all ${checked
                         ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
-                        : required
-                          ? "bg-zinc-950/30 border-amber-500/20 text-white hover:border-amber-500/40"
-                          : "bg-zinc-950/30 border-zinc-800 text-zinc-300 hover:border-zinc-700"
+                        : "bg-zinc-950/30 border-amber-500/20 text-white hover:border-amber-500/40"
                         }`}
                     >
                       <span className="flex items-center gap-2">
-                        <span className={`inline-block w-2.5 h-2.5 rounded-full ${required ? "bg-amber-500" : "bg-zinc-700"}`} />
-                        {DOC_LABEL[k]}
-                        {required ? <span className="text-amber-400 text-xs font-black ml-1">OBRIG.</span> : null}
+                        <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500" />
+                        <div className="flex flex-col items-start">
+                          <span>{DOC_LABEL[k]}</span>
+                          {alreadyOnFile && (
+                            <span className="text-[9px] text-emerald-400 font-black uppercase tracking-tighter">Arquivado no Perfil</span>
+                          )}
+                        </div>
+                        {!alreadyOnFile ? <span className="text-amber-400 text-xs font-black ml-1">OBRIG.</span> : null}
                       </span>
                       <span className={checked ? "text-emerald-400" : "text-zinc-400"}>
                         {checked ? "✓" : "—"}
@@ -841,6 +905,44 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
 
         </div>
       </div>
+
+      {/* Login Suggestion Modal */}
+      {showLoginPrompt && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            onClick={() => setShowLoginPrompt(false)}
+          />
+          <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M13.8 12H3" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-black text-white mb-2">Autenticação Necessária</h3>
+              <p className="text-zinc-400 text-sm mb-8">
+                Para concluir esta simulação e guardar o seu histórico, por favor inicie sessão na sua conta primeiro.
+              </p>
+              
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => navigate("/admin")}
+                  className="w-full py-4 rounded-2xl bg-amber-500 text-zinc-950 font-black uppercase tracking-widest hover:bg-amber-400 transition-all"
+                >
+                  Fazer Login
+                </button>
+                <button
+                  onClick={() => setShowLoginPrompt(false)}
+                  className="w-full py-4 rounded-2xl border border-zinc-800 text-zinc-400 font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all"
+                >
+                  Continuar a Simular
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

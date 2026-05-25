@@ -6,6 +6,7 @@ interface AuthContextType {
   user: AuthUser | null;
   allUsers: User[];
   login: (email: string, password: string) => Promise<boolean>;
+  register: (user: Omit<User, 'id' | 'dataCriacao' | 'ultimoAcesso' | 'totalAlugueres'>) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
   addUser: (user: Omit<User, 'id' | 'dataCriacao' | 'ultimoAcesso' | 'totalAlugueres'>) => void;
@@ -48,6 +49,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return false;
   };
 
+  const register = async (userData: Omit<User, 'id' | 'dataCriacao' | 'ultimoAcesso' | 'totalAlugueres'>): Promise<boolean> => {
+    setIsLoading(true);
+    await new Promise(r => setTimeout(r, 800));
+    
+    const newUser: User = {
+      ...userData,
+      id: `u${Date.now()}`,
+      dataCriacao: new Date().toISOString().split('T')[0],
+      ultimoAcesso: new Date().toISOString().split('T')[0],
+      totalAlugueres: 0,
+    };
+    
+    setAllUsers(prev => [...prev, newUser]);
+    setUser({ id: newUser.id, nome: newUser.nome, email: newUser.email, role: newUser.role });
+    setIsLoading(false);
+    return true;
+  };
+
   const logout = () => setUser(null);
 
   const addUser = (userData: Omit<User, 'id' | 'dataCriacao' | 'ultimoAcesso' | 'totalAlugueres'>) => {
@@ -74,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user, 
       allUsers, 
       login, 
+      register,
       logout, 
       isLoading,
       addUser,

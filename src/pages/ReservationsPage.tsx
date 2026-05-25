@@ -178,12 +178,19 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
                         </td>
                         <td className="px-4 py-3">
                           <p className="text-sm text-white">
-                            {isPurchase ? `Compra efetuada em ${r.dataInicio}` : `${r.dataInicio} → ${r.dataFim}`}
+                            {isPurchase 
+                              ? `Compra efetuada em ${r.dataInicio}` 
+                              : `${r.dataInicio} (${r.horaLevantamento}) → ${r.dataFim} (${r.horaDevolucao})`}
                           </p>
                           {!isPurchase && r.localLevantamento && (
                             <p className="text-[10px] text-zinc-400 mt-1 leading-normal">
-                              📍 Levantamento: {r.localLevantamento} <br />
-                              🏁 Devolução: {r.localDevolucao}
+                              📍 {r.localLevantamento} <br />
+                              🏁 {r.localDevolucao}
+                            </p>
+                          )}
+                          {r.motivoViagem && (
+                            <p className="text-[10px] text-amber-500 mt-1 italic">
+                              📝 Motivo: {r.motivoViagem}
                             </p>
                           )}
                         </td>

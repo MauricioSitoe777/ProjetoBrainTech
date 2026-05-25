@@ -179,3 +179,17 @@ export const NAV_LINKS = [
   ["simulador",     "Simulador"],
   ["pagamentos",    "Pagamentos"],
 ];
+
+export const CATEGORY_LABEL: Record<string, string> = {
+  func_publico: "Público",
+  func_privado: "Privado",
+  empreendedor: "Empreendedor",
+};
+
+export const DOC_LABEL: Record<string, string> = {
+  bi: "B.I",
+  nuit: "NUIT",
+  declaracao_rendimento: "Declaração de Rendimento",
+  contrato_trabalho: "Contrato de trabalho",
+  carta_conducao: "Carta de Condução",
+};

@@ -20,6 +20,8 @@ export interface VehicleData {
 
 interface VehiclesContextType {
   vehicles: VehicleData[];
+  searchTerm: string;
+  setSearchTerm: (term: string) => void;
   addVehicle: (vehicle: Omit<VehicleData, 'id'>) => void;
   updateVehicle: (id: number, vehicle: Partial<VehicleData>) => void;
   removeVehicle: (id: number) => void;
@@ -30,6 +32,7 @@ const VehiclesContext = createContext<VehiclesContextType | null>(null);
 const STORAGE_KEY = 'rentcar:vehicles:v1';
 
 export function VehiclesProvider({ children }: { children: ReactNode }) {
+  const [searchTerm, setSearchTerm] = useState("");
   const [vehicles, setVehicles] = useState<VehicleData[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -58,7 +61,7 @@ export function VehiclesProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <VehiclesContext.Provider value={{ vehicles, addVehicle, updateVehicle, removeVehicle }}>
+    <VehiclesContext.Provider value={{ vehicles, searchTerm, setSearchTerm, addVehicle, updateVehicle, removeVehicle }}>
       {children}
     </VehiclesContext.Provider>
   );

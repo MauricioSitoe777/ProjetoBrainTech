@@ -16,6 +16,9 @@ export interface Reservation {
   clientPhone?: string;
   dataInicio: string;
   dataFim: string;
+  horaLevantamento: string;
+  horaDevolucao: string;
+  motivoViagem?: string;
   status: ReservationStatus;
   valorTotal: number;
   deposito: number;

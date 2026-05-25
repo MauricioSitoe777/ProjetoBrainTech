@@ -4,28 +4,22 @@ import VehicleCard from "./VehicleCard";
 import { BookingPanel } from "./reservations/BookingPanel";
 import { useScrollTo } from "../hooks";
 import { useVehicles } from "../context/VehiclesContext";
+import { useAuth } from "../context/AuthContext";
+import { useRoute } from "../hooks/useRoute";
 
 type Mode = "todos" | "aluguer" | "compra";
 type Cat  = "suv" | "pickup" | "sedan" | "hatchback" | "van" | null;
 
-const CAT_DESCRIPTIONS: Record<string, string> = {
-  suv: "Todo o terreno — Devido às condições das estradas fora dos centros urbanos e à necessidade de maior altura em relação ao solo.",
-  pickup: "Carrinhas de Caixa Aberta — Essenciais para uso comercial, agricultura, construção e terrenos difíceis.",
-  sedan: "Preferidos por famílias pelo conforto e porta-malas espaçoso, tanto para uso urbano quanto para viagens longas.",
-  hatchback: "Compactos — Carros de baixo consumo de combustível, facilidade de estacionamento e preços acessíveis, sendo ideais para o dia a dia.",
-  van: "Para transporte privado de grandes famílias quanto para transporte público e logística de carga leve.",
-};
-
 const MODE_FILTERS: { key: Mode; label: string }[] = [
-  { key: "todos",   label: "Todos"   },
+  { key: "todos", label: "Todos" },
   { key: "aluguer", label: "Aluguer" },
-  { key: "compra",  label: "Compra"  },
+  { key: "compra", label: "Compra" },
 ];
 
 const CAT_FILTERS: { key: Cat; label: string; img: string; blend?: boolean }[] = [
   {
     key: "suv",
-    label: "SUVs & Crossovers",
+    label: "SUVs",
     img: "https://img.pikbest.com/png-images/20260210/red-suv-car-isolated-on-transparent-background_15826901.jpg!f305cw",
     blend: true,
   },
@@ -38,8 +32,8 @@ const CAT_FILTERS: { key: Cat; label: string; img: string; blend?: boolean }[] =
   {
     key: "sedan",
     label: "Sedans",
-    img: "https://static.vecteezy.com/system/resources/thumbnails/066/972/267/small_2x/3d-luxury-sedan-car-front-view-realistic-vehicle-render-on-transparent-background-free-png.png",
-    blend: false,
+    img: "https://www.freeiconspng.com/uploads/black-sedan-car-png-2.png",
+    blend: true,
   },
   {
     key: "hatchback",
@@ -63,13 +57,15 @@ export default function CatalogSection({
   onOpenFlowModal?: () => void;
 }) {
   const scrollTo = useScrollTo();
-  const { vehicles: dynamicVehicles } = useVehicles();
+  const { navigate } = useRoute();
+  const { user } = useAuth();
+  const { vehicles: dynamicVehicles, searchTerm, setSearchTerm } = useVehicles();
   const [mode, setMode] = useState<Mode>("todos");
   const [cat,  setCat]  = useState<Cat>(null);
   const [bookingVehicle, setBookingVehicle] = useState<Vehicle | null>(null);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   // New filters state
-  const [search, setSearch] = useState("");
   const [brand, setBrand] = useState("todos");
   const [maxPrice, setMaxPrice] = useState<number>(10000000); // High default
   const [onlyDiscount, setOnlyDiscount] = useState(false);
@@ -78,7 +74,7 @@ export default function CatalogSection({
   const handleMode = (m: Mode) => {
     setMode(m);
     setCat(null);
-    setSearch("");
+    setSearchTerm("");
     setBrand("todos");
     setOnlyDiscount(false);
     setOnlyAvailable(false);
@@ -89,22 +85,15 @@ export default function CatalogSection({
 
   const uniqueBrands = Array.from(new Set(
     allVehicles
-      .filter(v => mode === "todos" || v.mode === mode)
+      .filter(v => v && (mode === "todos" || v.mode === mode))
       .map(v => v.brand)
+      .filter(Boolean) // Remove null/undefined/empty brands
   )).sort();
 
-  const isFiltered = cat !== null || search !== "" || brand !== "todos" || onlyDiscount || onlyAvailable || (mode === "aluguer" ? maxPrice < 20000 : maxPrice < 15000000);
-
-  const resetFilters = () => {
-    setCat(null);
-    setSearch("");
-    setBrand("todos");
-    setOnlyDiscount(false);
-    setOnlyAvailable(false);
-    setMaxPrice(mode === "aluguer" ? 20000 : 15000000);
-  };
-
   const filtered = allVehicles.filter((v) => {
+    // Safety check for vehicle data
+    if (!v) return false;
+
     // Mode filter
     if (mode !== "todos" && v.mode !== mode) return false;
 
@@ -114,11 +103,16 @@ export default function CatalogSection({
     // Brand filter
     if (brand !== "todos" && v.brand !== brand) return false;
 
-    // Search filter (name or brand)
-    if (search && !v.name.toLowerCase().includes(search.toLowerCase()) && !v.brand.toLowerCase().includes(search.toLowerCase())) return false;
+    // Search filter (name or brand) - Added safety checks with optional chaining and fallback
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const nameMatch = (v.name || "").toLowerCase().includes(searchLower);
+      const brandMatch = (v.brand || "").toLowerCase().includes(searchLower);
+      if (!nameMatch && !brandMatch) return false;
+    }
 
     // Price filter
-    const priceValue = Number(String(v.price).replace(/[^\d]/g, "")) || 0;
+    const priceValue = Number(String(v.price || "0").replace(/[^\d]/g, "")) || 0;
     if (maxPrice > 0 && priceValue > maxPrice) return false;
 
     // Discount filter
@@ -131,6 +125,11 @@ export default function CatalogSection({
   });
 
   const handleAction = (vehicle: Vehicle) => {
+    if (!user) {
+      setShowLoginPrompt(true);
+      return;
+    }
+
     if (vehicle.mode === "aluguer") {
       setBookingVehicle(vehicle);
       return;
@@ -198,6 +197,19 @@ export default function CatalogSection({
           </div>
         </div>
 
+        {/* ── Category description ── */}
+        {cat && (
+          <div className="mb-6 p-4 rounded-2xl bg-zinc-900/30 border border-zinc-800/50">
+            <h3 className="text-white font-bold text-lg mb-1 capitalize">
+              {CAT_FILTERS.find(f => f.key === cat)?.label}
+            </h3>
+            <p className="text-zinc-400 text-xs leading-relaxed">
+              Explore a nossa seleção premium de {CAT_FILTERS.find(f => f.key === cat)?.label.toLowerCase()}. 
+              Veículos mantidos com os mais altos padrões de qualidade e segurança para a sua jornada.
+            </p>
+          </div>
+        )}
+
         {/* ── Category pills (visible only for Aluguer / Compra) ── */}
         {mode !== "todos" && (
           <>
@@ -260,35 +272,23 @@ export default function CatalogSection({
             </div>
 
             {/* Advanced Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 p-6 bg-zinc-900/40 rounded-3xl border border-zinc-800/50">
-              {/* Search */}
-              <div className="flex flex-col gap-2">
-                <label className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider ml-1">Pesquisar</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Marca ou modelo..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500/50 outline-none transition-all"
-                  />
-                  <span className="absolute right-3 top-2.5 text-zinc-600">🔍</span>
-                </div>
-              </div>
-
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 p-6 bg-zinc-900/40 rounded-3xl border border-zinc-800/50">
               {/* Brand Select */}
               <div className="flex flex-col gap-2">
                 <label className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider ml-1">Marca</label>
-                <select
-                  value={brand}
-                  onChange={(e) => setBrand(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500/50 outline-none transition-all appearance-none"
-                >
-                  <option value="todos">Todas as marcas</option>
-                  {uniqueBrands.map(b => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={brand}
+                    onChange={(e) => setBrand(e.target.value)}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500/50 outline-none transition-all appearance-none"
+                  >
+                    <option value="todos">Todas as marcas</option>
+                    {uniqueBrands.map(b => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-600 text-[10px]">▼</div>
+                </div>
               </div>
 
               {/* Price Range */}
@@ -348,52 +348,32 @@ export default function CatalogSection({
           </>
         )}
 
-        {/* ── Results count and Reset ── */}
+        {/* ── Results count ── */}
         <div className="flex items-center justify-between mb-4">
           <p className="text-zinc-400 text-xs uppercase tracking-widest">
             {filtered.length} veículo{filtered.length !== 1 ? "s" : ""} encontrado{filtered.length !== 1 ? "s" : ""}
           </p>
-          {isFiltered && (
-            <button
-              onClick={resetFilters}
-              className="text-amber-500 text-[10px] font-bold uppercase tracking-tighter hover:text-amber-400 flex items-center gap-1 transition-all"
-            >
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Limpar Filtros
-            </button>
-          )}
         </div>
 
-        {/* ── Category description ── */}
-        {cat && CAT_DESCRIPTIONS[cat] && (
-          <p className="text-zinc-200 text-base mb-6 max-w-2xl leading-relaxed"
-             style={{ animation: 'fadeIn .3s ease' }}>
-            {CAT_DESCRIPTIONS[cat]}
-          </p>
-        )}
-        {!cat && <div className="mb-4" />}
+        {/* ── Grid ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filtered.map((v) => (
+            <VehicleCard
+              key={v.id}
+              vehicle={v}
+              onAction={handleAction}
+            />
+          ))}
+        </div>
 
-        {/* ── Vehicle grid ── */}
-        {filtered.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((vehicle) => (
-              <VehicleCard key={vehicle.id} vehicle={vehicle} onAction={handleAction} />
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <div className="text-zinc-600 text-5xl">🚗</div>
-            <p className="text-zinc-200 text-base">
-              Nenhum veículo encontrado para esta selecção.
+        {/* ── Empty state ── */}
+        {filtered.length === 0 && (
+          <div className="py-20 text-center bg-zinc-900/30 rounded-3xl border border-zinc-800/50">
+            <div className="text-4xl mb-4 grayscale opacity-50">🔍</div>
+            <h3 className="text-white font-bold text-xl mb-2">Nenhum veículo encontrado</h3>
+            <p className="text-zinc-400 text-sm max-w-xs mx-auto">
+              Tente ajustar os filtros ou a sua pesquisa para encontrar o que procura.
             </p>
-            <button
-              onClick={() => { setMode("todos"); setCat(null); }}
-              className="mt-2 px-5 py-2 rounded-full text-sm font-semibold bg-zinc-900 text-zinc-200 border border-zinc-800 hover:border-zinc-600 hover:text-white transition-all"
-            >
-              Ver todos
-            </button>
           </div>
         )}
 
@@ -404,6 +384,44 @@ export default function CatalogSection({
           vehicle={bookingVehicle}
           onClose={() => setBookingVehicle(null)}
         />
+      )}
+
+      {/* Login Suggestion Modal */}
+      {showLoginPrompt && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            onClick={() => setShowLoginPrompt(false)}
+          />
+          <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M13.8 12H3" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-black text-white mb-2">Autenticação Necessária</h3>
+              <p className="text-zinc-400 text-sm mb-8">
+                Para prosseguir com a reserva ou compra deste veículo, por favor inicie sessão na sua conta primeiro.
+              </p>
+              
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => navigate("/admin")}
+                  className="w-full py-4 rounded-2xl bg-amber-500 text-zinc-950 font-black uppercase tracking-widest hover:bg-amber-400 transition-all"
+                >
+                  Fazer Login
+                </button>
+                <button
+                  onClick={() => setShowLoginPrompt(false)}
+                  className="w-full py-4 rounded-2xl border border-zinc-800 text-zinc-400 font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all"
+                >
+                  Continuar a Explorar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </section>
   );

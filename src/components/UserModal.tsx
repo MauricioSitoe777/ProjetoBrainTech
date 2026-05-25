@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import type { User, UserRole, UserStatus } from '../types/user';
+import type { User, UserRole, UserStatus, UserCategory } from '../types/user';
+import { CATEGORY_LABEL } from '../data/constants';
 
 interface UserModalProps {
   user?: User | null;
@@ -25,7 +26,9 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
     telefone: '',
     role: 'cliente' as UserRole,
     status: 'ativo' as UserStatus,
+    category: 'func_publico' as UserCategory,
     bi: '',
+    nuit: '',
     endereco: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -38,7 +41,9 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
         telefone: user.telefone,
         role: user.role,
         status: user.status,
+        category: user.category || 'func_publico',
         bi: user.bi || '',
+        nuit: user.nuit || '',
         endereco: user.endereco || '',
       });
     }
@@ -147,6 +152,27 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
                 placeholder="000000000A"
                 className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500 transition-colors"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs text-white mb-1">NUIT</label>
+              <input
+                {...field('nuit')}
+                placeholder="123456789"
+                className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500 transition-colors"
+              />
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-xs text-white mb-1">Categoria de Funcionário</label>
+              <select
+                {...field('category')}
+                className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500 transition-colors"
+              >
+                {(Object.entries(CATEGORY_LABEL) as [UserCategory, string][]).map(([val, label]) => (
+                  <option key={val} value={val}>{label}</option>
+                ))}
+              </select>
             </div>
 
             <div className="col-span-2">

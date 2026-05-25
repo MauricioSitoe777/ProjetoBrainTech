@@ -21,11 +21,14 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
 
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
+  const [horaLevantamento, setHoraLevantamento] = useState('09:00');
+  const [horaDevolucao, setHoraDevolucao] = useState('17:00');
+  const [motivoViagem, setMotivoViagem] = useState('');
   const [localLevantamento, setLocalLevantamento] = useState('Escritório Central (Av. Julius Nyerere, Maputo)');
   const [localDevolucao, setLocalDevolucao] = useState('Escritório Central (Av. Julius Nyerere, Maputo)');
-  const [clientName, setClientName] = useState(user?.nome ?? '');
+  const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
-  const [clientEmail, setClientEmail] = useState(user?.email ?? '');
+  const [clientEmail, setClientEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
@@ -36,9 +39,9 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
     if (user && allUsers) {
       const fullUser = allUsers.find(u => u.id === user.id);
       if (fullUser) {
-        if (!clientName) setClientName(fullUser.nome);
-        if (!clientEmail) setClientEmail(fullUser.email);
-        if (!clientPhone) setClientPhone(fullUser.telefone);
+        setClientName(fullUser.nome);
+        setClientEmail(fullUser.email);
+        setClientPhone(fullUser.telefone || '');
       }
     }
   }, [user, allUsers]);
@@ -105,6 +108,9 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
       clientPhone: clientPhone.trim() || undefined,
       dataInicio,
       dataFim,
+      horaLevantamento,
+      horaDevolucao,
+      motivoViagem: motivoViagem.trim() || undefined,
       status: 'pendente',
       valorTotal: quote.total,
       deposito: quote.deposito,
@@ -152,12 +158,34 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-zinc-400 mb-1">Data de início</label>
-              <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} required className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm" />
+              <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} required className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:border-amber-400 outline-none" />
             </div>
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Data de fim</label>
-              <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} required className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm" />
+              <label className="block text-xs text-zinc-400 mb-1">Hora de levantamento</label>
+              <input type="time" value={horaLevantamento} onChange={e => setHoraLevantamento(e.target.value)} required className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:border-amber-400 outline-none" />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1">Data de fim</label>
+              <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} required className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:border-amber-400 outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1">Hora de devolução</label>
+              <input type="time" value={horaDevolucao} onChange={e => setHoraDevolucao(e.target.value)} required className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:border-amber-400 outline-none" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1">Motivo da viagem (Para onde pretende ir?)</label>
+            <textarea
+              value={motivoViagem}
+              onChange={e => setMotivoViagem(e.target.value)}
+              placeholder="Ex: Viagem de negócios à Beira, Férias em Bilene..."
+              rows={2}
+              className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:border-amber-400 outline-none resize-none"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
