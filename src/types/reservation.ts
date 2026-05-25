@@ -26,6 +26,8 @@ export interface Reservation {
   notas?: string;
   localLevantamento?: string;
   localDevolucao?: string;
+  totalPrestacoes?: number;
+  prestacoesPagas?: number;
 }
 
 export interface BlockedPeriod {

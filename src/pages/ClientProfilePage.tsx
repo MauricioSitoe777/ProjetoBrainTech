@@ -96,8 +96,15 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
                             </span>
                           </div>
                           <p className="text-xs text-zinc-300">
-                            {isPurchase ? `Adquirido em ${r.dataInicio}` : `${r.dataInicio} → ${r.dataFim}`}
+                            {isPurchase 
+                              ? `Adquirido em ${r.dataInicio}${vehicle ? ` · Preço do Carro: ${vehicle.price}` : ''}`
+                              : `${r.dataInicio} → ${r.dataFim}`}
                           </p>
+                          {isPurchase && (r.totalPrestacoes ?? 0) > 0 && (
+                            <p className="text-[10px] text-amber-500 font-semibold mt-1">
+                              📅 Prestações: {(r.prestacoesPagas ?? 0)} / {r.totalPrestacoes} pagas · Restam: {(r.totalPrestacoes ?? 0) - (r.prestacoesPagas ?? 0)}
+                            </p>
+                          )}
                           {!isPurchase && r.localLevantamento && (
                             <p className="text-[10px] text-zinc-400 mt-1">
                               📍 Levantamento: {r.localLevantamento} <br />
@@ -107,7 +114,11 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
                         </div>
                         <div className="flex items-center gap-3">
                           <span className={`text-xs border rounded-md px-2 py-0.5 ${st.className}`}>{st.label}</span>
-                          <span className="text-sm text-amber-400 font-bold">{r.valorTotal.toLocaleString("pt-PT")} MT</span>
+                          <span className="text-sm text-amber-400 font-bold">
+                            {isPurchase && r.notas?.includes("prestações")
+                              ? `${r.deposito.toLocaleString("pt-PT")} MT/mês`
+                              : `${r.valorTotal.toLocaleString("pt-PT")} MT`}
+                          </span>
                         </div>
                       </div>
                     );

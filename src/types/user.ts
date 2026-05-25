@@ -24,6 +24,7 @@ export interface User {
     declaracao_rendimento?: boolean;
     contrato_trabalho?: boolean;
     carta_conducao?: boolean;
+    declaracao_bairro?: boolean;
   };
   endereco?: string;
 }

@@ -12,8 +12,8 @@ type Cat  = "suv" | "pickup" | "sedan" | "hatchback" | "van" | null;
 
 const MODE_FILTERS: { key: Mode; label: string }[] = [
   { key: "todos", label: "Todos" },
-  { key: "aluguer", label: "Aluguer" },
   { key: "compra", label: "Compra" },
+  { key: "aluguer", label: "Aluguer" },
 ];
 
 const CAT_FILTERS: { key: Cat; label: string; img: string; blend?: boolean }[] = [

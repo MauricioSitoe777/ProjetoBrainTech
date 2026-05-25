@@ -19,12 +19,19 @@ type DocumentKey =
   | "nuit"
   | "declaracao_rendimento"
   | "contrato_trabalho"
-  | "carta_conducao";
+  | "carta_conducao"
+  | "declaracao_bairro";
 
 const REQUIRED_DOCS_VENDA: Record<Category, readonly DocumentKey[]> = {
   func_publico: ["bi", "nuit", "declaracao_rendimento"],
   func_privado: ["contrato_trabalho", "bi", "nuit", "declaracao_rendimento"],
   empreendedor: ["bi", "nuit"],
+} as const;
+
+const REQUIRED_DOCS_VENDA_PRONTO: Record<Category, readonly DocumentKey[]> = {
+  func_publico: ["bi", "nuit", "declaracao_bairro"],
+  func_privado: ["bi", "nuit", "declaracao_bairro"],
+  empreendedor: ["bi", "nuit", "declaracao_bairro"],
 } as const;
 
 const REQUIRED_DOCS_ALUGUER: Record<Category, readonly DocumentKey[]> = {
@@ -246,12 +253,15 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
     declaracao_rendimento: false,
     contrato_trabalho: false,
     carta_conducao: false,
+    declaracao_bairro: false,
   });
 
   const requiredDocs = useMemo(() => {
-    const map = flow === "compra" ? REQUIRED_DOCS_VENDA : REQUIRED_DOCS_ALUGUER;
-    return map[category];
-  }, [flow, category]);
+    if (flow === "compra") {
+      return paymentPlan === "pronto" ? REQUIRED_DOCS_VENDA_PRONTO[category] : REQUIRED_DOCS_VENDA[category];
+    }
+    return REQUIRED_DOCS_ALUGUER[category];
+  }, [flow, category, paymentPlan]);
 
   const docsOk = requiredDocs.every((k) => docs[k]);
 
@@ -390,6 +400,8 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
           valorTotal: purchaseTotal,
           deposito: paymentPlan === "prestacoes" ? purchasePMT : purchaseTotal,
           notas: `Compra via plano: ${paymentPlan === "prestacoes" ? `${mesesPrestacoes} prestações` : "Pronto pagamento"}`,
+          totalPrestacoes: paymentPlan === "prestacoes" ? mesesPrestacoes : undefined,
+          prestacoesPagas: paymentPlan === "prestacoes" ? 0 : undefined,
         });
       }
     }
@@ -787,7 +799,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                 ? paymentPlan === "prestacoes"
                   ? ([
                     ["Valor do Veículo", `${fmt(vehiclePrice)} MT`],
-                    ["Total a Pagar", `${fmt(purchaseTotal)} MT`],
+                    ["Prestação Mensal", `${fmt(purchasePMT)} MT`],
                   ] as [string, string][])
                   : ([
                     ["Valor do Veículo", `${fmt(vehiclePrice)} MT`],
@@ -846,14 +858,18 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                         <div className="text-right">
                           <div className="text-amber-400 font-black text-sm">
                             {h.flow === "compra"
-                              ? fmt(h.values.purchaseTotal ?? h.values.vehiclePrice ?? 0)
+                              ? h.paymentPlan === "prestacoes"
+                                ? fmt(h.values.purchasePMT)
+                                : fmt(h.values.vehiclePrice ?? 0)
                               : fmt(h.values.rentTotalPayNow ?? 0)}
-                            <span className="text-zinc-400 font-bold ml-1">MT</span>
+                            <span className="text-zinc-400 font-bold ml-1">
+                              {h.flow === "compra" && h.paymentPlan === "prestacoes" ? "MT/mês" : "MT"}
+                            </span>
                           </div>
                           <div className="text-zinc-400 text-xs">
                             {h.flow === "compra"
                               ? h.paymentPlan === "prestacoes"
-                                ? `${h.mesesPrestacoes} meses`
+                                ? `Preço do Carro: ${fmt(h.values.vehiclePrice)} MT · ${h.mesesPrestacoes} meses`
                                 : "Pronto"
                               : `${h.values.days ?? ""} dias`}
                           </div>

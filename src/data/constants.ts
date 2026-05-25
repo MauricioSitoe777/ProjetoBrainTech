@@ -192,4 +192,5 @@ export const DOC_LABEL: Record<string, string> = {
   declaracao_rendimento: "Declaração de Rendimento",
   contrato_trabalho: "Contrato de trabalho",
   carta_conducao: "Carta de Condução",
+  declaracao_bairro: "Declaração do Bairro",
 };

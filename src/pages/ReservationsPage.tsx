@@ -193,6 +193,21 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
                               📝 Motivo: {r.motivoViagem}
                             </p>
                           )}
+                          {isPurchase && (r.totalPrestacoes ?? 0) > 0 && (
+                            <div className="mt-1.5 p-2 bg-zinc-800/80 border border-zinc-700/60 rounded-lg text-[11px] max-w-xs space-y-1">
+                              <p className="text-amber-400 font-bold uppercase tracking-wider text-[9px]">
+                                Prestações da Compra
+                              </p>
+                              <div className="flex justify-between text-zinc-300">
+                                <span>Pagas:</span>
+                                <span className="font-bold text-white">{(r.prestacoesPagas ?? 0)} / {r.totalPrestacoes}</span>
+                              </div>
+                              <div className="flex justify-between text-zinc-400">
+                                <span>Restantes:</span>
+                                <span className="font-bold text-red-400">{(r.totalPrestacoes ?? 0) - (r.prestacoesPagas ?? 0)}</span>
+                              </div>
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <span className={`text-xs border rounded-md px-2 py-0.5 ${st.className}`}>{st.label}</span>
@@ -201,27 +216,51 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
                           <div className="flex justify-end gap-1 flex-wrap">
                             {isPurchase ? (
                               // Se for COMPRA
-                              <>
-                                {r.status === 'pendente' && (
-                                  <>
+                              <div className="flex flex-col items-end gap-2">
+                                <div className="flex gap-1">
+                                  {r.status === 'pendente' && (
+                                    <>
+                                      <button
+                                        onClick={() => updateReservation(r.id, { status: 'concluida' })}
+                                        className="text-xs px-2 py-1 rounded bg-emerald-400/10 text-emerald-400 hover:bg-emerald-400/20"
+                                      >
+                                        Concluir Venda
+                                      </button>
+                                      <button
+                                        onClick={() => cancelReservation(r.id)}
+                                        className="text-xs px-2 py-1 rounded bg-red-400/10 text-red-400 hover:bg-red-400/20"
+                                      >
+                                        Cancelar Venda
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                                
+                                {(r.totalPrestacoes ?? 0) > 0 && (
+                                  <div className="flex items-center gap-1.5 bg-zinc-950/60 p-1 rounded-lg border border-zinc-800">
+                                    <span className="text-[9px] text-zinc-400 font-bold uppercase ml-1">Reg. Pagamento:</span>
                                     <button
-                                      onClick={() => updateReservation(r.id, { status: 'concluida' })}
-                                      className="text-xs px-2 py-1 rounded bg-emerald-400/10 text-emerald-400 hover:bg-emerald-400/20"
+                                      disabled={(r.prestacoesPagas ?? 0) <= 0}
+                                      onClick={() => updateReservation(r.id, { prestacoesPagas: Math.max(0, (r.prestacoesPagas ?? 0) - 1) })}
+                                      className="w-5 h-5 flex items-center justify-center rounded bg-zinc-800 text-white hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold transition-all"
+                                      title="Diminuir prestações pagas"
                                     >
-                                      Concluir Venda
+                                      -
                                     </button>
+                                    <span className="text-xs font-black text-amber-400 px-1 select-none">
+                                      {r.prestacoesPagas ?? 0}
+                                    </span>
                                     <button
-                                      onClick={() => cancelReservation(r.id)}
-                                      className="text-xs px-2 py-1 rounded bg-red-400/10 text-red-400 hover:bg-red-400/20"
+                                      disabled={(r.prestacoesPagas ?? 0) >= (r.totalPrestacoes ?? 0)}
+                                      onClick={() => updateReservation(r.id, { prestacoesPagas: Math.min(r.totalPrestacoes ?? 0, (r.prestacoesPagas ?? 0) + 1) })}
+                                      className="w-5 h-5 flex items-center justify-center rounded bg-amber-500 text-zinc-950 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold transition-all"
+                                      title="Registrar prestação paga"
                                     >
-                                      Cancelar Venda
+                                      +
                                     </button>
-                                  </>
+                                  </div>
                                 )}
-                                {r.status !== 'pendente' && (
-                                  <span className="text-xs text-zinc-500 italic">—</span>
-                                )}
-                              </>
+                              </div>
                             ) : (
                               // Se for ALUGUER
                               <>

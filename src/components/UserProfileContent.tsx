@@ -41,9 +41,14 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
     return v?.mode === 'compra';
   });
 
-  // Calcular o total gasto
+  // Calcular o total gasto (usando o preço do carro original para compras parceladas, sem incluir juros das prestações)
   const totalAlugueresGasto = alugueres.filter(a => a.status === 'concluida').reduce((s, a) => s + a.valorTotal, 0);
-  const totalComprasGasto = compras.filter(c => c.status === 'concluida' || c.status === 'confirmada' || c.status === 'ativa').reduce((s, c) => s + c.valorTotal, 0);
+  const totalComprasGasto = compras.filter(c => c.status === 'concluida' || c.status === 'confirmada' || c.status === 'ativa').reduce((s, c) => {
+    const v = VEHICLES.find(veh => veh.id === c.vehicleId);
+    const originalPrice = v ? parseInt(v.price.replace(/\D/g, ""), 10) : c.valorTotal;
+    const isInstallment = (c.notas || (c as any).notes)?.includes("prestações");
+    return s + (isInstallment ? originalPrice : c.valorTotal);
+  }, 0);
   const totalGasto = totalAlugueresGasto + totalComprasGasto;
 
   const getVehicleName = (id: number) => VEHICLES.find(v => v.id === id)?.name || `Viatura #${id}`;
@@ -149,8 +154,15 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
                       </span>
                     </div>
                     <p className="text-xs text-white">
-                      {getVehiclePlate(a.vehicleId)} · {isPurchase ? `Adquirido em ${a.dataInicio}` : `${a.dataInicio} → ${a.dataFim}`}
+                      {getVehiclePlate(a.vehicleId)} · {isPurchase 
+                        ? `Adquirido em ${a.dataInicio}${vehicle ? ` · Preço do Carro: ${vehicle.price}` : ''}`
+                        : `${a.dataInicio} → ${a.dataFim}`}
                     </p>
+                    {isPurchase && (a.totalPrestacoes ?? 0) > 0 && (
+                      <p className="text-[10px] text-amber-500 font-semibold mt-1">
+                        📅 Prestações: {(a.prestacoesPagas ?? 0)} / {a.totalPrestacoes} pagas · Restam: {(a.totalPrestacoes ?? 0) - (a.prestacoesPagas ?? 0)}
+                      </p>
+                    )}
                     {!isPurchase && a.localLevantamento && (
                       <p className="text-[10px] text-zinc-400 mt-1">
                         📍 Levantamento: {a.localLevantamento} <br />
@@ -160,7 +172,11 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
                   </div>
                   <div className="text-right flex flex-col items-end gap-1.5 shrink-0">
                     <span className={`text-xs border rounded-md px-2 py-0.5 ${statusAluguer[a.status].className}`}>{statusAluguer[a.status].label}</span>
-                    <p className="text-sm font-medium text-white">{a.valorTotal.toLocaleString("pt-PT")} MT</p>
+                    <p className="text-sm font-medium text-white">
+                      {isPurchase && ((a.notas || (a as any).notes)?.includes("prestações"))
+                        ? `${a.deposito.toLocaleString("pt-PT")} MT/mês`
+                        : `${a.valorTotal.toLocaleString("pt-PT")} MT`}
+                    </p>
                     
                     {/* Botões de Ação para o Admin */}
                     {isAdmin && (a.status === 'pendente' || a.status === 'confirmada' || a.status === 'ativa') && (
