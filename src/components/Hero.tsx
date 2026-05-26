@@ -16,7 +16,7 @@ export default function Hero({ onShowSimulator }: { onShowSimulator?: () => void
 
   useEffect(() => {
     if (revealed < PHRASES.length) return;
-    const t = setTimeout(() => setCtaOnly(true), 3000);
+    const t = setTimeout(() => setCtaOnly(true), 5000);
     return () => clearTimeout(t);
   }, [revealed]);
 
@@ -79,7 +79,7 @@ export default function Hero({ onShowSimulator }: { onShowSimulator?: () => void
                     animation: `enterUp 0.75s cubic-bezier(0.22,1,0.36,1) forwards`,
                   }}
                 >
-                  <BrandLogo className="h-[1.2em] w-auto animate-[logo-spin_8s_linear_infinite]" />
+                  <BrandLogo className="h-[1.5em] w-auto animate-[logo-spin_8s_linear_infinite]" />
                 </span>
               ) : null}
             </h1>
