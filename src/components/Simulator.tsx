@@ -180,6 +180,39 @@ export default function Simulator({
   const [clientContact, setClientContact] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
 
+  // Compra
+  const [vehiclePrice, setVehiclePrice] = useState(1_500_000);
+  const [income, setIncome] = useState(80_000);
+  const [downPayment, setDownPayment] = useState(0);
+  const [paymentPlan, setPaymentPlan] = useState<PaymentPlan>("prestacoes");
+  const [mesesPrestacoes, setMesesPrestacoes] = useState(12);
+
+  // Aluguer
+  const [days, setDays] = useState(3);
+  const [dailyRate, setDailyRate] = useState(8_500);
+  const [discountPct, setDiscountPct] = useState(10);
+  const [cleaningFee, setCleaningFee] = useState(500);
+  const [deposit, setDeposit] = useState(10_000);
+  const [logisticsFee, setLogisticsFee] = useState(0);
+  const [otherFees, setOtherFees] = useState(0);
+  const [dataInicio, setDataInicio] = useState("");
+  const [dataFim, setDataFim] = useState("");
+  const [horaLevantamento, setHoraLevantamento] = useState("09:00");
+  const [horaDevolucao, setHoraDevolucao] = useState("17:00");
+  const [motivoViagem, setMotivoViagem] = useState("");
+  const [localLevantamento, setLocalLevantamento] = useState<string>(RENTAL_LOCATIONS[1]);
+  const [localDevolucao, setLocalDevolucao] = useState<string>(RENTAL_LOCATIONS[1]);
+  const [submitError, setSubmitError] = useState("");
+
+  const [docs, setDocs] = useState<Record<DocumentKey, boolean>>({
+    bi: false,
+    nuit: false,
+    declaracao_rendimento: false,
+    contrato_trabalho: false,
+    carta_conducao: false,
+    declaracao_bairro: false,
+  });
+
   // Auto-preencher dados se o utilizador logado for alterado/carregado
   useEffect(() => {
     if (currentUser) {
@@ -215,29 +248,6 @@ export default function Simulator({
     setClientContact(formatContact(contact.replace(/^\+258\s*/, "")));
     setShowSuggestions(false);
   };
-
-  // Compra
-  const [vehiclePrice, setVehiclePrice] = useState(1_500_000);
-  const [income, setIncome] = useState(80_000);
-  const [paymentPlan, setPaymentPlan] = useState<PaymentPlan>("prestacoes");
-  const [mesesPrestacoes, setMesesPrestacoes] = useState(12);
-
-  // Aluguer
-  const [days, setDays] = useState(3);
-  const [dailyRate, setDailyRate] = useState(8_500);
-  const [discountPct, setDiscountPct] = useState(10);
-  const [cleaningFee, setCleaningFee] = useState(500);
-  const [deposit, setDeposit] = useState(10_000);
-  const [logisticsFee, setLogisticsFee] = useState(0);
-  const [otherFees, setOtherFees] = useState(0);
-  const [dataInicio, setDataInicio] = useState("");
-  const [dataFim, setDataFim] = useState("");
-  const [horaLevantamento, setHoraLevantamento] = useState("09:00");
-  const [horaDevolucao, setHoraDevolucao] = useState("17:00");
-  const [motivoViagem, setMotivoViagem] = useState("");
-  const [localLevantamento, setLocalLevantamento] = useState<string>(RENTAL_LOCATIONS[1]);
-  const [localDevolucao, setLocalDevolucao] = useState<string>(RENTAL_LOCATIONS[1]);
-  const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
     if (lockedFlow) {
@@ -285,15 +295,6 @@ export default function Simulator({
     }
   }, [lockedFlow]);
 
-  const [docs, setDocs] = useState<Record<DocumentKey, boolean>>({
-    bi: false,
-    nuit: false,
-    declaracao_rendimento: false,
-    contrato_trabalho: false,
-    carta_conducao: false,
-    declaracao_bairro: false,
-  });
-
   const requiredDocs = useMemo(() => {
     if (flow === "compra") {
       return paymentPlan === "pronto" ? REQUIRED_DOCS_VENDA_PRONTO[category] : REQUIRED_DOCS_VENDA[category];
@@ -307,18 +308,52 @@ export default function Simulator({
     if (flow !== "compra") return 0;
     if (paymentPlan !== "prestacoes") return 0;
     const n = Math.min(MAX_MESES_PRESTACOES, Math.max(1, Math.round(mesesPrestacoes)));
-    return pmtMonthly(vehiclePrice, n, TAXA_MENSAL);
-  }, [flow, paymentPlan, mesesPrestacoes, vehiclePrice]);
+    const financed = Math.max(0, vehiclePrice - downPayment);
+    return pmtMonthly(financed, n, TAXA_MENSAL);
+  }, [flow, paymentPlan, mesesPrestacoes, vehiclePrice, downPayment]);
 
   const purchaseTotal = useMemo(() => {
     if (flow !== "compra") return 0;
     if (paymentPlan === "pronto") return vehiclePrice;
     const n = Math.min(MAX_MESES_PRESTACOES, Math.max(1, Math.round(mesesPrestacoes)));
-    return purchasePMT * n;
-  }, [flow, paymentPlan, vehiclePrice, purchasePMT, mesesPrestacoes]);
+    return downPayment + (purchasePMT * n);
+  }, [flow, paymentPlan, vehiclePrice, purchasePMT, mesesPrestacoes, downPayment]);
 
   const maxPmt = income * 0.3;
-  const eligivel = flow === "compra" && paymentPlan === "prestacoes" ? purchasePMT <= maxPmt : true;
+
+  const financingStatus = useMemo(() => {
+    if (flow !== "compra" || paymentPlan !== "prestacoes") return { ok: true, msg: "" };
+
+    const pctEntry = (downPayment / vehiclePrice) * 100;
+
+    if (category === "func_publico") {
+      if (purchasePMT > maxPmt) {
+        return { ok: false, msg: `A prestação excede 30% do seu rendimento (${fmt(maxPmt)} MT). Aumente a entrada.` };
+      }
+      return { ok: true, msg: "Elegível: Sem entrada obrigatória, respeitando a taxa de esforço." };
+    }
+
+    if (category === "func_privado") {
+      if (pctEntry < 10 || pctEntry > 50) {
+        return { ok: false, msg: "Funcionários privados requerem entrada entre 10% e 50% do valor do veículo." };
+      }
+      if (purchasePMT > maxPmt) {
+        return { ok: false, msg: `A prestação excede 30% do seu rendimento (${fmt(maxPmt)} MT).` };
+      }
+      return { ok: true, msg: "Elegível: Entrada e taxa de esforço dentro dos parâmetros." };
+    }
+
+    if (category === "empreendedor") {
+      if (pctEntry < 75) {
+        return { ok: false, msg: "Empreendedores requerem entrada mínima de 75% do valor do veículo." };
+      }
+      return { ok: true, msg: "Elegível: Entrada superior a 75% confirmada." };
+    }
+
+    return { ok: true, msg: "" };
+  }, [flow, paymentPlan, category, downPayment, vehiclePrice, purchasePMT, maxPmt, fmt]);
+
+  const eligivel = financingStatus.ok;
 
   const rentalVehicleId = selectedVehicleId ?? 4;
   const dateValidation = useMemo(
@@ -390,7 +425,7 @@ export default function Simulator({
 
     const values: Record<string, number> =
       flow === "compra"
-        ? { vehiclePrice, income, purchasePMT, purchaseTotal }
+        ? { vehiclePrice, income, downPayment, purchasePMT, purchaseTotal }
         : {
           days: Math.max(1, Math.round(days)),
           dailyRate,
@@ -588,6 +623,13 @@ export default function Simulator({
                   </div>
                 )}
               </div>
+              <div className="mt-2 p-3 rounded-lg bg-white/5 border border-white/10">
+                <p className="text-[11px] text-zinc-400 leading-relaxed">
+                  {category === "func_publico" && "Público: Sem entrada obrigatória. Financiamento limitado a 30% do rendimento mensal."}
+                  {category === "func_privado" && "Privado: Entrada obrigatória entre 10% e 50%. Financiamento limitado a 30% do rendimento mensal."}
+                  {category === "empreendedor" && "Empreendedor: Entrada mínima obrigatória de 75% do valor do veículo."}
+                </p>
+              </div>
             </div>
 
             {/* Cliente */}
@@ -670,6 +712,17 @@ export default function Simulator({
                     suffix="MT"
                   />
                 </div>
+
+                {paymentPlan === "prestacoes" && (
+                  <NumberField
+                    label="Valor de Entrada"
+                    value={downPayment}
+                    onChange={(v) => setDownPayment(Math.min(vehiclePrice, Math.max(0, v)))}
+                    min={0}
+                    step={10_000}
+                    suffix="MT"
+                  />
+                )}
 
                 <div>
                   <label className="text-white text-sm font-medium block mb-3">Plano de Pagamento</label>
@@ -956,12 +1009,10 @@ export default function Simulator({
                   }`}
               >
                 <div className={`text-sm font-bold mb-1 ${eligivel ? "text-emerald-400" : "text-red-400"}`}>
-                  {eligivel ? "✓ Elegível para prestações" : "✗ Rendimento insuficiente"}
+                  {eligivel ? "✓ Simulação Válida" : "✗ Requisitos não atendidos"}
                 </div>
                 <div className="text-zinc-200 text-xs leading-relaxed">
-                  {eligivel
-                    ? `A prestação (${fmt(purchasePMT)} MT) está dentro do limite de 30% do salário (${fmt(maxPmt)} MT).`
-                    : `A prestação (${fmt(purchasePMT)} MT) excede 30% do salário. Reduza o valor ou aumente o prazo.`}
+                  {financingStatus.msg}
                 </div>
               </div>
             ) : null}
@@ -972,6 +1023,8 @@ export default function Simulator({
                 ? paymentPlan === "prestacoes"
                   ? ([
                     ["Valor do Veículo", `${fmt(vehiclePrice)} MT`],
+                    ["Valor de Entrada", `${fmt(downPayment)} MT`],
+                    ["Financiado", `${fmt(vehiclePrice - downPayment)} MT`],
                     ["Prestação Mensal", `${fmt(purchasePMT)} MT`],
                   ] as [string, string][])
                   : ([
