@@ -79,7 +79,7 @@ export default function Hero({ onShowSimulator }: { onShowSimulator?: () => void
                     animation: `enterUp 0.75s cubic-bezier(0.22,1,0.36,1) forwards`,
                   }}
                 >
-                  <BrandLogo className="h-[1em] w-auto" />
+                  <BrandLogo className="h-[1.2em] w-auto animate-[logo-spin_8s_linear_infinite]" />
                 </span>
               ) : null}
             </h1>
@@ -130,6 +130,7 @@ export default function Hero({ onShowSimulator }: { onShowSimulator?: () => void
         @keyframes enterLeft  { from{opacity:0;transform:translateX(-60px) scale(0.95)} to{opacity:1;transform:translateX(0) scale(1)} }
         @keyframes enterUp    { from{opacity:0;transform:translateY(50px) scale(0.92)} to{opacity:1;transform:translateY(0) scale(1)} }
         @keyframes enterRight { from{opacity:0;transform:translateX(60px) scale(0.95)} to{opacity:1;transform:translateX(0) scale(1)} }
+        @keyframes logo-spin  { from{transform:rotateY(0deg)} to{transform:rotateY(360deg)} }
       `}</style>
     </section>
   );
