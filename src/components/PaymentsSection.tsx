@@ -66,7 +66,7 @@ export default function PaymentsSection({
         <div className="mt-12 rounded-3xl border border-amber-500/20 bg-amber-500/5 p-8 md:p-12 text-center relative overflow-hidden">
           <div
             className="absolute inset-0 opacity-5 pointer-events-none"
-            style={{ backgroundImage: "radial-gradient(circle at 50% 50%, #f59e0b, transparent 60%)" }}
+            style={{ backgroundImage: "radial-gradient(circle at 50% 50%, #d8a020, transparent 60%)" }}
           />
 
           <div className="relative">

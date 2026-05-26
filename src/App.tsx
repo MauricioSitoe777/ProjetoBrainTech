@@ -20,6 +20,8 @@ import { VehiclesProvider } from "./context/VehiclesContext";
 import { VehiclesPage } from "./pages/VehiclesPage";
 import VehicleDetailsPage from "./components/VehicleDetailsPage";
 
+type SimulatorFlow = "aluguer" | "compra";
+
 // ─── Admin shell (login gate) ────────────────────────────────────────────────
 function AdminShell({ onExit }: { onExit: () => void }) {
   const { user } = useAuth();
@@ -45,13 +47,16 @@ function LandingPage({
   const scrolled = useScrolled(40);
   const [showSimulator, setShowSimulator] = useState(false);
   const [flowModalOpen, setFlowModalOpen] = useState(false);
+  const [simulatorFlowLock, setSimulatorFlowLock] = useState<SimulatorFlow | undefined>();
 
   useEffect(() => {
     const handler = () => {
       setShowSimulator(false);
       setFlowModalOpen(false);
+      setSimulatorFlowLock(undefined);
     };
-    const openFlowHandler = () => {
+    const openFlowHandler = (event: Event) => {
+      setSimulatorFlowLock((event as CustomEvent<SimulatorFlow | undefined>).detail);
       setFlowModalOpen(true);
     };
     window.addEventListener("rentcar:close-simulator", handler as EventListener);
@@ -76,7 +81,10 @@ function LandingPage({
         <Hero onShowSimulator={() => setShowSimulator(true)} />
         <CatalogSection
           onShowSimulator={() => setShowSimulator(true)}
-          onOpenFlowModal={() => setFlowModalOpen(true)}
+          onOpenFlowModal={(lockedFlow) => {
+            setSimulatorFlowLock(lockedFlow);
+            setFlowModalOpen(true);
+          }}
         />
         <HowItWorks onShowSimulator={() => setShowSimulator(true)} />
         <div id="simulador" />
@@ -89,7 +97,10 @@ function LandingPage({
         <div className="fixed inset-0 z-[100]">
           <div
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={() => setFlowModalOpen(false)}
+            onClick={() => {
+              setFlowModalOpen(false);
+              setSimulatorFlowLock(undefined);
+            }}
           />
           <div className="absolute inset-0 flex items-center justify-center p-4">
             <div className="w-full max-w-6xl max-h-[90vh] overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 shadow-2xl">
@@ -98,14 +109,17 @@ function LandingPage({
                 <button
                   type="button"
                   aria-label="Fechar"
-                  onClick={() => setFlowModalOpen(false)}
+                  onClick={() => {
+                    setFlowModalOpen(false);
+                    setSimulatorFlowLock(undefined);
+                  }}
                   className="w-10 h-10 rounded-full border border-zinc-800 bg-zinc-950/60 text-white hover:text-white hover:border-zinc-600 transition flex items-center justify-center"
                 >
                   ×
                 </button>
               </div>
               <div className="max-h-[calc(90vh-64px)] overflow-auto">
-                <Simulator showClose={false} />
+                <Simulator showClose={false} lockedFlow={simulatorFlowLock} />
               </div>
             </div>
           </div>
@@ -134,10 +148,10 @@ export default function App() {
                 <VehicleDetailsPage 
                   vehicleId={vehicleId} 
                   onExit={() => navigate("/")}
-                  onOpenFlowModal={() => {
+                  onOpenFlowModal={(lockedFlow) => {
                     navigate("/");
                     setTimeout(() => {
-                      window.dispatchEvent(new CustomEvent("rentcar:open-flow-modal"));
+                      window.dispatchEvent(new CustomEvent("rentcar:open-flow-modal", { detail: lockedFlow }));
                     }, 100);
                   }}
                 />

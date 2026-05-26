@@ -4,6 +4,17 @@
 
 @theme {
   --color-zinc-950: #353535;
+  --color-amber-50: #fff8df;
+  --color-amber-100: #fff0b8;
+  --color-amber-200: #f9df7a;
+  --color-amber-300: #f0c840;
+  --color-amber-400: #e8b830;
+  --color-amber-500: #d8a020;
+  --color-amber-600: #b87d13;
+  --color-amber-700: #8f5d0d;
+  --color-amber-800: #6e470d;
+  --color-amber-900: #56380e;
+  --color-amber-950: #2f1c05;
 }
 
 /* Smooth scrolling for anchor navigation */
@@ -29,7 +40,7 @@ input[type="range"]::-webkit-slider-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #f59e0b; /* amber-500 */
+  background: #d8a020; /* logo gold */
   cursor: pointer;
   border: 2px solid #18181b;
   transition: transform 0.15s ease;
@@ -43,7 +54,7 @@ input[type="range"]::-moz-range-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #f59e0b;
+  background: #d8a020;
   cursor: pointer;
   border: 2px solid #18181b;
 }

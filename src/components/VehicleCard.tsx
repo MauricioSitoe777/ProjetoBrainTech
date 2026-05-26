@@ -26,7 +26,7 @@ export default function VehicleCard({ vehicle, onAction }: VehicleCardProps) {
       onClick={handleNavigate}
       className={`group relative rounded-3xl overflow-hidden bg-zinc-900 border transition-all duration-500 cursor-pointer ${
         hovered
-          ? "border-amber-500/50 shadow-[0_20px_40px_rgba(0,0,0,0.4),0_0_20px_rgba(245,158,11,0.1)] -translate-y-2"
+          ? "border-amber-500/50 shadow-[0_20px_40px_rgba(0,0,0,0.4),0_0_20px_rgba(216,160,32,0.1)] -translate-y-2"
           : "border-zinc-800 shadow-xl"
       }`}
     >

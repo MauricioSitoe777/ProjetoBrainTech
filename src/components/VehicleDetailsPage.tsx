@@ -5,12 +5,13 @@ import { useAuth } from "../context/AuthContext";
 import { useRoute } from "../hooks/useRoute";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
-import { BookingPanel } from "./reservations/BookingPanel";
+
+type SimulatorFlow = "aluguer" | "compra";
 
 interface VehicleDetailsPageProps {
   vehicleId: number;
   onExit: () => void;
-  onOpenFlowModal?: () => void;
+  onOpenFlowModal?: (lockedFlow?: SimulatorFlow) => void;
   onShowSimulator?: () => void;
 }
 
@@ -26,7 +27,6 @@ export default function VehicleDetailsPage({
   const scrollTo = useScrollTo();
   const [vehicle, setVehicle] = useState<VehicleData | null>(null);
   const [currentImg, setCurrentImg] = useState(0);
-  const [bookingVehicle, setBookingVehicle] = useState<VehicleData | null>(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   useEffect(() => {
@@ -60,11 +60,6 @@ export default function VehicleDetailsPage({
       return;
     }
 
-    if (vehicle.mode === "aluguer") {
-      setBookingVehicle(vehicle);
-      return;
-    }
-
     const mt = Number(String(vehicle.price).replace(/[^\d]/g, "")) || 0;
     const payload = {
       id: vehicle.id,
@@ -80,7 +75,7 @@ export default function VehicleDetailsPage({
     }
 
     if (onOpenFlowModal) {
-      onOpenFlowModal();
+      onOpenFlowModal(vehicle.mode === "aluguer" ? "aluguer" : undefined);
       return;
     }
 
@@ -284,13 +279,6 @@ export default function VehicleDetailsPage({
 
       <Footer />
 
-      {bookingVehicle && (
-        <BookingPanel
-          vehicle={bookingVehicle as any}
-          onClose={() => setBookingVehicle(null)}
-        />
-      )}
-
       {/* Login Suggestion Modal */}
       {showLoginPrompt && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
@@ -301,7 +289,7 @@ export default function VehicleDetailsPage({
           <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="text-center">
               <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d8a020" strokeWidth="2">
                   <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M13.8 12H3" />
                 </svg>
               </div>

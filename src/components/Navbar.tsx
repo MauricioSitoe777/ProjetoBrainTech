@@ -3,6 +3,7 @@ import { NAV_LINKS } from "../data/constants";
 import { useScrollTo } from "../hooks";
 import { useRoute } from "../hooks/useRoute";
 import { useVehicles } from "../context/VehiclesContext";
+import { BrandLogo } from "./BrandLogo";
 
 interface NavbarProps {
   scrolled: boolean;
@@ -57,20 +58,11 @@ export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdm
 
         {/* Logo */}
         <div 
-          className="flex items-center gap-2 cursor-pointer group"
+          className="flex items-center cursor-pointer"
           onClick={() => navigate("/")}
+          aria-label="Ir para a página inicial"
         >
-          <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-              <path d="M5 17H3a2 2 0 01-2-2V9a2 2 0 012-2h11l5 5v3a2 2 0 01-2 2h-1M14 17a2 2 0 11-4 0 2 2 0 014 0zM8 17a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </div>
-          <span
-            className="font-black text-white tracking-tight"
-            style={{ fontFamily: "'Archivo', sans-serif", fontSize: "1.25rem" }}
-          >
-            Rent<span className="text-amber-500">Car</span>
-          </span>
+          <BrandLogo className="h-12 w-auto max-w-[155px] sm:max-w-[190px]" />
         </div>
 
         {/* Links desktop */}
@@ -204,4 +196,3 @@ export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdm
     </nav>
   );
 }
-

@@ -31,14 +31,14 @@ export default function HowItWorks({
         className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse at center, rgba(245,158,11,0.07) 0%, transparent 70%)",
+            "radial-gradient(ellipse at center, rgba(216,160,32,0.07) 0%, transparent 70%)",
         }}
       />
       <div
         className="absolute bottom-0 right-0 w-[400px] h-[400px] pointer-events-none"
         style={{
           background:
-            "radial-gradient(circle, rgba(245,158,11,0.04) 0%, transparent 70%)",
+            "radial-gradient(circle, rgba(216,160,32,0.04) 0%, transparent 70%)",
         }}
       />
 
@@ -62,7 +62,7 @@ export default function HowItWorks({
             style={{ fontFamily: "'Archivo', sans-serif" }}
           >
             Como{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">
               Funciona
             </span>
           </h2>
@@ -82,7 +82,7 @@ export default function HowItWorks({
               className="h-full rounded-full transition-all duration-[1.5s] ease-out"
               style={{
                 background:
-                  "linear-gradient(90deg, #f59e0b 0%, #f59e0b40 50%, #f59e0b 100%)",
+                  "linear-gradient(90deg, #d8a020 0%, #d8a02040 50%, #d8a020 100%)",
                 transform: visible ? "scaleX(1)" : "scaleX(0)",
                 transformOrigin: "left",
               }}
@@ -104,13 +104,13 @@ export default function HowItWorks({
                   {/* Glow effect on hover */}
                   <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
                     style={{
-                      background: "radial-gradient(ellipse at 50% 0%, rgba(245,158,11,0.08), transparent 70%)",
+                      background: "radial-gradient(ellipse at 50% 0%, rgba(216,160,32,0.08), transparent 70%)",
                     }}
                   />
 
                   {/* Step number circle */}
                   <div className="relative z-10 mb-6">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:shadow-amber-500/40 group-hover:scale-110 transition-all duration-500">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:shadow-amber-500/40 group-hover:scale-110 transition-all duration-500">
                       <span
                         className="text-zinc-950 text-lg font-black"
                         style={{ fontFamily: "'Archivo', sans-serif" }}
@@ -131,7 +131,7 @@ export default function HowItWorks({
                       height="20"
                       viewBox="0 0 24 24"
                       fill="none"
-                      stroke="#f59e0b"
+                      stroke="#d8a020"
                       strokeWidth="1.6"
                       className="group-hover:scale-110 transition-transform duration-300"
                     >
@@ -158,7 +158,7 @@ export default function HowItWorks({
                   <div className="mt-auto pt-5 relative z-10">
                     <div className="h-[2px] rounded-full bg-zinc-800 overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-700 ease-out"
+                        className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-600 transition-all duration-700 ease-out"
                         style={{
                           width: visible ? "100%" : "0%",
                           transitionDelay: `${i * 0.2 + 0.8}s`,
@@ -190,7 +190,7 @@ export default function HowItWorks({
               onShowSimulator?.();
               scrollTo("simulador");
             }}
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-zinc-950 font-bold text-sm px-7 py-3 rounded-full hover:from-amber-400 hover:to-orange-400 transition-all duration-300 hover:scale-105 active:scale-95 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 text-zinc-950 font-bold text-sm px-7 py-3 rounded-full hover:from-amber-400 hover:to-amber-500 transition-all duration-300 hover:scale-105 active:scale-95 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40"
           >
             Simular agora
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

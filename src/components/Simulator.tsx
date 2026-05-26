@@ -54,6 +54,13 @@ type HistoryEntry = {
 };
 
 const HISTORY_KEY = "rentcar:clientHistory:v1";
+const RENTAL_LOCATIONS = [
+  "Aeroporto de Maputo (MPM)",
+  "Escritório Central (Av. Julius Nyerere, Maputo)",
+  "Matola (Bairro Central)",
+  "Entrega ao Domicílio (Maputo)",
+  "Entrega ao Domicílio (Matola)",
+] as const;
 
 function NumberField({
   label,
@@ -129,11 +136,22 @@ function pmtMonthly(principal: number, months: number, monthlyRate: number): num
   return (principal * r * pow) / (pow - 1);
 }
 
-export default function Simulator({ showClose = true }: { showClose?: boolean }) {
+export default function Simulator({
+  showClose = true,
+  lockedFlow,
+}: {
+  showClose?: boolean;
+  lockedFlow?: FlowType;
+}) {
   const fmt = useCurrencyFormatter();
   const { user: authUser, allUsers } = useAuth();
   const { updateUser, getUser } = useUsers();
-  const { createReservation } = useReservations();
+  const {
+    createReservation,
+    validateDates,
+    checkAvailability,
+    quoteRental,
+  } = useReservations();
   const { navigate } = useRoute();
 
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
@@ -145,7 +163,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
   
   const isAdmin = authUser?.role === "admin";
 
-  const [flow, setFlow] = useState<FlowType>("compra");
+  const [flow, setFlow] = useState<FlowType>(lockedFlow ?? "compra");
   const [category, setCategory] = useState<Category>("func_publico");
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
 
@@ -212,6 +230,20 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
   const [deposit, setDeposit] = useState(10_000);
   const [logisticsFee, setLogisticsFee] = useState(0);
   const [otherFees, setOtherFees] = useState(0);
+  const [dataInicio, setDataInicio] = useState("");
+  const [dataFim, setDataFim] = useState("");
+  const [horaLevantamento, setHoraLevantamento] = useState("09:00");
+  const [horaDevolucao, setHoraDevolucao] = useState("17:00");
+  const [motivoViagem, setMotivoViagem] = useState("");
+  const [localLevantamento, setLocalLevantamento] = useState<string>(RENTAL_LOCATIONS[1]);
+  const [localDevolucao, setLocalDevolucao] = useState<string>(RENTAL_LOCATIONS[1]);
+  const [submitError, setSubmitError] = useState("");
+
+  useEffect(() => {
+    if (lockedFlow) {
+      setFlow(lockedFlow);
+    }
+  }, [lockedFlow]);
 
   useEffect(() => {
     try {
@@ -230,13 +262,19 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
         setSelectedVehicleId(parsed.id);
       }
 
-      if (parsed.mode === "aluguer") {
+      if (lockedFlow) {
+        setFlow(lockedFlow);
+      } else if (parsed.mode === "aluguer") {
         setFlow("aluguer");
+      } else if (parsed.mode === "compra") {
+        setFlow("compra");
+      }
+
+      if (parsed.mode === "aluguer") {
         if (typeof parsed.dailyRate === "number" && Number.isFinite(parsed.dailyRate) && parsed.dailyRate > 0) {
           setDailyRate(parsed.dailyRate);
         }
       } else if (parsed.mode === "compra") {
-        setFlow("compra");
         if (typeof parsed.vehiclePrice === "number" && Number.isFinite(parsed.vehiclePrice) && parsed.vehiclePrice > 0) {
           setVehiclePrice(parsed.vehiclePrice);
         }
@@ -245,7 +283,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
     } catch {
       // ignore
     }
-  }, []);
+  }, [lockedFlow]);
 
   const [docs, setDocs] = useState<Record<DocumentKey, boolean>>({
     bi: false,
@@ -282,10 +320,38 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
   const maxPmt = income * 0.3;
   const eligivel = flow === "compra" && paymentPlan === "prestacoes" ? purchasePMT <= maxPmt : true;
 
+  const rentalVehicleId = selectedVehicleId ?? 4;
+  const dateValidation = useMemo(
+    () => (dataInicio && dataFim ? validateDates(dataInicio, dataFim) : null),
+    [dataInicio, dataFim, validateDates],
+  );
+  const availability = useMemo(
+    () =>
+      dataInicio && dataFim && dateValidation?.valid
+        ? checkAvailability(rentalVehicleId, dataInicio, dataFim)
+        : null,
+    [dataInicio, dataFim, dateValidation, checkAvailability, rentalVehicleId],
+  );
+  const rentalQuote = useMemo(
+    () =>
+      dataInicio && dataFim && dateValidation?.valid && availability?.available
+        ? quoteRental(rentalVehicleId, dataInicio, dataFim)
+        : null,
+    [dataInicio, dataFim, dateValidation, availability, quoteRental, rentalVehicleId],
+  );
+
+  useEffect(() => {
+    if (dateValidation?.valid) {
+      setDays(dateValidation.days);
+    }
+  }, [dateValidation]);
+
   const rentDailySubtotal = dailyRate * Math.max(1, Math.round(days));
   const rentDiscount = rentDailySubtotal * (Math.min(100, Math.max(0, discountPct)) / 100);
   const rentDailyAfterDiscount = rentDailySubtotal - rentDiscount;
   const rentTotalPayNow = rentDailyAfterDiscount + cleaningFee + logisticsFee + otherFees + deposit;
+  const rentalTotal = rentalQuote?.total ?? rentTotalPayNow;
+  const rentalDeposit = rentalQuote?.deposito ?? deposit;
 
   const [history, setHistory] = useState<HistoryEntry[]>(() => {
     try {
@@ -306,9 +372,13 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
     }
   }, [history]);
 
-  const canSubmit = clientName.trim().length >= 2 && docsOk && (flow === "aluguer" || eligivel);
+  const rentalDetailsOk =
+    flow !== "aluguer" ||
+    (!!dataInicio && !!dataFim && dateValidation?.valid === true && availability?.available !== false);
+  const canSubmit = clientName.trim().length >= 2 && docsOk && rentalDetailsOk && (flow === "aluguer" || eligivel);
 
   const handleSubmit = () => {
+    setSubmitError("");
     if (!canSubmit) return;
 
     if (!authUser) {
@@ -331,8 +401,8 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
           cleaningFee,
           logisticsFee,
           otherFees,
-          deposit,
-          rentTotalPayNow,
+          deposit: rentalDeposit,
+          rentTotalPayNow: rentalTotal,
         };
 
     const entry: HistoryEntry = {
@@ -365,28 +435,29 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
         }
       });
 
-      const start = new Date();
       if (flow === "aluguer") {
-        const end = new Date();
-        end.setDate(start.getDate() + Math.max(1, Math.round(days)));
-
-        createReservation({
-          vehicleId: selectedVehicleId ?? 4,
+        const result = createReservation({
+          vehicleId: rentalVehicleId,
           userId: authUser.id,
-          clientName: authUser.nome,
+          clientName: clientName.trim() || authUser.nome,
           clientEmail: authUser.email,
-          dataInicio: start.toISOString().split('T')[0],
-          dataFim: end.toISOString().split('T')[0],
-          horaLevantamento: "09:00",
-          horaDevolucao: "17:00",
-          motivoViagem: "Simulação via sistema",
+          clientPhone: clientContact.trim() ? `+258 ${clientContact.trim()}` : undefined,
+          dataInicio,
+          dataFim,
+          horaLevantamento,
+          horaDevolucao,
           status: 'pendente',
-          valorTotal: rentTotalPayNow,
-          deposito: deposit,
-          localLevantamento: 'Escritório Central (Av. Julius Nyerere, Maputo)',
-          localDevolucao: 'Escritório Central (Av. Julius Nyerere, Maputo)',
+          valorTotal: rentalTotal,
+          deposito: rentalDeposit,
+          ...(motivoViagem.trim() ? { motivoViagem: motivoViagem.trim() } : { motivoViagem: undefined }),
+          ...{ localLevantamento, localDevolucao },
         });
+        if (!result.ok) {
+          setSubmitError(result.error ?? "Não foi possível criar a reserva.");
+          return;
+        }
       } else if (flow === "compra") {
+        const start = new Date();
         createReservation({
           vehicleId: selectedVehicleId ?? 2,
           userId: authUser.id,
@@ -412,7 +483,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
       {/* Ambient glow */}
       <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-5 pointer-events-none"
-        style={{ background: "radial-gradient(circle, #f59e0b, transparent 70%)" }}
+        style={{ background: "radial-gradient(circle, #d8a020, transparent 70%)" }}
       />
 
       <div className="max-w-7xl mx-auto px-6 relative">
@@ -436,7 +507,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
         {/* Header */}
         <div className="text-center mb-12">
           <div className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-3">
-            Compra & Aluguer
+            {lockedFlow === "aluguer" ? "Aluguer" : "Compra & Aluguer"}
           </div>
           <h2
             className="text-white text-4xl md:text-5xl font-black"
@@ -445,7 +516,9 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
             Simulador
           </h2>
           <p className="text-zinc-200 text-base mt-4 max-w-xl mx-auto">
-            Escolha a categoria do cliente, submeta documentos e simule pagamentos (compra) ou custos (aluguer).
+            {lockedFlow === "aluguer"
+              ? "Escolha a categoria do cliente, submeta documentos e simule os custos do aluguer."
+              : "Escolha a categoria do cliente, submeta documentos e simule pagamentos (compra) ou custos (aluguer)."}
           </p>
         </div>
 
@@ -457,23 +530,29 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
             {/* Serviço */}
             <div>
               <label className="text-white text-lg font-bold block mb-3">Serviço</label>
-              <div className="grid grid-cols-2 gap-2">
-                {([
-                  { key: "compra", label: "Compra (Venda)" },
-                  { key: "aluguer", label: "Aluguer" },
-                ] as const).map((o) => (
-                  <button
-                    key={o.key}
-                    onClick={() => setFlow(o.key)}
-                    className={`py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${flow === o.key
-                      ? "bg-amber-500 text-zinc-950"
-                      : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
-                      }`}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
+              {lockedFlow ? (
+                <div className="py-2.5 rounded-xl text-sm font-bold text-center bg-amber-500 text-zinc-950">
+                  {lockedFlow === "aluguer" ? "Aluguer" : "Compra (Venda)"}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { key: "compra", label: "Compra (Venda)" },
+                    { key: "aluguer", label: "Aluguer" },
+                  ] as const).map((o) => (
+                    <button
+                      key={o.key}
+                      onClick={() => setFlow(o.key)}
+                      className={`py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${flow === o.key
+                        ? "bg-amber-500 text-zinc-950"
+                        : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
+                        }`}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Categoria */}
@@ -631,6 +710,99 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
               <>
                 {/* Aluguer */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-white text-sm font-medium block mb-2">Data de início</label>
+                    <input
+                      type="date"
+                      value={dataInicio}
+                      onChange={(e) => setDataInicio(e.target.value)}
+                      className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-zinc-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-white text-sm font-medium block mb-2">Hora de levantamento</label>
+                    <input
+                      type="time"
+                      value={horaLevantamento}
+                      onChange={(e) => setHoraLevantamento(e.target.value)}
+                      className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-zinc-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-white text-sm font-medium block mb-2">Data de fim</label>
+                    <input
+                      type="date"
+                      value={dataFim}
+                      onChange={(e) => setDataFim(e.target.value)}
+                      className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-zinc-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-white text-sm font-medium block mb-2">Hora de devolução</label>
+                    <input
+                      type="time"
+                      value={horaDevolucao}
+                      onChange={(e) => setHoraDevolucao(e.target.value)}
+                      className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-zinc-600"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-white text-sm font-medium block mb-2">Motivo da viagem</label>
+                  <textarea
+                    value={motivoViagem}
+                    onChange={(e) => setMotivoViagem(e.target.value)}
+                    placeholder="Ex: Viagem de negócios à Beira, férias em Bilene..."
+                    rows={2}
+                    className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600 resize-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-white text-sm font-medium block mb-2">Local de levantamento</label>
+                    <select
+                      value={localLevantamento}
+                      onChange={(e) => setLocalLevantamento(e.target.value)}
+                      className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-zinc-600"
+                    >
+                      {RENTAL_LOCATIONS.map((location) => (
+                        <option key={location} value={location} className="bg-zinc-900 text-white">
+                          {location}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-white text-sm font-medium block mb-2">Local de devolução</label>
+                    <select
+                      value={localDevolucao}
+                      onChange={(e) => setLocalDevolucao(e.target.value)}
+                      className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-zinc-600"
+                    >
+                      {RENTAL_LOCATIONS.map((location) => (
+                        <option key={location} value={location} className="bg-zinc-900 text-white">
+                          {location}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {dateValidation && !dateValidation.valid ? (
+                  <div className="text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+                    {dateValidation.errors[0]}
+                  </div>
+                ) : null}
+
+                {availability && !availability.available && dateValidation?.valid ? (
+                  <div className="text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+                    {availability.conflicts[0]}
+                  </div>
+                ) : null}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <NumberField
                     label="Dias"
                     value={days}
@@ -638,6 +810,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                     min={1}
                     step={1}
                     suffix="dias"
+                    disabled={dateValidation?.valid === true}
                   />
                   <NumberField
                     label="Custo diário"
@@ -762,7 +935,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                   ? paymentPlan === "prestacoes"
                     ? fmt(purchasePMT)
                     : fmt(vehiclePrice)
-                  : fmt(rentTotalPayNow)}
+                  : fmt(rentalTotal)}
                 <span className="text-2xl text-zinc-400 ml-2">MT</span>
               </div>
               <div className="text-zinc-300 text-xs mt-2">
@@ -816,6 +989,12 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
                 </div>
               ))}
             </div>
+
+            {submitError ? (
+              <div className="mt-4 text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+                {submitError}
+              </div>
+            ) : null}
 
             <button
               onClick={handleSubmit}
@@ -899,7 +1078,7 @@ export default function Simulator({ showClose = true }: { showClose?: boolean })
           <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="text-center">
               <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d8a020" strokeWidth="2">
                   <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M13.8 12H3" />
                 </svg>
               </div>

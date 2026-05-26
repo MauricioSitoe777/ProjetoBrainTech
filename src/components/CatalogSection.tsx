@@ -1,13 +1,13 @@
 import { useState } from "react";
 import type { Vehicle } from "../data/constants";
 import VehicleCard from "./VehicleCard";
-import { BookingPanel } from "./reservations/BookingPanel";
 import { useScrollTo } from "../hooks";
 import { useVehicles } from "../context/VehiclesContext";
 import { useAuth } from "../context/AuthContext";
 import { useRoute } from "../hooks/useRoute";
 
 type Mode = "todos" | "aluguer" | "compra";
+type SimulatorFlow = "aluguer" | "compra";
 type Cat  = "suv" | "pickup" | "sedan" | "hatchback" | "van" | null;
 
 const MODE_FILTERS: { key: Mode; label: string }[] = [
@@ -54,7 +54,7 @@ export default function CatalogSection({
   onOpenFlowModal,
 }: {
   onShowSimulator?: () => void;
-  onOpenFlowModal?: () => void;
+  onOpenFlowModal?: (lockedFlow?: SimulatorFlow) => void;
 }) {
   const scrollTo = useScrollTo();
   const { navigate } = useRoute();
@@ -62,7 +62,6 @@ export default function CatalogSection({
   const { vehicles: dynamicVehicles, searchTerm, setSearchTerm } = useVehicles();
   const [mode, setMode] = useState<Mode>("todos");
   const [cat,  setCat]  = useState<Cat>(null);
-  const [bookingVehicle, setBookingVehicle] = useState<Vehicle | null>(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   // New filters state
@@ -130,11 +129,6 @@ export default function CatalogSection({
       return;
     }
 
-    if (vehicle.mode === "aluguer") {
-      setBookingVehicle(vehicle);
-      return;
-    }
-
     const mt = Number(String(vehicle.price).replace(/[^\d]/g, "")) || 0;
     const payload = {
       id: vehicle.id,
@@ -150,7 +144,7 @@ export default function CatalogSection({
     }
 
     if (onOpenFlowModal) {
-      onOpenFlowModal();
+      onOpenFlowModal(vehicle.mode === "aluguer" ? "aluguer" : undefined);
       return;
     }
 
@@ -213,11 +207,11 @@ export default function CatalogSection({
         {/* ── Category pills (visible only for Aluguer / Compra) ── */}
         {mode !== "todos" && (
           <>
-            <div className="flex flex-wrap gap-3 mb-6 items-center">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6 items-stretch">
               {/* Reset pill */}
               <button
                 onClick={() => setCat(null)}
-                className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-bold transition-all duration-200 border h-14 ${
+                className={`w-full flex items-center gap-2 px-4 sm:px-5 py-3 rounded-2xl text-xs font-bold transition-all duration-200 border h-14 ${
                   cat === null
                     ? "bg-zinc-700 text-white border-zinc-500 shadow-lg shadow-zinc-900/50"
                     : "bg-zinc-900/60 text-zinc-400 border-zinc-800 hover:border-zinc-600 hover:text-zinc-200 hover:bg-zinc-800/80"
@@ -250,7 +244,7 @@ export default function CatalogSection({
                 <button
                   key={f.key}
                   onClick={() => setCat(f.key)}
-                  className={`flex items-center gap-3 px-4 py-2 rounded-2xl text-xs font-bold transition-all duration-200 border h-14 overflow-hidden relative ${
+                  className={`w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 rounded-2xl text-xs font-bold transition-all duration-200 border h-14 overflow-hidden relative ${
                     cat === f.key
                       ? "bg-zinc-700/80 text-white border-amber-500/60 shadow-lg shadow-amber-500/10"
                       : "bg-zinc-900/60 text-zinc-400 border-zinc-800 hover:border-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/80"
@@ -266,7 +260,7 @@ export default function CatalogSection({
                       style={f.blend ? {} : { filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.6))" }}
                     />
                   </div>
-                  <span className="leading-tight text-left font-semibold">{f.label}</span>
+                  <span className="leading-tight text-left font-semibold min-w-0">{f.label}</span>
                 </button>
               ))}
             </div>
@@ -379,13 +373,6 @@ export default function CatalogSection({
 
       </div>
 
-      {bookingVehicle && (
-        <BookingPanel
-          vehicle={bookingVehicle}
-          onClose={() => setBookingVehicle(null)}
-        />
-      )}
-
       {/* Login Suggestion Modal */}
       {showLoginPrompt && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
@@ -396,7 +383,7 @@ export default function CatalogSection({
           <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="text-center">
               <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d8a020" strokeWidth="2">
                   <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M13.8 12H3" />
                 </svg>
               </div>

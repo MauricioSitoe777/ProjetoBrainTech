@@ -5,6 +5,7 @@ import { UserProfileContent } from '../components/UserProfileContent';
 import { VEHICLES } from '../data/constants';
 import type { ReservationStatus } from '../types/reservation';
 import { NotificationBell } from '../components/NotificationBell';
+import { BrandLogo } from '../components/BrandLogo';
 
 const RES_STATUS: Record<ReservationStatus, { label: string; className: string }> = {
   pendente: { label: 'Pendente', className: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
@@ -27,17 +28,7 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
       <nav className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 bg-amber-500 rounded-md flex items-center justify-center">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#18181b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/>
-                <rect x="9" y="11" width="14" height="10" rx="2"/>
-                <circle cx="12" cy="16" r="1"/>
-                <circle cx="20" cy="16" r="1"/>
-              </svg>
-            </div>
-            <span className="font-black text-white tracking-tight" style={{ fontFamily: "'Archivo', sans-serif" }}>
-              Rent<span className="text-amber-500">Car</span>
-            </span>
+            <BrandLogo className="h-10 w-auto max-w-[140px] shrink-0" />
             <span className="text-zinc-700">·</span>
             <span className="text-sm text-white">A minha conta</span>
           </div>

@@ -79,8 +79,8 @@ export default function Hero({ onShowSimulator }: { onShowSimulator?: () => void
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
                     backgroundClip: "text",
-                    backgroundImage: "linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #ef4444 100%)",
-                    filter: "drop-shadow(0 0 30px rgba(245,158,11,0.45)) drop-shadow(0 0 70px rgba(239,68,68,0.15))",
+                    backgroundImage: "linear-gradient(135deg, #d8a020 0%, #f0c840 50%, #ef4444 100%)",
+                    filter: "drop-shadow(0 0 30px rgba(216,160,32,0.45)) drop-shadow(0 0 70px rgba(239,68,68,0.15))",
                   }}
                 >
                   SOSMotors

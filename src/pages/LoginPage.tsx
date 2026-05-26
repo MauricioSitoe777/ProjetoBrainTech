@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import type { UserRole, UserCategory } from '../types/user';
 import { CATEGORY_LABEL } from '../data/constants';
+import { BrandLogo } from '../components/BrandLogo';
 
 const ROLES: { id: UserRole; label: string; icon: React.ReactNode; desc: string }[] = [
   {
@@ -111,16 +112,8 @@ export function LoginPage({ onCancel }: { onCancel?: () => void }) {
 
         {/* Logo */}
         <div className="text-center mb-10 pt-4">
-          <div className="inline-flex items-center gap-3 mb-3">
-            <div className="w-12 h-12 bg-amber-400 rounded-xl flex items-center justify-center shadow-lg shadow-amber-400/20">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#18181b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/>
-                <rect x="9" y="11" width="14" height="10" rx="2"/>
-                <circle cx="12" cy="16" r="1"/>
-                <circle cx="20" cy="16" r="1"/>
-              </svg>
-            </div>
-            <span className="text-3xl font-bold text-white tracking-tighter">RentCar<span className="text-amber-400">.</span></span>
+          <div className="inline-flex items-center justify-center mb-3">
+            <BrandLogo className="h-24 w-auto max-w-[280px]" />
           </div>
           <p className="text-zinc-200 text-sm font-medium">
             {isRegister ? 'Crie a sua conta de cliente' : 'Selecione o seu perfil para aceder ao sistema'}
