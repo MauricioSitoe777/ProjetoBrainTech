@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useScrollTo } from "../hooks";
+import { BrandLogo } from "./BrandLogo";
 
 const PHRASES = [
   { text: "Alugue", anim: "enterLeft" },
@@ -76,14 +77,9 @@ export default function Hero({ onShowSimulator }: { onShowSimulator?: () => void
                     display: "block",
                     opacity: 0,
                     animation: `enterUp 0.75s cubic-bezier(0.22,1,0.36,1) forwards`,
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    backgroundClip: "text",
-                    backgroundImage: "linear-gradient(135deg, #d8a020 0%, #f0c840 50%, #ef4444 100%)",
-                    filter: "drop-shadow(0 0 30px rgba(216,160,32,0.45)) drop-shadow(0 0 70px rgba(239,68,68,0.15))",
                   }}
                 >
-                  SOSMotors
+                  <BrandLogo className="h-[1em] w-auto" />
                 </span>
               ) : null}
             </h1>
