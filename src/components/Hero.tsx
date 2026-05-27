@@ -10,11 +10,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import type { AnimatePresenceProps, MotionProps, Transition } from "motion/react";
 import { useScrollTo } from "../hooks";
-<<<<<<< HEAD
-import { BrandLogo } from "./BrandLogo";
-=======
 import { ArrowRight, Gauge } from "lucide-react";
->>>>>>> 595e6a6e8d69c17bab81528469b4834ceede59fe
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -22,15 +18,7 @@ function cn(...classes: (string | undefined | false)[]) {
   return classes.filter(Boolean).join(" ");
 }
 
-<<<<<<< HEAD
-  useEffect(() => {
-    if (revealed < PHRASES.length) return;
-    const t = setTimeout(() => setCtaOnly(true), 5000);
-    return () => clearTimeout(t);
-  }, [revealed]);
-=======
 // ─── TextRotate ────────────────────────────────────────────────────────────────
->>>>>>> 595e6a6e8d69c17bab81528469b4834ceede59fe
 
 interface TextRotateProps {
   texts: string[];
@@ -460,21 +448,6 @@ export default function Hero({ onShowSimulator }: { onShowSimulator?: () => void
       {/* Brilho dourado sutil no topo-esquerdo */}
       <div className="pointer-events-none absolute -top-20 -left-20 h-80 w-80 rounded-full bg-amber-500/10 blur-3xl" />
 
-<<<<<<< HEAD
-              {revealed >= PHRASES.length ? (
-                <span
-                  style={{
-                    display: "block",
-                    opacity: 0,
-                    animation: `enterUp 0.75s cubic-bezier(0.22,1,0.36,1) forwards`,
-                  }}
-                >
-                  <BrandLogo className="h-[1.5em] w-auto animate-[logo-spin_8s_linear_infinite]" />
-                </span>
-              ) : null}
-            </h1>
-          </div>
-=======
       {/* Conteúdo */}
       <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col items-center justify-center gap-10 px-5 py-24 sm:px-8 md:flex-row md:items-center md:gap-12 lg:gap-16">
 
@@ -519,7 +492,6 @@ export default function Hero({ onShowSimulator }: { onShowSimulator?: () => void
               Simular Prestações
             </button>
           </motion.div>
->>>>>>> 595e6a6e8d69c17bab81528469b4834ceede59fe
         </div>
 
         {/* DIREITA — cards embaralhados */}
@@ -532,16 +504,6 @@ export default function Hero({ onShowSimulator }: { onShowSimulator?: () => void
           <ShufflingCards />
         </motion.div>
       </div>
-<<<<<<< HEAD
-
-      <style>{`
-        @keyframes enterLeft  { from{opacity:0;transform:translateX(-60px) scale(0.95)} to{opacity:1;transform:translateX(0) scale(1)} }
-        @keyframes enterUp    { from{opacity:0;transform:translateY(50px) scale(0.92)} to{opacity:1;transform:translateY(0) scale(1)} }
-        @keyframes enterRight { from{opacity:0;transform:translateX(60px) scale(0.95)} to{opacity:1;transform:translateX(0) scale(1)} }
-        @keyframes logo-spin  { from{transform:rotateY(0deg)} to{transform:rotateY(360deg)} }
-      `}</style>
-=======
->>>>>>> 595e6a6e8d69c17bab81528469b4834ceede59fe
     </section>
   );
 }
