@@ -4,7 +4,6 @@ import { useCurrencyFormatter } from "../hooks";
 import { useAuth } from "../context/AuthContext";
 import { useReservations } from "../context/ReservationsContext";
 import { useUsers } from "../context/UsersContext";
-import { useRoute } from "../hooks/useRoute";
 import { CATEGORY_LABEL, DOC_LABEL } from "../data/constants";
 
 const TAXA_MENSAL = 0.015;
@@ -152,9 +151,6 @@ export default function Simulator({
     checkAvailability,
     quoteRental,
   } = useReservations();
-  const { navigate } = useRoute();
-
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   // Get full user data from context to have documents
   const currentUser = useMemo(() => {
@@ -380,11 +376,6 @@ export default function Simulator({
   const handleSubmit = () => {
     setSubmitError("");
     if (!canSubmit) return;
-
-    if (!authUser) {
-      setShowLoginPrompt(true);
-      return;
-    }
 
     const submittedDocs = (Object.keys(docs) as DocumentKey[]).filter((k) => docs[k]);
 
@@ -1068,43 +1059,6 @@ export default function Simulator({
         </div>
       </div>
 
-      {/* Login Suggestion Modal */}
-      {showLoginPrompt && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-black/80 backdrop-blur-md"
-            onClick={() => setShowLoginPrompt(false)}
-          />
-          <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="text-center">
-              <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d8a020" strokeWidth="2">
-                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M13.8 12H3" />
-                </svg>
-              </div>
-              <h3 className="text-2xl font-black text-white mb-2">Autenticação Necessária</h3>
-              <p className="text-zinc-400 text-sm mb-8">
-                Para concluir esta simulação e guardar o seu histórico, por favor inicie sessão na sua conta primeiro.
-              </p>
-              
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={() => navigate("/admin")}
-                  className="w-full py-4 rounded-2xl bg-amber-500 text-zinc-950 font-black uppercase tracking-widest hover:bg-amber-400 transition-all"
-                >
-                  Fazer Login
-                </button>
-                <button
-                  onClick={() => setShowLoginPrompt(false)}
-                  className="w-full py-4 rounded-2xl border border-zinc-800 text-zinc-400 font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all"
-                >
-                  Continuar a Simular
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </section>
   );
 }
