@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useVehicles, type VehicleData } from "../context/VehiclesContext";
 import { useScrollTo } from "../hooks";
-import { useAuth } from "../context/AuthContext";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 
@@ -21,7 +20,6 @@ export default function VehicleDetailsPage({
   onShowSimulator,
 }: VehicleDetailsPageProps) {
   const { vehicles } = useVehicles();
-  const { user } = useAuth();
   const scrollTo = useScrollTo();
   const [vehicle, setVehicle] = useState<VehicleData | null>(null);
   const [currentImg, setCurrentImg] = useState(0);

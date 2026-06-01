@@ -3,7 +3,6 @@ import type { Vehicle } from "../data/constants";
 import VehicleCard from "./VehicleCard";
 import { useScrollTo } from "../hooks";
 import { useVehicles } from "../context/VehiclesContext";
-import { useAuth } from "../context/AuthContext";
 
 type Mode = "todos" | "aluguer" | "compra";
 type SimulatorFlow = "aluguer" | "compra";
@@ -56,7 +55,6 @@ export default function CatalogSection({
   onOpenFlowModal?: (lockedFlow?: SimulatorFlow) => void;
 }) {
   const scrollTo = useScrollTo();
-  const { user } = useAuth();
   const { vehicles: dynamicVehicles, searchTerm, setSearchTerm } = useVehicles();
   const [mode, setMode] = useState<Mode>("todos");
   const [cat,  setCat]  = useState<Cat>(null);
