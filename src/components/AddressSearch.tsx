@@ -92,12 +92,17 @@ export function AddressSearch({ label, value, onChange, placeholder }: AddressSe
   };
 
   return (
-    <div ref={containerRef} className="relative">
-      <label className="text-white text-sm font-medium block mb-2">{label}</label>
-      <div className="flex items-center rounded-xl bg-zinc-950/40 border border-zinc-800 focus-within:border-zinc-600 transition-colors overflow-visible">
+    <div ref={containerRef} className="relative w-full overflow-hidden">
+      <label 
+        className="text-white text-sm font-bold block mb-2 truncate w-full" 
+        title={label}
+      >
+        {label}
+      </label>
+      <div className="flex items-center rounded-xl bg-zinc-950 border border-zinc-700 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500/20 transition-all overflow-hidden shadow-inner">
         {/* Pin icon */}
-        <span className="pl-3 text-zinc-500 shrink-0">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <span className="pl-4 text-amber-500 shrink-0">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
             <circle cx="12" cy="10" r="3"/>
           </svg>
@@ -108,21 +113,21 @@ export function AddressSearch({ label, value, onChange, placeholder }: AddressSe
           onChange={handleChange}
           onFocus={() => { if (suggestions.length > 0) setOpen(true); }}
           placeholder={placeholder ?? 'Pesquisar morada em Moçambique…'}
-          className="flex-1 bg-transparent px-3 py-3 text-sm text-white placeholder:text-zinc-600 outline-none"
+          className="flex-1 bg-transparent px-3 py-3.5 text-sm text-white font-bold placeholder:text-zinc-600 outline-none"
         />
         {loading && (
-          <span className="px-3 shrink-0">
-            <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+          <span className="px-4 shrink-0">
+            <div className="w-5 h-5 border-3 border-amber-500 border-t-transparent rounded-full animate-spin" />
           </span>
         )}
         {!loading && query.length > 0 && (
           <button
             type="button"
             onMouseDown={handleClear}
-            className="px-3 text-zinc-500 hover:text-zinc-300 transition-colors shrink-0"
+            className="px-4 text-zinc-400 hover:text-white transition-colors shrink-0"
             tabIndex={-1}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
               <line x1="18" y1="6" x2="6" y2="18"/>
               <line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
@@ -131,7 +136,7 @@ export function AddressSearch({ label, value, onChange, placeholder }: AddressSe
       </div>
 
       {open && suggestions.length > 0 && (
-        <ul className="absolute z-[200] left-0 right-0 mt-1 bg-zinc-900 border border-zinc-700 rounded-xl overflow-hidden shadow-2xl max-h-64 overflow-y-auto">
+        <ul className="absolute z-[200] left-0 right-0 mt-2 bg-zinc-900 border border-zinc-700 rounded-xl overflow-hidden shadow-2xl max-h-72 overflow-y-auto divide-y divide-zinc-800">
           {suggestions.map((s) => {
             const parts = s.display_name.split(',');
             const main = parts[0]?.trim() ?? s.display_name;
@@ -140,17 +145,17 @@ export function AddressSearch({ label, value, onChange, placeholder }: AddressSe
               <li
                 key={s.place_id}
                 onMouseDown={() => handleSelect(s)}
-                className="flex items-start gap-3 px-4 py-3 hover:bg-zinc-800 cursor-pointer border-b border-zinc-800/60 last:border-0 transition-colors"
+                className="flex items-start gap-4 px-5 py-4 hover:bg-zinc-800 cursor-pointer transition-colors"
               >
-                <span className="text-amber-500 mt-0.5 shrink-0">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <span className="text-amber-500 mt-1 shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
                     <circle cx="12" cy="10" r="3"/>
                   </svg>
                 </span>
                 <div className="min-w-0">
-                  <div className="text-sm text-white font-medium truncate">{main}</div>
-                  {sub && <div className="text-xs text-zinc-400 truncate mt-0.5">{sub}</div>}
+                  <div className="text-sm text-white font-black truncate">{main}</div>
+                  {sub && <div className="text-[11px] text-zinc-300 truncate mt-1 font-medium">{sub}</div>}
                 </div>
               </li>
             );

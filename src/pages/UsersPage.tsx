@@ -1,13 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useUsers } from '../context/UsersContext';
 import { useAuth } from '../context/AuthContext';
-import { useInvites } from '../context/InvitesContext';
-import { useNotifications } from '../context/NotificationsContext';
 import { UserModal } from '../components/UserModal';
 import { UserDetail } from '../components/UserDetail';
 import { AdminNav } from '../components/AdminNav';
 import type { User, UserRole, UserStatus } from '../types/user';
-import { CATEGORY_LABEL } from '../data/constants';
 
 const roleConfig = {
   admin: { label: 'Administrador', className: 'bg-purple-400/10 text-purple-400 border-purple-400/20' },
@@ -18,7 +15,7 @@ const statusConfig = {
   ativo: { label: 'Ativo', dot: 'bg-emerald-400' },
   inativo: { label: 'Inativo', dot: 'bg-zinc-500' },
   suspenso: { label: 'Suspenso', dot: 'bg-red-400' },
-  pendente: { label: 'Pendente', dot: 'bg-amber-400' },
+  pendente: { label: 'Pendente', dot: 'bg-amber-400 animate-pulse' },
 };
 
 function initials(nome: string) {
@@ -28,8 +25,6 @@ function initials(nome: string) {
 export function UsersPage({ onExit }: { onExit?: () => void }) {
   const { users, addUser, updateUser, deleteUser } = useUsers();
   const { user: authUser } = useAuth();
-  const { createInvite } = useInvites();
-  const { addNotification } = useNotifications();
 
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState<UserRole | 'todos'>('todos');
@@ -38,9 +33,6 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [detailUser, setDetailUser] = useState<User | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [inviteLink, setInviteLink] = useState<string | null>(null);
-  const [inviteUser, setInviteUser] = useState<User | null>(null);
-  const [copied, setCopied] = useState(false);
 
   const filtered = useMemo(() => {
     return users.filter(u => {
@@ -57,7 +49,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
     total: users.length,
     ativos: users.filter(u => u.status === 'ativo').length,
     clientes: users.filter(u => u.role === 'cliente').length,
-    pendentes: users.filter(u => u.status === 'pendente').length,
+    suspensos: users.filter(u => u.status === 'suspenso').length,
   }), [users]);
 
   const handleSave = (data: Omit<User, 'id' | 'dataCriacao' | 'ultimoAcesso' | 'totalAlugueres'>) => {
@@ -81,29 +73,6 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
     setDeleteConfirm(null);
   };
 
-  const handleActivate = (u: User) => {
-    updateUser(u.id, { status: 'ativo' });
-    const invite = createInvite(u.id, u.nome, u.email);
-    const link = `${window.location.origin}/convite/${invite.token}`;
-    setInviteLink(link);
-    setInviteUser(u);
-    setCopied(false);
-    addNotification(
-      'admin',
-      'Convite enviado',
-      `Convite de acesso gerado para ${u.nome} (${u.email}). Válido por 24h.`,
-      'success',
-    );
-  };
-
-  const handleCopy = () => {
-    if (!inviteLink) return;
-    navigator.clipboard.writeText(inviteLink).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    });
-  };
-
   const canManage = authUser?.role === 'admin';
 
   return (
@@ -117,7 +86,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
             { label: 'Total utilizadores', value: stats.total, color: 'text-white' },
             { label: 'Ativos', value: stats.ativos, color: 'text-emerald-400' },
             { label: 'Clientes', value: stats.clientes, color: 'text-amber-400' },
-            { label: 'Pendentes', value: stats.pendentes, color: 'text-amber-400' },
+            { label: 'Suspensos', value: stats.suspensos, color: 'text-red-400' },
           ].map(s => (
             <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
               <p className="text-xs text-zinc-300">{s.label}</p>
@@ -152,10 +121,10 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
             className="bg-zinc-900 border border-zinc-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 transition-colors"
           >
             <option value="todos">Todos os estados</option>
-            <option value="pendente">Pendente</option>
             <option value="ativo">Ativo</option>
             <option value="inativo">Inativo</option>
             <option value="suspenso">Suspenso</option>
+            <option value="pendente">Pendente</option>
           </select>
           {canManage && (
             <button
@@ -176,7 +145,6 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                 <tr className="border-b border-zinc-800">
                   <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider">Utilizador</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider hidden sm:table-cell">Papel</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider hidden md:table-cell">Categoria</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider hidden md:table-cell">Telefone</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider">Estado</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider hidden lg:table-cell">Último acesso</th>
@@ -213,23 +181,11 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                       <td className="px-4 py-3 hidden sm:table-cell">
                         <span className={`text-xs border rounded-md px-2 py-0.5 ${role.className}`}>{role.label}</span>
                       </td>
-                      <td className="px-4 py-3 hidden md:table-cell text-sm text-zinc-300">
-                        {u.category ? CATEGORY_LABEL[u.category] : '—'}
-                      </td>
                       <td className="px-4 py-3 hidden md:table-cell text-sm text-white">{u.telefone}</td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`}></span>
                           <span className="text-xs text-white">{status.label}</span>
-                          {canManage && u.status === 'pendente' && (
-                            <button
-                              onClick={() => handleActivate(u)}
-                              className="ml-1 text-[10px] font-bold text-emerald-400 border border-emerald-400/30 bg-emerald-400/10 px-1.5 py-0.5 rounded hover:bg-emerald-400/20 transition-colors"
-                              title="Ativar e enviar convite"
-                            >
-                              Ativar
-                            </button>
-                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3 hidden lg:table-cell text-xs text-zinc-400">{u.ultimoAcesso}</td>
@@ -292,69 +248,6 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
           onClose={() => setDetailUser(null)}
           onEdit={() => handleEdit(detailUser)}
         />
-      )}
-
-      {/* Invite link modal */}
-      {inviteLink && inviteUser && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 max-w-md w-full shadow-2xl">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-emerald-400/10 rounded-2xl flex items-center justify-center flex-shrink-0">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2">
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.38 2 2 0 0 1 3.57 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.54a16 16 0 0 0 5.55 5.55l.94-.93a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-white font-black text-lg">Convite gerado!</h3>
-                <p className="text-zinc-400 text-xs">Conta de <span className="text-white font-semibold">{inviteUser.nome}</span> ativada</p>
-              </div>
-            </div>
-
-            <p className="text-zinc-300 text-sm mb-4">
-              Partilhe o link abaixo com o cliente. O acesso é válido por <span className="text-amber-400 font-bold">24 horas</span> e expira após a primeira utilização.
-            </p>
-
-            {/* Link box */}
-            <div className="bg-zinc-950 border border-zinc-700 rounded-2xl p-3 mb-4 flex items-center gap-3">
-              <p className="text-amber-400 text-xs font-mono flex-1 break-all leading-relaxed select-all">
-                {inviteLink}
-              </p>
-              <button
-                onClick={handleCopy}
-                className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                  copied
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                    : 'bg-zinc-800 text-white hover:bg-zinc-700 border border-zinc-700'
-                }`}
-              >
-                {copied ? '✓ Copiado' : 'Copiar'}
-              </button>
-            </div>
-
-            {/* Client info */}
-            <div className="bg-zinc-800/40 border border-zinc-700/50 rounded-xl p-3 mb-6 space-y-1 text-xs">
-              <div className="flex justify-between">
-                <span className="text-zinc-400">Email</span>
-                <span className="text-white">{inviteUser.email}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-400">Telefone</span>
-                <span className="text-white">{inviteUser.telefone || '—'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-400">Validade</span>
-                <span className="text-amber-400 font-bold">24 horas</span>
-              </div>
-            </div>
-
-            <button
-              onClick={() => { setInviteLink(null); setInviteUser(null); }}
-              className="w-full py-3 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-sm transition-colors"
-            >
-              Fechar
-            </button>
-          </div>
-        </div>
       )}
 
       {/* Delete confirm */}

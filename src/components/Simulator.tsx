@@ -111,8 +111,8 @@ function NumberField({
 
   return (
     <div>
-      <label className="text-white text-sm font-medium block mb-2">{label}</label>
-      <div className={`flex items-center gap-3 rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 ${disabled ? 'opacity-60 cursor-not-allowed' : 'focus-within:border-zinc-600'}`}>
+      <label className="text-white text-sm font-bold block mb-2">{label}</label>
+      <div className={`flex items-center gap-3 rounded-xl bg-zinc-950 border border-zinc-700 px-4 py-3 ${disabled ? 'opacity-70 cursor-not-allowed' : 'focus-within:border-amber-500/50 focus-within:ring-1 focus-within:ring-amber-500/20'}`}>
         <input
           type="text"
           value={raw}
@@ -120,9 +120,9 @@ function NumberField({
           onBlur={handleBlur}
           onFocus={(e) => !disabled && e.currentTarget.select()}
           disabled={disabled}
-          className={`w-full bg-transparent text-sm text-white outline-none ${disabled ? 'cursor-not-allowed' : ''}`}
+          className={`w-full bg-transparent text-sm text-white font-medium outline-none ${disabled ? 'cursor-not-allowed' : ''}`}
         />
-        {suffix ? <span className="text-zinc-300 text-xs font-semibold">{suffix}</span> : null}
+        {suffix ? <span className="text-zinc-200 text-xs font-bold">{suffix}</span> : null}
       </div>
     </div>
   );
@@ -327,24 +327,36 @@ export default function Simulator({
 
     if (category === "func_publico") {
       if (purchasePMT > maxPmt) {
-        return { ok: false, msg: `A prestação excede 30% do seu rendimento (${fmt(maxPmt)} MT). Aumente a entrada.` };
+        return { 
+          ok: false, 
+          msg: `A prestação (${fmt(purchasePMT)} MT) excede o limite de 30% do rendimento mensal (${fmt(maxPmt)} MT). É necessária uma entrada para prosseguir.` 
+        };
       }
-      return { ok: true, msg: "Elegível: Sem entrada obrigatória, respeitando a taxa de esforço." };
+      return { ok: true, msg: "Elegível: Sem entrada obrigatória (respeitando taxa de esforço)." };
     }
 
     if (category === "func_privado") {
       if (pctEntry < 10 || pctEntry > 50) {
-        return { ok: false, msg: "Funcionários privados requerem entrada entre 10% e 50% do valor do veículo." };
+        return { 
+          ok: false, 
+          msg: `Entrada fora do intervalo obrigatório (10% a 50%). Valor mínimo: ${fmt(vehiclePrice * 0.1)} MT.` 
+        };
       }
       if (purchasePMT > maxPmt) {
-        return { ok: false, msg: `A prestação excede 30% do seu rendimento (${fmt(maxPmt)} MT).` };
+        return { 
+          ok: false, 
+          msg: `A prestação (${fmt(purchasePMT)} MT) excede o limite de 30% do rendimento mensal (${fmt(maxPmt)} MT).` 
+        };
       }
       return { ok: true, msg: "Elegível: Entrada e taxa de esforço dentro dos parâmetros." };
     }
 
     if (category === "empreendedor") {
       if (pctEntry < 75) {
-        return { ok: false, msg: "Empreendedores requerem entrada mínima de 75% do valor do veículo." };
+        return { 
+          ok: false, 
+          msg: `Entrada insuficiente. A posse da viatura para empreendedores requer no mínimo 75% (${fmt(vehiclePrice * 0.75)} MT).` 
+        };
       }
       return { ok: true, msg: "Elegível: Entrada superior a 75% confirmada." };
     }
@@ -563,12 +575,12 @@ export default function Simulator({
             {lockedFlow === "aluguer" ? "Aluguer" : "Compra & Aluguer"}
           </div>
           <h2
-            className="text-white text-4xl md:text-5xl font-black"
+            className="text-white text-4xl md:text-5xl font-bold"
             style={{ fontFamily: "'Archivo', sans-serif" }}
           >
             Simulador
           </h2>
-          <p className="text-zinc-200 text-base mt-4 max-w-xl mx-auto">
+          <p className="text-zinc-100 text-base mt-4 max-w-xl mx-auto font-medium opacity-90">
             {lockedFlow === "aluguer"
               ? "Escolha a categoria do cliente, submeta documentos e simule os custos do aluguer."
               : "Escolha a categoria do cliente, submeta documentos e simule pagamentos (compra) ou custos (aluguer)."}
@@ -578,17 +590,17 @@ export default function Simulator({
         <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-8">
 
           {/* ── Controls panel ── */}
-          <div className="bg-zinc-900 rounded-3xl border border-zinc-800 p-8 flex flex-col gap-8">
+          <div className="bg-zinc-900 rounded-3xl border border-zinc-700 p-8 flex flex-col gap-8 shadow-2xl">
 
             {/* Serviço */}
             <div>
-              <label className="text-white text-lg font-bold block mb-3">Serviço</label>
+              <label className="text-white text-base font-bold block mb-4 uppercase tracking-tight">Serviço</label>
               {lockedFlow ? (
-                <div className="py-2.5 rounded-xl text-sm font-bold text-center bg-amber-500 text-zinc-950">
+                <div className="py-3 rounded-xl text-sm font-bold text-center bg-amber-500 text-zinc-950 shadow-lg">
                   {lockedFlow === "aluguer" ? "Aluguer" : "Compra (Venda)"}
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   {([
                     { key: "compra", label: "Compra (Venda)" },
                     { key: "aluguer", label: "Aluguer" },
@@ -596,9 +608,9 @@ export default function Simulator({
                     <button
                       key={o.key}
                       onClick={() => setFlow(o.key)}
-                      className={`py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${flow === o.key
-                        ? "bg-amber-500 text-zinc-950"
-                        : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
+                      className={`py-3 rounded-xl text-sm font-bold transition-all duration-200 shadow-md ${flow === o.key
+                        ? "bg-amber-500 text-zinc-950 scale-[1.02]"
+                        : "bg-zinc-800 text-zinc-100 border border-zinc-700 hover:bg-zinc-700"
                         }`}
                     >
                       {o.label}
@@ -610,10 +622,37 @@ export default function Simulator({
 
             {/* Categoria */}
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="text-white text-sm font-medium block">Funcionário</label>
+              {flow === "compra" && (
+                <div className="mb-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                  <h3 className="text-amber-500 text-[11px] font-bold mb-2 flex items-center gap-2 uppercase tracking-tighter">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Informação de Financiamento
+                  </h3>
+                  <div className="space-y-2 text-[11px] text-zinc-100 font-medium leading-tight">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div className={`p-2 rounded-lg transition-colors ${category === 'func_publico' ? 'bg-amber-500/20 border border-amber-500/30' : 'bg-zinc-950/50'}`}>
+                        <p className="font-bold text-white mb-0.5">Público</p>
+                        <p className="opacity-80 text-[10px]">Entrada opcional. Limite 30% salário.</p>
+                      </div>
+
+                      <div className={`p-2 rounded-lg transition-colors ${category === 'func_privado' ? 'bg-amber-500/20 border border-amber-500/30' : 'bg-zinc-950/50'}`}>
+                        <p className="font-bold text-white mb-0.5">Privado</p>
+                        <p className="opacity-80 text-[10px]">Entrada obrigatória: 10% a 50%.</p>
+                      </div>
+
+                      <div className={`p-2 rounded-lg transition-colors ${category === 'empreendedor' ? 'bg-amber-500/20 border border-amber-500/30' : 'bg-zinc-950/50'}`}>
+                        <p className="font-bold text-white mb-0.5">Empreendedor</p>
+                        <p className="opacity-80 text-[10px]">Posse viatura com 75% entrada.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-white text-sm font-bold block">Funcionário</label>
                 {currentUser?.category && (
-                  <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20">
+                  <span className="text-[11px] text-emerald-400 font-bold uppercase tracking-widest bg-emerald-400/20 px-3 py-1 rounded-lg border border-emerald-400/30">
                     Definido no Perfil
                   </span>
                 )}
@@ -623,37 +662,30 @@ export default function Simulator({
                   value={category}
                   onChange={(e) => setCategory(e.target.value as Category)}
                   disabled={!!currentUser?.category}
-                  className={`w-full appearance-none rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white font-semibold outline-none focus:border-zinc-600 ${
-                    currentUser?.category ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                  className={`w-full appearance-none rounded-xl bg-zinc-950 border border-zinc-700 px-4 py-3.5 text-sm text-white font-bold outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 ${
+                    currentUser?.category ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'
                   }`}
                 >
                   {(Object.keys(CATEGORY_LABEL) as Category[]).map((k) => (
-                    <option key={k} value={k} className="bg-zinc-900 text-white">
+                    <option key={k} value={k} className="bg-zinc-900 text-white font-bold">
                       {CATEGORY_LABEL[k]}
                     </option>
                   ))}
                 </select>
                 {!currentUser?.category && (
-                  <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-zinc-400">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-amber-500">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                       <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
                 )}
-              </div>
-              <div className="mt-2 p-3 rounded-lg bg-white/5 border border-white/10">
-                <p className="text-[11px] text-zinc-400 leading-relaxed">
-                  {category === "func_publico" && "Público: Sem entrada obrigatória. Financiamento limitado a 30% do rendimento mensal."}
-                  {category === "func_privado" && "Privado: Entrada obrigatória entre 10% e 50%. Financiamento limitado a 30% do rendimento mensal."}
-                  {category === "empreendedor" && "Empreendedor: Entrada mínima obrigatória de 75% do valor do veículo."}
-                </p>
               </div>
             </div>
 
             {/* Cliente */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="relative">
-                <label className="text-white text-sm font-medium block mb-2">Nome do cliente</label>
+                <label className="text-white text-sm font-bold block mb-2">Nome do cliente</label>
                 <input
                   value={clientName}
                   onChange={(e) => {
@@ -665,24 +697,24 @@ export default function Simulator({
                   onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   placeholder="Ex: Ana Mussa"
                   readOnly={!!authUser}
-                  className={`w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600 ${
-                    authUser ? 'opacity-60 cursor-not-allowed' : ''
+                  className={`w-full rounded-xl bg-zinc-950 border border-zinc-700 px-4 py-3.5 text-sm text-white font-bold placeholder:text-zinc-600 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 ${
+                    authUser ? 'opacity-70 cursor-not-allowed' : ''
                   }`}
                 />
                 {showSuggestions && suggestions.length > 0 && !authUser && (
-                  <div className="absolute left-0 right-0 mt-1 bg-zinc-900 border border-zinc-800 rounded-xl max-h-48 overflow-y-auto z-20 shadow-xl divide-y divide-zinc-800">
+                  <div className="absolute left-0 right-0 mt-2 bg-zinc-900 border border-zinc-700 rounded-xl max-h-60 overflow-y-auto z-20 shadow-2xl divide-y divide-zinc-800">
                     {suggestions.map(u => (
                       <button
                         key={u.id}
                         type="button"
                         onClick={() => handleSelectUser(u)}
-                        className="w-full text-left px-4 py-2.5 text-xs hover:bg-zinc-800/50 flex items-center justify-between transition-colors"
+                        className="w-full text-left px-4 py-3 text-xs hover:bg-zinc-800/80 flex items-center justify-between transition-colors"
                       >
                         <div>
-                          <p className="font-semibold text-white">{u.nome}</p>
-                          <p className="text-[10px] text-zinc-400">{u.email}</p>
+                          <p className="font-bold text-white">{u.nome}</p>
+                          <p className="text-[11px] text-zinc-400 font-medium">{u.email}</p>
                         </div>
-                        <span className="text-[10px] text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20">
+                        <span className="text-[10px] text-amber-400 bg-amber-400/10 px-2 py-1 rounded-lg border border-amber-400/20 font-bold">
                           {u.telefone || 'Sem Telefone'}
                         </span>
                       </button>
@@ -691,9 +723,9 @@ export default function Simulator({
                 )}
               </div>
               <div className="relative">
-                <label className="text-white text-sm font-medium block mb-2">Contacto</label>
-                <div className="flex items-center w-full rounded-xl bg-zinc-950/40 border border-zinc-800 focus-within:border-zinc-600 overflow-hidden">
-                  <div className="pl-4 pr-2 py-3 text-sm text-zinc-400 font-semibold bg-zinc-900/50 border-r border-zinc-800">
+                <label className="text-white text-sm font-bold block mb-2">Contacto</label>
+                <div className={`flex items-center w-full rounded-xl bg-zinc-950 border border-zinc-700 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500/20 overflow-hidden ${authUser ? 'opacity-70' : ''}`}>
+                  <div className="pl-4 pr-3 py-3.5 text-sm text-amber-500 font-bold bg-zinc-900 border-r border-zinc-700">
                     +258
                   </div>
                   <input
@@ -701,8 +733,8 @@ export default function Simulator({
                     onChange={(e) => !authUser && setClientContact(formatContact(e.target.value))}
                     placeholder="Ex: 84..."
                     readOnly={!!authUser}
-                    className={`w-full bg-transparent px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none ${
-                      authUser ? 'opacity-60 cursor-not-allowed' : ''
+                    className={`w-full bg-transparent px-4 py-3.5 text-sm text-white font-bold placeholder:text-zinc-600 outline-none ${
+                      authUser ? 'cursor-not-allowed' : ''
                     }`}
                   />
                 </div>
@@ -712,7 +744,7 @@ export default function Simulator({
             {/* Email — só visível para convidados */}
             {!authUser && (
               <div>
-                <label className="text-white text-sm font-medium block mb-2">
+                <label className="text-white text-sm font-bold block mb-2">
                   Email do cliente <span className="text-amber-400 text-xs font-bold">*</span>
                 </label>
                 <input
@@ -720,9 +752,9 @@ export default function Simulator({
                   value={clientEmail}
                   onChange={(e) => setClientEmail(e.target.value)}
                   placeholder="email@cliente.com"
-                  className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600"
+                  className="w-full rounded-xl bg-zinc-950 border border-zinc-700 px-4 py-3.5 text-sm text-white font-bold placeholder:text-zinc-600 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 shadow-inner"
                 />
-                <p className="text-zinc-400 text-xs mt-1.5">
+                <p className="text-zinc-100 text-[11px] mt-2 font-medium italic">
                   O seu pedido ficará pendente até o admin aprovar o registo.
                 </p>
               </div>
@@ -731,7 +763,7 @@ export default function Simulator({
             {/* Compra */}
             {flow === "compra" ? (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <NumberField
                     label="Valor do Veículo"
                     value={vehiclePrice}
@@ -762,8 +794,8 @@ export default function Simulator({
                 )}
 
                 <div>
-                  <label className="text-white text-sm font-medium block mb-3">Plano de Pagamento</label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <label className="text-white text-sm font-bold block mb-4">Plano de Pagamento</label>
+                  <div className="grid grid-cols-2 gap-3">
                     {([
                       { key: "pronto", label: "Pronto pagamento" },
                       { key: "prestacoes", label: "Por prestações" },
@@ -771,16 +803,16 @@ export default function Simulator({
                       <button
                         key={o.key}
                         onClick={() => setPaymentPlan(o.key)}
-                        className={`py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${paymentPlan === o.key
-                          ? "bg-amber-500 text-zinc-950"
-                          : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
+                        className={`py-3 rounded-xl text-sm font-bold transition-all duration-200 shadow-md ${paymentPlan === o.key
+                          ? "bg-amber-500 text-zinc-950 scale-[1.02]"
+                          : "bg-zinc-800 text-zinc-100 border border-zinc-700 hover:bg-zinc-700"
                           }`}
                       >
                         {o.label}
                       </button>
                     ))}
                   </div>
-                  <div className="text-zinc-300 text-xs mt-2">
+                  <div className="text-zinc-100 text-xs mt-3 font-bold italic">
                     Prestações: máximo {MAX_MESES_PRESTACOES} meses.
                   </div>
                 </div>
@@ -799,57 +831,57 @@ export default function Simulator({
             ) : (
               <>
                 {/* Aluguer */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
-                    <label className="text-white text-sm font-medium block mb-2">Data de início</label>
+                    <label className="text-white text-sm font-bold block mb-2">Data de início</label>
                     <input
                       type="date"
                       value={dataInicio}
                       onChange={(e) => setDataInicio(e.target.value)}
-                      className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-zinc-600"
+                      className="w-full rounded-xl bg-zinc-950 border border-zinc-700 px-4 py-3.5 text-sm text-white font-bold outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20"
                     />
                   </div>
                   <div>
-                    <label className="text-white text-sm font-medium block mb-2">Hora de levantamento</label>
+                    <label className="text-white text-sm font-bold block mb-2">Hora de levantamento</label>
                     <input
                       type="time"
                       value={horaLevantamento}
                       onChange={(e) => setHoraLevantamento(e.target.value)}
-                      className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-zinc-600"
+                      className="w-full rounded-xl bg-zinc-950 border border-zinc-700 px-4 py-3.5 text-sm text-white font-bold outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20"
                     />
                   </div>
                   <div>
-                    <label className="text-white text-sm font-medium block mb-2">Data de fim</label>
+                    <label className="text-white text-sm font-bold block mb-2">Data de fim</label>
                     <input
                       type="date"
                       value={dataFim}
                       onChange={(e) => setDataFim(e.target.value)}
-                      className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-zinc-600"
+                      className="w-full rounded-xl bg-zinc-950 border border-zinc-700 px-4 py-3.5 text-sm text-white font-bold outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20"
                     />
                   </div>
                   <div>
-                    <label className="text-white text-sm font-medium block mb-2">Hora de devolução</label>
+                    <label className="text-white text-sm font-bold block mb-2">Hora de devolução</label>
                     <input
                       type="time"
                       value={horaDevolucao}
                       onChange={(e) => setHoraDevolucao(e.target.value)}
-                      className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-zinc-600"
+                      className="w-full rounded-xl bg-zinc-950 border border-zinc-700 px-4 py-3.5 text-sm text-white font-bold outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-white text-sm font-medium block mb-2">Motivo da viagem</label>
+                  <label className="text-white text-sm font-bold block mb-2">Motivo da viagem</label>
                   <textarea
                     value={motivoViagem}
                     onChange={(e) => setMotivoViagem(e.target.value)}
                     placeholder="Ex: Viagem de negócios à Beira, férias em Bilene..."
                     rows={2}
-                    className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600 resize-none"
+                    className="w-full rounded-xl bg-zinc-950 border border-zinc-700 px-4 py-3.5 text-sm text-white font-bold placeholder:text-zinc-600 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 resize-none shadow-inner"
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <AddressSearch
                     label="Local de levantamento"
                     value={localLevantamento}
@@ -865,18 +897,18 @@ export default function Simulator({
                 </div>
 
                 {dateValidation && !dateValidation.valid ? (
-                  <div className="text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+                  <div className="text-xs text-red-100 bg-red-600 border border-red-500 rounded-xl p-4 font-bold shadow-lg">
                     {dateValidation.errors[0]}
                   </div>
                 ) : null}
 
                 {availability && !availability.available && dateValidation?.valid ? (
-                  <div className="text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+                  <div className="text-xs text-red-100 bg-red-600 border border-red-500 rounded-xl p-4 font-bold shadow-lg">
                     {availability.conflicts[0]}
                   </div>
                 ) : null}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <NumberField
                     label="Dias"
                     value={days}
@@ -907,7 +939,7 @@ export default function Simulator({
                   disabled={!isAdmin}
                 />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <NumberField
                     label="Taxa de limpeza"
                     value={cleaningFee}
@@ -950,14 +982,14 @@ export default function Simulator({
 
             {/* Documentos */}
             <div>
-              <div className="flex items-end justify-between gap-6 mb-3">
-                <label className="text-white text-sm font-medium block">Documentos do cliente</label>
-                <div className={`text-xs font-semibold ${docsOk ? "text-emerald-400" : "text-zinc-300"}`}>
-                  {docsOk ? "Completo" : "Obrigatórios pendentes"}
+              <div className="flex items-end justify-between gap-6 mb-4">
+                <label className="text-white text-sm font-bold block">Documentos do cliente</label>
+                <div className={`text-xs font-bold uppercase tracking-widest ${docsOk ? "text-emerald-400" : "text-amber-500"}`}>
+                  {docsOk ? "Completo ✓" : "Pendentes —"}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {requiredDocs.map((k) => {
                   const checked = docs[k];
                   const alreadyOnFile = currentUser?.documentos?.[k] === true;
@@ -966,22 +998,22 @@ export default function Simulator({
                     <button
                       key={k}
                       onClick={() => setDocs((d) => ({ ...d, [k]: !d[k] }))}
-                      className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl border text-sm font-semibold transition-all ${checked
-                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
-                        : "bg-zinc-950/30 border-amber-500/20 text-white hover:border-amber-500/40"
+                      className={`flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl border text-sm font-black transition-all shadow-sm ${checked
+                        ? "bg-emerald-500 text-zinc-950 border-emerald-400 scale-[1.01]"
+                        : "bg-zinc-950 border-zinc-700 text-white hover:border-amber-500/50"
                         }`}
                     >
                       <span className="flex items-center gap-2">
-                        <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500" />
+                        <span className={`inline-block w-2.5 h-2.5 rounded-full ${checked ? 'bg-zinc-950' : 'bg-amber-500 animate-pulse'}`} />
                         <div className="flex flex-col items-start">
-                          <span>{DOC_LABEL[k]}</span>
+                          <span className={checked ? 'text-zinc-950' : 'text-white'}>{DOC_LABEL[k]}</span>
                           {alreadyOnFile && (
-                            <span className="text-[9px] text-emerald-400 font-black uppercase tracking-tighter">Arquivado no Perfil</span>
+                            <span className={`text-[10px] font-black uppercase tracking-tighter ${checked ? 'text-zinc-900/70' : 'text-emerald-400'}`}>Arquivado</span>
                           )}
                         </div>
-                        {!alreadyOnFile ? <span className="text-amber-400 text-xs font-black ml-1">OBRIG.</span> : null}
+                        {!alreadyOnFile && !checked ? <span className="text-amber-500 text-[10px] font-black ml-1">OBRIG.</span> : null}
                       </span>
-                      <span className={checked ? "text-emerald-400" : "text-zinc-400"}>
+                      <span className={checked ? "text-zinc-950 text-lg" : "text-zinc-600"}>
                         {checked ? "✓" : "—"}
                       </span>
                     </button>
@@ -992,17 +1024,20 @@ export default function Simulator({
           </div>
 
           {/* ── Result panel ── */}
-          <div className="bg-zinc-900 rounded-3xl border border-zinc-800 p-8 flex flex-col justify-between">
-            <div>
-              <div className="text-zinc-300 text-sm mb-2">
+          <div className="bg-zinc-900 rounded-2xl border border-amber-500/30 p-6 flex flex-col justify-between shadow-[0_0_50px_-12px_rgba(216,160,32,0.15)] relative overflow-hidden h-fit">
+            {/* Decoration */}
+            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 blur-3xl -mr-12 -mt-12" />
+            
+            <div className="relative z-10">
+              <div className="text-zinc-100 text-[10px] mb-2 font-bold uppercase tracking-widest opacity-80">
                 {flow === "compra"
                   ? paymentPlan === "prestacoes"
-                    ? "Prestação Mensal Estimada"
-                    : "Total (Pronto pagamento)"
-                  : "Total a pagar (no levantamento)"}
+                    ? "Prestação Mensal"
+                    : "Total (Pronto)"
+                  : "Total a pagar"}
               </div>
               <div
-                className="text-5xl font-black text-white mb-1"
+                className="text-5xl font-black text-white mb-1 tracking-tighter"
                 style={{ fontFamily: "'Archivo', sans-serif" }}
               >
                 {flow === "compra"
@@ -1010,62 +1045,67 @@ export default function Simulator({
                     ? fmt(purchasePMT)
                     : fmt(vehiclePrice)
                   : fmt(rentalTotal)}
-                <span className="text-2xl text-zinc-400 ml-2">MT</span>
+                <span className="text-2xl text-amber-500 ml-1.5 font-black">MT</span>
               </div>
-              <div className="text-zinc-300 text-xs mt-2">
+              <div className="text-zinc-100 text-[10px] mt-2 font-bold bg-white/5 px-2 py-1 rounded-md inline-block border border-white/10">
                 {flow === "compra" && paymentPlan === "prestacoes"
-                  ? `Taxa referência: ${(TAXA_MENSAL * 100).toFixed(1)}% /mês · ${Math.min(MAX_MESES_PRESTACOES, Math.max(1, Math.round(mesesPrestacoes)))} meses`
+                  ? `${(TAXA_MENSAL * 100).toFixed(1)}%/mês · ${Math.min(MAX_MESES_PRESTACOES, Math.max(1, Math.round(mesesPrestacoes)))} meses`
                   : flow === "compra"
-                    ? "Pagamento à vista (sem prestações)."
-                    : "Inclui diárias (com desconto), taxas e caução."}
+                    ? "Pagamento à vista."
+                    : "Inclui diárias, taxas e caução."}
               </div>
             </div>
 
             {/* Elegibilidade */}
             {flow === "compra" && paymentPlan === "prestacoes" ? (
               <div
-                className={`mt-8 rounded-2xl p-5 border ${eligivel
-                  ? "bg-emerald-500/10 border-emerald-500/30"
-                  : "bg-red-500/10 border-red-500/30"
+                className={`mt-6 rounded-xl p-4 border-2 shadow-md relative z-10 ${eligivel
+                  ? "bg-emerald-500/5 border-emerald-500/20"
+                  : "bg-red-500/5 border-red-500/20"
                   }`}
               >
-                <div className={`text-sm font-bold mb-1 ${eligivel ? "text-emerald-400" : "text-red-400"}`}>
-                  {eligivel ? "✓ Simulação Válida" : "✗ Requisitos não atendidos"}
+                <div className={`text-xs font-bold mb-1 uppercase tracking-tight flex items-center gap-2 ${eligivel ? "text-emerald-400" : "text-red-400"}`}>
+                  {eligivel ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                  )}
+                  {eligivel ? "Simulação Válida" : "Requisitos não atendidos"}
                 </div>
-                <div className="text-zinc-200 text-xs leading-relaxed">
+                <div className="text-white text-[11px] leading-tight font-medium opacity-90">
                   {financingStatus.msg}
                 </div>
               </div>
             ) : null}
 
             {/* Resumo */}
-            <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="mt-6 grid grid-cols-2 gap-3 relative z-10">
               {(flow === "compra"
                 ? paymentPlan === "prestacoes"
                   ? ([
-                    ["Valor do Veículo", `${fmt(vehiclePrice)} MT`],
-                    ["Valor de Entrada", `${fmt(downPayment)} MT`],
-                    ["Financiado", `${fmt(vehiclePrice - downPayment)} MT`],
-                    ["Prestação Mensal", `${fmt(purchasePMT)} MT`],
+                    ["Veículo", `${fmt(vehiclePrice)}`],
+                    ["Entrada", `${fmt(downPayment)}`],
+                    ["Financiado", `${fmt(vehiclePrice - downPayment)}`],
+                    ["Prestação", `${fmt(purchasePMT)}`],
                   ] as [string, string][])
                   : ([
-                    ["Valor do Veículo", `${fmt(vehiclePrice)} MT`],
-                    ["Total a Pagar", `${fmt(vehiclePrice)} MT`],
+                    ["Veículo", `${fmt(vehiclePrice)} MT`],
+                    ["Total", `${fmt(vehiclePrice)} MT`],
                   ] as [string, string][])
                 : ([
-                  ["Diárias (c/ desconto)", `${fmt(rentDailyAfterDiscount)} MT`],
+                  ["Diárias", `${fmt(rentDailyAfterDiscount)} MT`],
                   ["Caução", `${fmt(deposit)} MT`],
                 ] as [string, string][])
               ).map(([label, val]) => (
-                <div key={label} className="bg-zinc-800/50 rounded-xl p-3">
-                  <div className="text-zinc-300 text-xs">{label}</div>
-                  <div className="text-white font-bold text-sm mt-1">{val}</div>
+                <div key={label} className="bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-3">
+                  <div className="text-zinc-300 text-[10px] font-bold uppercase tracking-tighter mb-0.5">{label}</div>
+                  <div className="text-white font-bold text-sm truncate">{val}</div>
                 </div>
               ))}
             </div>
 
             {submitError ? (
-              <div className="mt-4 text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+              <div className="mt-4 p-3 rounded-lg bg-red-600/90 text-white text-[11px] font-bold text-center shadow-lg animate-bounce">
                 {submitError}
               </div>
             ) : null}
@@ -1073,64 +1113,51 @@ export default function Simulator({
             <button
               onClick={handleSubmit}
               disabled={!canSubmit}
-              className={`mt-6 w-full py-3.5 rounded-xl font-bold text-sm transition-all duration-200 ${canSubmit
-                ? "bg-amber-500 text-zinc-950 hover:bg-amber-400 hover:scale-[1.02] active:scale-[0.98]"
-                : "bg-zinc-800 text-zinc-300 cursor-not-allowed"
+              className={`mt-8 w-full py-4 rounded-xl font-bold text-xs uppercase tracking-widest transition-all duration-300 shadow-lg relative z-10 ${canSubmit
+                ? "bg-amber-500 text-zinc-950 hover:bg-amber-400 hover:scale-[1.01] active:scale-[0.99]"
+                : "bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700"
                 }`}
             >
-              Guardar no histórico
+              Confirmar Operação
             </button>
 
-            {/* Histórico */}
-            <div className="mt-6">
-              <div className="flex items-center justify-between">
-                <div className="text-white text-sm font-bold">Histórico do Cliente</div>
+            {/* Histórico — Mini */}
+            <div className="mt-8 relative z-10 border-t border-zinc-800 pt-6">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-white text-[11px] font-bold uppercase tracking-widest opacity-80">Últimos Registos</div>
                 <button
                   onClick={() => setHistory([])}
-                  className="text-xs font-bold text-zinc-300 hover:text-zinc-300"
+                  className="text-[10px] font-bold text-zinc-400 hover:text-amber-500 transition-colors uppercase tracking-tighter"
                 >
                   Limpar
                 </button>
               </div>
 
               {history.length === 0 ? (
-                <div className="mt-3 text-zinc-200 text-sm">
-                  Ainda sem registos. Preencha e clique em "Guardar no histórico".
+                <div className="text-zinc-500 text-[11px] font-medium bg-white/5 p-4 rounded-xl border border-dashed border-white/5 text-center">
+                  Sem histórico.
                 </div>
               ) : (
-                <div className="mt-4 flex flex-col gap-3 max-h-[280px] overflow-auto pr-1">
-                  {history.slice(0, 10).map((h) => (
-                    <div key={h.id} className="rounded-2xl border border-zinc-800 bg-zinc-950/30 p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <div className="text-white font-bold text-sm">{h.clientName}</div>
-                          <div className="text-zinc-300 text-xs mt-0.5">
-                            {new Date(h.createdAt).toLocaleString("pt-MZ")} · {h.flow === "compra" ? "Compra" : "Aluguer"} · {CATEGORY_LABEL[h.category]}
+                <div className="flex flex-col gap-2 max-h-[200px] overflow-auto pr-1 custom-scrollbar">
+                  {history.slice(0, 5).map((h) => (
+                    <div key={h.id} className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-3 hover:border-amber-500/30 transition-colors group">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-white font-bold text-xs truncate group-hover:text-amber-500 transition-colors">{h.clientName}</div>
+                          <div className="text-zinc-400 text-[9px] font-bold uppercase tracking-tighter truncate mt-0.5">
+                            {h.flow === "compra" ? "Compra" : "Aluguer"} · {CATEGORY_LABEL[h.category]}
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-amber-400 font-black text-sm">
+                        <div className="text-right shrink-0">
+                          <div className="text-amber-500 font-bold text-xs">
                             {h.flow === "compra"
                               ? h.paymentPlan === "prestacoes"
                                 ? fmt(h.values.purchasePMT)
                                 : fmt(h.values.vehiclePrice ?? 0)
                               : fmt(h.values.rentTotalPayNow ?? 0)}
-                            <span className="text-zinc-400 font-bold ml-1">
-                              {h.flow === "compra" && h.paymentPlan === "prestacoes" ? "MT/mês" : "MT"}
-                            </span>
                           </div>
-                          <div className="text-zinc-400 text-xs">
-                            {h.flow === "compra"
-                              ? h.paymentPlan === "prestacoes"
-                                ? `Preço do Carro: ${fmt(h.values.vehiclePrice)} MT · ${h.mesesPrestacoes} meses`
-                                : "Pronto"
-                              : `${h.values.days ?? ""} dias`}
-                          </div>
+                          <div className="text-zinc-500 text-[9px] font-bold uppercase tracking-tighter">MT</div>
                         </div>
-                      </div>
-                      <div className="mt-3 text-zinc-300 text-xs leading-relaxed">
-                        Docs: {h.submittedDocs.length > 0 ? h.submittedDocs.map((d) => DOC_LABEL[d]).join(", ") : "—"}
-                        {h.clientContact ? ` · Contacto: ${h.clientContact}` : ""}
                       </div>
                     </div>
                   ))}
