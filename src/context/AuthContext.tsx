@@ -9,9 +9,10 @@ interface AuthContextType {
   register: (user: Omit<User, 'id' | 'dataCriacao' | 'ultimoAcesso' | 'totalAlugueres'>) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
-  addUser: (user: Omit<User, 'id' | 'dataCriacao' | 'ultimoAcesso' | 'totalAlugueres'>) => void;
+  addUser: (user: Omit<User, 'id' | 'dataCriacao' | 'ultimoAcesso' | 'totalAlugueres'>) => User;
   updateUser: (id: string, data: Partial<User>) => void;
   deleteUser: (id: string) => void;
+  loginById: (id: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -38,8 +39,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Procura em todos os utilizadores (existentes e novos)
     const foundUser = allUsers.find(u => u.email === email);
     
-    // Para simplificar o demo, aceitamos a password '123' para todos
-    if (foundUser && password === DEFAULT_PASSWORD) {
+    // Usar senha própria se definida, caso contrário aceitar a senha demo
+    const validPassword = foundUser?.password
+      ? password === foundUser.password
+      : password === DEFAULT_PASSWORD;
+    if (foundUser && validPassword) {
       setUser({ id: foundUser.id, nome: foundUser.nome, email: foundUser.email, role: foundUser.role });
       setIsLoading(false);
       return true;
@@ -69,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => setUser(null);
 
-  const addUser = (userData: Omit<User, 'id' | 'dataCriacao' | 'ultimoAcesso' | 'totalAlugueres'>) => {
+  const addUser = (userData: Omit<User, 'id' | 'dataCriacao' | 'ultimoAcesso' | 'totalAlugueres'>): User => {
     const newUser: User = {
       ...userData,
       id: `u${Date.now()}`,
@@ -78,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       totalAlugueres: 0,
     };
     setAllUsers(prev => [...prev, newUser]);
+    return newUser;
   };
 
   const updateUser = (id: string, data: Partial<User>) => {
@@ -88,17 +93,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAllUsers(prev => prev.filter(u => u.id !== id));
   };
 
+  const loginById = (id: string) => {
+    const found = allUsers.find(u => u.id === id);
+    if (found) {
+      setUser({ id: found.id, nome: found.nome, email: found.email, role: found.role });
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      allUsers, 
-      login, 
+    <AuthContext.Provider value={{
+      user,
+      allUsers,
+      login,
       register,
-      logout, 
+      logout,
       isLoading,
       addUser,
       updateUser,
-      deleteUser
+      deleteUser,
+      loginById,
     }}>
       {children}
     </AuthContext.Provider>

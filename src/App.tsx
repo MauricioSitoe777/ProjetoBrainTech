@@ -19,6 +19,8 @@ import { NotificationsProvider } from "./context/NotificationsContext";
 import { VehiclesProvider } from "./context/VehiclesContext";
 import { VehiclesPage } from "./pages/VehiclesPage";
 import VehicleDetailsPage from "./components/VehicleDetailsPage";
+import { InvitesProvider } from "./context/InvitesContext";
+import { InvitePage } from "./pages/InvitePage";
 
 type SimulatorFlow = "aluguer" | "compra";
 
@@ -134,7 +136,9 @@ export default function App() {
   const { path, navigate } = useRoute();
   const isAdmin = path.startsWith("/admin");
   const isVehicleDetails = path.startsWith("/veiculo/");
+  const isInvite = path.startsWith("/convite/");
   const vehicleId = isVehicleDetails ? parseInt(path.split("/").pop() || "0") : 0;
+  const inviteToken = isInvite ? path.split("/convite/")[1] ?? "" : "";
 
   return (
     <AuthProvider>
@@ -142,24 +146,31 @@ export default function App() {
         <NotificationsProvider>
           <ReservationsProvider>
             <VehiclesProvider>
-              {isAdmin ? (
-                <AdminShell onExit={() => navigate("/")} />
-              ) : isVehicleDetails ? (
-                <VehicleDetailsPage 
-                  vehicleId={vehicleId} 
-                  onExit={() => navigate("/")}
-                  onOpenFlowModal={(lockedFlow) => {
-                    navigate("/");
-                    setTimeout(() => {
-                      window.dispatchEvent(new CustomEvent("rentcar:open-flow-modal", { detail: lockedFlow }));
-                    }, 100);
-                  }}
-                />
-              ) : (
-                <LandingPage 
-                  onOpenAdmin={() => navigate("/admin")} 
-                />
-              )}
+              <InvitesProvider>
+                {isInvite ? (
+                  <InvitePage
+                    token={inviteToken}
+                    onSuccess={() => navigate("/")}
+                  />
+                ) : isAdmin ? (
+                  <AdminShell onExit={() => navigate("/")} />
+                ) : isVehicleDetails ? (
+                  <VehicleDetailsPage
+                    vehicleId={vehicleId}
+                    onExit={() => navigate("/")}
+                    onOpenFlowModal={(lockedFlow) => {
+                      navigate("/");
+                      setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent("rentcar:open-flow-modal", { detail: lockedFlow }));
+                      }, 100);
+                    }}
+                  />
+                ) : (
+                  <LandingPage
+                    onOpenAdmin={() => navigate("/admin")}
+                  />
+                )}
+              </InvitesProvider>
             </VehiclesProvider>
           </ReservationsProvider>
         </NotificationsProvider>

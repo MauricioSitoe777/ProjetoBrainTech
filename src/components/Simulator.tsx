@@ -4,7 +4,6 @@ import { useCurrencyFormatter } from "../hooks";
 import { useAuth } from "../context/AuthContext";
 import { useReservations } from "../context/ReservationsContext";
 import { useUsers } from "../context/UsersContext";
-import { useRoute } from "../hooks/useRoute";
 import { CATEGORY_LABEL, DOC_LABEL } from "../data/constants";
 
 const TAXA_MENSAL = 0.015;
@@ -144,7 +143,7 @@ export default function Simulator({
   lockedFlow?: FlowType;
 }) {
   const fmt = useCurrencyFormatter();
-  const { user: authUser, allUsers } = useAuth();
+  const { user: authUser, allUsers, addUser } = useAuth();
   const { updateUser, getUser } = useUsers();
   const {
     createReservation,
@@ -152,9 +151,6 @@ export default function Simulator({
     checkAvailability,
     quoteRental,
   } = useReservations();
-  const { navigate } = useRoute();
-
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   // Get full user data from context to have documents
   const currentUser = useMemo(() => {
@@ -178,6 +174,7 @@ export default function Simulator({
 
   const [clientName, setClientName] = useState("");
   const [clientContact, setClientContact] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   // Auto-preencher dados se o utilizador logado for alterado/carregado
@@ -213,6 +210,7 @@ export default function Simulator({
     setClientName(selectedUser.nome);
     const contact = selectedUser.telefone || selectedUser.email || "";
     setClientContact(formatContact(contact.replace(/^\+258\s*/, "")));
+    setClientEmail(selectedUser.email || "");
     setShowSuggestions(false);
   };
 
@@ -375,16 +373,16 @@ export default function Simulator({
   const rentalDetailsOk =
     flow !== "aluguer" ||
     (!!dataInicio && !!dataFim && dateValidation?.valid === true && availability?.available !== false);
-  const canSubmit = clientName.trim().length >= 2 && docsOk && rentalDetailsOk && (flow === "aluguer" || eligivel);
+  const canSubmit =
+    clientName.trim().length >= 2 &&
+    docsOk &&
+    rentalDetailsOk &&
+    (flow === "aluguer" || eligivel) &&
+    (!!authUser || clientEmail.trim().length > 0);
 
   const handleSubmit = () => {
     setSubmitError("");
     if (!canSubmit) return;
-
-    if (!authUser) {
-      setShowLoginPrompt(true);
-      return;
-    }
 
     const submittedDocs = (Object.keys(docs) as DocumentKey[]).filter((k) => docs[k]);
 
@@ -423,58 +421,77 @@ export default function Simulator({
 
     setHistory((h) => [entry, ...h].slice(0, 30));
 
-    // Se estiver logado, atualizar documentos no perfil e criar transação real
+    // Resolve which user record to link the reservation to
+    const normalizedPhone = clientContact.trim() ? `+258 ${clientContact.trim()}` : "";
+    let transactionUserId: string;
+
     if (authUser) {
-      // Persistir dados no perfil do utilizador (categoria, contacto e documentos)
+      transactionUserId = authUser.id;
       updateUser(authUser.id, {
         category,
-        telefone: clientContact.trim() ? `+258 ${clientContact.trim()}` : undefined,
-        documentos: {
-          ...currentUser?.documentos,
-          ...docs
-        }
+        telefone: normalizedPhone || undefined,
+        documentos: { ...currentUser?.documentos, ...docs },
       });
-
-      if (flow === "aluguer") {
-        const result = createReservation({
-          vehicleId: rentalVehicleId,
-          userId: authUser.id,
-          clientName: clientName.trim() || authUser.nome,
-          clientEmail: authUser.email,
-          clientPhone: clientContact.trim() ? `+258 ${clientContact.trim()}` : undefined,
-          dataInicio,
-          dataFim,
-          horaLevantamento,
-          horaDevolucao,
-          status: 'pendente',
-          valorTotal: rentalTotal,
-          deposito: rentalDeposit,
-          ...(motivoViagem.trim() ? { motivoViagem: motivoViagem.trim() } : { motivoViagem: undefined }),
-          ...{ localLevantamento, localDevolucao },
+    } else {
+      // Guest: reuse existing account if email/phone matches, otherwise create pending
+      const existing = allUsers.find(
+        (u) => u.email === clientEmail.trim() || (normalizedPhone && u.telefone === normalizedPhone),
+      );
+      if (existing) {
+        transactionUserId = existing.id;
+      } else {
+        const guest = addUser({
+          nome: clientName.trim(),
+          email: clientEmail.trim(),
+          telefone: normalizedPhone,
+          role: "cliente",
+          status: "pendente",
+          category,
+          documentos: docs,
         });
-        if (!result.ok) {
-          setSubmitError(result.error ?? "Não foi possível criar a reserva.");
-          return;
-        }
-      } else if (flow === "compra") {
-        const start = new Date();
-        createReservation({
-          vehicleId: selectedVehicleId ?? 2,
-          userId: authUser.id,
-          clientName: authUser.nome,
-          clientEmail: authUser.email,
-          dataInicio: start.toISOString().split('T')[0],
-          dataFim: start.toISOString().split('T')[0],
-          horaLevantamento: "09:00",
-          horaDevolucao: "09:00",
-          status: 'pendente',
-          valorTotal: purchaseTotal,
-          deposito: paymentPlan === "prestacoes" ? purchasePMT : purchaseTotal,
-          notas: `Compra via plano: ${paymentPlan === "prestacoes" ? `${mesesPrestacoes} prestações` : "Pronto pagamento"}`,
-          totalPrestacoes: paymentPlan === "prestacoes" ? mesesPrestacoes : undefined,
-          prestacoesPagas: paymentPlan === "prestacoes" ? 0 : undefined,
-        });
+        transactionUserId = guest.id;
       }
+    }
+
+    if (flow === "aluguer") {
+      const result = createReservation({
+        vehicleId: rentalVehicleId,
+        userId: transactionUserId,
+        clientName: clientName.trim(),
+        clientEmail: authUser?.email ?? clientEmail.trim(),
+        clientPhone: normalizedPhone || undefined,
+        dataInicio,
+        dataFim,
+        horaLevantamento,
+        horaDevolucao,
+        status: "pendente",
+        valorTotal: rentalTotal,
+        deposito: rentalDeposit,
+        ...(motivoViagem.trim() ? { motivoViagem: motivoViagem.trim() } : { motivoViagem: undefined }),
+        ...{ localLevantamento, localDevolucao },
+      });
+      if (!result.ok) {
+        setSubmitError(result.error ?? "Não foi possível criar a reserva.");
+        return;
+      }
+    } else if (flow === "compra") {
+      const start = new Date();
+      createReservation({
+        vehicleId: selectedVehicleId ?? 2,
+        userId: transactionUserId,
+        clientName: clientName.trim(),
+        clientEmail: authUser?.email ?? clientEmail.trim(),
+        dataInicio: start.toISOString().split("T")[0],
+        dataFim: start.toISOString().split("T")[0],
+        horaLevantamento: "09:00",
+        horaDevolucao: "09:00",
+        status: "pendente",
+        valorTotal: purchaseTotal,
+        deposito: paymentPlan === "prestacoes" ? purchasePMT : purchaseTotal,
+        notas: `Compra via plano: ${paymentPlan === "prestacoes" ? `${mesesPrestacoes} prestações` : "Pronto pagamento"}`,
+        totalPrestacoes: paymentPlan === "prestacoes" ? mesesPrestacoes : undefined,
+        prestacoesPagas: paymentPlan === "prestacoes" ? 0 : undefined,
+      });
     }
   };
 
@@ -648,6 +665,25 @@ export default function Simulator({
                 </div>
               </div>
             </div>
+
+            {/* Email — só visível para convidados */}
+            {!authUser && (
+              <div>
+                <label className="text-white text-sm font-medium block mb-2">
+                  Email do cliente <span className="text-amber-400 text-xs font-bold">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={clientEmail}
+                  onChange={(e) => setClientEmail(e.target.value)}
+                  placeholder="email@cliente.com"
+                  className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600"
+                />
+                <p className="text-zinc-400 text-xs mt-1.5">
+                  O seu pedido ficará pendente até o admin aprovar o registo.
+                </p>
+              </div>
+            )}
 
             {/* Compra */}
             {flow === "compra" ? (
@@ -1068,43 +1104,6 @@ export default function Simulator({
         </div>
       </div>
 
-      {/* Login Suggestion Modal */}
-      {showLoginPrompt && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-black/80 backdrop-blur-md"
-            onClick={() => setShowLoginPrompt(false)}
-          />
-          <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="text-center">
-              <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d8a020" strokeWidth="2">
-                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M13.8 12H3" />
-                </svg>
-              </div>
-              <h3 className="text-2xl font-black text-white mb-2">Autenticação Necessária</h3>
-              <p className="text-zinc-400 text-sm mb-8">
-                Para concluir esta simulação e guardar o seu histórico, por favor inicie sessão na sua conta primeiro.
-              </p>
-              
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={() => navigate("/admin")}
-                  className="w-full py-4 rounded-2xl bg-amber-500 text-zinc-950 font-black uppercase tracking-widest hover:bg-amber-400 transition-all"
-                >
-                  Fazer Login
-                </button>
-                <button
-                  onClick={() => setShowLoginPrompt(false)}
-                  className="w-full py-4 rounded-2xl border border-zinc-800 text-zinc-400 font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all"
-                >
-                  Continuar a Simular
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </section>
   );
 }

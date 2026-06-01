@@ -1,6 +1,6 @@
 export type UserRole = 'admin' | 'cliente';
 
-export type UserStatus = 'ativo' | 'inativo' | 'suspenso';
+export type UserStatus = 'ativo' | 'inativo' | 'suspenso' | 'pendente';
 
 export type UserCategory = 'func_publico' | 'func_privado' | 'empreendedor';
 
@@ -27,6 +27,7 @@ export interface User {
     declaracao_bairro?: boolean;
   };
   endereco?: string;
+  password?: string;
 }
 
 export interface Aluguer {
