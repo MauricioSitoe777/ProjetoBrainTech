@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useState } from "react";
+import { AddressSearch } from "./AddressSearch";
 import { useCurrencyFormatter } from "../hooks";
 import { useAuth } from "../context/AuthContext";
 import { useReservations } from "../context/ReservationsContext";
@@ -197,8 +198,8 @@ export default function Simulator({
   const [horaLevantamento, setHoraLevantamento] = useState("09:00");
   const [horaDevolucao, setHoraDevolucao] = useState("17:00");
   const [motivoViagem, setMotivoViagem] = useState("");
-  const [localLevantamento, setLocalLevantamento] = useState<string>(RENTAL_LOCATIONS[1]);
-  const [localDevolucao, setLocalDevolucao] = useState<string>(RENTAL_LOCATIONS[1]);
+  const [localLevantamento, setLocalLevantamento] = useState("");
+  const [localDevolucao, setLocalDevolucao] = useState("");
   const [submitError, setSubmitError] = useState("");
 
   const [docs, setDocs] = useState<Record<DocumentKey, boolean>>({
@@ -849,34 +850,18 @@ export default function Simulator({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-white text-sm font-medium block mb-2">Local de levantamento</label>
-                    <select
-                      value={localLevantamento}
-                      onChange={(e) => setLocalLevantamento(e.target.value)}
-                      className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-zinc-600"
-                    >
-                      {RENTAL_LOCATIONS.map((location) => (
-                        <option key={location} value={location} className="bg-zinc-900 text-white">
-                          {location}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-white text-sm font-medium block mb-2">Local de devolução</label>
-                    <select
-                      value={localDevolucao}
-                      onChange={(e) => setLocalDevolucao(e.target.value)}
-                      className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-zinc-600"
-                    >
-                      {RENTAL_LOCATIONS.map((location) => (
-                        <option key={location} value={location} className="bg-zinc-900 text-white">
-                          {location}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <AddressSearch
+                    label="Local de levantamento"
+                    value={localLevantamento}
+                    onChange={setLocalLevantamento}
+                    placeholder="Ex: Av. 24 de Julho, Maputo…"
+                  />
+                  <AddressSearch
+                    label="Local de devolução"
+                    value={localDevolucao}
+                    onChange={setLocalDevolucao}
+                    placeholder="Ex: Aeroporto de Maputo…"
+                  />
                 </div>
 
                 {dateValidation && !dateValidation.valid ? (
