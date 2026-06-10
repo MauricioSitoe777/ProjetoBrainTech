@@ -10,7 +10,9 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import type { AnimatePresenceProps, MotionProps, Transition } from "motion/react";
 import { useScrollTo } from "../hooks";
-import { ArrowRight, Gauge } from "lucide-react";
+import { ArrowRight, Clock, Gauge } from "lucide-react";
+
+import { useReservations } from '../context/ReservationsContext';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -297,11 +299,25 @@ function RotatingHeading() {
 // ─── ShufflingCards ────────────────────────────────────────────────────────────
 
 const CARDS = [
-  { id: "suv",     title: "SUV",      subtitle: "Espaço & Força",       tag: "Popular",       rotDeg: -3, glowColor: "rgba(216,160,32,0.25)" },
-  { id: "pickup",  title: "Pick-up",  subtitle: "Robustez Total",        tag: "Tendência",     rotDeg:  3, glowColor: "rgba(240,200,64,0.20)" },
-  { id: "sedan",   title: "Sedan",    subtitle: "Conforto & Estilo",     tag: "Clássico",      rotDeg:  2, glowColor: "rgba(216,160,32,0.18)" },
-  { id: "aluguer", title: "Aluguer",  subtitle: "Flexibilidade Máxima",  tag: "Diário/Mensal", rotDeg: -2, glowColor: "rgba(240,200,64,0.22)" },
+  { id: "publico",      title: "Público",      subtitle: "Sem entrada obrigatória", tag: "Funcionário",  rotDeg: -3, glowColor: "rgba(216,160,32,0.25)", warranty: true  },
+  { id: "privado",      title: "Privado",      subtitle: "Entrada de 10% a 50%",   tag: "Funcionário",  rotDeg:  3, glowColor: "rgba(240,200,64,0.20)", warranty: true  },
+  { id: "empreendedor", title: "Empreendedor", subtitle: "Posse com 75% entrada",  tag: "Empresário",   rotDeg:  2, glowColor: "rgba(216,160,32,0.18)", warranty: true  },
+  { id: "aluguer",      title: "Aluguer",      subtitle: "Diário ou Mensal",        tag: "Flexibilidade",rotDeg: -2, glowColor: "rgba(240,200,64,0.22)", warranty: false },
 ];
+
+const CARD_SIMULATOR_NAV: Record<string, { category?: string; flow?: "compra" | "aluguer" }> = {
+  publico:      { category: "func_publico",  flow: "compra"  },
+  privado:      { category: "func_privado",  flow: "compra"  },
+  empreendedor: { category: "empreendedor",  flow: "compra"  },
+  aluguer:      {                            flow: "aluguer" },
+};
+
+function navigateToSimulator(cardId: string) {
+  window.dispatchEvent(
+    new CustomEvent("rentcar:open-simulator-category", { detail: CARD_SIMULATOR_NAV[cardId] })
+  );
+  setTimeout(() => document.getElementById("simulador")?.scrollIntoView({ behavior: "smooth" }), 30);
+}
 
 function shuffleDifferent<T>(arr: T[]): T[] {
   let next = [...arr];
@@ -314,10 +330,27 @@ function shuffleDifferent<T>(arr: T[]): T[] {
 }
 
 function ShufflingCards() {
+  const { rules } = useReservations();
   const [order, setOrder] = useState([0, 1, 2, 3]);
   const [locked, setLocked] = useState(false);
+  const [xitiqueTextIndex, setXitiqueTextIndex] = useState(0);
   const gridRef = useRef<HTMLDivElement>(null);
   const [slots, setSlots] = useState<{ x: number; y: number }[]>([]);
+
+  // Textos rotativos para o card de aluguer
+  const discountTexts = useMemo(() => [
+    "Diário ou Mensal",
+    `Desconto 7+ dias: ${rules.descontoSemanalPercentual}%`,
+    `Desconto 15+ dias: ${rules.descontoQuinzenalPercentual}%`,
+    `Desconto 30+ dias: ${rules.descontoMensalPercentual}%`
+  ], [rules]);
+
+  const xitiqueTexts = useMemo(() => [
+    "Poupança comunitária · Prémio mensal",
+    "Grupo de 10 membros · 30K MT/mês",
+    "Sorteio mensal · 300K MT",
+    "Entre no grupo · Receba as chaves"
+  ], []);
 
   useEffect(() => {
     const measure = () => {
@@ -337,22 +370,22 @@ function ShufflingCards() {
   }, []);
 
   const handleHover = () => {
-    if (locked || slots.length < 4) return;
+    if (locked || slots.length < 5) return;
     setLocked(true);
     setOrder((prev) => shuffleDifferent(prev));
     setTimeout(() => setLocked(false), 520);
   };
 
-  const lastIdx = slots.length - 1;
+  // containerH usa o slot 4 (Xitique full-width) como âncora inferior
   const containerH =
-    slots.length === 4
-      ? slots[lastIdx].y +
-        ((gridRef.current?.children[lastIdx] as HTMLElement | undefined)?.offsetHeight ?? 200)
+    slots.length === 5
+      ? slots[4].y +
+        ((gridRef.current?.children[4] as HTMLElement | undefined)?.offsetHeight ?? 100)
       : undefined;
 
   return (
     <div className="relative w-full">
-      {/* grid invisível — referência para medir posições dos 4 slots */}
+      {/* grid invisível — 4 slots normais + 1 slot full-width (Xitique) */}
       <div
         ref={gridRef}
         className="invisible grid grid-cols-2 gap-2 sm:gap-3"
@@ -361,11 +394,15 @@ function ShufflingCards() {
         {CARDS.map((c) => (
           <div key={c.id} className="min-h-[120px] sm:min-h-[135px] lg:min-h-[150px]" />
         ))}
+        {/* slot Xitique — ocupa as 2 colunas */}
+        <div className="col-span-2 min-h-[88px]" />
       </div>
 
-      {/* container absoluto com a altura medida */}
+      {/* container absoluto com altura total */}
       <div className="absolute inset-x-0 top-0" style={{ height: containerH }}>
-        {slots.length === 4 &&
+
+        {/* ── 4 cards embaralhados ── */}
+        {slots.length === 5 &&
           order.map((cardIdx, slotIdx) => {
             const card = CARDS[cardIdx];
             const { x, y } = slots[slotIdx];
@@ -380,6 +417,7 @@ function ShufflingCards() {
                 whileHover={{ scale: 1.04, rotate: 0, zIndex: 20 }}
                 transition={{ type: "spring", stiffness: 260, damping: 28 }}
                 onHoverStart={handleHover}
+                onClick={() => navigateToSimulator(card.id)}
                 style={{
                   position: "absolute",
                   width: w,
@@ -390,7 +428,6 @@ function ShufflingCards() {
                 }}
                 className="flex flex-col justify-between rounded-2xl border border-white/10 p-3.5 backdrop-blur-md sm:rounded-[20px] sm:p-4"
               >
-                {/* topo: ícone + tag */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-amber-400/30 bg-amber-400/15 sm:h-8 sm:w-8">
                     <Gauge className="h-3.5 w-3.5 text-amber-400 sm:h-4 sm:w-4" />
@@ -399,19 +436,131 @@ function ShufflingCards() {
                     {card.tag}
                   </span>
                 </div>
-
-                {/* base: título + subtítulo */}
                 <div>
                   <h3 className="text-lg font-black uppercase leading-none tracking-tight text-white sm:text-xl">
                     {card.title}
                   </h3>
-                  <p className="mt-0.5 text-[11px] font-medium text-white/55 sm:text-xs">
-                    {card.subtitle}
-                  </p>
+                  {card.id === 'aluguer' ? (
+                    <div className="h-4 sm:h-5 overflow-hidden">
+                      <TextRotate
+                        texts={discountTexts}
+                        rotationInterval={3000}
+                        staggerDuration={0.02}
+                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                        initial={{ y: "100%", opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: "-100%", opacity: 0 }}
+                        mainClassName="text-[11px] font-bold text-amber-400 sm:text-xs uppercase tracking-tight"
+                        splitBy="words"
+                      />
+                    </div>
+                  ) : (
+                    <p className="mt-0.5 text-[11px] font-medium text-white/55 sm:text-xs">
+                      {card.subtitle}
+                    </p>
+                  )}
+                  {card.warranty && (
+                    <div className="mt-2 flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md w-fit">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="text-[8px] font-black text-emerald-400 uppercase tracking-tighter">
+                        Garantia 15 dias
+                      </span>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             );
           })}
+
+        {/* ── Card Xitique — fixo, full-width ── */}
+        {slots.length === 5 && (() => {
+          const { x, y } = slots[4];
+          const el = gridRef.current?.children[4] as HTMLElement | undefined;
+          const w = el?.offsetWidth ?? 0;
+          const h = el?.offsetHeight ?? 88;
+          return (
+            <motion.div
+              key="xitique"
+              initial={{ opacity: 0, y: y + 12 }}
+              animate={{ opacity: 1, x, y }}
+              transition={{ type: "spring", stiffness: 220, damping: 30, delay: 0.15 }}
+              whileHover={{ scale: 1.02, zIndex: 20 }}
+              onClick={() => window.dispatchEvent(new CustomEvent("rentcar:open-xitique-modal"))}
+              style={{
+                position: "absolute",
+                width: w,
+                height: h,
+                cursor: "pointer",
+                background:
+                  "linear-gradient(135deg, rgba(216,160,32,0.22) 0%, rgba(92,61,16,0.22) 44%, rgba(8,8,10,0.56) 100%)",
+                boxShadow:
+                  "0 18px 50px rgba(0,0,0,0.28), 0 8px 34px rgba(216,160,32,0.22), inset 0 1px 0 rgba(255,255,255,0.16)",
+              }}
+              className="group overflow-hidden flex items-center justify-between gap-3 rounded-2xl border border-amber-400/30 px-4 py-3 backdrop-blur-xl sm:gap-4 sm:rounded-[20px] sm:px-5"
+            >
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_20%,rgba(255,214,102,0.20),transparent_32%),linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent)] opacity-80" />
+              <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-amber-200/50 to-transparent" />
+
+              {/* ícone */}
+              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-amber-300/40 bg-amber-400/15 shadow-[0_0_24px_rgba(216,160,32,0.22)]">
+                <Clock className="h-[18px] w-[18px] text-amber-300" />
+              </div>
+
+              {/* info central */}
+              <div className="relative flex-1 min-w-0">
+                <div className="mb-1 flex items-center gap-2">
+                  <h3 className="text-base font-black uppercase tracking-tight text-white sm:text-lg leading-none">
+                    Xitique
+                  </h3>
+                  <span className="rounded-full border border-amber-300/40 bg-amber-300/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-amber-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]">
+                    10 Membros
+                  </span>
+                </div>
+                <div className="h-4 overflow-hidden sm:h-5">
+                  <TextRotate
+                    texts={xitiqueTexts}
+                    rotationInterval={3000}
+                    staggerDuration={0.018}
+                    transition={{ type: "spring", damping: 24, stiffness: 280 }}
+                    initial={{ y: "110%", opacity: 0, filter: "blur(4px)" }}
+                    animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
+                    exit={{ y: "-110%", opacity: 0, filter: "blur(4px)" }}
+                    onNext={setXitiqueTextIndex}
+                    mainClassName="text-[11px] font-semibold text-white/70 sm:text-xs"
+                    splitBy="words"
+                  />
+                </div>
+                <div className="mt-1.5 hidden items-center gap-1.5 sm:flex">
+                  {xitiqueTexts.map((_, index) => (
+                    <span
+                      key={index}
+                      className={cn(
+                        "h-1 rounded-full transition-all duration-500",
+                        index === xitiqueTextIndex ? "w-4 bg-amber-300" : "w-1.5 bg-white/20",
+                      )}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* stats */}
+              <div className="relative flex items-center gap-3 shrink-0">
+                <div className="text-right hidden sm:block">
+                  <div className="text-[9px] text-white/40 uppercase font-bold">Quota</div>
+                  <div className="text-sm font-black text-white leading-tight">30K <span className="text-amber-400 text-[10px]">MT</span></div>
+                </div>
+                <div className="w-px h-6 bg-white/10 hidden sm:block" />
+                <div className="text-right">
+                  <div className="text-[9px] text-white/40 uppercase font-bold">Prémio</div>
+                  <div className="text-sm font-black text-amber-400 leading-tight">300K <span className="text-white/60 text-[10px]">MT</span></div>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/20 border border-amber-300/40 shadow-[0_0_22px_rgba(216,160,32,0.20)] transition-transform duration-300 group-hover:translate-x-0.5">
+                  <ArrowRight className="h-3.5 w-3.5 text-amber-300" strokeWidth={2.5} />
+                </div>
+              </div>
+            </motion.div>
+          );
+        })()}
       </div>
     </div>
   );
@@ -485,7 +634,7 @@ export default function Hero({ onShowSimulator }: { onShowSimulator?: () => void
                 onShowSimulator?.();
                 scrollTo("simulador");
               }}
-              className="flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 px-8 py-4 text-sm font-black uppercase tracking-wider text-zinc-300 backdrop-blur-sm transition-all hover:-translate-y-1 hover:border-amber-500/50 hover:text-white"
+              className="flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 px-8 py-4 text-sm font-black uppercase tracking-wider text-white backdrop-blur-sm transition-all hover:-translate-y-1 hover:border-amber-500/50 hover:text-white"
               style={{ fontFamily: "'Archivo', sans-serif" }}
             >
               Simular Prestações

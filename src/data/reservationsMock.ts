@@ -1,16 +1,32 @@
 import type { BlockedPeriod, BusinessRules, Reservation } from '../types/reservation';
 
 export const DEFAULT_BUSINESS_RULES: BusinessRules = {
+  // Limites temporais
   minDiasAluguer: 1,
   maxDiasAluguer: 90,
   antecedenciaMinimaHoras: 24,
   antecedenciaMaximaDias: 180,
   bufferHorasEntreReservas: 4,
+  // Depósito & caução
   depositoPercentual: 30,
+  caucaoValor: 5000,
+  // Taxas fixas
   taxaLimpeza: 500,
   taxaLogistica: 800,
+  seguroDiario: 300,
+  taxaCombustivel: 0,
+  taxaCondutorAdicional: 500,
+  // Quilómetros
+  kmIncluidosPorDia: 200,
+  precoKmExtra: 5,
+  // Penalizações
+  penalizacaoAtrasoPorHora: 200,
+  taxaCancelamento: 1000,
+  // Descontos
   descontoSemanalPercentual: 10,
+  descontoQuinzenalPercentual: 17,
   descontoMensalPercentual: 20,
+  // Configurações gerais
   permitirFimSemana: true,
   horaLevantamento: '08:00',
   horaDevolucao: '18:00',

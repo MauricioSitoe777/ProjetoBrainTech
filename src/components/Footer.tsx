@@ -27,7 +27,7 @@ export default function Footer() {
             <div className="flex items-center mb-4">
               <BrandLogo className="h-14 w-auto max-w-[200px]" />
             </div>
-            <p className="text-zinc-200 text-sm leading-relaxed max-w-sm">
+            <p className="text-white text-sm leading-relaxed max-w-sm">
               Ecossistema híbrido de gestão automóvel em Moçambique.
               Aluguer, venda e financiamento digital.
             </p>
@@ -39,7 +39,7 @@ export default function Footer() {
             {SERVICES.map((s) => (
               <div
                 key={s}
-                className="text-zinc-200 text-sm mb-2 hover:text-white cursor-pointer transition-colors"
+                className="text-white text-sm mb-2 hover:text-white cursor-pointer transition-colors"
               >
                 {s}
               </div>
@@ -50,7 +50,7 @@ export default function Footer() {
           <div>
             <div className="text-white font-semibold text-sm mb-4">Contacto</div>
             {CONTACTS.map((c) => (
-              <div key={c} className="text-zinc-200 text-sm mb-2">{c}</div>
+              <div key={c} className="text-white text-sm mb-2">{c}</div>
             ))}
           </div>
 
@@ -58,7 +58,7 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="border-t border-zinc-900 pt-6">
-          <p className="text-zinc-400 text-xs">
+          <p className="text-white text-xs">
             © 2026 RentCar &amp; Vendas Moçambique. Todos os direitos reservados.
           </p>
         </div>

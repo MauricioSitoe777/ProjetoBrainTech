@@ -26,8 +26,21 @@ export default function PaymentsSection({
           >
             Pague como preferir
           </h2>
-          <p className="text-zinc-400 text-base mt-4 max-w-xl mx-auto">
-            Aceitamos os principais métodos de pagamento móvel em Moçambique.
+          <p className="text-white text-base mt-4 max-w-xl mx-auto">
+            Aceitamos os principais métodos de pagamento móvel em Moçambique através de negociação directa e offline.
+          </p>
+        </div>
+
+        {/* Offline Negotiation Alert */}
+        <div className="mb-10 max-w-2xl mx-auto bg-amber-500/10 border border-amber-500/20 p-5 rounded-2xl flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
+          <p className="text-white text-sm font-medium leading-relaxed">
+            <span className="text-amber-500 font-black uppercase text-[10px] block mb-1">Processo de Pagamento</span>
+            O pagamento <span className="text-white font-bold underline">não é processado nesta aplicação</span>. Após simular ou reservar, o administrador entrará em contacto para negociar e fornecer as instruções de pagamento seguro (M-Pesa ou Transferência).
           </p>
         </div>
 
@@ -57,7 +70,7 @@ export default function PaymentsSection({
                 />
               </div>
               <h3 className="text-white font-bold text-base mb-2">{m.name}</h3>
-              <p className="text-zinc-300 text-sm leading-relaxed">{m.desc}</p>
+              <p className="text-white text-sm leading-relaxed">{m.desc}</p>
             </div>
           ))}
         </div>
@@ -81,7 +94,7 @@ export default function PaymentsSection({
               <br />
               Enquanto Usa
             </h3>
-            <p className="text-zinc-400 text-base max-w-xl mx-auto mb-8">
+            <p className="text-white text-base max-w-xl mx-auto mb-8">
               Desconto direto no salário. Taxas preferenciais e prazo
               até 12 meses sem entrada.
             </p>

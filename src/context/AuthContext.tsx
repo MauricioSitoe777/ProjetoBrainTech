@@ -32,23 +32,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('rentcar:users:v2', JSON.stringify(allUsers));
   }, [allUsers]);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (identifier: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     await new Promise(r => setTimeout(r, 800));
-    
-    // Procura em todos os utilizadores (existentes e novos)
-    const foundUser = allUsers.find(u => u.email === email);
-    
-    // Usar senha própria se definida, caso contrário aceitar a senha demo
+
+    const id = identifier.trim();
+    // Normaliza dígitos para comparação de telemóvel (ignora +258, espaços, traços)
+    const idDigits = id.replace(/\D/g, '').replace(/^258/, '');
+
+    const foundUser = allUsers.find(u => {
+      if (u.email === id) return true;
+      const phoneDigits = (u.telefone ?? '').replace(/\D/g, '').replace(/^258/, '');
+      return idDigits.length >= 8 && phoneDigits.length >= 8 && phoneDigits.endsWith(idDigits);
+    });
+
     const validPassword = foundUser?.password
       ? password === foundUser.password
       : password === DEFAULT_PASSWORD;
+
     if (foundUser && validPassword) {
-      setUser({ id: foundUser.id, nome: foundUser.nome, email: foundUser.email, role: foundUser.role });
+      setUser({ id: foundUser.id, nome: foundUser.nome, email: foundUser.email, role: foundUser.role, xitique: foundUser.xitique ?? false });
       setIsLoading(false);
       return true;
     }
-    
+
     setIsLoading(false);
     return false;
   };
@@ -60,6 +67,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const newUser: User = {
       ...userData,
       id: `u${Date.now()}`,
+      status: userData.status || 'ativo',
+      regularity: 'regular',
+      restriction: 'nenhuma',
       dataCriacao: new Date().toISOString().split('T')[0],
       ultimoAcesso: new Date().toISOString().split('T')[0],
       totalAlugueres: 0,
@@ -77,6 +87,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const newUser: User = {
       ...userData,
       id: `u${Date.now()}`,
+      status: userData.status || 'ativo',
+      regularity: userData.regularity || 'regular',
+      restriction: userData.restriction || 'nenhuma',
       dataCriacao: new Date().toISOString().split('T')[0],
       ultimoAcesso: new Date().toISOString().split('T')[0],
       totalAlugueres: 0,

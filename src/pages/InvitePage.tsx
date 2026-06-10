@@ -65,7 +65,7 @@ export function InvitePage({ token, onSuccess }: InvitePageProps) {
             </svg>
           </div>
           <h2 className="text-white text-2xl font-black mb-2">Link inválido</h2>
-          <p className="text-zinc-400 text-sm mb-6">
+          <p className="text-white text-sm mb-6">
             Este link já foi utilizado, expirou (válido por 24h) ou não existe.
             Contacte o administrador para obter um novo convite.
           </p>
@@ -107,7 +107,7 @@ export function InvitePage({ token, onSuccess }: InvitePageProps) {
             <h2 className="text-white text-2xl font-black">
               Olá, {invite.userName.split(' ')[0]}!
             </h2>
-            <p className="text-zinc-400 text-sm mt-2">
+            <p className="text-white text-sm mt-2">
               Crie a sua senha para activar a conta.
             </p>
           </div>
@@ -115,15 +115,15 @@ export function InvitePage({ token, onSuccess }: InvitePageProps) {
           {/* Account info */}
           <div className="bg-zinc-800/50 border border-zinc-700/50 rounded-2xl p-4 mb-6 space-y-2 text-sm">
             <div className="flex items-center justify-between">
-              <span className="text-zinc-400 text-xs">Nome</span>
+              <span className="text-white text-xs">Nome</span>
               <span className="text-white font-semibold">{invite.userName}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-zinc-400 text-xs">Email</span>
+              <span className="text-white text-xs">Email</span>
               <span className="text-white">{invite.userEmail}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-zinc-400 text-xs">Link expira em</span>
+              <span className="text-white text-xs">Link expira em</span>
               <span className="text-amber-400 font-bold text-xs">
                 {expiresIn > 0 ? `≈ ${expiresIn}h` : 'menos de 1h'}
               </span>
@@ -144,12 +144,12 @@ export function InvitePage({ token, onSuccess }: InvitePageProps) {
                   onChange={(e) => { setPassword(e.target.value); setError(''); }}
                   placeholder="Mínimo 6 caracteres"
                   required
-                  className="flex-1 bg-transparent px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none"
+                  className="flex-1 bg-transparent px-4 py-3 text-sm text-white placeholder:text-zinc-500 outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="px-3 text-zinc-500 hover:text-zinc-300 transition-colors"
+                  className="px-3 text-white hover:text-white transition-colors"
                   tabIndex={-1}
                 >
                   {showPassword ? (
@@ -181,7 +181,7 @@ export function InvitePage({ token, onSuccess }: InvitePageProps) {
                       }`}
                     />
                   ))}
-                  <span className="text-xs text-zinc-400 ml-1 self-center">
+                  <span className="text-xs text-white ml-1 self-center">
                     {password.length < 6 ? 'Fraca' : password.length < 10 ? 'Média' : 'Forte'}
                   </span>
                 </div>
@@ -200,12 +200,12 @@ export function InvitePage({ token, onSuccess }: InvitePageProps) {
                   onChange={(e) => { setConfirm(e.target.value); setError(''); }}
                   placeholder="Repita a senha"
                   required
-                  className="flex-1 bg-transparent px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none"
+                  className="flex-1 bg-transparent px-4 py-3 text-sm text-white placeholder:text-zinc-500 outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirm((v) => !v)}
-                  className="px-3 text-zinc-500 hover:text-zinc-300 transition-colors"
+                  className="px-3 text-white hover:text-white transition-colors"
                   tabIndex={-1}
                 >
                   {showConfirm ? (
@@ -243,14 +243,14 @@ export function InvitePage({ token, onSuccess }: InvitePageProps) {
               className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all ${
                 !submitting && password.length >= 6 && password === confirm
                   ? 'bg-amber-500 text-zinc-950 hover:bg-amber-400 active:scale-[0.98]'
-                  : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                  : 'bg-zinc-800 text-white cursor-not-allowed'
               }`}
             >
               {submitting ? 'A activar…' : 'Activar conta'}
             </button>
           </form>
 
-          <p className="text-zinc-600 text-xs text-center mt-5">
+          <p className="text-white text-xs text-center mt-5">
             Link de uso único · válido por 24h após emissão
           </p>
         </div>

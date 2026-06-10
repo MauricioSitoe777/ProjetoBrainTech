@@ -16,6 +16,7 @@ export default function VehicleCard({ vehicle, onAction }: VehicleCardProps) {
   const { navigate } = useRoute();
 
   const handleNavigate = () => {
+    sessionStorage.setItem("rentcar:returnScroll", String(window.scrollY));
     navigate(`/veiculo/${vehicle.id}`);
   };
 
@@ -54,7 +55,7 @@ export default function VehicleCard({ vehicle, onAction }: VehicleCardProps) {
           <div className="w-full h-full bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 flex items-center justify-center">
             <div className="flex flex-col items-center gap-3">
               <div className="text-4xl filter grayscale opacity-50">🚗</div>
-              <span className="text-[10px] text-zinc-300 font-bold uppercase tracking-tighter">Imagem Indisponível</span>
+              <span className="text-[10px] text-white font-bold uppercase tracking-tighter">Imagem Indisponível</span>
             </div>
           </div>
         )}
@@ -76,6 +77,11 @@ export default function VehicleCard({ vehicle, onAction }: VehicleCardProps) {
           <div className="px-3 py-1 rounded-full text-[10px] font-bold bg-zinc-950/80 text-white border border-zinc-700/50 backdrop-blur-md uppercase tracking-widest">
             {vehicle.cat}
           </div>
+          {vehicle.mode === "compra" && (
+            <div className="px-3 py-1 rounded-full text-[10px] font-black bg-emerald-600 text-white border border-emerald-400/50 shadow-lg shadow-emerald-600/20 uppercase tracking-widest">
+              Garantia 15 Dias
+            </div>
+          )}
           {vehicle.discount && vehicle.discount > 0 && (
             <div className="px-3 py-1 rounded-full text-[10px] font-black bg-red-600 text-white border border-red-400/50 shadow-lg shadow-red-600/20 animate-pulse uppercase tracking-widest">
               -{vehicle.discount}% OFF
@@ -94,7 +100,7 @@ export default function VehicleCard({ vehicle, onAction }: VehicleCardProps) {
                 <div className={`w-2 h-2 rounded-full shrink-0 ${vehicle.available !== false ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'}`} title={vehicle.available !== false ? 'Disponível' : 'Indisponível'} />
               )}
             </div>
-            <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.2em]">
+            <p className="text-white text-[10px] font-bold uppercase tracking-[0.2em]">
               {vehicle.brand}
             </p>
           </div>
@@ -113,7 +119,7 @@ export default function VehicleCard({ vehicle, onAction }: VehicleCardProps) {
           disabled={vehicle.mode === "aluguer" && vehicle.available === false}
           className={`w-full py-4 rounded-2xl text-xs font-black uppercase tracking-widest border transition-all duration-300 ${
             vehicle.mode === "aluguer" && vehicle.available === false
-              ? "border-zinc-800 bg-zinc-900/50 text-zinc-600 cursor-not-allowed"
+              ? "border-zinc-800 bg-zinc-900/50 text-white cursor-not-allowed"
               : "border-zinc-800 text-white hover:bg-amber-500 hover:text-zinc-950 hover:border-amber-500 hover:shadow-lg hover:shadow-amber-500/20"
           }`}
         >

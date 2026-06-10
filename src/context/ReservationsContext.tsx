@@ -5,6 +5,7 @@ import type {
   BlockReason,
   BusinessRules,
   DateValidationResult,
+  Prestacao,
   Reservation,
   ReservationStatus,
 } from '../types/reservation';
@@ -37,6 +38,8 @@ interface ReservationsContextType {
   getVehicleReservations: (vehicleId: number) => Reservation[];
   getClientReservations: (userId: string) => Reservation[];
   quoteRental: (vehicleId: number, start: string, end: string) => ReturnType<typeof calculateRentalTotal> & { days: number; dailyRate: number } | null;
+  gerarPrestacoes: (id: string, semEntrada?: boolean) => void;
+  marcarPrestacao: (reservationId: string, numero: number, paga: boolean) => void;
 }
 
 const ReservationsContext = createContext<ReservationsContextType | null>(null);
@@ -50,11 +53,18 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
     return saved ? JSON.parse(saved) : mockReservations;
   });
   const [blocks, setBlocks] = useState<BlockedPeriod[]>(mockBlockedPeriods);
-  const [rules, setRules] = useState<BusinessRules>(DEFAULT_BUSINESS_RULES);
+  const [rules, setRules] = useState<BusinessRules>(() => {
+    const saved = localStorage.getItem('rentcar:businessRules:v2');
+    return saved ? JSON.parse(saved) : DEFAULT_BUSINESS_RULES;
+  });
 
   useEffect(() => {
     localStorage.setItem('rentcar:reservations:v2', JSON.stringify(reservations));
   }, [reservations]);
+
+  useEffect(() => {
+    localStorage.setItem('rentcar:businessRules:v2', JSON.stringify(rules));
+  }, [rules]);
 
   const visibleReservations = useMemo(() => {
     if (!authUser) return [];
@@ -181,6 +191,54 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
     setRules(prev => ({ ...prev, ...data }));
   };
 
+  const gerarPrestacoes = (id: string, semEntrada = false) => {
+    if (authUser?.role !== 'admin') return;
+    setReservations(prev =>
+      prev.map(r => {
+        if (r.id !== id) return r;
+        const n = r.totalPrestacoes && r.totalPrestacoes > 0 ? r.totalPrestacoes : 12;
+        const entradaPaga = semEntrada ? 0 : (r.deposito ?? 0);
+        const restante = Math.max(0, r.valorTotal - entradaPaga);
+        const valorPrestacao = Math.round(restante / n);
+        const hoje = new Date();
+        const plano: Prestacao[] = Array.from({ length: n }, (_, i) => {
+          const due = new Date(hoje);
+          due.setMonth(due.getMonth() + i + 1);
+          return {
+            numero: i + 1,
+            dataVencimento: due.toISOString().split('T')[0],
+            valor: valorPrestacao,
+            paga: false,
+          };
+        });
+        return {
+          ...r,
+          status: 'em_prestacao' as ReservationStatus,
+          totalPrestacoes: n,
+          prestacoesPagas: 0,
+          prestacoes: plano,
+        };
+      })
+    );
+  };
+
+  const marcarPrestacao = (reservationId: string, numero: number, paga: boolean) => {
+    if (authUser?.role !== 'admin') return;
+    const today = new Date().toISOString().split('T')[0];
+    setReservations(prev =>
+      prev.map(r => {
+        if (r.id !== reservationId) return r;
+        const prestacoes = (r.prestacoes ?? []).map(p =>
+          p.numero === numero
+            ? { ...p, paga, dataPagamento: paga ? today : undefined }
+            : p
+        );
+        const prestacoesPagas = prestacoes.filter(p => p.paga).length;
+        return { ...r, prestacoes, prestacoesPagas };
+      })
+    );
+  };
+
   const quoteRental = (vehicleId: number, start: string, end: string) => {
     const vehicle = VEHICLES.find(v => v.id === vehicleId);
     if (!vehicle || vehicle.mode !== 'aluguer') return null;
@@ -208,6 +266,8 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
         getVehicleReservations: vehicleId => reservations.filter(r => r.vehicleId === vehicleId),
         getClientReservations: userId => reservations.filter(r => r.userId === userId),
         quoteRental,
+        gerarPrestacoes,
+        marcarPrestacao,
       }}
     >
       {children}

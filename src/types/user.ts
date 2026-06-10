@@ -2,6 +2,10 @@ export type UserRole = 'admin' | 'cliente';
 
 export type UserStatus = 'ativo' | 'inativo' | 'suspenso' | 'pendente';
 
+export type UserRegularity = 'regular' | 'pendente' | 'inadimplente';
+
+export type UserRestriction = 'nenhuma' | 'blacklisted';
+
 export type UserCategory = 'func_publico' | 'func_privado' | 'empreendedor';
 
 export interface User {
@@ -11,6 +15,8 @@ export interface User {
   telefone: string;
   role: UserRole;
   status: UserStatus;
+  regularity: UserRegularity;
+  restriction: UserRestriction;
   category?: UserCategory;
   avatar?: string;
   dataCriacao: string;
@@ -19,15 +25,16 @@ export interface User {
   bi?: string;
   nuit?: string;
   documentos?: {
-    bi?: boolean;
-    nuit?: boolean;
-    declaracao_rendimento?: boolean;
-    contrato_trabalho?: boolean;
-    carta_conducao?: boolean;
-    declaracao_bairro?: boolean;
+    bi?: string | boolean;
+    nuit?: string | boolean;
+    declaracao_rendimento?: string | boolean;
+    contrato_trabalho?: string | boolean;
+    carta_conducao?: string | boolean;
+    declaracao_bairro?: string | boolean;
   };
   endereco?: string;
   password?: string;
+  xitique?: boolean;
 }
 
 export interface Aluguer {
@@ -46,4 +53,5 @@ export interface AuthUser {
   nome: string;
   email: string;
   role: UserRole;
+  xitique?: boolean;
 }

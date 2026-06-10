@@ -100,7 +100,7 @@ export function NotificationBell() {
         type="button"
         aria-label="Notificações"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-9 h-9 flex items-center justify-center rounded-full text-zinc-300 hover:text-white hover:bg-zinc-800 transition-all active:scale-95 relative cursor-pointer"
+        className="w-9 h-9 flex items-center justify-center rounded-full text-white hover:text-white hover:bg-zinc-800 transition-all active:scale-95 relative cursor-pointer"
       >
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -130,13 +130,13 @@ export function NotificationBell() {
               <div className="flex gap-3">
                 <button
                   onClick={markAllAsRead}
-                  className="text-[10px] text-zinc-400 hover:text-white font-semibold transition-colors cursor-pointer"
+                  className="text-[10px] text-white hover:text-white font-semibold transition-colors cursor-pointer"
                 >
                   Ler tudo
                 </button>
                 <button
                   onClick={clearNotifications}
-                  className="text-[10px] text-zinc-500 hover:text-red-400 font-semibold transition-colors cursor-pointer"
+                  className="text-[10px] text-white hover:text-red-400 font-semibold transition-colors cursor-pointer"
                 >
                   Limpar
                 </button>
@@ -148,14 +148,14 @@ export function NotificationBell() {
           <div className="max-h-[350px] overflow-y-auto divide-y divide-zinc-800/60">
             {notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                <div className="w-10 h-10 rounded-full bg-zinc-800/30 flex items-center justify-center mb-3 border border-zinc-800/40 text-zinc-500">
+                <div className="w-10 h-10 rounded-full bg-zinc-800/30 flex items-center justify-center mb-3 border border-zinc-800/40 text-white">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                     <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                   </svg>
                 </div>
                 <p className="text-xs text-white font-medium">Sem notificações</p>
-                <p className="text-[10px] text-zinc-300 mt-1 max-w-[200px]">
+                <p className="text-[10px] text-white mt-1 max-w-[200px]">
                   Atualizações sobre compras e alugueres pendentes aparecerão aqui.
                 </p>
               </div>
@@ -178,13 +178,13 @@ export function NotificationBell() {
                         {styles.icon}
                       </div>
                       <div className="space-y-1 min-w-0">
-                        <p className={`text-xs font-bold ${!n.read ? 'text-white' : 'text-zinc-300'}`}>
+                        <p className={`text-xs font-bold ${!n.read ? 'text-white' : 'text-white'}`}>
                           {n.title}
                         </p>
-                        <p className="text-[11px] text-zinc-200 leading-relaxed break-words">
+                        <p className="text-[11px] text-white leading-relaxed break-words">
                           {n.message}
                         </p>
-                        <p className="text-[9px] text-zinc-400 font-medium">
+                        <p className="text-[9px] text-white font-medium">
                           {formatTime(n.createdAt)}
                         </p>
                       </div>

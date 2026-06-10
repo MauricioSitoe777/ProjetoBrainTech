@@ -4,11 +4,12 @@ import { useAuth } from '../context/AuthContext';
 import { UserModal } from '../components/UserModal';
 import { UserDetail } from '../components/UserDetail';
 import { AdminNav } from '../components/AdminNav';
+import { AcoesNecessarias } from '../components/AcoesNecessarias';
 import type { User, UserRole, UserStatus } from '../types/user';
 
 const roleConfig = {
   admin: { label: 'Administrador', className: 'bg-purple-400/10 text-purple-400 border-purple-400/20' },
-  cliente: { label: 'Cliente', className: 'bg-zinc-700 text-zinc-300 border-zinc-600' },
+  cliente: { label: 'Cliente', className: 'bg-zinc-700 text-white border-zinc-600' },
 };
 
 const statusConfig = {
@@ -16,6 +17,17 @@ const statusConfig = {
   inativo: { label: 'Inativo', dot: 'bg-zinc-500' },
   suspenso: { label: 'Suspenso', dot: 'bg-red-400' },
   pendente: { label: 'Pendente', dot: 'bg-amber-400 animate-pulse' },
+};
+
+const regularityConfig = {
+  regular: { label: 'Regular', className: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' },
+  pendente: { label: 'Pendente', className: 'text-amber-400 bg-amber-400/10 border-amber-400/20' },
+  inadimplente: { label: 'Inadimplente', className: 'text-red-400 bg-red-400/10 border-red-400/20' },
+};
+
+const restrictionConfig = {
+  nenhuma: { label: 'Nenhuma', className: 'text-white' },
+  blacklisted: { label: 'Lista Negra', className: 'text-white bg-red-600 border-red-500 px-2 font-bold uppercase text-[10px]' },
 };
 
 function initials(nome: string) {
@@ -34,8 +46,10 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
   const [detailUser, setDetailUser] = useState<User | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
+  const activePool = useMemo(() => users.filter(u => !u.xitique), [users]);
+
   const filtered = useMemo(() => {
-    return users.filter(u => {
+    return activePool.filter(u => {
       const matchSearch = u.nome.toLowerCase().includes(search.toLowerCase()) ||
         u.email.toLowerCase().includes(search.toLowerCase()) ||
         u.telefone.includes(search);
@@ -43,14 +57,14 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
       const matchStatus = filterStatus === 'todos' || u.status === filterStatus;
       return matchSearch && matchRole && matchStatus;
     });
-  }, [users, search, filterRole, filterStatus]);
+  }, [activePool, search, filterRole, filterStatus]);
 
   const stats = useMemo(() => ({
-    total: users.length,
-    ativos: users.filter(u => u.status === 'ativo').length,
-    clientes: users.filter(u => u.role === 'cliente').length,
-    suspensos: users.filter(u => u.status === 'suspenso').length,
-  }), [users]);
+    total:     activePool.length,
+    ativos:    activePool.filter(u => u.status === 'ativo').length,
+    clientes:  activePool.filter(u => u.role === 'cliente').length,
+    suspensos: activePool.filter(u => u.status === 'suspenso').length,
+  }), [activePool]);
 
   const handleSave = (data: Omit<User, 'id' | 'dataCriacao' | 'ultimoAcesso' | 'totalAlugueres'>) => {
     if (editingUser) {
@@ -80,25 +94,13 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
       <AdminNav subtitle="Utilizadores" onExit={onExit} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: 'Total utilizadores', value: stats.total, color: 'text-white' },
-            { label: 'Ativos', value: stats.ativos, color: 'text-emerald-400' },
-            { label: 'Clientes', value: stats.clientes, color: 'text-amber-400' },
-            { label: 'Suspensos', value: stats.suspensos, color: 'text-red-400' },
-          ].map(s => (
-            <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-              <p className="text-xs text-zinc-300">{s.label}</p>
-              <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
-            </div>
-          ))}
-        </div>
 
-        {/* Toolbar */}
+        <AcoesNecessarias />
+
+
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-white" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -142,19 +144,21 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-zinc-800">
-                  <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider">Utilizador</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider hidden sm:table-cell">Papel</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider hidden md:table-cell">Telefone</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider">Estado</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider hidden lg:table-cell">Último acesso</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-zinc-300 uppercase tracking-wider">Ações</th>
+                <tr className="border-b border-zinc-700 bg-zinc-800/40">
+                  <th className="text-left px-4 py-3 text-xs font-bold text-white uppercase tracking-wider">Utilizador</th>
+                  <th className="text-left px-4 py-3 text-xs font-bold text-white uppercase tracking-wider hidden sm:table-cell">Papel</th>
+                  <th className="text-left px-4 py-3 text-xs font-bold text-white uppercase tracking-wider hidden md:table-cell">Telefone</th>
+                  <th className="text-left px-4 py-3 text-xs font-bold text-white uppercase tracking-wider">Estado</th>
+                  <th className="text-left px-4 py-3 text-xs font-bold text-white uppercase tracking-wider hidden md:table-cell">Registo</th>
+                  <th className="text-left px-4 py-3 text-xs font-bold text-white uppercase tracking-wider hidden lg:table-cell">Regularidade</th>
+                  <th className="text-left px-4 py-3 text-xs font-bold text-white uppercase tracking-wider hidden xl:table-cell">Restrição</th>
+                  <th className="text-right px-4 py-3 text-xs font-bold text-white uppercase tracking-wider">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800">
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="text-center py-12 text-zinc-400 text-sm">
+                    <td colSpan={6} className="text-center py-12 text-white text-sm font-medium">
                       Nenhum utilizador encontrado
                     </td>
                   </tr>
@@ -163,37 +167,60 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                   const role = roleConfig[u.role];
                   const status = statusConfig[u.status];
                   return (
-                    <tr key={u.id} className="hover:bg-zinc-800/40 transition-colors group">
-                      <td className="px-4 py-3">
+                    <tr key={u.id} className="hover:bg-zinc-800/50 transition-colors group border-b border-zinc-800/60">
+                      <td className="px-4 py-3.5">
                         <button
                           onClick={() => setDetailUser(u)}
                           className="flex items-center gap-3 text-left"
                         >
-                          <div className="w-9 h-9 rounded-lg bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 text-xs font-bold flex-shrink-0">
+                          <div className="w-9 h-9 rounded-lg bg-amber-400/15 border border-amber-400/30 flex items-center justify-center text-amber-400 text-xs font-black flex-shrink-0">
                             {initials(u.nome)}
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-white group-hover:text-amber-400 transition-colors">{u.nome}</p>
-                            <p className="text-xs text-zinc-400">{u.email}</p>
+                            <p className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors">{u.nome}</p>
+                            <p className="text-xs text-white mt-0.5">{u.email}</p>
                           </div>
                         </button>
                       </td>
-                      <td className="px-4 py-3 hidden sm:table-cell">
-                        <span className={`text-xs border rounded-md px-2 py-0.5 ${role.className}`}>{role.label}</span>
+                      <td className="px-4 py-3.5 hidden sm:table-cell">
+                        <span className={`text-xs font-bold border rounded-md px-2 py-1 ${role.className}`}>{role.label}</span>
                       </td>
-                      <td className="px-4 py-3 hidden md:table-cell text-sm text-white">{u.telefone}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
-                          <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`}></span>
-                          <span className="text-xs text-white">{status.label}</span>
+                      <td className="px-4 py-3.5 hidden md:table-cell text-sm font-medium text-white">{u.telefone}</td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${status.dot}`}></span>
+                          <span className="text-sm font-semibold text-white">{status.label}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 hidden lg:table-cell text-xs text-zinc-400">{u.ultimoAcesso}</td>
+                      <td className="px-4 py-3.5 hidden md:table-cell">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-sm font-semibold text-white">
+                            {u.dataCriacao
+                              ? new Date(u.dataCriacao).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                              : '—'}
+                          </span>
+                          {u.ultimoAcesso && u.ultimoAcesso !== u.dataCriacao && (
+                            <span className="text-xs text-white">
+                              Acesso: {new Date(u.ultimoAcesso).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 hidden lg:table-cell">
+                        <span className={`text-xs font-bold border rounded-md px-2 py-1 ${regularityConfig[u.regularity || 'regular'].className}`}>
+                          {regularityConfig[u.regularity || 'regular'].label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 hidden xl:table-cell">
+                        <span className={`text-xs font-bold border rounded-md px-2 py-1 ${restrictionConfig[u.restriction || 'nenhuma'].className}`}>
+                          {restrictionConfig[u.restriction || 'nenhuma'].label}
+                        </span>
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => setDetailUser(u)}
-                            className="p-1.5 text-zinc-400 hover:text-zinc-200 transition-colors rounded-lg hover:bg-zinc-700"
+                            className="p-1.5 text-white hover:text-white transition-colors rounded-lg hover:bg-zinc-700"
                             title="Ver detalhes"
                           >
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -202,7 +229,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                             <>
                               <button
                                 onClick={() => handleEdit(u)}
-                                className="p-1.5 text-zinc-400 hover:text-zinc-200 transition-colors rounded-lg hover:bg-zinc-700"
+                                className="p-1.5 text-white hover:text-white transition-colors rounded-lg hover:bg-zinc-700"
                                 title="Editar"
                               >
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -210,7 +237,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                               {authUser?.role === 'admin' && u.id !== authUser.id && (
                                 <button
                                   onClick={() => setDeleteConfirm(u.id)}
-                                  className="p-1.5 text-zinc-400 hover:text-red-400 transition-colors rounded-lg hover:bg-red-400/10"
+                                  className="p-1.5 text-white hover:text-red-400 transition-colors rounded-lg hover:bg-red-400/10"
                                   title="Eliminar"
                                 >
                                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
@@ -227,10 +254,25 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
             </table>
           </div>
           {filtered.length > 0 && (
-            <div className="px-4 py-3 border-t border-zinc-800 text-xs text-zinc-400">
-              {filtered.length} de {users.length} utilizadores
+            <div className="px-4 py-3 border-t border-zinc-800 text-xs font-semibold text-white">
+              {filtered.length} de {activePool.length} utilizadores
             </div>
           )}
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: 'Total utilizadores', value: stats.total, color: 'text-white' },
+            { label: 'Ativos', value: stats.ativos, color: 'text-emerald-400' },
+            { label: 'Clientes', value: stats.clientes, color: 'text-amber-400' },
+            { label: 'Suspensos', value: stats.suspensos, color: 'text-red-400' },
+          ].map(s => (
+            <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+              <p className="text-xs text-white">{s.label}</p>
+              <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
+            </div>
+          ))}
         </div>
       </div>
 

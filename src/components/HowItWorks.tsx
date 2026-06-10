@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useScrollTo } from "../hooks";
 
 /**
- * Premium four-step process explainer with animated connecting lines,
+ * Premium five-step process explainer with animated connecting lines,
  * glowing icons, and scroll-triggered entrance animations.
  */
 export default function HowItWorks({
@@ -66,7 +66,7 @@ export default function HowItWorks({
               Funciona
             </span>
           </h2>
-          <p className="text-zinc-300 text-base md:text-lg mt-5 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-white text-base md:text-lg mt-5 max-w-2xl mx-auto leading-relaxed">
             Do catálogo às chaves na mão — o processo é{" "}
             <span className="text-white font-semibold">100% digital</span>,{" "}
             <span className="text-white font-semibold">transparente</span> e
@@ -77,7 +77,7 @@ export default function HowItWorks({
         {/* ── Steps ── */}
         <div className="relative">
           {/* Connecting line (desktop) */}
-          <div className="hidden lg:block absolute top-[72px] left-[calc(12.5%+24px)] right-[calc(12.5%+24px)] h-[2px]">
+          <div className="hidden lg:block absolute top-[72px] left-[calc(10%+24px)] right-[calc(10%+24px)] h-[2px]">
             <div
               className="h-full rounded-full transition-all duration-[1.5s] ease-out"
               style={{
@@ -89,7 +89,7 @@ export default function HowItWorks({
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 lg:gap-5">
             {STEPS.map((step, i) => (
               <div
                 key={step.n}
@@ -150,7 +150,7 @@ export default function HowItWorks({
                   >
                     {step.title}
                   </h3>
-                  <p className="relative z-10 text-zinc-400 text-sm leading-relaxed group-hover:text-zinc-300 transition-colors duration-300">
+                  <p className="relative z-10 text-white text-sm leading-relaxed group-hover:text-white transition-colors duration-300">
                     {step.desc}
                   </p>
 
@@ -181,7 +181,7 @@ export default function HowItWorks({
             transitionDelay: "1s",
           }}
         >
-          <p className="text-zinc-500 text-sm mb-4">
+          <p className="text-white text-sm mb-4">
             Pronto para começar?
           </p>
           <button

@@ -71,7 +71,7 @@ export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdm
             <li key={id}>
               <button
                 onClick={() => handleNav(id)}
-                className="text-zinc-200 hover:text-amber-500 text-sm font-bold transition-colors tracking-wide"
+                className="text-white hover:text-amber-500 text-sm font-bold transition-colors tracking-wide"
               >
                 {label}
               </button>
@@ -89,14 +89,14 @@ export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdm
               placeholder="Pesquisar..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-transparent border-none outline-none text-xs text-white placeholder:text-zinc-600 w-32"
+              className="bg-transparent border-none outline-none text-xs text-white placeholder:text-zinc-500 w-32"
               autoFocus={showSearchInput}
             />
           </div>
           <button
             aria-label="Pesquisar"
             onClick={handleSearchClick}
-            className={`w-9 h-9 flex items-center justify-center rounded-full transition-all duration-200 ${showSearchInput ? "text-amber-500" : "text-zinc-200 hover:text-white hover:bg-zinc-800"}`}
+            className={`w-9 h-9 flex items-center justify-center rounded-full transition-all duration-200 ${showSearchInput ? "text-amber-500" : "text-white hover:text-white hover:bg-zinc-800"}`}
           >
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8" />
@@ -108,7 +108,7 @@ export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdm
           <button
             aria-label="Entrar"
             onClick={() => onOpenAdmin?.()}
-            className="w-9 h-9 flex items-center justify-center rounded-full text-zinc-200 hover:text-white hover:bg-zinc-800 transition-all duration-200"
+            className="w-9 h-9 flex items-center justify-center rounded-full text-white hover:text-white hover:bg-zinc-800 transition-all duration-200"
           >
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" strokeLinecap="round" />
@@ -131,7 +131,7 @@ export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdm
         {/* Hamburger mobile */}
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="md:hidden text-zinc-200 hover:text-white"
+          className="md:hidden text-white hover:text-white"
           aria-label="Menu"
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -151,7 +151,7 @@ export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdm
             <button
               key={id}
               onClick={() => handleNav(id)}
-              className="text-zinc-300 hover:text-amber-500 text-left text-base font-bold transition-colors"
+              className="text-white hover:text-amber-500 text-left text-base font-bold transition-colors"
             >
               {label}
             </button>
@@ -160,7 +160,7 @@ export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdm
           {/* Pesquisa + Login mobile */}
           <div className="flex flex-col gap-3 pt-1">
             <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-500">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white">
                 <circle cx="11" cy="11" r="8" />
                 <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
               </svg>
@@ -169,13 +169,13 @@ export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdm
                 placeholder="Pesquisar veículos..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-transparent border-none outline-none text-sm text-white placeholder:text-zinc-600 ml-3 flex-1"
+                className="bg-transparent border-none outline-none text-sm text-white placeholder:text-zinc-500 ml-3 flex-1"
               />
             </div>
             
             <button
               onClick={() => { onOpenAdmin?.(); setMenuOpen(false); }}
-              className="flex items-center gap-3 px-4 py-2 text-zinc-200 hover:text-white text-base font-bold transition-colors"
+              className="flex items-center gap-3 px-4 py-2 text-white hover:text-white text-base font-bold transition-colors"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" strokeLinecap="round" />

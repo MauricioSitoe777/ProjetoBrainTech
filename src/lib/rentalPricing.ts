@@ -12,6 +12,7 @@ export function calculateRentalTotal(
   const subtotal = dailyRate * days;
   let descontoPct = 0;
   if (days >= 30) descontoPct = rules.descontoMensalPercentual;
+  else if (days >= 15) descontoPct = rules.descontoQuinzenalPercentual;
   else if (days >= 7) descontoPct = rules.descontoSemanalPercentual;
 
   const desconto = subtotal * (descontoPct / 100);

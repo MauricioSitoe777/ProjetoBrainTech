@@ -1,0 +1,272 @@
+import { useAuth } from '../context/AuthContext';
+import { useXitique } from '../context/XitiqueContext';
+import { BrandLogo } from '../components/BrandLogo';
+
+const fmt = (n: number) => new Intl.NumberFormat('pt-PT').format(n) + ' MT';
+
+export function XitiqueClientPage({ onExit, embedded }: { onExit?: () => void; embedded?: boolean }) {
+  const { user: authUser, logout, allUsers } = useAuth();
+  const { membros, sorteios, inscricoes, estadoGrupo, mesAtual, quotaMT, premioMT, numMembros } = useXitique();
+
+  const fullUser = allUsers.find(u => u.id === authUser?.id);
+
+  // Encontra o membro: primeiro por userId (ligação fiável), depois por nome (compatibilidade)
+  const membro = membros.find(m =>
+    (authUser?.id && m.userId === authUser.id) ||
+    m.nome.toLowerCase().trim() === authUser?.nome.toLowerCase().trim()
+  );
+
+  // Verifica se há inscrição ainda pendente (não aprovada)
+  const inscricaoPendente = !membro && inscricoes.find(i =>
+    i.email === fullUser?.email ||
+    (fullUser?.telefone && i.telefone.replace(/\D/g, '').endsWith(fullUser.telefone.replace(/\D/g, '').slice(-8)))
+  );
+
+  const sorteioGanho = membro?.estado === 'Sorteado'
+    ? sorteios.find(s => s.vencedor === membro.nome)
+    : null;
+
+  const estadoCores = {
+    Pendente: { bg: 'bg-zinc-800 border-zinc-700',        dot: 'bg-zinc-400',   text: 'text-white'  },
+    Aceite:   { bg: 'bg-amber-400/10 border-amber-400/20', dot: 'bg-amber-400',  text: 'text-amber-400' },
+    Sorteado: { bg: 'bg-emerald-400/10 border-emerald-400/20', dot: 'bg-emerald-400', text: 'text-emerald-400' },
+  };
+
+  const cores = membro ? estadoCores[membro.estado] : null;
+
+  return (
+    <div className={embedded ? 'text-white' : 'min-h-screen bg-zinc-950 text-white'} style={{ fontFamily: "'Archivo', sans-serif" }}>
+
+      {/* Nav — oculto quando embutido noutras páginas */}
+      {!embedded && (
+        <nav className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-sm sticky top-0 z-10">
+          <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <BrandLogo className="h-10 w-auto max-w-[130px] shrink-0" />
+              <span className="text-zinc-700">·</span>
+              <span className="text-xs text-amber-400 font-bold uppercase tracking-widest">Xitique</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-white hidden sm:block">{authUser?.nome}</span>
+              {onExit && (
+                <button onClick={onExit} className="text-white hover:text-white text-sm font-medium transition">
+                  Voltar
+                </button>
+              )}
+              <div className="w-px h-4 bg-zinc-800" />
+              <button onClick={logout} className="text-white hover:text-amber-400 transition text-sm">Logout</button>
+            </div>
+          </div>
+        </nav>
+      )}
+
+      <div className={embedded ? 'space-y-5' : 'max-w-2xl mx-auto px-4 py-8 space-y-5'}>
+
+        {/* Cabeçalho */}
+        <div>
+          <h1 className="text-2xl font-black text-white">
+            Olá, {authUser?.nome.split(' ')[0]}!
+          </h1>
+          <p className="text-white text-sm mt-1">
+            Aqui pode acompanhar o estado da sua participação no Xitique.
+          </p>
+        </div>
+
+        {/* ── Estado do Grupo ── */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: 'Estado',       value: estadoGrupo === 'EmAndamento' ? 'Em Andamento' : estadoGrupo },
+            { label: 'Mês Actual',   value: `${mesAtual} / ${numMembros}` },
+            { label: 'Prémio Mensal',value: fmt(premioMT) },
+          ].map(s => (
+            <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
+              <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">{s.label}</div>
+              <div className="text-sm font-black text-white leading-tight">{s.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Caso 1: É membro ── */}
+        {membro && cores && (
+          <div className={`rounded-2xl border p-5 space-y-4 ${cores.bg}`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-2.5 h-2.5 rounded-full ${cores.dot} ${membro.estado !== 'Sorteado' ? 'animate-pulse' : ''}`} />
+                <span className={`text-sm font-black uppercase tracking-wide ${cores.text}`}>
+                  {membro.estado === 'Pendente' ? 'Pagamento Pendente'
+                    : membro.estado === 'Aceite' ? 'Pagamento Confirmado'
+                    : 'Contemplado 🎉'}
+                </span>
+              </div>
+              <span className="text-xs text-white">Mês {mesAtual}</span>
+            </div>
+
+            <p className="text-xs text-white leading-relaxed">
+              {membro.estado === 'Pendente' &&
+                `Efectue o pagamento de ${fmt(quotaMT)} via M-Pesa e aguarde a confirmação do administrador.`}
+              {membro.estado === 'Aceite' &&
+                `O seu pagamento de ${fmt(quotaMT)} foi confirmado. Está elegível para o sorteio deste mês.`}
+              {membro.estado === 'Sorteado' &&
+                `Parabéns! Foi sorteado e irá receber ${fmt(premioMT)}. O administrador entrará em contacto.`}
+            </p>
+
+            {/* Progresso visual do mês */}
+            <div>
+              <div className="flex justify-between text-[10px] text-white mb-1.5">
+                <span>Progresso do Ciclo</span>
+                <span>{sorteios.length} / {numMembros} sorteios realizados</span>
+              </div>
+              <div className="flex gap-1">
+                {Array.from({ length: numMembros }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`flex-1 h-1.5 rounded-full ${
+                      i < sorteios.length
+                        ? sorteios[i].vencedor === membro.nome ? 'bg-emerald-400' : 'bg-amber-500'
+                        : 'bg-zinc-700'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Card prémio ganho */}
+            {sorteioGanho && (
+              <div className="bg-emerald-400/10 border border-emerald-400/20 rounded-xl px-4 py-3 text-center">
+                <div className="text-emerald-400 font-black text-sm">🏆 Sorteio do Mês {sorteioGanho.mes}</div>
+                <div className="text-white font-black text-2xl mt-1">{fmt(sorteioGanho.valorPremio)}</div>
+                <div className="text-xs text-white mt-1">O administrador irá contactá-lo para a entrega.</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Caso 2: Inscrição pendente (não aprovada ainda) ── */}
+        {!membro && inscricaoPendente && (
+          <div className="bg-amber-400/5 border border-amber-400/20 rounded-2xl p-5 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+              <span className="text-amber-400 font-black text-sm uppercase tracking-wide">Inscrição em Análise</span>
+            </div>
+            <p className="text-xs text-white leading-relaxed">
+              A sua inscrição foi recebida e está a aguardar validação pelo administrador.
+              Assim que o pagamento for confirmado, será adicionado ao grupo.
+            </p>
+            <div className="bg-zinc-800/50 rounded-xl px-4 py-3 space-y-1.5 text-xs">
+              <div className="flex justify-between">
+                <span className="text-white">Nome</span>
+                <span className="text-white font-semibold">{inscricaoPendente.nome}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-white">Telemóvel</span>
+                <span className="text-white">{inscricaoPendente.telefone}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-white">Estado</span>
+                <span className="text-amber-400 font-bold capitalize">{inscricaoPendente.status.replace('_', ' ')}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Caso 3: Não encontrado ── */}
+        {!membro && !inscricaoPendente && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center space-y-3">
+            <div className="w-12 h-12 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center mx-auto">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#71717a" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.8" fill="#71717a"/>
+              </svg>
+            </div>
+            <p className="text-white text-sm">Ainda não está associado a nenhum grupo activo.</p>
+            <p className="text-white text-xs">Contacte o administrador para mais informações.</p>
+          </div>
+        )}
+
+        {/* ── Histórico do cliente ── */}
+        {membro && (sorteios.length > 0 || membro.mesesPagos.length > 0) && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+            <h3 className="text-white font-black text-sm uppercase tracking-wider mb-3">O Meu Histórico</h3>
+            <div className="space-y-2">
+              {Array.from({ length: Math.max(sorteios.length, membro.mesesPagos.length, mesAtual - 1) }, (_, i) => i + 1).map(mes => {
+                const sorteio = sorteios.find(s => s.mes === mes);
+                const pagou = membro.mesesPagos.includes(mes);
+                const ganhou = sorteio?.vencedor === membro.nome;
+
+                return (
+                  <div key={mes} className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 ${
+                    ganhou ? 'bg-emerald-400/10 border border-emerald-400/20' : 'bg-zinc-800/50'
+                  }`}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-6 h-6 rounded-full bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-[10px] font-black text-amber-400 shrink-0">
+                        {mes}
+                      </span>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs text-zinc-400">Mês {mes}</span>
+                        {ganhou && (
+                          <span className="text-xs text-emerald-400 font-black">🏆 Sorteado</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {pagou ? (
+                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 rounded-full">
+                          Pago
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-zinc-500 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded-full">
+                          Pendente
+                        </span>
+                      )}
+                      {ganhou && sorteio && (
+                        <span className="text-xs text-amber-400 font-black">{fmt(sorteio.valorPremio)}</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Resumo */}
+            <div className="mt-3 pt-3 border-t border-zinc-800 flex justify-between text-xs">
+              <span className="text-zinc-400">Total pago</span>
+              <span className="text-white font-black">{fmt(membro.mesesPagos.length * quotaMT)}</span>
+            </div>
+          </div>
+        )}
+
+        {/* ── Histórico geral de sorteios ── */}
+        {sorteios.length > 0 && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+            <h3 className="text-white font-black text-sm uppercase tracking-wider mb-3">Sorteios do Grupo</h3>
+            <div className="space-y-2">
+              {[...sorteios].reverse().map(s => (
+                <div key={s.mes} className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 ${
+                  s.vencedor === membro?.nome
+                    ? 'bg-emerald-400/10 border border-emerald-400/20'
+                    : 'bg-zinc-800/50'
+                }`}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-6 h-6 rounded-full bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-[10px] font-black text-amber-400 shrink-0">
+                      {s.mes}
+                    </span>
+                    <span className={`text-sm font-semibold truncate ${
+                      s.vencedor === membro?.nome ? 'text-emerald-400 font-black' : 'text-white'
+                    }`}>
+                      {s.vencedor === membro?.nome ? `${s.vencedor} (você)` : s.vencedor}
+                    </span>
+                  </div>
+                  <span className="text-xs text-amber-400 font-bold shrink-0">{fmt(s.valorPremio)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Info quota */}
+        <div className="text-center text-white text-xs pb-4">
+          Quota mensal: {fmt(quotaMT)} · Grupo de {numMembros} membros · SOS Motors
+        </div>
+      </div>
+    </div>
+  );
+}

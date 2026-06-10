@@ -8,11 +8,20 @@ import { useReservations } from '../context/ReservationsContext';
 import type { ReservationStatus } from '../types/reservation';
 
 const STATUS_CFG: Record<ReservationStatus, { label: string; className: string }> = {
-  pendente: { label: 'Pendente', className: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
-  confirmada: { label: 'Confirmada', className: 'bg-blue-400/10 text-blue-400 border-blue-400/20' },
-  ativa: { label: 'Ativa', className: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
-  concluida: { label: 'Concluída', className: 'bg-zinc-700 text-zinc-300 border-zinc-600' },
-  cancelada: { label: 'Cancelada', className: 'bg-red-400/10 text-red-400 border-red-400/20' },
+  // Aluguer
+  pendente:            { label: 'Reserva Pendente',       className: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
+  confirmada:          { label: 'Reserva Confirmada',     className: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
+  pronta_levantamento: { label: 'Pronta p/ Levantamento', className: 'bg-sky-400/10 text-sky-400 border-sky-400/20' },
+  ativa:               { label: 'Aluguer Ativo',          className: 'bg-blue-400/10 text-blue-400 border-blue-400/20' },
+  devolucao_pendente:  { label: 'Devolução Pendente',     className: 'bg-orange-400/10 text-orange-400 border-orange-400/20' },
+  concluida:           { label: 'Concluído',              className: 'bg-zinc-700 text-white border-zinc-600' },
+  cancelada:           { label: 'Cancelado',              className: 'bg-red-400/10 text-red-400 border-red-400/20' },
+  // Compra
+  compra_aprovada:     { label: 'Compra Aprovada',        className: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
+  entrada_paga:        { label: 'Entrada Paga',           className: 'bg-teal-400/10 text-teal-400 border-teal-400/20' },
+  em_prestacao:        { label: 'Em Prestação',           className: 'bg-blue-400/10 text-blue-400 border-blue-400/20' },
+  prestacao_atraso:    { label: 'Prestação em Atraso',    className: 'bg-red-400/10 text-red-400 border-red-400/20' },
+  liquidada:           { label: 'Liquidada',              className: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
 };
 
 type Tab = 'calendario' | 'reservas' | 'bloqueios' | 'regras';
@@ -23,6 +32,16 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [filterStatus, setFilterStatus] = useState<ReservationStatus | 'todos'>('todos');
+  // Guarda o ID da reserva que está a ser actualizada para bloquear duplo-clique
+  const [updatingPrestacao, setUpdatingPrestacao] = useState<string | null>(null);
+
+  const registarPrestacao = (id: string, novoValor: number) => {
+    if (updatingPrestacao === id) return; // bloqueia se já está em curso
+    setUpdatingPrestacao(id);
+    updateReservation(id, { prestacoesPagas: novoValor });
+    // Liberta após 800ms — tempo suficiente para o estado actualizar e re-renderizar
+    setTimeout(() => setUpdatingPrestacao(null), 800);
+  };
 
   const rentalVehicles = useMemo(() => VEHICLES.filter(v => v.mode === 'aluguer'), []);
 
@@ -54,19 +73,6 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
       <AdminNav subtitle="Reservas & Disponibilidade" onExit={onExit} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: 'Reservas', value: stats.total, color: 'text-white' },
-            { label: 'Pendentes', value: stats.pendentes, color: 'text-amber-400' },
-            { label: 'Activas / confirmadas', value: stats.ativas, color: 'text-emerald-400' },
-            { label: 'Bloqueios', value: stats.bloqueios, color: 'text-red-400' },
-          ].map(s => (
-            <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-              <p className="text-xs text-zinc-300">{s.label}</p>
-              <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
-            </div>
-          ))}
-        </div>
 
         <div className="flex flex-wrap gap-2">
           {tabs.map(t => (
@@ -76,7 +82,7 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
               className={`text-sm px-4 py-2 rounded-lg transition-colors ${
                 tab === t.key
                   ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20'
-                  : 'bg-zinc-900 text-white border border-zinc-800 hover:text-zinc-200'
+                  : 'bg-zinc-900 text-white border border-zinc-800 hover:text-white'
               }`}
             >
               {t.label}
@@ -141,17 +147,17 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-zinc-800">
-                    <th className="text-left px-4 py-3 text-xs text-zinc-300 uppercase">Cliente</th>
-                    <th className="text-left px-4 py-3 text-xs text-zinc-300 uppercase hidden md:table-cell">Viatura</th>
-                    <th className="text-left px-4 py-3 text-xs text-zinc-300 uppercase">Período</th>
-                    <th className="text-left px-4 py-3 text-xs text-zinc-300 uppercase">Estado</th>
-                    <th className="text-right px-4 py-3 text-xs text-zinc-300 uppercase">Ações</th>
+                    <th className="text-left px-4 py-3 text-xs text-white uppercase">Cliente</th>
+                    <th className="text-left px-4 py-3 text-xs text-white uppercase hidden md:table-cell">Viatura</th>
+                    <th className="text-left px-4 py-3 text-xs text-white uppercase">Período</th>
+                    <th className="text-left px-4 py-3 text-xs text-white uppercase">Estado</th>
+                    <th className="text-right px-4 py-3 text-xs text-white uppercase">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800">
                   {filteredReservations.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="text-center py-10 text-zinc-400 text-sm">Sem reservas</td>
+                      <td colSpan={5} className="text-center py-10 text-white text-sm">Sem reservas</td>
                     </tr>
                   )}
                   {filteredReservations.map(r => {
@@ -162,7 +168,7 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
                       <tr key={r.id} className="hover:bg-zinc-800/40">
                         <td className="px-4 py-3">
                           <p className="text-sm text-white">{r.clientName}</p>
-                          <p className="text-xs text-zinc-300">{r.clientPhone ?? r.clientEmail ?? '—'}</p>
+                          <p className="text-xs text-white">{r.clientPhone ?? r.clientEmail ?? '—'}</p>
                         </td>
                         <td className="px-4 py-3 hidden md:table-cell text-sm text-white">
                           <div>
@@ -183,7 +189,7 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
                               : `${r.dataInicio} (${r.horaLevantamento}) → ${r.dataFim} (${r.horaDevolucao})`}
                           </p>
                           {!isPurchase && r.localLevantamento && (
-                            <p className="text-[10px] text-zinc-400 mt-1 leading-normal">
+                            <p className="text-[10px] text-white mt-1 leading-normal">
                               📍 {r.localLevantamento} <br />
                               🏁 {r.localDevolucao}
                             </p>
@@ -198,11 +204,11 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
                               <p className="text-amber-400 font-bold uppercase tracking-wider text-[9px]">
                                 Prestações da Compra
                               </p>
-                              <div className="flex justify-between text-zinc-300">
+                              <div className="flex justify-between text-white">
                                 <span>Pagas:</span>
                                 <span className="font-bold text-white">{(r.prestacoesPagas ?? 0)} / {r.totalPrestacoes}</span>
                               </div>
-                              <div className="flex justify-between text-zinc-400">
+                              <div className="flex justify-between text-white">
                                 <span>Restantes:</span>
                                 <span className="font-bold text-red-400">{(r.totalPrestacoes ?? 0) - (r.prestacoesPagas ?? 0)}</span>
                               </div>
@@ -236,71 +242,72 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
                                   )}
                                 </div>
                                 
-                                {(r.totalPrestacoes ?? 0) > 0 && (
-                                  <div className="flex items-center gap-1.5 bg-zinc-950/60 p-1 rounded-lg border border-zinc-800">
-                                    <span className="text-[9px] text-zinc-400 font-bold uppercase ml-1">Reg. Pagamento:</span>
-                                    <button
-                                      disabled={(r.prestacoesPagas ?? 0) <= 0}
-                                      onClick={() => updateReservation(r.id, { prestacoesPagas: Math.max(0, (r.prestacoesPagas ?? 0) - 1) })}
-                                      className="w-5 h-5 flex items-center justify-center rounded bg-zinc-800 text-white hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold transition-all"
-                                      title="Diminuir prestações pagas"
-                                    >
-                                      -
-                                    </button>
-                                    <span className="text-xs font-black text-amber-400 px-1 select-none">
-                                      {r.prestacoesPagas ?? 0}
-                                    </span>
-                                    <button
-                                      disabled={(r.prestacoesPagas ?? 0) >= (r.totalPrestacoes ?? 0)}
-                                      onClick={() => updateReservation(r.id, { prestacoesPagas: Math.min(r.totalPrestacoes ?? 0, (r.prestacoesPagas ?? 0) + 1) })}
-                                      className="w-5 h-5 flex items-center justify-center rounded bg-amber-500 text-zinc-950 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold transition-all"
-                                      title="Registrar prestação paga"
-                                    >
-                                      +
-                                    </button>
-                                  </div>
-                                )}
+                                {(r.totalPrestacoes ?? 0) > 0 && (() => {
+                                  const pagas = r.prestacoesPagas ?? 0;
+                                  const total = r.totalPrestacoes ?? 0;
+                                  const bloqueado = updatingPrestacao === r.id;
+                                  return (
+                                    <div className="flex items-center gap-1.5 bg-zinc-950/60 p-1 rounded-lg border border-zinc-800">
+                                      <span className="text-[9px] text-white font-bold uppercase ml-1">Reg. Pagamento:</span>
+                                      <button
+                                        disabled={pagas <= 0 || bloqueado}
+                                        onClick={() => registarPrestacao(r.id, Math.max(0, pagas - 1))}
+                                        className="w-5 h-5 flex items-center justify-center rounded bg-zinc-800 text-white hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold transition-all"
+                                        title="Remover última prestação registada"
+                                      >
+                                        -
+                                      </button>
+                                      <span className="text-xs font-black text-amber-400 px-1 select-none min-w-[1.5rem] text-center">
+                                        {bloqueado ? '…' : pagas}
+                                      </span>
+                                      <button
+                                        disabled={pagas >= total || bloqueado}
+                                        onClick={() => registarPrestacao(r.id, Math.min(total, pagas + 1))}
+                                        className="w-5 h-5 flex items-center justify-center rounded bg-amber-500 text-zinc-950 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold transition-all"
+                                        title="Registar prestação paga"
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                  );
+                                })()}
                               </div>
                             ) : (
                               // Se for ALUGUER
                               <>
                                 {r.status === 'pendente' && (
-                                  <>
-                                    <button
-                                      onClick={() => updateReservation(r.id, { status: 'confirmada' })}
-                                      className="text-xs px-2 py-1 rounded bg-emerald-400/10 text-emerald-400 hover:bg-emerald-400/20"
-                                    >
-                                      Confirmar
-                                    </button>
-                                    <button
-                                      onClick={() => updateReservation(r.id, { status: 'concluida' })}
-                                      className="text-xs px-2 py-1 rounded bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
-                                    >
-                                      Concluir
-                                    </button>
-                                  </>
+                                  <button onClick={() => updateReservation(r.id, { status: 'confirmada' })}
+                                    className="text-xs px-2 py-1 rounded bg-emerald-400/10 text-emerald-400 border border-emerald-400/20 hover:bg-emerald-400/20">
+                                    Confirmar Reserva
+                                  </button>
                                 )}
                                 {r.status === 'confirmada' && (
-                                  <button
-                                    onClick={() => updateReservation(r.id, { status: 'ativa' })}
-                                    className="text-xs px-2 py-1 rounded bg-blue-400/10 text-blue-400 hover:bg-blue-400/20"
-                                  >
-                                    Activar
+                                  <button onClick={() => updateReservation(r.id, { status: 'pronta_levantamento' })}
+                                    className="text-xs px-2 py-1 rounded bg-sky-400/10 text-sky-400 border border-sky-400/20 hover:bg-sky-400/20">
+                                    Viatura Pronta
+                                  </button>
+                                )}
+                                {r.status === 'pronta_levantamento' && (
+                                  <button onClick={() => updateReservation(r.id, { status: 'ativa' })}
+                                    className="text-xs px-2 py-1 rounded bg-blue-400/10 text-blue-400 border border-blue-400/20 hover:bg-blue-400/20">
+                                    Confirmar Levantamento
                                   </button>
                                 )}
                                 {r.status === 'ativa' && (
-                                  <button
-                                    onClick={() => updateReservation(r.id, { status: 'concluida' })}
-                                    className="text-xs px-2 py-1 rounded bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
-                                  >
-                                    Concluir
+                                  <button onClick={() => updateReservation(r.id, { status: 'devolucao_pendente' })}
+                                    className="text-xs px-2 py-1 rounded bg-orange-400/10 text-orange-400 border border-orange-400/20 hover:bg-orange-400/20">
+                                    Marcar Devolução
                                   </button>
                                 )}
-                                {r.status !== 'cancelada' && r.status !== 'concluida' && (
-                                  <button
-                                    onClick={() => cancelReservation(r.id)}
-                                    className="text-xs px-2 py-1 rounded bg-red-400/10 text-red-400 hover:bg-red-400/20"
-                                  >
+                                {r.status === 'devolucao_pendente' && (
+                                  <button onClick={() => updateReservation(r.id, { status: 'concluida' })}
+                                    className="text-xs px-2 py-1 rounded bg-zinc-700 text-white border border-zinc-600 hover:bg-zinc-600">
+                                    Viatura Recebida
+                                  </button>
+                                )}
+                                {r.status !== 'cancelada' && r.status !== 'concluida' && r.status !== 'devolucao_pendente' && (
+                                  <button onClick={() => cancelReservation(r.id)}
+                                    className="text-xs px-2 py-1 rounded bg-red-400/10 text-red-400 border border-red-400/20 hover:bg-red-400/20">
                                     Cancelar
                                   </button>
                                 )}
@@ -327,16 +334,16 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
             </button>
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl divide-y divide-zinc-800">
               {blocks.length === 0 && (
-                <p className="text-center py-10 text-zinc-400 text-sm">Sem bloqueios activos</p>
+                <p className="text-center py-10 text-white text-sm">Sem bloqueios activos</p>
               )}
               {blocks.map(b => (
                 <div key={b.id} className="flex items-center justify-between px-4 py-3 gap-4">
                   <div>
                     <p className="text-sm text-white capitalize">{b.motivo.replace('_', ' ')}</p>
-                    <p className="text-xs text-zinc-300">
+                    <p className="text-xs text-white">
                       {b.vehicleId === null ? 'Toda a frota' : vehicleName(b.vehicleId)} · {b.dataInicio} → {b.dataFim}
                     </p>
-                    {b.descricao && <p className="text-xs text-zinc-600 mt-0.5">{b.descricao}</p>}
+                    {b.descricao && <p className="text-xs text-white mt-0.5">{b.descricao}</p>}
                   </div>
                   <button
                     onClick={() => removeBlock(b.id)}
@@ -351,6 +358,20 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
         )}
 
         {tab === 'regras' && <BusinessRulesPanel />}
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: 'Reservas', value: stats.total, color: 'text-white' },
+            { label: 'Pendentes', value: stats.pendentes, color: 'text-amber-400' },
+            { label: 'Activas / confirmadas', value: stats.ativas, color: 'text-emerald-400' },
+            { label: 'Bloqueios', value: stats.bloqueios, color: 'text-red-400' },
+          ].map(s => (
+            <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+              <p className="text-xs text-white">{s.label}</p>
+              <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {showBlockModal && (

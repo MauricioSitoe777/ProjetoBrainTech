@@ -158,7 +158,7 @@ export default function CatalogSection({
             >
               Frota Disponível
             </h2>
-            <p className="text-zinc-200 text-base mt-3 max-w-md">
+            <p className="text-white text-base mt-3 max-w-md">
               Defina o destino, nós tratamos do caminho. Comece aqui.
             </p>
           </div>
@@ -172,7 +172,7 @@ export default function CatalogSection({
                 className={`px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
                   mode === f.key
                     ? "bg-amber-500 text-zinc-950"
-                    : "bg-zinc-900 text-zinc-200 border border-zinc-800 hover:border-zinc-600 hover:text-white"
+                    : "bg-zinc-900 text-white border border-zinc-800 hover:border-zinc-600 hover:text-white"
                 }`}
               >
                 {f.label}
@@ -187,7 +187,7 @@ export default function CatalogSection({
             <h3 className="text-white font-bold text-lg mb-1 capitalize">
               {CAT_FILTERS.find(f => f.key === cat)?.label}
             </h3>
-            <p className="text-zinc-400 text-xs leading-relaxed">
+            <p className="text-white text-xs leading-relaxed">
               Explore a nossa seleção premium de {CAT_FILTERS.find(f => f.key === cat)?.label.toLowerCase()}. 
               Veículos mantidos com os mais altos padrões de qualidade e segurança para a sua jornada.
             </p>
@@ -204,7 +204,7 @@ export default function CatalogSection({
                 className={`w-full flex items-center gap-2 px-4 sm:px-5 py-3 rounded-2xl text-xs font-bold transition-all duration-200 border h-14 ${
                   cat === null
                     ? "bg-zinc-700 text-white border-zinc-500 shadow-lg shadow-zinc-900/50"
-                    : "bg-zinc-900/60 text-zinc-400 border-zinc-800 hover:border-zinc-600 hover:text-zinc-200 hover:bg-zinc-800/80"
+                    : "bg-zinc-900/60 text-white border-zinc-800 hover:border-zinc-600 hover:text-white hover:bg-zinc-800/80"
                 }`}
               >
                 <div className="w-12 h-10 flex items-center justify-center shrink-0 relative overflow-visible">
@@ -237,7 +237,7 @@ export default function CatalogSection({
                   className={`w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 rounded-2xl text-xs font-bold transition-all duration-200 border h-14 overflow-hidden relative ${
                     cat === f.key
                       ? "bg-zinc-700/80 text-white border-amber-500/60 shadow-lg shadow-amber-500/10"
-                      : "bg-zinc-900/60 text-zinc-400 border-zinc-800 hover:border-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/80"
+                      : "bg-zinc-900/60 text-white border-zinc-800 hover:border-zinc-500 hover:text-white hover:bg-zinc-800/80"
                   }`}
                 >
                   <div className="w-12 h-10 flex items-center justify-center relative overflow-hidden shrink-0">
@@ -259,7 +259,7 @@ export default function CatalogSection({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 p-6 bg-zinc-900/40 rounded-3xl border border-zinc-800/50">
               {/* Brand Select */}
               <div className="flex flex-col gap-2">
-                <label className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider ml-1">Marca</label>
+                <label className="text-white text-[10px] uppercase font-bold tracking-wider ml-1">Marca</label>
                 <div className="relative">
                   <select
                     value={brand}
@@ -271,13 +271,13 @@ export default function CatalogSection({
                       <option key={b} value={b}>{b}</option>
                     ))}
                   </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-600 text-[10px]">▼</div>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white text-[10px]">▼</div>
                 </div>
               </div>
 
               {/* Price Range */}
               <div className="flex flex-col gap-2">
-                <label className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider ml-1">
+                <label className="text-white text-[10px] uppercase font-bold tracking-wider ml-1">
                   Preço Máximo {mode === "aluguer" ? "(MT/dia)" : "(MT)"}
                 </label>
                 <input
@@ -289,7 +289,7 @@ export default function CatalogSection({
                   onChange={(e) => setMaxPrice(Number(e.target.value))}
                   className="w-full accent-amber-500 h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer mt-3"
                 />
-                <div className="flex justify-between text-[10px] text-zinc-500 font-mono mt-1">
+                <div className="flex justify-between text-[10px] text-white font-mono mt-1">
                   <span>{mode === "aluguer" ? "500" : "500k"}</span>
                   <span className="text-amber-500 font-bold">{maxPrice >= (mode === "aluguer" ? 20000 : 15000000) ? "Qualquer" : maxPrice.toLocaleString() + " MT"}</span>
                   <span>{mode === "aluguer" ? "20k" : "15M"}</span>
@@ -309,7 +309,7 @@ export default function CatalogSection({
                     <div className={`w-10 h-5 rounded-full transition-colors ${onlyDiscount ? "bg-amber-500" : "bg-zinc-800"}`} />
                     <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${onlyDiscount ? "translate-x-5" : ""}`} />
                   </div>
-                  <span className="text-xs font-semibold text-zinc-300 group-hover:text-white transition-colors">Com Desconto</span>
+                  <span className="text-xs font-semibold text-white group-hover:text-white transition-colors">Com Desconto</span>
                 </label>
 
                 {mode === "aluguer" && (
@@ -324,7 +324,7 @@ export default function CatalogSection({
                       <div className={`w-10 h-5 rounded-full transition-colors ${onlyAvailable ? "bg-amber-500" : "bg-zinc-800"}`} />
                       <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${onlyAvailable ? "translate-x-5" : ""}`} />
                     </div>
-                    <span className="text-xs font-semibold text-zinc-300 group-hover:text-white transition-colors">Disponível Agora</span>
+                    <span className="text-xs font-semibold text-white group-hover:text-white transition-colors">Disponível Agora</span>
                   </label>
                 )}
               </div>
@@ -334,7 +334,7 @@ export default function CatalogSection({
 
         {/* ── Results count ── */}
         <div className="flex items-center justify-between mb-4">
-          <p className="text-zinc-400 text-xs uppercase tracking-widest">
+          <p className="text-white text-xs uppercase tracking-widest">
             {filtered.length} veículo{filtered.length !== 1 ? "s" : ""} encontrado{filtered.length !== 1 ? "s" : ""}
           </p>
         </div>
@@ -355,7 +355,7 @@ export default function CatalogSection({
           <div className="py-20 text-center bg-zinc-900/30 rounded-3xl border border-zinc-800/50">
             <div className="text-4xl mb-4 grayscale opacity-50">🔍</div>
             <h3 className="text-white font-bold text-xl mb-2">Nenhum veículo encontrado</h3>
-            <p className="text-zinc-400 text-sm max-w-xs mx-auto">
+            <p className="text-white text-sm max-w-xs mx-auto">
               Tente ajustar os filtros ou a sua pesquisa para encontrar o que procura.
             </p>
           </div>
