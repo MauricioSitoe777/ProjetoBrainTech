@@ -77,6 +77,8 @@ export function LoginPage({ onCancel }: { onCancel?: () => void }) {
         email,
         role: 'cliente',
         status: 'ativo',
+        regularity: 'regular',
+        restriction: 'nenhuma',
         category,
         telefone: '',
       });

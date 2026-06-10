@@ -223,7 +223,7 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
       })
       .map(r => {
         const v = vehicles.find((vv: { id: number }) => vv.id === r.vehicleId) as { id: number; name?: string; price?: string } | undefined;
-        return { id: r.id, nome: v?.name ?? `Viatura #${r.vehicleId}`, cliente: r.clienteNome ?? '—', data: r.dataInicio, valor: r.valorTotal, status: r.status };
+        return { id: r.id, nome: v?.name ?? `Viatura #${r.vehicleId}`, cliente: r.clientName ?? '—', data: r.dataInicio, valor: r.valorTotal, status: r.status };
       });
   }, [reservations, vehicles]);
 
@@ -235,7 +235,7 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
       })
       .map(r => {
         const v = vehicles.find((vv: { id: number }) => vv.id === r.vehicleId) as { id: number; name?: string } | undefined;
-        return { id: r.id, nome: v?.name ?? `Viatura #${r.vehicleId}`, cliente: r.clienteNome ?? '—', dataInicio: r.dataInicio, dataFim: r.dataFim, valor: r.valorTotal, status: r.status };
+        return { id: r.id, nome: v?.name ?? `Viatura #${r.vehicleId}`, cliente: r.clientName ?? '—', dataInicio: r.dataInicio, dataFim: r.dataFim, valor: r.valorTotal, status: r.status };
       });
   }, [reservations, vehicles]);
 

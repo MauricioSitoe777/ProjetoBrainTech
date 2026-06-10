@@ -132,13 +132,15 @@ export function XitiquePage({ onExit }: { onExit?: () => void }) {
       userId = existente.id;
     } else {
       const novoUser = addUser({
-        nome:     insc.nome,
-        email:    insc.email,
-        telefone: insc.telefone,
-        role:     'cliente',
-        status:   'ativo',
-        password: senha,
-        xitique:  true,
+        nome:        insc.nome,
+        email:       insc.email,
+        telefone:    insc.telefone,
+        role:        'cliente',
+        status:      'ativo',
+        regularity:  'regular',
+        restriction: 'nenhuma',
+        password:    senha,
+        xitique:     true,
       });
       userId = novoUser.id;
     }
