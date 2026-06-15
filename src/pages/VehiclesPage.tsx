@@ -10,7 +10,7 @@ const emptyForm: Omit<VehicleData, 'id'> = {
   name: '', brand: '', cat: 'suv', mode: 'aluguer', price: '', description: '', img: '', images: [], fuel: 'Gasolina', seats: 5, year: 2024, discount: 0, available: true,
 };
 
-export function VehiclesPage({ onExit }: { onExit: () => void }) {
+export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
   const { vehicles, addVehicle, updateVehicle, removeVehicle } = useVehicles();
   const { reservations, blocks } = useReservations();
   const [showForm, setShowForm] = useState(false);

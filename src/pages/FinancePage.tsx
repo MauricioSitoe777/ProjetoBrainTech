@@ -104,7 +104,7 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
           const membrosAceites     = membros.filter(m => m.estado === 'Aceite' || m.estado === 'Sorteado');
           const totalArrecadado    = membrosAceites.length * quotaMT;
           const totalDistribuido   = sorteios.length * premioMT;
-          const inscricoesPendentes = inscricoes.filter(i => i.status === 'pendente').length;
+          const inscricoesPendentes = inscricoes.filter(i => i.status === 'aguarda_validacao').length;
 
           return (
             <div className="space-y-6">
