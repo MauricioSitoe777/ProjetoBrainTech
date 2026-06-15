@@ -59,7 +59,6 @@ export default function HowItWorks({
           </div>
           <h2
             className="text-white text-4xl md:text-6xl font-black leading-tight"
-            style={{ fontFamily: "'Archivo', sans-serif" }}
           >
             Como{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">
@@ -113,7 +112,6 @@ export default function HowItWorks({
                     <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:shadow-amber-500/40 group-hover:scale-110 transition-all duration-500">
                       <span
                         className="text-zinc-950 text-lg font-black"
-                        style={{ fontFamily: "'Archivo', sans-serif" }}
                       >
                         {step.n}
                       </span>
@@ -146,7 +144,6 @@ export default function HowItWorks({
                   {/* Content */}
                   <h3
                     className="relative z-10 text-white font-bold text-lg mb-3 group-hover:text-amber-50 transition-colors duration-300"
-                    style={{ fontFamily: "'Archivo', sans-serif" }}
                   >
                     {step.title}
                   </h3>

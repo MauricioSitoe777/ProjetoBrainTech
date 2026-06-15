@@ -57,10 +57,11 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-zinc-900 pt-6">
+        <div className="border-t border-zinc-900 pt-6 flex items-center justify-between gap-4">
           <p className="text-white text-xs">
             © 2026 RentCar &amp; Vendas Moçambique. Todos os direitos reservados.
           </p>
+          <img src="/braintech-logo.svg" alt="Braintech" className="h-10 w-auto shrink-0 opacity-80 hover:opacity-100 transition-opacity" />
         </div>
 
       </div>

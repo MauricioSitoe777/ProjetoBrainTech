@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useXitique } from '../context/XitiqueContext';
 import { useAuth } from '../context/AuthContext';
-import { AdminNav } from '../components/AdminNav';
 import type { EstadoGrupo, EstadoMembroXitique, InscricaoXitique } from '../types/xitique';
 
 function gerarSenha(): string {
@@ -156,9 +155,7 @@ export function XitiquePage({ onExit }: { onExit?: () => void }) {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950" style={{ fontFamily: "'Archivo', sans-serif" }}>
-      <AdminNav subtitle="Xitique" onExit={onExit} />
-
+    <div className="bg-zinc-950">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
 
         {/* ── Header de estado ── */}
@@ -604,7 +601,6 @@ export function XitiquePage({ onExit }: { onExit?: () => void }) {
           <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setCredencial(null)} />
           <div
             className="relative w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden"
-            style={{ fontFamily: "'Archivo', sans-serif" }}
           >
             {/* Brilho verde */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-20 bg-emerald-500/10 blur-3xl pointer-events-none" />

@@ -13,7 +13,7 @@ export default function XitiqueRegulationsModal({ onClose }: XitiqueRegulationsM
         {/* Header */}
         <div className="p-8 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50 backdrop-blur-xl sticky top-0 z-10">
           <div>
-            <h2 className="text-2xl font-black text-white uppercase tracking-tight" style={{ fontFamily: "'Archivo', sans-serif" }}>
+            <h2 className="text-2xl font-black text-white uppercase tracking-tight">
               Regulamento <span className="text-amber-500 text-3xl">Xitique</span>
             </h2>
             <p className="text-white text-[10px] font-black uppercase tracking-[0.2em] mt-1">SOS Motors • Transparência e Confiança</p>

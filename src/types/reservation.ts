@@ -43,6 +43,7 @@ export interface Reservation {
   notas?: string;
   localLevantamento?: string;
   localDevolucao?: string;
+  motoristaId?: string;
   totalPrestacoes?: number;
   prestacoesPagas?: number;
   prestacoes?: Prestacao[];  // plano detalhado de prestações

@@ -30,7 +30,7 @@ export function daysBetweenInclusive(start: string, end: string): number {
   const s = parseDate(start);
   const e = parseDate(end);
   const diff = Math.round((e.getTime() - s.getTime()) / 86_400_000);
-  return Math.max(1, diff + 1);
+  return Math.max(1, diff);
 }
 
 export function rangesOverlap(

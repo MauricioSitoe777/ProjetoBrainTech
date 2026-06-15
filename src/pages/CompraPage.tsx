@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { VEHICLES } from '../data/constants';
-import { AdminNav } from '../components/AdminNav';
 import { useReservations } from '../context/ReservationsContext';
 import type { Reservation, ReservationStatus } from '../types/reservation';
 
@@ -65,8 +64,7 @@ function PrestacoeModal({
       style={{ backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl"
-        style={{ fontFamily: "'Archivo', sans-serif" }}>
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
 
         {/* Cabeçalho do modal */}
         <div className={`px-6 py-4 border-b border-zinc-800 flex items-start justify-between gap-4 rounded-t-2xl ${isAtraso ? 'bg-red-500/5' : ''}`}>
@@ -281,9 +279,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
   const modalReservation = modalAberto ? reservations.find(r => r.id === modalAberto) : null;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white" style={{ fontFamily: "'Archivo', sans-serif" }}>
-      <AdminNav subtitle="Compra" onExit={onExit} />
-
+    <div className="bg-zinc-950 text-white">
       {/* Modal de gestão de prestações */}
       {modalReservation && (
         <PrestacoeModal

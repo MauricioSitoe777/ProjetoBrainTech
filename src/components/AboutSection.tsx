@@ -35,7 +35,6 @@ export default function AboutSection() {
           </div>
           <h2
             className="text-4xl md:text-5xl font-black text-white leading-tight mb-4"
-            style={{ fontFamily: "'Archivo', sans-serif" }}
           >
             A Nossa <span className="text-amber-500">História</span>
           </h2>

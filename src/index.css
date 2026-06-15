@@ -21,6 +21,7 @@
 html, body {
   scroll-behavior: smooth;
   background-color: #353535;
+  font-family: 'Archivo', sans-serif;
 }
 
 /* Custom range slider track */
@@ -57,6 +58,29 @@ input[type="range"]::-moz-range-thumb {
   background: #d8a020;
   cursor: pointer;
   border: 2px solid #18181b;
+}
+
+/* Months slider — pista mais grossa + thumb com glow */
+input[type="range"].months-slider {
+  height: 6px;
+  border-radius: 9999px;
+}
+
+input[type="range"].months-slider::-webkit-slider-thumb {
+  width: 22px;
+  height: 22px;
+  box-shadow: 0 0 0 4px rgba(216,160,32,0.18);
+}
+
+input[type="range"].months-slider::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 0 7px rgba(216,160,32,0.22);
+  transform: scale(1.1);
+}
+
+input[type="range"].months-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  box-shadow: 0 0 0 4px rgba(216,160,32,0.18);
 }
 
 /* Subtle scrollbar */

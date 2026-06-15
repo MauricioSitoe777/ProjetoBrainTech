@@ -10,12 +10,13 @@ export interface AppNotification {
   read: boolean;
   createdAt: string;
   reservationId?: string;
+  link?: string; // path para navegar ao clicar
 }
 
 interface NotificationsContextType {
   notifications: AppNotification[];
   unreadCount: number;
-  addNotification: (userId: string, title: string, message: string, type?: AppNotification['type'], reservationId?: string) => void;
+  addNotification: (userId: string, title: string, message: string, type?: AppNotification['type'], reservationId?: string, link?: string) => void;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
   clearNotifications: () => void;
@@ -51,7 +52,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     title: string,
     message: string,
     type: AppNotification['type'] = 'info',
-    reservationId?: string
+    reservationId?: string,
+    link?: string
   ) => {
     const newNotif: AppNotification = {
       id: `n_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -62,6 +64,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       read: false,
       createdAt: new Date().toISOString(),
       reservationId,
+      link,
     };
     setAllNotifications(prev => [newNotif, ...prev]);
   };

@@ -22,7 +22,6 @@ export default function PaymentsSection({
           </div>
           <h2
             className="text-white text-4xl md:text-5xl font-black"
-            style={{ fontFamily: "'Archivo', sans-serif" }}
           >
             Pague como preferir
           </h2>
@@ -88,7 +87,6 @@ export default function PaymentsSection({
             </div>
             <h3
               className="text-white text-3xl md:text-4xl font-black mb-4"
-              style={{ fontFamily: "'Archivo', sans-serif" }}
             >
               Pague 
               <br />

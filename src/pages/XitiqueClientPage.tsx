@@ -35,7 +35,7 @@ export function XitiqueClientPage({ onExit, embedded }: { onExit?: () => void; e
   const cores = membro ? estadoCores[membro.estado] : null;
 
   return (
-    <div className={embedded ? 'text-white' : 'min-h-screen bg-zinc-950 text-white'} style={{ fontFamily: "'Archivo', sans-serif" }}>
+    <div className={embedded ? 'text-white' : 'min-h-screen bg-zinc-950 text-white'}>
 
       {/* Nav — oculto quando embutido noutras páginas */}
       {!embedded && (

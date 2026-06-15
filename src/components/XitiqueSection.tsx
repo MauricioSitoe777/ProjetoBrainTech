@@ -87,7 +87,7 @@ export default function XitiqueSection({
               </span>
             </div>
             
-            <h2 className="text-4xl md:text-6xl font-black text-white leading-[1.1] mb-6" style={{ fontFamily: "'Archivo', sans-serif" }}>
+            <h2 className="text-4xl md:text-6xl font-black text-white leading-[1.1] mb-6">
               O Caminho Mais Curto para o Seu <span className="text-amber-500">Novo Carro</span>
             </h2>
             

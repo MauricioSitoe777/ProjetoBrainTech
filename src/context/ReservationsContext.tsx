@@ -33,6 +33,7 @@ interface ReservationsContextType {
   createReservation: (data: Omit<Reservation, 'id' | 'createdAt'>) => { ok: boolean; error?: string };
   updateReservation: (id: string, data: Partial<Reservation>) => void;
   cancelReservation: (id: string) => void;
+  deleteReservation: (id: string) => void;
   addBlock: (data: Omit<BlockedPeriod, 'id'>) => void;
   removeBlock: (id: string) => void;
   getVehicleReservations: (vehicleId: number) => Reservation[];
@@ -105,7 +106,8 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
       'Nova Operação Pendente',
       `O cliente "${data.clientName}" realizou um pedido de ${operacaoLabel} (${vehicleName}) e está pendente à espera de resposta do admin.`,
       'warning',
-      newRes.id
+      newRes.id,
+      isPurchase ? '/admin/compra' : '/admin/aluguer'
     );
 
     return { ok: true };
@@ -113,6 +115,10 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
 
   const updateReservation = (id: string, data: Partial<Reservation>) => {
     if (authUser?.role !== 'admin') return;
+
+    // Captura a reserva actual ANTES do update para poder enviar a notificação fora do updater
+    const existing = reservations.find(r => r.id === id);
+
     setReservations(prev =>
       prev.map(r => {
         if (r.id !== id) return r;
@@ -120,60 +126,58 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
         if (data.dataInicio || data.dataFim) {
           const start = data.dataInicio ?? r.dataInicio;
           const end = data.dataFim ?? r.dataFim;
-          const avail = isVehicleAvailable(next.vehicleId, start, end, reservations, blocks, id);
+          const avail = isVehicleAvailable(next.vehicleId, start, end, prev, blocks, id);
           if (!avail.available) return r;
         }
-
-        // Notificar o cliente caso o admin altere o estado
-        if (data.status && data.status !== r.status) {
-          const vehicle = VEHICLES.find(v => v.id === r.vehicleId);
-          const isPurchase = vehicle?.mode === 'compra';
-          const operacaoLabel = isPurchase ? 'Compra' : 'Aluguer';
-          const vehicleName = vehicle?.name || `Viatura #${r.vehicleId}`;
-          const statusText = data.status === 'concluida' ? 'CONCLUÍDA' : data.status === 'cancelada' ? 'CANCELADA' : data.status;
-          const statusType = data.status === 'concluida' ? 'success' : 'alert';
-
-          if (r.userId) {
-            addNotification(
-              r.userId,
-              'Estado do Pedido Atualizado',
-              `O seu pedido de ${operacaoLabel.toLowerCase()} ("${vehicleName}") foi alterado para o estado ${statusText} pelo administrador António Silva.`,
-              statusType,
-              r.id
-            );
-          }
-        }
-
         return next;
       }),
     );
+
+    // Side effect fora do updater — nunca é duplicado pelo Strict Mode
+    if (existing && data.status && data.status !== existing.status && existing.userId) {
+      const vehicle = VEHICLES.find(v => v.id === existing.vehicleId);
+      const isPurchase = vehicle?.mode === 'compra';
+      const operacaoLabel = isPurchase ? 'Compra' : 'Aluguer';
+      const vehicleName = vehicle?.name || `Viatura #${existing.vehicleId}`;
+      const statusText = data.status === 'concluida' ? 'CONCLUÍDA' : data.status === 'cancelada' ? 'CANCELADA' : data.status;
+      const statusType = data.status === 'concluida' ? 'success' : 'alert';
+      addNotification(
+        existing.userId,
+        'Estado do Pedido Atualizado',
+        `O seu pedido de ${operacaoLabel.toLowerCase()} ("${vehicleName}") foi alterado para o estado ${statusText} pelo administrador António Silva.`,
+        statusType,
+        id,
+        '/admin'
+      );
+    }
+  };
+
+  const deleteReservation = (id: string) => {
+    if (authUser?.role !== 'admin') return;
+    setReservations(prev => prev.filter(r => r.id !== id));
   };
 
   const cancelReservation = (id: string) => {
+    const existing = reservations.find(r => r.id === id);
+
     setReservations(prev =>
-      prev.map(r => {
-        if (r.id !== id) return r;
-        const next = { ...r, status: 'cancelada' as ReservationStatus };
-
-        // Notificar o cliente sobre o cancelamento
-        const vehicle = VEHICLES.find(v => v.id === r.vehicleId);
-        const isPurchase = vehicle?.mode === 'compra';
-        const operacaoLabel = isPurchase ? 'Compra' : 'Aluguer';
-        const vehicleName = vehicle?.name || `Viatura #${r.vehicleId}`;
-
-        if (r.userId) {
-          addNotification(
-            r.userId,
-            'Estado do Pedido Atualizado',
-            `O seu pedido de ${operacaoLabel.toLowerCase()} ("${vehicleName}") foi CANCELADO pelo administrador António Silva.`,
-            'alert',
-            r.id
-          );
-        }
-
-        return next;
-      }),
+      prev.map(r => r.id === id ? { ...r, status: 'cancelada' as ReservationStatus } : r)
     );
+
+    if (existing?.userId) {
+      const vehicle = VEHICLES.find(v => v.id === existing.vehicleId);
+      const isPurchase = vehicle?.mode === 'compra';
+      const operacaoLabel = isPurchase ? 'Compra' : 'Aluguer';
+      const vehicleName = vehicle?.name || `Viatura #${existing.vehicleId}`;
+      addNotification(
+        existing.userId,
+        'Estado do Pedido Atualizado',
+        `O seu pedido de ${operacaoLabel.toLowerCase()} ("${vehicleName}") foi CANCELADO pelo administrador António Silva.`,
+        'alert',
+        id,
+        '/admin'
+      );
+    }
   };
 
   const addBlock = (data: Omit<BlockedPeriod, 'id'>) => {
@@ -261,6 +265,7 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
         createReservation,
         updateReservation,
         cancelReservation,
+        deleteReservation,
         addBlock,
         removeBlock,
         getVehicleReservations: vehicleId => reservations.filter(r => r.vehicleId === vehicleId),

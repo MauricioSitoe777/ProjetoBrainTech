@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNotifications, type AppNotification } from '../context/NotificationsContext';
+import { useRoute } from '../hooks/useRoute';
 
 export function NotificationBell() {
   const {
@@ -10,6 +11,7 @@ export function NotificationBell() {
     clearNotifications,
   } = useNotifications();
 
+  const { navigate } = useRoute();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -162,31 +164,50 @@ export function NotificationBell() {
             ) : (
               notifications.map((n) => {
                 const styles = getNotifStyles(n.type);
+                const handleClick = () => {
+                  markAsRead(n.id);
+                  if (n.link) {
+                    setIsOpen(false);
+                    navigate(n.link);
+                  }
+                };
                 return (
                   <div
                     key={n.id}
-                    onClick={() => markAsRead(n.id)}
+                    onClick={handleClick}
                     className={`p-4 text-left transition-colors relative hover:bg-zinc-800/30 cursor-pointer ${
                       !n.read ? 'bg-zinc-800/10' : ''
-                    }`}
+                    } ${n.link ? 'group' : ''}`}
                   >
                     {!n.read && (
                       <span className={`absolute top-4 right-4 w-1.5 h-1.5 rounded-full ${styles.dot}`} />
+                    )}
+                    {n.link && n.read && (
+                      <svg className="absolute top-4 right-4 w-3 h-3 text-zinc-600 group-hover:text-zinc-400 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
                     )}
                     <div className="flex gap-3">
                       <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border mt-0.5 ${styles.bg}`}>
                         {styles.icon}
                       </div>
-                      <div className="space-y-1 min-w-0">
-                        <p className={`text-xs font-bold ${!n.read ? 'text-white' : 'text-white'}`}>
+                      <div className="space-y-1 min-w-0 pr-4">
+                        <p className="text-xs font-bold text-white">
                           {n.title}
                         </p>
                         <p className="text-[11px] text-white leading-relaxed break-words">
                           {n.message}
                         </p>
-                        <p className="text-[9px] text-white font-medium">
-                          {formatTime(n.createdAt)}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-[9px] text-zinc-500 font-medium">
+                            {formatTime(n.createdAt)}
+                          </p>
+                          {n.link && (
+                            <span className="text-[9px] text-zinc-500 group-hover:text-amber-400 font-semibold transition-colors">
+                              Toque para ver →
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

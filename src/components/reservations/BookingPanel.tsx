@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import type { Vehicle } from '../../data/constants';
 import { useReservations } from '../../context/ReservationsContext';
 import { useAuth } from '../../context/AuthContext';
+import { useMotoristas } from '../../context/MotoristasContext';
 
 interface BookingPanelProps {
   vehicle: Vehicle;
@@ -11,6 +12,7 @@ interface BookingPanelProps {
 
 export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps) {
   const { user, allUsers } = useAuth();
+  const { motoristas } = useMotoristas();
   const {
     validateDates,
     checkAvailability,
@@ -29,6 +31,8 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientEmail, setClientEmail] = useState('');
+  const [comMotorista, setComMotorista] = useState(false);
+  const [motoristaId, setMotoristaId] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
@@ -125,6 +129,7 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
       deposito: quote.deposito,
       localLevantamento,
       localDevolucao,
+      motoristaId: comMotorista && motoristaId ? motoristaId : undefined,
     });
 
     if (!result.ok) {
@@ -350,6 +355,45 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
               <label className="block text-xs text-white mb-1">Email</label>
               <input type="email" value={clientEmail} onChange={e => setClientEmail(e.target.value)} className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm" />
             </div>
+          </div>
+
+          {/* Motorista */}
+          <div className={`rounded-xl border transition-all ${comMotorista ? 'border-amber-400/30 bg-amber-400/5' : 'border-zinc-700/60 bg-zinc-800/30'}`}>
+            <button
+              type="button"
+              onClick={() => { setComMotorista(v => !v); setMotoristaId(''); }}
+              className="w-full flex items-center justify-between px-4 py-3 text-sm"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="text-base">🧑‍✈️</span>
+                <div className="text-left">
+                  <p className={`text-xs font-bold ${comMotorista ? 'text-amber-400' : 'text-white'}`}>Solicitar Motorista</p>
+                  <p className="text-[10px] text-zinc-500">Inclui condutor profissional na reserva</p>
+                </div>
+              </div>
+              <div className={`w-9 h-5 rounded-full flex items-center transition-all px-0.5 ${comMotorista ? 'bg-amber-400 justify-end' : 'bg-zinc-700 justify-start'}`}>
+                <div className="w-4 h-4 rounded-full bg-white shadow" />
+              </div>
+            </button>
+
+            {comMotorista && (
+              <div className="px-4 pb-4">
+                {motoristas.filter(m => m.status === 'disponivel').length === 0 ? (
+                  <p className="text-xs text-zinc-500 italic">Sem motoristas disponíveis no momento.</p>
+                ) : (
+                  <select
+                    value={motoristaId}
+                    onChange={e => setMotoristaId(e.target.value)}
+                    className="w-full bg-zinc-900 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:border-amber-400 outline-none"
+                  >
+                    <option value="">Selecionar motorista (opcional)</option>
+                    {motoristas.filter(m => m.status === 'disponivel').map(m => (
+                      <option key={m.id} value={m.id}>{m.nome} · {m.telefone}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
           </div>
 
           {error && <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">{error}</p>}

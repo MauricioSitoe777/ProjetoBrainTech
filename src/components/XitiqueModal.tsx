@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import { useXitique } from '../context/XitiqueContext';
+import { useAuth } from '../context/AuthContext';
 
 type Step = 'form' | 'otp' | 'sucesso';
 
@@ -13,13 +14,22 @@ export default function XitiqueModal({
   onClose: () => void;
 }) {
   const { adicionarInscricao, membros, numMembros, estadoGrupo } = useXitique();
+  const { user: authUser, allUsers } = useAuth();
+
+  const fullUser = useMemo(() =>
+    authUser ? allUsers.find(u => u.id === authUser.id) : null,
+    [authUser, allUsers]
+  );
+
+  // Se já está logado, usa os dados da conta; caso contrário começa vazio
+  const telefoneInicial = fullUser?.telefone?.replace(/^\+258\s?/, '').replace(/\D/g, '') ?? '';
 
   const isFull = membros.length >= numMembros;
   const isClosed = estadoGrupo !== 'Aberto' || isFull;
-  const [step, setStep]         = useState<Step>('form');
-  const [nome, setNome]         = useState('');
-  const [telefone, setTelefone] = useState('');
-  const [email, setEmail]       = useState('');
+  const [step, setStep]         = useState<Step>(fullUser ? 'otp' : 'form');
+  const [nome, setNome]         = useState(fullUser?.nome ?? '');
+  const [telefone, setTelefone] = useState(telefoneInicial);
+  const [email, setEmail]       = useState(fullUser?.email ?? '');
   const [erro, setErro]         = useState('');
 
   // OTP — gerado uma única vez e mantido estável
@@ -84,7 +94,6 @@ export default function XitiqueModal({
 
       <div
         className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden"
-        style={{ fontFamily: "'Archivo', sans-serif" }}
       >
         {/* Brilho dourado */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-72 h-28 bg-amber-500/8 blur-3xl pointer-events-none" />
@@ -95,7 +104,7 @@ export default function XitiqueModal({
             <div className="text-[10px] text-amber-400 font-bold uppercase tracking-widest mb-0.5">Xitique · SOS Motors</div>
             <h2 className="text-white font-black text-lg">
               {step === 'form'    && 'Inscrição no Grupo'}
-              {step === 'otp'     && 'Verificação por SMS'}
+              {step === 'otp'     && (fullUser ? `Olá, ${nome.split(' ')[0]}!` : 'Verificação por SMS')}
               {step === 'sucesso' && 'Inscrição Recebida!'}
             </h2>
           </div>
@@ -219,8 +228,41 @@ export default function XitiqueModal({
             </form>
           )}
 
-          {/* ── PASSO 2: OTP ── */}
-          {step === 'otp' && (
+          {/* ── PASSO 2a: Confirmação directa (utilizador já autenticado) ── */}
+          {step === 'otp' && fullUser && (
+            <div className="space-y-5">
+              <div className="bg-emerald-400/8 border border-emerald-400/20 rounded-xl px-4 py-4 space-y-2">
+                <p className="text-[10px] text-emerald-400 font-black uppercase tracking-widest mb-2">Dados da sua conta</p>
+                {[
+                  { label: 'Nome',      value: nome },
+                  { label: 'Telemóvel', value: telefone ? `+258 ${telefone}` : '—' },
+                  { label: 'Email',     value: email },
+                ].map(r => (
+                  <div key={r.label} className="flex justify-between text-xs">
+                    <span className="text-zinc-400">{r.label}</span>
+                    <span className="text-white font-semibold">{r.value}</span>
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-white text-sm leading-relaxed">
+                A sua identidade já foi verificada através do login. Confirme para submeter a inscrição.
+              </p>
+
+              <button
+                onClick={() => {
+                  adicionarInscricao({ nome, telefone: `+258 ${telefone}`, email });
+                  setStep('sucesso');
+                }}
+                className="w-full py-4 rounded-2xl bg-amber-500 text-zinc-950 font-black uppercase tracking-widest text-sm hover:bg-amber-400 active:scale-[0.98] transition"
+              >
+                Confirmar Inscrição
+              </button>
+            </div>
+          )}
+
+          {/* ── PASSO 2b: OTP (utilizador não autenticado) ── */}
+          {step === 'otp' && !fullUser && (
             <div className="space-y-5">
               <p className="text-white text-sm leading-relaxed">
                 Código de verificação enviado para{' '}

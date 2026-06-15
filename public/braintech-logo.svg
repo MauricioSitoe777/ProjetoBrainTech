@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 90" fill="none">
+
+  <!-- Network / nodes icon -->
+  <g fill="white" stroke="white">
+    <!-- Connection lines -->
+    <line x1="22" y1="45" x2="40" y2="25" stroke="white" stroke-width="2"/>
+    <line x1="22" y1="45" x2="42" y2="55" stroke="white" stroke-width="2"/>
+    <line x1="40" y1="25" x2="62" y2="20" stroke="white" stroke-width="2"/>
+    <line x1="40" y1="25" x2="58" y2="42" stroke="white" stroke-width="2"/>
+    <line x1="42" y1="55" x2="58" y2="42" stroke="white" stroke-width="2"/>
+    <line x1="62" y1="20" x2="72" y2="38" stroke="white" stroke-width="2"/>
+    <line x1="58" y1="42" x2="72" y2="38" stroke="white" stroke-width="2"/>
+    <line x1="42" y1="55" x2="52" y2="68" stroke="white" stroke-width="2"/>
+    <line x1="58" y1="42" x2="52" y2="68" stroke="white" stroke-width="2"/>
+
+    <!-- Nodes (circles) -->
+    <circle cx="22" cy="45" r="6.5" fill="white"/>
+    <circle cx="40" cy="25" r="5" fill="white"/>
+    <circle cx="62" cy="20" r="4" fill="white"/>
+    <circle cx="72" cy="38" r="5.5" fill="white"/>
+    <circle cx="58" cy="42" r="4" fill="white"/>
+    <circle cx="42" cy="55" r="5" fill="white"/>
+    <circle cx="52" cy="68" r="4" fill="white"/>
+  </g>
+
+  <!-- Sparkle/star above "i" in Brain -->
+  <g fill="white">
+    <polygon points="196,10 197.4,14.6 202,16 197.4,17.4 196,22 194.6,17.4 190,16 194.6,14.6"/>
+  </g>
+
+  <!-- "Brain" bold -->
+  <text x="98" y="58"
+    font-family="'Nexa', 'Segoe UI', Arial, sans-serif"
+    font-size="40"
+    font-weight="800"
+    fill="white"
+    letter-spacing="-0.5">Brain</text>
+
+  <!-- "tech" light -->
+  <text x="205" y="58"
+    font-family="'Nexa', 'Segoe UI', Arial, sans-serif"
+    font-size="40"
+    font-weight="300"
+    fill="white"
+    letter-spacing="-0.5">tech</text>
+
+</svg>

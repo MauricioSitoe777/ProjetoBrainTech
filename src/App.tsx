@@ -20,6 +20,7 @@ import { ClientProfilePage } from "./pages/ClientProfilePage";
 import { ReservationsPage } from "./pages/ReservationsPage";
 import { ReservationsProvider } from "./context/ReservationsContext";
 import { NotificationsProvider } from "./context/NotificationsContext";
+import { GuestsProvider } from "./context/GuestsContext";
 import { VehiclesProvider } from "./context/VehiclesContext";
 import { VehiclesPage } from "./pages/VehiclesPage";
 import VehicleDetailsPage from "./components/VehicleDetailsPage";
@@ -32,6 +33,11 @@ import { FinanceProvider } from "./context/FinanceContext";
 import { FinancePage } from "./pages/FinancePage";
 import { AluguerPage } from "./pages/AluguerPage";
 import { CompraPage } from "./pages/CompraPage";
+import { MotoristasProvider } from "./context/MotoristasContext";
+import { MotoristasPage } from "./pages/MotoristasPage";
+import { AdminNav } from "./components/AdminNav";
+import { AdminSidebar } from "./components/AdminSidebar";
+import { DashboardPage } from "./pages/DashboardPage";
 
 type SimulatorFlow = "aluguer" | "compra";
 
@@ -39,19 +45,35 @@ type SimulatorFlow = "aluguer" | "compra";
 function AdminShell({ onExit }: { onExit: () => void }) {
   const { user } = useAuth();
   const { path } = useRoute();
+
   if (!user) return <LoginPage onCancel={onExit} />;
-  // Todos os clientes vão para a dashboard unificada
   if (user.role === "cliente") return <ClientProfilePage onExit={onExit} />;
-  
-  // Admins vão para utilizadores por defeito
-  if (path === "/admin") return <UsersPage onExit={onExit} />;
-  
-  if (path.startsWith("/admin/aluguer"))  return <AluguerPage onExit={onExit} />;
-  if (path.startsWith("/admin/compra"))   return <CompraPage onExit={onExit} />;
-  if (path.startsWith("/admin/veiculos")) return <VehiclesPage onExit={onExit} />;
-  if (path.startsWith("/admin/xitique"))  return <XitiquePage onExit={onExit} />;
-  if (path.startsWith("/admin/financas")) return <FinancePage onExit={onExit} />;
-  return <UsersPage onExit={onExit} />;
+
+  const renderPage = () => {
+    if (path === "/admin" || path === "/admin/dashboard") return <DashboardPage />;
+    if (path.startsWith("/admin/utilizadores") || path.startsWith("/admin/visitantes")) return <UsersPage />;
+    if (path.startsWith("/admin/aluguer"))    return <AluguerPage />;
+    if (path.startsWith("/admin/compra"))     return <CompraPage />;
+    if (path.startsWith("/admin/veiculos"))   return <VehiclesPage />;
+    if (path.startsWith("/admin/xitique"))    return <XitiquePage />;
+    if (path.startsWith("/admin/financas"))   return <FinancePage />;
+    if (path.startsWith("/admin/motoristas")) return <MotoristasPage />;
+    return <DashboardPage />;
+  };
+
+  return (
+    <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
+      <AdminNav onExit={onExit} />
+      <div className="flex flex-1">
+        <div className="hidden md:block shrink-0 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto">
+          <AdminSidebar />
+        </div>
+        <main className="flex-1 min-w-0 overflow-x-hidden">
+          {renderPage()}
+        </main>
+      </div>
+    </div>
+  );
 }
 
 // ─── Landing page (original, untouched) ──────────────────────────────────────
@@ -92,7 +114,6 @@ function LandingPage({
   return (
     <div
       className="min-h-screen bg-zinc-950 antialiased"
-      style={{ fontFamily: "'Archivo', sans-serif" }}
     >
       <Navbar
         scrolled={scrolled}
@@ -181,9 +202,11 @@ export default function App() {
     <AuthProvider>
       <UsersProvider>
         <NotificationsProvider>
+          <GuestsProvider>
           <ReservationsProvider>
             <VehiclesProvider>
               <FinanceProvider>
+              <MotoristasProvider>
               <XitiqueProvider>
               <InvitesProvider>
                 {isInvite ? (
@@ -211,9 +234,11 @@ export default function App() {
                 )}
               </InvitesProvider>
               </XitiqueProvider>
+              </MotoristasProvider>
               </FinanceProvider>
             </VehiclesProvider>
           </ReservationsProvider>
+          </GuestsProvider>
         </NotificationsProvider>
       </UsersProvider>
     </AuthProvider>

@@ -154,7 +154,6 @@ export default function CatalogSection({
             </div>
             <h2
               className="text-white text-4xl md:text-5xl font-black leading-tight"
-              style={{ fontFamily: "'Archivo', sans-serif" }}
             >
               Frota Disponível
             </h2>

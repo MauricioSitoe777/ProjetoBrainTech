@@ -6,6 +6,7 @@ import { useFinance } from '../context/FinanceContext';
 import { VEHICLES } from '../data/constants';
 import { BrandLogo } from '../components/BrandLogo';
 import { NotificationBell } from '../components/NotificationBell';
+import { ReservationTracker } from '../components/ReservationTracker';
 import type { ReservationStatus } from '../types/reservation';
 
 type Tab = 'resumo' | 'aluguer' | 'compra' | 'xitique';
@@ -44,7 +45,7 @@ function diffDias(inicio: string, fim: string) {
 }
 
 export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
-  const { user: authUser, logout } = useAuth();
+  const { user: authUser, logout, allUsers } = useAuth();
   const { reservations } = useReservations();
   const { membros, sorteios, mesAtual, quotaMT, premioMT, numMembros, estadoGrupo, inscricoes } = useXitique();
   const { dividas } = useFinance();
@@ -118,7 +119,7 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-zinc-950 text-white" style={{ fontFamily: "'Archivo', sans-serif" }}>
+    <div className="min-h-screen bg-zinc-950 text-white">
 
       {/* Nav */}
       <nav className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-sm sticky top-0 z-10">
@@ -166,6 +167,38 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
               <span className="text-xs text-red-400 font-bold">{totalAlertas} pendente{totalAlertas > 1 ? 's' : ''}</span>
             </div>
           )}
+        </div>
+
+        {/* ── KPI cards ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
+            <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Alugueres</div>
+            <div className="text-xl font-black text-white">{alugueres.length}</div>
+          </div>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
+            <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Compras</div>
+            <div className="text-xl font-black text-white">{compras.length}</div>
+          </div>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
+            <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Total Investido</div>
+            <div className="text-sm font-black text-amber-400 leading-tight">{totalInvestido > 0 ? fmt(totalInvestido) : '—'}</div>
+          </div>
+          <div className={`rounded-2xl p-3 text-center border ${
+            membro?.estado === 'Sorteado' ? 'bg-emerald-400/10 border-emerald-400/20' :
+            membro?.estado === 'Aceite'   ? 'bg-amber-400/10 border-amber-400/20' :
+                                            'bg-zinc-900 border-zinc-800'
+          }`}>
+            <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Xitique</div>
+            <div className={`text-sm font-black leading-tight ${
+              membro?.estado === 'Sorteado' ? 'text-emerald-400' :
+              membro?.estado === 'Aceite'   ? 'text-amber-400' : 'text-white'
+            }`}>
+              {membro?.estado === 'Sorteado' ? 'Contemplado' :
+               membro?.estado === 'Aceite'   ? 'Activo' :
+               membro                        ? 'Pendente' :
+               inscricaoPendente             ? 'Em análise' : '—'}
+            </div>
+          </div>
         </div>
 
         {/* ── Alertas ── */}
@@ -237,75 +270,118 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
 
         {/* ══ TAB: RESUMO ══════════════════════════════════════════════════════ */}
         {tab === 'resumo' && (
-          <div className="space-y-4">
-            {userRes.length === 0 && !membro && !inscricaoPendente ? (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center">
-                <div className="w-12 h-12 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center mx-auto mb-3">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#71717a" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/>
-                  </svg>
-                </div>
-                <p className="text-white text-sm">Ainda não tem actividade registada.</p>
-                <p className="text-white text-xs mt-1">As suas reservas, compras e xitique aparecem aqui.</p>
-              </div>
-            ) : (
-              <>
-                {/* Actividade recente */}
-                {userRes.length > 0 && (
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-                    <h3 className="text-xs font-black text-white uppercase tracking-wider mb-3">Actividade Recente</h3>
-                    <div className="space-y-2">
-                      {[...userRes].slice(0, 4).map(r => {
-                        const veh = getVehicle(r.vehicleId);
-                        const isPurchase = veh?.mode === 'compra';
-                        const st = RES_STATUS[r.status];
-                        const restam = isPurchase
-                          ? (r.totalPrestacoes ?? 0) - (r.prestacoesPagas ?? 0)
-                          : 0;
-                        return (
-                          <div key={r.id} className="flex items-center justify-between gap-3 bg-zinc-800/50 rounded-xl px-3 py-2.5">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-[9px] font-black ${
-                                isPurchase ? 'bg-purple-500/15 text-purple-400 border border-purple-500/20' : 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
-                              }`}>
-                                {isPurchase ? 'CPR' : 'ALG'}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-semibold text-white truncate">{getVehicleName(r.vehicleId)}</p>
-                                <p className="text-[10px] text-white">
-                                  {isPurchase
-                                    ? restam > 0 ? `${restam} prestação${restam > 1 ? 'ões' : ''} pendente${restam > 1 ? 's' : ''}` : 'Liquidado'
-                                    : `${r.dataInicio} → ${r.dataFim}`}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className={`text-[10px] border rounded-full px-2 py-0.5 font-bold ${st.cls}`}>{st.label}</span>
-                              <span className="text-xs text-amber-400 font-black">
-                                {isPurchase && (r.notas ?? '').includes('prestações') ? `${fmt(r.deposito)}/mês` : fmt(r.valorTotal)}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+          <div className="space-y-2">
 
-                {/* Resumo xitique no resumo */}
-                {membro && (
-                  <div className={`rounded-2xl border p-4 space-y-3 ${
-                    membro.estado === 'Sorteado' ? 'bg-emerald-400/5 border-emerald-400/20' :
-                    membro.estado === 'Aceite'   ? 'bg-amber-400/5 border-amber-400/20'   :
-                                                   'bg-zinc-900 border-zinc-800'
-                  }`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-amber-400 font-black uppercase tracking-widest">Xitique</span>
-                        <span className="text-zinc-700">·</span>
-                        <span className="text-xs text-white">Mês {mesAtual} / {numMembros}</span>
+            {/* Conta suspensa */}
+            {(() => {
+              const fullUser = allUsers.find(u => u.id === authUser?.id);
+              return fullUser?.status === 'suspenso' && fullUser.motivoSuspensao ? (
+                <div className="flex gap-3 bg-red-500/5 border border-red-500/20 rounded-xl px-4 py-3 mb-2">
+                  <svg className="shrink-0 mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.8" fill="#f87171"/>
+                  </svg>
+                  <div>
+                    <p className="text-xs font-bold text-red-400 uppercase tracking-wider">Conta suspensa</p>
+                    <p className="text-sm text-red-300 mt-0.5 leading-relaxed">{fullUser.motivoSuspensao}</p>
+                  </div>
+                </div>
+              ) : null;
+            })()}
+
+            {/* Estado vazio */}
+            {userRes.length === 0 && !membro && !inscricaoPendente && (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center">
+                <p className="text-white text-sm">Ainda não tem actividade registada.</p>
+                <p className="text-white text-xs mt-1 opacity-60">As suas reservas, compras e xitique aparecem aqui.</p>
+              </div>
+            )}
+
+            {/* ── Secção: Alugueres ── */}
+            {alugueres.length > 0 && (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
+                  <span className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />
+                  <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Alugueres</span>
+                  <span className="text-[10px] text-zinc-500 font-bold ml-auto">{alugueres.length}</span>
+                </div>
+                <div className="divide-y divide-zinc-800">
+                  {alugueres.map(r => {
+                    const st = RES_STATUS[r.status];
+                    return (
+                      <div key={r.id} className="flex items-center justify-between gap-3 px-4 py-3.5 hover:bg-zinc-800/30 transition-colors">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-white truncate">{getVehicleName(r.vehicleId)}</p>
+                          <p className="text-xs text-white mt-0.5">{r.dataInicio} → {r.dataFim}</p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span className={`text-[10px] border rounded-full px-2 py-0.5 font-bold ${st.cls}`}>{st.label}</span>
+                          <span className="text-xs text-amber-400 font-black">{fmt(r.valorTotal)}</span>
+                        </div>
                       </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ── Secção: Compras ── */}
+            {compras.length > 0 && (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
+                  <span className="w-2 h-2 rounded-full bg-purple-400 shrink-0" />
+                  <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest">Compras</span>
+                  <span className="text-[10px] text-zinc-500 font-bold ml-auto">{compras.length}</span>
+                </div>
+                <div className="divide-y divide-zinc-800">
+                  {compras.map(c => {
+                    const st = RES_STATUS[c.status];
+                    const isParcelada = (c.totalPrestacoes ?? 0) > 0;
+                    const pagas = c.prestacoesPagas ?? 0;
+                    const total = c.totalPrestacoes ?? 0;
+                    const restam = total - pagas;
+                    return (
+                      <div key={c.id} className="flex items-center justify-between gap-3 px-4 py-3.5 hover:bg-zinc-800/30 transition-colors">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-white truncate">{getVehicleName(c.vehicleId)}</p>
+                          <p className="text-xs text-white mt-0.5">
+                            {isParcelada
+                              ? restam > 0 ? `${pagas}/${total} prestações · faltam ${restam}` : 'Liquidado'
+                              : `Pronto pagamento · ${fmtData(c.dataInicio)}`}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span className={`text-[10px] border rounded-full px-2 py-0.5 font-bold ${st.cls}`}>{st.label}</span>
+                          {isParcelada && (
+                            <span className="text-xs text-amber-400 font-black">{fmt(c.deposito)}/mês</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ── Secção: Xitique ── */}
+            {(membro || inscricaoPendente) && (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                  <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Xitique</span>
+                </div>
+                <div className="divide-y divide-zinc-800">
+                  {/* Estado do membro */}
+                  {membro && (
+                    <div className="flex items-center justify-between gap-3 px-4 py-3.5">
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-white">
+                          {membro.estado === 'Sorteado' ? 'Contemplado 🏆' :
+                           membro.estado === 'Aceite'   ? 'Pagamento confirmado' :
+                                                          'Pagamento pendente'}
+                        </p>
+                        <p className="text-xs text-white mt-0.5">Mês {mesAtual} de {numMembros} · Prémio {fmt(premioMT)}</p>
+                      </div>
+                      <span className={`text-[10px] font-bold border rounded-full px-2 py-0.5 shrink-0 ${
                         membro.estado === 'Sorteado' ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' :
                         membro.estado === 'Aceite'   ? 'bg-amber-400/10 text-amber-400 border-amber-400/20' :
                                                        'bg-zinc-800 text-white border-zinc-700'
@@ -313,38 +389,47 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
                         {membro.estado === 'Sorteado' ? 'Contemplado' : membro.estado === 'Aceite' ? 'Pago' : 'Pendente'}
                       </span>
                     </div>
-                    <div className="flex gap-1">
-                      {Array.from({ length: numMembros }).map((_, i) => {
-                        const mes = i + 1;
-                        const s = sorteios.find(s => s.mes === mes);
-                        const ganhou = s?.vencedor === membro.nome;
-                        const pagou = membro.mesesPagos.includes(mes);
-                        return (
-                          <div
-                            key={i}
-                            title={s ? `Mês ${mes}: ${s.vencedor}${ganhou ? ' (você)' : ''}` : `Mês ${mes}: ${pagou ? 'pago' : 'pendente'}`}
-                            className={`flex-1 h-1.5 rounded-full ${
-                              ganhou  ? 'bg-emerald-400' :
-                              s       ? 'bg-amber-500' :
-                              pagou   ? 'bg-amber-400/40' :
-                                        'bg-zinc-700'
-                            }`}
-                          />
-                        );
-                      })}
+                  )}
+                  {/* Prémio ganho */}
+                  {sorteioGanho && (
+                    <div className="flex items-center justify-between gap-3 px-4 py-3.5 bg-emerald-400/5">
+                      <p className="text-xs font-bold text-emerald-400">🏆 Sorteio do Mês {sorteioGanho.mes}</p>
+                      <span className="text-sm font-black text-emerald-400">{fmt(sorteioGanho.valorPremio)}</span>
                     </div>
-                    <p className="text-[10px] text-white">
-                      {membro.mesesPagos.length} mês{membro.mesesPagos.length !== 1 ? 'es' : ''} pago{membro.mesesPagos.length !== 1 ? 's' : ''} · Total: {fmt(membro.mesesPagos.length * quotaMT)} · Prémio: {fmt(premioMT)}
-                    </p>
-                    {sorteioGanho && (
-                      <div className="bg-emerald-400/10 border border-emerald-400/20 rounded-xl px-3 py-2.5 text-center">
-                        <p className="text-emerald-400 font-black text-xs">🏆 Contemplado no Mês {sorteioGanho.mes} — {fmt(sorteioGanho.valorPremio)}</p>
+                  )}
+                  {/* Meses pagos */}
+                  {membro && membro.mesesPagos.length > 0 && (
+                    <div className="px-4 py-3.5">
+                      <p className="text-xs text-white mb-2">{membro.mesesPagos.length} mês{membro.mesesPagos.length !== 1 ? 'es' : ''} pago{membro.mesesPagos.length !== 1 ? 's' : ''} · Total {fmt(membro.mesesPagos.length * quotaMT)}</p>
+                      <div className="flex gap-1">
+                        {Array.from({ length: numMembros }).map((_, i) => {
+                          const mes = i + 1;
+                          const s = sorteios.find(s => s.mes === mes);
+                          const ganhou = s?.vencedor === membro.nome;
+                          const pagou = membro.mesesPagos.includes(mes);
+                          return (
+                            <div key={i} className={`flex-1 h-1.5 rounded-full ${
+                              ganhou ? 'bg-emerald-400' : s ? 'bg-amber-500' : pagou ? 'bg-amber-400/40' : 'bg-zinc-700'
+                            }`} />
+                          );
+                        })}
                       </div>
-                    )}
-                  </div>
-                )}
-              </>
+                    </div>
+                  )}
+                  {/* Inscrição pendente */}
+                  {!membro && inscricaoPendente && (
+                    <div className="flex items-center gap-3 px-4 py-3.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                      <div>
+                        <p className="text-sm font-bold text-white">Inscrição em análise</p>
+                        <p className="text-xs text-white mt-0.5">Aguarda validação pelo administrador.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
+
           </div>
         )}
 
@@ -405,6 +490,12 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
                           )}
                         </div>
                       )}
+                    </div>
+
+                    {/* Tracking do processo */}
+                    <div className="space-y-2">
+                      <p className="text-[10px] text-amber-400 font-black uppercase tracking-widest">Estado do Processo</p>
+                      <ReservationTracker status={r.status} readonly />
                     </div>
 
                     {/* Valores */}
@@ -734,38 +825,6 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
             )}
           </div>
         )}
-
-        {/* ── KPI cards ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
-            <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Alugueres</div>
-            <div className="text-xl font-black text-white">{alugueres.length}</div>
-          </div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
-            <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Compras</div>
-            <div className="text-xl font-black text-white">{compras.length}</div>
-          </div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
-            <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Total Investido</div>
-            <div className="text-sm font-black text-amber-400 leading-tight">{totalInvestido > 0 ? fmt(totalInvestido) : '—'}</div>
-          </div>
-          <div className={`rounded-2xl p-3 text-center border ${
-            membro?.estado === 'Sorteado' ? 'bg-emerald-400/10 border-emerald-400/20' :
-            membro?.estado === 'Aceite'   ? 'bg-amber-400/10 border-amber-400/20' :
-                                            'bg-zinc-900 border-zinc-800'
-          }`}>
-            <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Xitique</div>
-            <div className={`text-sm font-black leading-tight ${
-              membro?.estado === 'Sorteado' ? 'text-emerald-400' :
-              membro?.estado === 'Aceite'   ? 'text-amber-400' : 'text-white'
-            }`}>
-              {membro?.estado === 'Sorteado' ? 'Contemplado' :
-               membro?.estado === 'Aceite'   ? 'Activo' :
-               membro                        ? 'Pendente' :
-               inscricaoPendente             ? 'Em análise' : '—'}
-            </div>
-          </div>
-        </div>
 
         {/* Footer */}
         <div className="text-center text-white text-xs pb-4">

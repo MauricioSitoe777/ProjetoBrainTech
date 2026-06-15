@@ -5,7 +5,9 @@ import { useCurrencyFormatter } from "../hooks";
 import { useAuth } from "../context/AuthContext";
 import { useReservations } from "../context/ReservationsContext";
 import { useUsers } from "../context/UsersContext";
-import { CATEGORY_LABEL } from "../data/constants";
+import { useMotoristas } from "../context/MotoristasContext";
+import { CATEGORY_LABEL, VEHICLES } from "../data/constants";
+import { GuestRequestModal } from "./GuestRequestModal";
 
 const TAXA_MENSAL = 0.015;
 const MAX_MESES_PADRAO = 12;
@@ -15,19 +17,6 @@ type FlowType = "compra" | "aluguer";
 type Category = "func_publico" | "func_privado" | "empreendedor";
 type PaymentPlan = "pronto" | "prestacoes";
 
-type HistoryEntry = {
-  id: string;
-  createdAt: number;
-  clientName: string;
-  clientContact: string;
-  flow: FlowType;
-  category: Category;
-  paymentPlan: PaymentPlan;
-  mesesPrestacoes?: number;
-  values: Record<string, number>;
-};
-
-const HISTORY_KEY = "rentcar:clientHistory:v1";
 const RENTAL_LOCATIONS = [
   "Aeroporto de Maputo (MPM)",
   "Escritório Central (Av. Julius Nyerere, Maputo)",
@@ -120,6 +109,7 @@ export default function Simulator({
   const fmt = useCurrencyFormatter();
   const { user: authUser, allUsers, addUser } = useAuth();
   const { updateUser, getUser } = useUsers();
+  const { motoristas } = useMotoristas();
   const {
     createReservation,
     validateDates,
@@ -157,6 +147,7 @@ export default function Simulator({
   };
 
   const [clientName, setClientName] = useState("");
+  const [showGuestModal, setShowGuestModal] = useState(false);
   const [clientContact, setClientContact] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -182,6 +173,8 @@ export default function Simulator({
   const [motivoViagem, setMotivoViagem] = useState("");
   const [localLevantamento, setLocalLevantamento] = useState("");
   const [localDevolucao, setLocalDevolucao] = useState("");
+  const [comMotorista, setComMotorista] = useState(false);
+  const [motoristaId, setMotoristaId] = useState("");
   const [submitError, setSubmitError] = useState("");
 
   // Auto-preencher dados se o utilizador logado for alterado/carregado
@@ -378,25 +371,6 @@ export default function Simulator({
   const rentalTotal = rentalQuote?.total ?? rentTotalPayNow;
   const rentalDeposit = rentalQuote?.deposito ?? deposit;
 
-  const [history, setHistory] = useState<HistoryEntry[]>(() => {
-    try {
-      const raw = localStorage.getItem(HISTORY_KEY);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw) as HistoryEntry[];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-    } catch {
-      // ignore
-    }
-  }, [history]);
-
   const rentalDetailsOk =
     flow !== "aluguer" ||
     (!!dataInicio && !!dataFim && dateValidation?.valid === true && availability?.available !== false);
@@ -432,23 +406,6 @@ export default function Simulator({
           deposit: rentalDeposit,
           rentTotalPayNow: rentalTotal,
         };
-
-    const entry: HistoryEntry = {
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      createdAt: Date.now(),
-      clientName: clientName.trim(),
-      clientContact: clientContact.trim() ? `+258 ${clientContact.trim()}` : "",
-      flow,
-      category,
-      paymentPlan: flow === "compra" ? paymentPlan : "pronto",
-      mesesPrestacoes:
-        flow === "compra" && paymentPlan === "prestacoes"
-          ? Math.min(maxMonthsForCategory, Math.max(1, Math.round(mesesPrestacoes)))
-          : undefined,
-      values,
-    };
-
-    setHistory((h) => [entry, ...h].slice(0, 30));
 
     // Resolve which user record to link the reservation to
     const normalizedPhone = clientContact.trim() ? `+258 ${clientContact.trim()}` : "";
@@ -498,6 +455,7 @@ export default function Simulator({
         deposito: rentalDeposit,
         ...(motivoViagem.trim() ? { motivoViagem: motivoViagem.trim() } : { motivoViagem: undefined }),
         ...{ localLevantamento, localDevolucao },
+        motoristaId: comMotorista && motoristaId ? motoristaId : undefined,
       });
       if (!result.ok) {
         setSubmitError(result.error ?? "Não foi possível criar a reserva.");
@@ -525,6 +483,7 @@ export default function Simulator({
   };
 
   return (
+    <>
     <section id="simulador" className="py-8 bg-zinc-950 relative overflow-hidden">
       {/* Ambient glow */}
       <div
@@ -557,7 +516,6 @@ export default function Simulator({
           </div>
           <h2
             className="text-white text-2xl md:text-3xl font-bold"
-            style={{ fontFamily: "'Archivo', sans-serif" }}
           >
             Simulador
           </h2>
@@ -636,7 +594,7 @@ export default function Simulator({
             {/* Cliente */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="relative">
-                <label className="text-white text-xs font-bold block mb-1.5">Nome do cliente</label>
+                <label className="text-white text-xs font-bold block mb-1.5">Cliente</label>
                 <input
                   value={clientName}
                   onChange={(e) => {
@@ -676,7 +634,7 @@ export default function Simulator({
               <div className="relative">
                 <label className="text-white text-xs font-bold block mb-1.5">Contacto</label>
                 <div className={`flex items-center w-full rounded-xl bg-zinc-950 border border-zinc-700 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500/20 overflow-hidden ${authUser ? 'opacity-70' : ''}`}>
-                  <div className="pl-4 pr-3 py-3.5 text-sm text-amber-500 font-bold bg-zinc-900 border-r border-zinc-700">
+                  <div className="pl-4 pr-3 py-2 text-sm text-amber-500 font-bold bg-zinc-900 border-r border-zinc-700">
                     +258
                   </div>
                   <input
@@ -738,7 +696,7 @@ export default function Simulator({
                 </div>
 
                 {paymentPlan === "prestacoes" && (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-4">
                     <NumberField
                       label="Valor de Entrada"
                       value={downPayment}
@@ -747,14 +705,51 @@ export default function Simulator({
                       step={10_000}
                       suffix="MT"
                     />
-                    <NumberField
-                      label="Meses"
-                      value={mesesPrestacoes}
-                      onChange={(v) => setMesesPrestacoes(Math.min(maxMonthsForCategory, Math.max(1, Math.round(v))))}
-                      min={1}
-                      step={1}
-                      suffix="meses"
-                    />
+
+                    {/* Slider de meses */}
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <label className="text-white text-xs font-bold uppercase tracking-tight">Meses em Prestação</label>
+                        <div className="flex items-baseline gap-1.5 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1">
+                          <span className="text-xl font-black text-amber-400 leading-none">{mesesPrestacoes}</span>
+                          <span className="text-[10px] text-white font-bold">meses</span>
+                        </div>
+                      </div>
+
+                      <input
+                        type="range"
+                        className="months-slider w-full"
+                        min={1}
+                        max={maxMonthsForCategory}
+                        step={1}
+                        value={mesesPrestacoes}
+                        onChange={e => setMesesPrestacoes(Number(e.target.value))}
+                        style={{
+                          background: `linear-gradient(to right, #d8a020 ${((mesesPrestacoes - 1) / (maxMonthsForCategory - 1)) * 100}%, #3f3f46 ${((mesesPrestacoes - 1) / (maxMonthsForCategory - 1)) * 100}%)`
+                        }}
+                      />
+
+                      {/* Marcas rápidas clicáveis */}
+                      <div className="flex justify-between mt-2.5">
+                        {(maxMonthsForCategory <= 12
+                          ? [1, 3, 6, 9, 12]
+                          : [1, 12, 24, 36, 48]
+                        ).filter(v => v <= maxMonthsForCategory).map(v => (
+                          <button
+                            key={v}
+                            type="button"
+                            onClick={() => setMesesPrestacoes(v)}
+                            className={`text-[10px] font-black px-1.5 py-0.5 rounded transition-all ${
+                              mesesPrestacoes === v
+                                ? 'text-amber-400 bg-amber-400/10 border border-amber-400/30'
+                                : 'text-zinc-500 hover:text-white'
+                            }`}
+                          >
+                            {v}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
               </>
@@ -826,6 +821,49 @@ export default function Simulator({
                   />
                 </div>
 
+                {/* Solicitar motorista */}
+                {(() => {
+                  const disponiveis = motoristas.filter(m => m.status === 'disponivel');
+                  return (
+                    <div className={`rounded-xl border transition-all ${comMotorista ? 'border-amber-400/30 bg-amber-400/5' : 'border-zinc-700/60 bg-zinc-800/30'}`}>
+                      <button
+                        type="button"
+                        onClick={() => { setComMotorista(v => !v); setMotoristaId(''); }}
+                        className="w-full flex items-center justify-between px-4 py-3"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-base">🧑‍✈️</span>
+                          <div className="text-left">
+                            <p className={`text-xs font-bold ${comMotorista ? 'text-amber-400' : 'text-white'}`}>Com ou sem motorista</p>
+                            <p className="text-[10px] text-white">Condutor profissional incluído na reserva</p>
+                          </div>
+                        </div>
+                        <div className={`w-9 h-5 rounded-full flex items-center transition-all px-0.5 shrink-0 ${comMotorista ? 'bg-amber-400 justify-end' : 'bg-zinc-700 justify-start'}`}>
+                          <div className="w-4 h-4 rounded-full bg-white shadow" />
+                        </div>
+                      </button>
+                      {comMotorista && (
+                        <div className="px-4 pb-3">
+                          {disponiveis.length === 0 ? (
+                            <p className="text-xs text-white italic">Sem motoristas disponíveis no momento.</p>
+                          ) : (
+                            <select
+                              value={motoristaId}
+                              onChange={e => setMotoristaId(e.target.value)}
+                              className="w-full bg-zinc-900 border border-zinc-700 text-white rounded-lg px-3 py-2 text-xs focus:border-amber-400 outline-none"
+                            >
+                              <option value="">Selecionar motorista (opcional)</option>
+                              {disponiveis.map(m => (
+                                <option key={m.id} value={m.id}>{m.nome} · {m.telefone}</option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {dateValidation && !dateValidation.valid ? (
                   <div className="text-xs text-red-100 bg-red-600 border border-red-500 rounded-lg p-2 font-bold">
                     {dateValidation.errors[0]}
@@ -838,8 +876,8 @@ export default function Simulator({
                   </div>
                 ) : null}
 
-                {/* Dias + Custo + Desconto em 3 colunas */}
-                <div className="grid grid-cols-3 gap-3">
+                {/* Dias + Custo + Desconto (desconto só admin) */}
+                <div className={`grid gap-3 ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
                   <NumberField
                     label="Dias"
                     value={days}
@@ -858,24 +896,26 @@ export default function Simulator({
                     suffix="MT/dia"
                     disabled={!isAdmin}
                   />
-                  <div className="relative">
-                    <NumberField
-                      label="Desconto"
-                      value={discountPct}
-                      onChange={(v) => setDiscountPct(Math.min(100, Math.max(0, v)))}
-                      min={0}
-                      step={1}
-                      suffix="%"
-                      disabled={!isAdmin && days < 7}
-                    />
-                    {days >= 7 && (
-                      <div className="absolute top-0 right-0 -translate-y-1 bg-emerald-500 text-zinc-950 text-[9px] font-black px-1.5 py-0.5 rounded shadow-lg animate-bounce">
-                        {days >= 30 ? rules.descontoMensalPercentual : days >= 15 ? rules.descontoQuinzenalPercentual : rules.descontoSemanalPercentual}%
-                      </div>
-                    )}
-                  </div>
+                  {isAdmin && (
+                    <div className="relative">
+                      <NumberField
+                        label="Desconto"
+                        value={discountPct}
+                        onChange={(v) => setDiscountPct(Math.min(100, Math.max(0, v)))}
+                        min={0}
+                        step={1}
+                        suffix="%"
+                      />
+                      {days >= 7 && (
+                        <div className="absolute top-0 right-0 -translate-y-1 bg-emerald-500 text-zinc-950 text-[9px] font-black px-1.5 py-0.5 rounded shadow-lg animate-bounce">
+                          {days >= 30 ? rules.descontoMensalPercentual : days >= 15 ? rules.descontoQuinzenalPercentual : rules.descontoSemanalPercentual}%
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
+                {isAdmin && (
                 <div className="grid grid-cols-2 gap-3">
                   <NumberField
                     label="Taxa de limpeza"
@@ -884,7 +924,6 @@ export default function Simulator({
                     min={0}
                     step={50}
                     suffix="MT"
-                    disabled={!isAdmin}
                   />
                   <NumberField
                     label="Taxa de logística"
@@ -893,7 +932,6 @@ export default function Simulator({
                     min={0}
                     step={100}
                     suffix="MT"
-                    disabled={!isAdmin}
                   />
                   <NumberField
                     label="Outras taxas"
@@ -902,7 +940,6 @@ export default function Simulator({
                     min={0}
                     step={100}
                     suffix="MT"
-                    disabled={!isAdmin}
                   />
                   <NumberField
                     label="Caução"
@@ -911,9 +948,9 @@ export default function Simulator({
                     min={0}
                     step={500}
                     suffix="MT"
-                    disabled={!isAdmin}
                   />
                 </div>
+                )}
               </>
             )}
 
@@ -932,23 +969,22 @@ export default function Simulator({
                     : "Total (Pronto)"
                   : "Total a pagar"}
               </div>
-              <div
-                className="text-3xl font-black text-white mb-1 tracking-tighter"
-                style={{ fontFamily: "'Archivo', sans-serif" }}
-              >
-                {flow === "compra"
-                  ? paymentPlan === "prestacoes"
-                    ? fmt(purchasePMT)
-                    : fmt(vehiclePrice)
-                  : fmt(rentalTotal)}
-                <span className="text-lg text-amber-500 ml-1 font-black">MT</span>
-              </div>
-              <div className="text-white text-[10px] mt-2 font-bold bg-white/5 px-2 py-1 rounded-md inline-block border border-white/10">
-                {flow === "compra" && paymentPlan === "prestacoes"
-                  ? `${(TAXA_MENSAL * 100).toFixed(1)}%/mês · ${Math.min(maxMonthsForCategory, Math.max(1, Math.round(mesesPrestacoes)))} meses`
-                  : flow === "compra"
-                    ? "Pagamento à vista."
-                    : "Inclui diárias, taxas e caução."}
+              <div className="flex items-baseline gap-3 flex-wrap mb-1">
+                <span className="text-3xl font-black text-white tracking-tighter">
+                  {flow === "compra"
+                    ? paymentPlan === "prestacoes"
+                      ? fmt(purchasePMT)
+                      : fmt(vehiclePrice)
+                    : fmt(rentalTotal)}
+                  <span className="text-lg text-amber-500 ml-1 font-black">MT</span>
+                </span>
+                <span className="text-white text-[10px] font-bold bg-white/5 px-2 py-1 rounded-md border border-white/10">
+                  {flow === "compra" && paymentPlan === "prestacoes"
+                    ? `${(TAXA_MENSAL * 100).toFixed(1)}%/mês · ${Math.min(maxMonthsForCategory, Math.max(1, Math.round(mesesPrestacoes)))} meses`
+                    : flow === "compra"
+                      ? "Pagamento à vista."
+                      : "Inclui diárias, taxas e caução."}
+                </span>
               </div>
             </div>
 
@@ -987,10 +1023,7 @@ export default function Simulator({
                     ["Veículo", `${fmt(vehiclePrice)} MT`],
                     ["Total", `${fmt(vehiclePrice)} MT`],
                   ] as [string, string][])
-                : ([
-                  ["Diárias", `${fmt(rentDailyAfterDiscount)} MT`],
-                  ["Caução", `${fmt(deposit)} MT`],
-                ] as [string, string][])
+                : ([] as [string, string][])
               ).map(([label, val]) => (
                 <div key={label} className="bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-3">
                   <div className="text-white text-[10px] font-bold uppercase tracking-tighter mb-0.5">{label}</div>
@@ -1020,64 +1053,34 @@ export default function Simulator({
             )}
 
             <button
-              onClick={handleSubmit}
-              disabled={!canSubmit}
-              className={`mt-5 w-full py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all duration-300 shadow-lg relative z-10 ${canSubmit
-                ? "bg-amber-500 text-zinc-950 hover:bg-amber-400 hover:scale-[1.01] active:scale-[0.99]"
-                : "bg-zinc-800 text-white cursor-not-allowed border border-zinc-700"
-                }`}
+              onClick={!authUser ? () => setShowGuestModal(true) : handleSubmit}
+              disabled={!authUser ? clientName.trim().length < 2 : !canSubmit}
+              className={`mt-5 w-full py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all duration-300 shadow-lg relative z-10 ${
+                (!authUser ? clientName.trim().length >= 2 : canSubmit)
+                  ? "bg-amber-500 text-zinc-950 hover:bg-amber-400 hover:scale-[1.01] active:scale-[0.99]"
+                  : "bg-zinc-800 text-white cursor-not-allowed border border-zinc-700"
+              }`}
             >
-              {isBlocked ? "Bloqueado" : "Confirmar Operação"}
+              {!authUser ? "Registar Interesse" : isBlocked ? "Bloqueado" : "Confirmar Operação"}
             </button>
 
-            {/* Histórico — Mini */}
-            <div className="mt-5 relative z-10 border-t border-zinc-800 pt-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-white text-[11px] font-bold uppercase tracking-widest opacity-80">Últimos Registos</div>
-                <button
-                  onClick={() => setHistory([])}
-                  className="text-[10px] font-bold text-white hover:text-amber-500 transition-colors uppercase tracking-tighter"
-                >
-                  Limpar
-                </button>
-              </div>
-
-              {history.length === 0 ? (
-                <div className="text-white text-[11px] font-medium bg-white/5 p-4 rounded-xl border border-dashed border-white/5 text-center">
-                  Sem histórico.
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2 max-h-[200px] overflow-auto pr-1 custom-scrollbar">
-                  {history.slice(0, 5).map((h) => (
-                    <div key={h.id} className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-3 hover:border-amber-500/30 transition-colors group">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="text-white font-bold text-xs truncate group-hover:text-amber-500 transition-colors">{h.clientName}</div>
-                          <div className="text-white text-[9px] font-bold uppercase tracking-tighter truncate mt-0.5">
-                            {h.flow === "compra" ? "Compra" : "Aluguer"} · {CATEGORY_LABEL[h.category]}
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <div className="text-amber-500 font-bold text-xs">
-                            {h.flow === "compra"
-                              ? h.paymentPlan === "prestacoes"
-                                ? fmt(h.values.purchasePMT)
-                                : fmt(h.values.vehiclePrice ?? 0)
-                              : fmt(h.values.rentTotalPayNow ?? 0)}
-                          </div>
-                          <div className="text-white text-[9px] font-bold uppercase tracking-tighter">MT</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
 
         </div>
       </div>
 
     </section>
+
+      {showGuestModal && (
+        <GuestRequestModal
+          intent={flow as 'aluguer' | 'compra'}
+          vehicleName={VEHICLES.find(v => v.id === selectedVehicleId)?.name}
+          prefill={{ nome: clientName, telefone: clientContact || undefined }}
+          preCategory={flow === 'compra' ? (category as import('../types/guest').GuestCategory) : undefined}
+          withDriver={flow === 'aluguer' ? comMotorista : undefined}
+          onClose={() => setShowGuestModal(false)}
+        />
+      )}
+    </>
   );
 }

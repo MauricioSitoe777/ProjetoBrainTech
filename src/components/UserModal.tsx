@@ -58,6 +58,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
     bi: '',
     nuit: '',
     endereco: '',
+    motivoSuspensao: '',
   });
   const [docFiles, setDocFiles] = useState<Partial<Record<string, string>>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -76,6 +77,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
         bi: user.bi || '',
         nuit: user.nuit || '',
         endereco: user.endereco || '',
+        motivoSuspensao: user.motivoSuspensao || '',
       });
       // Restore file names from existing documentos
       if (user.documentos) {
@@ -93,6 +95,8 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
     if (!form.nome.trim()) e.nome = 'Nome é obrigatório';
     if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email)) e.email = 'Email inválido';
     if (!form.telefone.trim()) e.telefone = 'Telefone é obrigatório';
+    if (form.status === 'suspenso' && !form.motivoSuspensao.trim())
+      e.motivoSuspensao = 'Obrigatório indicar o motivo da suspensão';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -208,6 +212,27 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
                 {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
+
+            {form.status === 'suspenso' && (
+              <div className="col-span-2">
+                <label className="block text-xs text-white mb-1 flex items-center gap-2">
+                  Motivo da suspensão
+                  <span className="text-[9px] font-bold text-red-400 bg-red-400/10 border border-red-400/20 px-1.5 py-0.5 rounded-full uppercase tracking-wider">Obrigatório</span>
+                </label>
+                <textarea
+                  {...field('motivoSuspensao')}
+                  placeholder="Ex: Incumprimento de pagamento, comportamento inadequado..."
+                  rows={3}
+                  className={`${inputClass} resize-none ${errors.motivoSuspensao ? 'border-red-500' : ''}`}
+                />
+                {errors.motivoSuspensao && (
+                  <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.8" fill="currentColor"/></svg>
+                    {errors.motivoSuspensao}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* BI + inline upload */}
             <div>

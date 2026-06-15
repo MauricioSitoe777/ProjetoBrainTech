@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { AdminNav } from '../components/AdminNav';
 import { useVehicles, type VehicleData } from '../context/VehiclesContext';
 import { useReservations } from '../context/ReservationsContext';
 
@@ -130,9 +129,7 @@ export function VehiclesPage({ onExit }: { onExit: () => void }) {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950" style={{ fontFamily: "'Archivo', sans-serif" }}>
-      <AdminNav subtitle="Gestão de Veículos" onExit={onExit} />
-
+    <div className="bg-zinc-950">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {/* Header */}
         <div className="flex items-center justify-between gap-4 mb-6">
