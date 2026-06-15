@@ -696,7 +696,7 @@ export default function Simulator({
                 </div>
 
                 {paymentPlan === "prestacoes" && (
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3 items-start">
                     <NumberField
                       label="Valor de Entrada"
                       value={downPayment}
@@ -706,13 +706,13 @@ export default function Simulator({
                       suffix="MT"
                     />
 
-                    {/* Slider de meses */}
+                    {/* Slider de meses — coluna direita */}
                     <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <label className="text-white text-xs font-bold uppercase tracking-tight">Meses em Prestação</label>
-                        <div className="flex items-baseline gap-1.5 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1">
-                          <span className="text-xl font-black text-amber-400 leading-none">{mesesPrestacoes}</span>
-                          <span className="text-[10px] text-white font-bold">meses</span>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-white text-xs font-bold">Meses</label>
+                        <div className="flex items-baseline gap-1 bg-zinc-800 border border-zinc-700 rounded-md px-2 py-0.5">
+                          <span className="text-base font-black text-amber-400 leading-none">{mesesPrestacoes}</span>
+                          <span className="text-[9px] text-white font-bold">m</span>
                         </div>
                       </div>
 
@@ -729,17 +729,17 @@ export default function Simulator({
                         }}
                       />
 
-                      {/* Marcas rápidas clicáveis */}
-                      <div className="flex justify-between mt-2.5">
+                      {/* Marcas rápidas */}
+                      <div className="flex justify-between mt-1.5">
                         {(maxMonthsForCategory <= 12
-                          ? [1, 3, 6, 9, 12]
-                          : [1, 12, 24, 36, 48]
+                          ? [1, 6, 12]
+                          : [1, 12, 24, 48]
                         ).filter(v => v <= maxMonthsForCategory).map(v => (
                           <button
                             key={v}
                             type="button"
                             onClick={() => setMesesPrestacoes(v)}
-                            className={`text-[10px] font-black px-1.5 py-0.5 rounded transition-all ${
+                            className={`text-[9px] font-black px-1 py-0.5 rounded transition-all ${
                               mesesPrestacoes === v
                                 ? 'text-amber-400 bg-amber-400/10 border border-amber-400/30'
                                 : 'text-zinc-500 hover:text-white'
