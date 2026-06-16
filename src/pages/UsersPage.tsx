@@ -11,6 +11,7 @@ import { useGuests } from '../context/GuestsContext';
 import { GuestReviewModal } from '../components/GuestReviewModal';
 import { AcoesNecessarias } from '../components/AcoesNecessarias';
 import { useRoute } from '../hooks/useRoute';
+import { useNotifications } from '../context/NotificationsContext';
 
 // ── Configs ────────────────────────────────────────────────────────────────
 
@@ -129,9 +130,10 @@ function MotoristaModal({ initial, onSave, onClose }: {
 export function UsersPage() {
   const { users, addUser, updateUser, deleteUser } = useUsers();
   const { motoristas, addMotorista, updateMotorista, deleteMotorista } = useMotoristas();
-  const { guests } = useGuests();
+  const { guests, updateGuest } = useGuests();
   const { user: authUser } = useAuth();
   const { path } = useRoute();
+  const { addNotification } = useNotifications();
 
   const [search, setSearch]     = useState('');
   const [mainTab, setMainTab]   = useState<MainTab>(() =>
@@ -142,21 +144,21 @@ export function UsersPage() {
     if (path === '/admin/utilizadores/administradores') return 'admins';
     return 'todos';
   });
-  const [guestSub, setGuestSub] = useState<GuestSubFilter>(() => {
-    if (path === '/admin/visitantes/pendentes')  return 'pendentes';
-    if (path === '/admin/visitantes/aprovados')  return 'aprovado';
-    if (path === '/admin/visitantes/rejeitados') return 'rejeitado';
+  const pathToGuestSub = (p: string): GuestSubFilter => {
+    if (p === '/admin/visitantes/aguarda-documentos') return 'aguarda_documentos';
+    if (p === '/admin/visitantes/em-analise')         return 'em_analise';
+    if (p === '/admin/visitantes/aprovados')          return 'aprovado';
+    if (p === '/admin/visitantes/rejeitados')         return 'rejeitado';
     return 'todos';
-  });
+  };
+
+  const [guestSub, setGuestSub] = useState<GuestSubFilter>(() => pathToGuestSub(path));
 
   // Sync state when sidebar navigation changes the path
   useEffect(() => {
     if (path.startsWith('/admin/visitantes')) {
       setMainTab('visitantes');
-      if (path === '/admin/visitantes/pendentes')  setGuestSub('pendentes');
-      else if (path === '/admin/visitantes/aprovados')  setGuestSub('aprovado');
-      else if (path === '/admin/visitantes/rejeitados') setGuestSub('rejeitado');
-      else setGuestSub('todos');
+      setGuestSub(pathToGuestSub(path));
     } else {
       setMainTab('utilizadores');
       if (path === '/admin/utilizadores/clientes')        setUserSub('clientes');
@@ -215,6 +217,7 @@ export function UsersPage() {
         if (guestSub !== 'todos')     return g.status === guestSub;
         return true;
       })
+      .sort((a, b) => (a.intent === b.intent ? 0 : a.intent === 'aluguer' ? -1 : 1))
       .map(g => ({ kind: 'guest', data: g } as Row));
   }, [activePool, motoristas, guests, search, mainTab, userSub, guestSub]);
 
@@ -245,7 +248,7 @@ export function UsersPage() {
           {[
             { label: 'Utilizadores',      value: activePool.length,                                           color: 'text-white' },
             { label: 'Ativos',            value: activePool.filter(u => u.status === 'ativo').length,         color: 'text-emerald-400' },
-            { label: 'Visitantes',        value: guests.filter(g => g.status !== 'aprovado' && g.status !== 'rejeitado').length, color: 'text-purple-400' },
+            { label: 'Visitantes',        value: guests.filter(g => g.status !== 'aprovado' && g.status !== 'rejeitado').length, color: 'text-amber-400' },
             { label: 'Motoristas disp.',  value: motoristas.filter(m => m.status === 'disponivel').length,    color: 'text-blue-400' },
           ].map(s => (
             <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
@@ -312,8 +315,8 @@ export function UsersPage() {
           {/* Visitantes — header contextual (quando navegado via sidebar) */}
           {mainTab === 'visitantes' && (
             <div className="flex items-center gap-2 px-1">
-              <span className="w-2 h-2 rounded-full bg-purple-400 shrink-0" />
-              <span className="text-xs font-black text-purple-400 uppercase tracking-widest">Visitantes</span>
+              <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+              <span className="text-xs font-black text-amber-500 uppercase tracking-widest">Visitantes</span>
               <span className="text-xs text-zinc-500 font-bold">
                 {guests.filter(g => g.status !== 'aprovado' && g.status !== 'rejeitado').length} pendentes
               </span>
@@ -341,28 +344,6 @@ export function UsersPage() {
             </div>
           )}
 
-          {/* Sub-filters — Visitantes */}
-          {mainTab === 'visitantes' && (
-            <div className="flex gap-2 flex-wrap">
-              {([
-                { value: 'todos',                 label: 'Todos' },
-                { value: 'aguarda_documentos',    label: 'Aguarda Documentos' },
-                { value: 'documentos_submetidos', label: 'Docs Submetidos' },
-                { value: 'em_analise',            label: 'Em Análise' },
-                { value: 'rejeitado',             label: 'Rejeitados' },
-              ] as { value: GuestSubFilter; label: string }[]).map(sf => (
-                <button key={sf.value}
-                  onClick={() => setGuestSub(sf.value)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
-                    guestSub === sf.value
-                      ? 'bg-purple-500 text-white border-purple-500'
-                      : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-white'
-                  }`}>
-                  {sf.label}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Table */}
@@ -389,7 +370,31 @@ export function UsersPage() {
                   </tr>
                 )}
 
-                {rows.map(row => {
+                {rows.map((row, rowIndex) => {
+                  // Separator between aluguer / compra groups in visitantes tab
+                  if (row.kind === 'guest') {
+                    const prev = rows[rowIndex - 1];
+                    const prevIntent = prev?.kind === 'guest' ? prev.data.intent : null;
+                    const showSep = prevIntent !== null && prevIntent !== row.data.intent;
+                    const showFirst = prevIntent === null;
+                    const groupLabel = row.data.intent === 'aluguer' ? '🔑 Aluguer' : '🚗 Compra';
+                    const guestRowEl = (
+                      <GuestRow key={`g-${row.data.id}`} g={row.data} guestStatusConfig={guestStatusConfig}
+                        onReview={setReviewGuest} onAdvance={(g, next) => next ? updateGuest(g.id, { status: next }) : setReviewGuest(g)} />
+                    );
+                    if (showSep || showFirst) {
+                      return [
+                        <tr key={`sep-${row.data.intent}-${row.data.id}`} className="bg-zinc-800/30">
+                          <td colSpan={7} className="px-4 py-1.5">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-amber-500">{groupLabel}</span>
+                          </td>
+                        </tr>,
+                        guestRowEl,
+                      ];
+                    }
+                    return guestRowEl;
+                  }
+
                   if (row.kind === 'user') {
                     const u = row.data;
                     const role   = roleConfig[u.role];
@@ -448,7 +453,7 @@ export function UsersPage() {
                                   <>
                                     {u.status === 'suspenso' ? (
                                       <button
-                                        onClick={() => updateUser(u.id, { status: 'ativo', motivoSuspensao: '' })}
+                                        onClick={() => { updateUser(u.id, { status: 'ativo', motivoSuspensao: '' }); addNotification('admin', 'Conta reactivada', `${u.nome} foi reactivado e pode voltar a aceder ao sistema.`, 'success'); }}
                                         title="Reactivar conta"
                                         className="p-1.5 text-emerald-400 hover:text-emerald-300 transition-colors rounded-lg hover:bg-emerald-400/10"
                                       >
@@ -470,53 +475,6 @@ export function UsersPage() {
                                 )}
                               </>
                             )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  }
-
-                  // Guest row
-                  if (row.kind === 'guest') {
-                    const g  = row.data;
-                    const gs = guestStatusConfig[g.status];
-                    return (
-                      <tr key={`g-${g.id}`} className="hover:bg-zinc-800/50 transition-colors group border-b border-zinc-800/60 cursor-pointer" onClick={() => setReviewGuest(g)}>
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 text-xs font-black flex-shrink-0">
-                              {initials(g.nome)}
-                            </div>
-                            <div>
-                              <p className="text-sm font-bold text-white group-hover:text-purple-400 transition-colors">{g.nome}</p>
-                              <p className="text-xs text-zinc-500 mt-0.5">{g.email}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5 hidden sm:table-cell">
-                          <span className="text-xs font-bold border rounded-md px-2 py-1 bg-purple-500/10 text-purple-400 border-purple-500/20">
-                            Visitante · {g.intent === 'aluguer' ? 'Aluguer' : 'Compra'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 hidden md:table-cell text-sm font-medium text-white">{g.telefone}</td>
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-2">
-                            <span className={`w-2 h-2 rounded-full ${gs.dot}`} />
-                            <span className="text-sm font-semibold text-white">{gs.label}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5 hidden md:table-cell text-sm text-white">
-                          {new Date(g.dataCriacao).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                        </td>
-                        <td className="px-4 py-3.5 hidden xl:table-cell">
-                          {g.vehicleName ? <span className="text-xs text-zinc-400">{g.vehicleName}</span> : <span className="text-xs text-zinc-600">—</span>}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-end">
-                            <button onClick={e => { e.stopPropagation(); setReviewGuest(g); }}
-                              className="p-1.5 text-zinc-400 hover:text-purple-400 transition-colors rounded-lg hover:bg-purple-400/10" title="Analisar">
-                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                            </button>
                           </div>
                         </td>
                       </tr>
@@ -620,7 +578,12 @@ export function UsersPage() {
             <p className="text-white text-sm mb-6">Esta ação é permanente e não pode ser desfeita.</p>
             <div className="flex gap-3">
               <button onClick={() => setDeleteUserConfirm(null)} className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg py-2 text-sm transition-colors">Cancelar</button>
-              <button onClick={() => { deleteUser(deleteUserConfirm); setDeleteUserConfirm(null); }} className="flex-1 bg-red-500 hover:bg-red-400 text-white font-medium rounded-lg py-2 text-sm transition-colors">Eliminar</button>
+              <button onClick={() => {
+                const target = users.find(u => u.id === deleteUserConfirm);
+                deleteUser(deleteUserConfirm);
+                if (target) addNotification('admin', 'Utilizador eliminado', `${target.nome} foi removido permanentemente do sistema.`, 'alert');
+                setDeleteUserConfirm(null);
+              }} className="flex-1 bg-red-500 hover:bg-red-400 text-white font-medium rounded-lg py-2 text-sm transition-colors">Eliminar</button>
             </div>
           </div>
         </div>
@@ -707,6 +670,7 @@ export function UsersPage() {
                 onClick={() => {
                   if (!suspendMotivo.trim()) { setSuspendError('Obrigatório indicar o motivo da suspensão'); return; }
                   updateUser(suspendTarget.id, { status: 'suspenso', motivoSuspensao: suspendMotivo.trim() });
+                  addNotification('admin', 'Conta suspensa', `${suspendTarget.nome} foi suspenso. Motivo: ${suspendMotivo.trim()}`, 'warning');
                   setSuspendTarget(null);
                 }}
                 className="flex-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 rounded-lg py-2.5 text-sm font-black transition-all"
@@ -718,5 +682,77 @@ export function UsersPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// ── Next-status map ────────────────────────────────────────────────────────
+const NEXT_STATUS: Partial<Record<GuestStatus, GuestStatus | null>> = {
+  aguarda_documentos:    'em_analise',
+  documentos_submetidos: 'em_analise',
+  em_analise:            null, // null = open review modal
+};
+
+function GuestRow({ g, guestStatusConfig, onReview, onAdvance }: {
+  g: Guest;
+  guestStatusConfig: Record<GuestStatus, { label: string; dot: string }>;
+  onReview: (g: Guest) => void;
+  onAdvance: (g: Guest, next: GuestStatus | null) => void;
+}) {
+  const gs = guestStatusConfig[g.status];
+  const nextStatus = NEXT_STATUS[g.status];
+  const canAdvance = g.status in NEXT_STATUS;
+
+  return (
+    <tr className="hover:bg-zinc-800/50 transition-colors group border-b border-zinc-800/60 cursor-pointer" onClick={() => onReview(g)}>
+      <td className="px-4 py-3.5">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xs font-black flex-shrink-0">
+            {g.nome.split(' ').filter(Boolean).slice(0, 2).map(n => n[0]).join('').toUpperCase()}
+          </div>
+          <div>
+            <p className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors">{g.nome}</p>
+            <p className="text-xs text-white mt-0.5">{g.email}</p>
+            {g.status === 'rejeitado' && g.notaAdmin && (
+              <p className="text-[10px] text-red-400 mt-1 font-semibold leading-tight max-w-[220px]">✕ {g.notaAdmin}</p>
+            )}
+          </div>
+        </div>
+      </td>
+      <td className="px-4 py-3.5 hidden sm:table-cell">
+        <span className="text-xs font-bold border rounded-md px-2 py-1 bg-amber-500/10 text-amber-400 border-amber-500/20">
+          Visitante · {g.intent === 'aluguer' ? 'Aluguer' : 'Compra'}
+        </span>
+      </td>
+      <td className="px-4 py-3.5 hidden md:table-cell text-sm font-medium text-white">{g.telefone}</td>
+      <td className="px-4 py-3.5">
+        <div className="flex items-center gap-1.5">
+          <span className={`w-2 h-2 rounded-full shrink-0 ${gs.dot}`} />
+          <span className="text-sm font-semibold text-white">{gs.label}</span>
+          {canAdvance && (
+            <button
+              onClick={e => { e.stopPropagation(); onAdvance(g, nextStatus ?? null); }}
+              title={nextStatus ? `→ ${guestStatusConfig[nextStatus]?.label ?? nextStatus}` : '→ Aprovar / Rejeitar'}
+              className="p-0.5 text-amber-500 hover:text-amber-400 transition-colors"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          )}
+        </div>
+      </td>
+      <td className="px-4 py-3.5 hidden md:table-cell text-sm text-white">
+        {new Date(g.dataCriacao).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+      </td>
+      <td className="px-4 py-3.5 hidden xl:table-cell">
+        {g.vehicleName ? <span className="text-xs text-white">{g.vehicleName}</span> : <span className="text-xs text-zinc-600">—</span>}
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex items-center justify-end">
+          <button onClick={e => { e.stopPropagation(); onReview(g); }}
+            className="p-1.5 text-white hover:text-amber-400 transition-colors rounded-lg hover:bg-amber-400/10" title="Analisar">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </td>
+    </tr>
   );
 }

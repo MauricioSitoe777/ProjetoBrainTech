@@ -40,7 +40,8 @@ export function AcoesNecessarias() {
   const { reservations, blocks } = useReservations();
   const { dividas } = useFinance();
   const { vehicles } = useVehicles();
-  const { inscricoes, membros } = useXitique();
+  const { grupos, inscricoes } = useXitique();
+  const membros = useMemo(() => grupos.flatMap(g => g.membros), [grupos]);
   const { users } = useUsers();
   const { guests } = useGuests();
   const { navigate } = useRoute();
@@ -165,7 +166,7 @@ export function AcoesNecessarias() {
       items.push({ label: `${p(manutencaoIds.size, 'viatura')} em manutenção`, route: '/admin/veiculos', urgency: 'info' });
 
     return items;
-  }, [reservations, dividas, blocks, vehicles, inscricoes, membros, users, guests]);
+  }, [reservations, dividas, blocks, vehicles, inscricoes, grupos, membros, users, guests]);
 
   const visible = acoes.filter(a => !dismissed.has(a.label));
   const hidden  = acoes.filter(a => dismissed.has(a.label));

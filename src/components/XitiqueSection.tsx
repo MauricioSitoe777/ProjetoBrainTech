@@ -10,8 +10,8 @@ export default function XitiqueSection({
 }: {
   onShowSimulator?: () => void;
 }) {
-  const { estadoGrupo, membros, numMembros } = useXitique();
-  const isClosed = estadoGrupo !== 'Aberto' || membros.length >= numMembros;
+  const { grupos } = useXitique();
+  const isClosed = grupos.length === 0 || grupos.every(g => g.estadoGrupo !== 'Aberto' || g.membros.length >= g.maxMembros);
 
   const scrollTo = useScrollTo();
   const sectionRef = useRef<HTMLDivElement>(null);

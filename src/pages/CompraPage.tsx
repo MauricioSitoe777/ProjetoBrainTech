@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { VEHICLES } from '../data/constants';
 import { useReservations } from '../context/ReservationsContext';
 import type { Reservation, ReservationStatus } from '../types/reservation';
 
 
 const STATUS_CFG: Record<ReservationStatus, { label: string; className: string }> = {
-  pendente:            { label: 'Compra Pendente',        className: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
+  pendente:            { label: 'Aguarda Pagamento',      className: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
   compra_aprovada:     { label: 'Compra Aprovada',        className: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
   entrada_paga:        { label: 'Entrada Paga',           className: 'bg-teal-400/10 text-teal-400 border-teal-400/20' },
   em_prestacao:        { label: 'Em Prestação',           className: 'bg-blue-400/10 text-blue-400 border-blue-400/20' },
@@ -20,7 +20,7 @@ const STATUS_CFG: Record<ReservationStatus, { label: string; className: string }
 };
 
 const FLOW_STEPS = [
-  { key: 'pendente',        label: 'Pendente'  },
+  { key: 'pendente',        label: 'Ag. Pagamento' },
   { key: 'compra_aprovada', label: 'Aprovada'  },
   { key: 'entrada_paga',    label: 'Entrada'   },
   { key: 'em_prestacao',    label: 'Prestação' },
@@ -32,7 +32,7 @@ function stepIndex(status: ReservationStatus) {
   return FLOW_STEPS.findIndex(s => s.key === status);
 }
 
-const fmt     = (n: number) => new Intl.NumberFormat('pt-PT').format(Math.round(n)) + ' MT';
+const fmt     = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' MT';
 const fmtDate = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' });
 
 const compraVehicles = VEHICLES.filter(v => v.mode === 'compra');
@@ -47,7 +47,7 @@ function PrestacoeModal({
   r: Reservation;
   today: string;
   onClose: () => void;
-  onToggle: (numero: number, paga: boolean) => void;
+  onToggle: (numero: number, paga: boolean, valorPago?: number) => void;
   isBlocked: boolean;
 }) {
   const prestacoes    = r.prestacoes ?? [];
@@ -57,6 +57,16 @@ function PrestacoeModal({
   const isAtraso      = r.status === 'prestacao_atraso';
   const allPaid       = pagas >= total && total > 0;
   const proximaNumero = prestacoes.find(p => !p.paga)?.numero ?? null;
+
+  // Custom amount state for the next installment
+  const proximaPrestacao = prestacoes.find(p => p.numero === proximaNumero);
+  const [valorCustom, setValorCustom] = React.useState<string>(
+    proximaPrestacao ? String(proximaPrestacao.valor) : ''
+  );
+  // Sync when modal opens with a different reservation or after recalc
+  React.useEffect(() => {
+    if (proximaPrestacao) setValorCustom(String(proximaPrestacao.valor));
+  }, [proximaNumero, proximaPrestacao?.valor]);
 
   return (
     <div
@@ -165,24 +175,57 @@ function PrestacoeModal({
                       : `Prestação ${p.numero}`}
                   </span>
 
-                  {/* Botão acção */}
-                  <div className="shrink-0 w-24 flex justify-end">
+                  {/* Botão / input acção */}
+                  <div className="shrink-0 flex justify-end items-center gap-2">
                     {p.paga && !isFinal(r.status) && (
-                      <button disabled={isBlocked} onClick={() => onToggle(p.numero, false)}
-                        className="text-xs px-3 py-1 rounded-lg font-semibold bg-zinc-800 text-zinc-500 hover:bg-zinc-700 hover:text-white transition-all disabled:opacity-40">
-                        Reverter
-                      </button>
+                      <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        {p.valorPago && p.valorPago !== p.valor
+                          ? <span title={`Valor acordado: ${fmt(p.valor)}`}>{fmt(p.valorPago)}</span>
+                          : 'Pago'}
+                      </span>
                     )}
-                    {isProxima && !isFinal(r.status) && (
-                      <button disabled={isBlocked} onClick={() => onToggle(p.numero, true)}
-                        className={`text-xs px-3 py-1 rounded-lg font-black transition-all disabled:opacity-40 ${
-                          isOverdue
-                            ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30 border border-red-500/30'
-                            : 'bg-blue-600 text-white hover:bg-blue-500'
-                        }`}>
-                        {isOverdue ? '⚠ Receber' : '✓ Receber'}
-                      </button>
-                    )}
+                    {isProxima && !isFinal(r.status) && (() => {
+                      const custom = parseInt(valorCustom.replace(/\D/g, ''), 10) || 0;
+                      const isAbove = custom > p.valor;
+                      const unpaidAfter = prestacoes.filter(q => !q.paga && q.numero !== p.numero);
+                      const novasPrestacoes = unpaidAfter.length > 0
+                        ? Math.round(Math.max(0, unpaidAfter.reduce((s, q) => s + q.valor, 0) - Math.max(0, custom - p.valor)) / unpaidAfter.length)
+                        : 0;
+                      return (
+                        <div className="flex flex-col gap-1 items-end">
+                          {/* Input de valor personalizado */}
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              value={valorCustom.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
+                              onChange={e => setValorCustom(e.target.value.replace(/\D/g, ''))}
+                              className="w-28 text-xs text-right bg-zinc-800 border border-zinc-700 focus:border-amber-500 rounded-lg px-2 py-1 text-white outline-none tabular-nums font-bold"
+                            />
+                            <span className="text-[10px] text-zinc-500 font-semibold">MT</span>
+                          </div>
+                          {/* Preview de recálculo */}
+                          {isAbove && unpaidAfter.length > 0 && (
+                            <p className="text-[9px] text-amber-400 font-semibold text-right leading-tight">
+                              Próximas: {fmt(novasPrestacoes)}/mês
+                            </p>
+                          )}
+                          {/* Botão Receber */}
+                          <button
+                            disabled={isBlocked || custom <= 0}
+                            onClick={() => { onToggle(p.numero, true, custom); setValorCustom(''); }}
+                            className={`text-xs px-3 py-1 rounded-lg font-black transition-all disabled:opacity-40 ${
+                              isOverdue
+                                ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30 border border-red-500/30'
+                                : 'bg-blue-600 text-white hover:bg-blue-500'
+                            }`}>
+                            {isOverdue ? '⚠ Receber' : '✓ Receber'}
+                          </button>
+                        </div>
+                      );
+                    })()}
                     {isFutura && (
                       <span className="text-xs text-zinc-700 px-3 py-1">—</span>
                     )}
@@ -222,10 +265,22 @@ type Tab = 'compras' | 'acoes';
 // ── Página principal ──────────────────────────────────────────────────────────
 export function CompraPage({ onExit }: { onExit?: () => void }) {
   const { reservations, updateReservation, cancelReservation, gerarPrestacoes, marcarPrestacao } = useReservations();
-  const [tab,         setTab]          = useState<Tab>('compras');
+  const [tab,         setTab]          = useState<Tab>(() =>
+    new URLSearchParams(window.location.search).get('tab') === 'acoes' ? 'acoes' : 'compras'
+  );
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
   const [updating,       setUpdating]       = useState<string | null>(null);
   const [modalAberto,    setModalAberto]    = useState<string | null>(null); // id da reserva
+
+  // Sync tab with URL when navigating from a notification while already on this page
+  React.useEffect(() => {
+    const sync = () => {
+      const t = new URLSearchParams(window.location.search).get('tab');
+      setTab(t === 'acoes' ? 'acoes' : 'compras');
+    };
+    window.addEventListener('popstate', sync);
+    return () => window.removeEventListener('popstate', sync);
+  }, []);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -246,10 +301,10 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
     }, 600);
   };
 
-  const togglePrestacao = (reservationId: string, numero: number, paga: boolean) => {
+  const togglePrestacao = (reservationId: string, numero: number, paga: boolean, valorPago?: number) => {
     if (updating === reservationId) return;
     setUpdating(reservationId);
-    marcarPrestacao(reservationId, numero, paga);
+    marcarPrestacao(reservationId, numero, paga, valorPago);
     setTimeout(() => setUpdating(null), 600);
   };
 
@@ -286,7 +341,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
           r={modalReservation}
           today={today}
           onClose={() => setModalAberto(null)}
-          onToggle={(numero, paga) => togglePrestacao(modalReservation.id, numero, paga)}
+          onToggle={(numero, paga, valorPago) => togglePrestacao(modalReservation.id, numero, paga, valorPago)}
           isBlocked={updating === modalReservation.id}
         />
       )}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { VEHICLES } from '../data/constants';
 import { useReservations } from '../context/ReservationsContext';
 import { useMotoristas } from '../context/MotoristasContext';
@@ -8,8 +8,10 @@ import { BusinessRulesPanel } from '../components/reservations/BusinessRulesPane
 import { ReservationTracker } from '../components/ReservationTracker';
 import type { ReservationStatus } from '../types/reservation';
 
+const fmt = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' MT';
+
 const STATUS_CFG: Record<ReservationStatus, { label: string; className: string }> = {
-  pendente:            { label: 'Reserva Pendente',       className: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
+  pendente:            { label: 'Aguarda Pagamento',      className: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
   confirmada:          { label: 'Reserva Confirmada',     className: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
   pronta_levantamento: { label: 'Pronta p/ Levantamento', className: 'bg-sky-400/10 text-sky-400 border-sky-400/20' },
   ativa:               { label: 'Aluguer Ativo',          className: 'bg-blue-400/10 text-blue-400 border-blue-400/20' },
@@ -36,7 +38,7 @@ const GRUPOS: Array<{
   { status: 'ativa',               title: 'Alugueres Ativos',        dot: 'bg-blue-400',   badge: 'bg-blue-400/10 text-blue-400 border-blue-400/20',       textColor: 'text-blue-400'   },
   { status: 'pronta_levantamento', title: 'Prontas p/ Levantamento', dot: 'bg-sky-400',    badge: 'bg-sky-400/10 text-sky-400 border-sky-400/20',           textColor: 'text-sky-400'    },
   { status: 'confirmada',          title: 'Reservas Confirmadas',    dot: 'bg-emerald-400',badge: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20',textColor: 'text-emerald-400'},
-  { status: 'pendente',            title: 'Reservas Pendentes',      dot: 'bg-amber-400',  badge: 'bg-amber-400/10 text-amber-400 border-amber-400/20',     textColor: 'text-amber-400'  },
+  { status: 'pendente',            title: 'Aguarda Pagamento',       dot: 'bg-amber-400',  badge: 'bg-amber-400/10 text-amber-400 border-amber-400/20',     textColor: 'text-amber-400'  },
 ];
 
 const aluguerVehicles = VEHICLES.filter(v => v.mode === 'aluguer');
@@ -45,9 +47,21 @@ const aluguerIds = new Set(aluguerVehicles.map(v => v.id));
 export function AluguerPage({ onExit }: { onExit?: () => void }) {
   const { reservations, blocks, updateReservation, cancelReservation, removeBlock } = useReservations();
   const { motoristas } = useMotoristas();
-  const [tab, setTab] = useState<Tab>('reservas');
+  const [tab, setTab] = useState<Tab>(() =>
+    new URLSearchParams(window.location.search).get('tab') === 'acoes' ? 'acoes' : 'reservas'
+  );
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
   const [showBlockModal, setShowBlockModal] = useState(false);
+
+  // Sync tab with URL when navigating from a notification while already on this page
+  useEffect(() => {
+    const sync = () => {
+      const t = new URLSearchParams(window.location.search).get('tab');
+      setTab(t === 'acoes' ? 'acoes' : 'reservas');
+    };
+    window.addEventListener('popstate', sync);
+    return () => window.removeEventListener('popstate', sync);
+  }, []);
 
   const aluguerReservations = useMemo(() =>
     reservations.filter(r => aluguerIds.has(r.vehicleId)),
@@ -237,6 +251,39 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                               })()}
                             </div>
                           </div>
+                          {/* Barra de pagamento */}
+                          {r.valorTotal > 0 && (() => {
+                            const pago    = r.deposito ?? 0;
+                            const divida  = Math.max(0, r.valorTotal - pago);
+                            const pct     = Math.round((pago / r.valorTotal) * 100);
+                            return (
+                              <div className="border-t border-zinc-800 pt-3 space-y-2">
+                                <p className="text-[10px] font-black text-white uppercase tracking-widest">Pagamento</p>
+                                {/* Barra de progresso */}
+                                <div className="h-1.5 w-full rounded-full bg-zinc-800 overflow-hidden">
+                                  <div
+                                    className="h-full rounded-full bg-emerald-500 transition-all"
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 text-[10px]">
+                                  <div>
+                                    <p className="text-zinc-500 font-semibold">Total</p>
+                                    <p className="text-white font-black">{fmt(r.valorTotal)}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-emerald-400 font-semibold">Pago {pct > 0 ? `(${pct}%)` : ''}</p>
+                                    <p className="text-emerald-400 font-black">{fmt(pago)}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-amber-400 font-semibold">Em dívida {pct < 100 ? `(${100 - pct}%)` : ''}</p>
+                                    <p className="text-amber-400 font-black">{fmt(divida)}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()}
+
                           {/* Tracker de processo */}
                           <div className="border-t border-zinc-800 pt-4">
                             <ReservationTracker

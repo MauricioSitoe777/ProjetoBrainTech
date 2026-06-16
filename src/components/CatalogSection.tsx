@@ -290,7 +290,7 @@ export default function CatalogSection({
                 />
                 <div className="flex justify-between text-[10px] text-white font-mono mt-1">
                   <span>{mode === "aluguer" ? "500" : "500k"}</span>
-                  <span className="text-amber-500 font-bold">{maxPrice >= (mode === "aluguer" ? 20000 : 15000000) ? "Qualquer" : maxPrice.toLocaleString() + " MT"}</span>
+                  <span className="text-amber-500 font-bold">{maxPrice >= (mode === "aluguer" ? 20000 : 15000000) ? "Qualquer" : Math.round(maxPrice).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + " MT"}</span>
                   <span>{mode === "aluguer" ? "20k" : "15M"}</span>
                 </div>
               </div>

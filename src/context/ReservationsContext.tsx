@@ -40,7 +40,7 @@ interface ReservationsContextType {
   getClientReservations: (userId: string) => Reservation[];
   quoteRental: (vehicleId: number, start: string, end: string) => ReturnType<typeof calculateRentalTotal> & { days: number; dailyRate: number } | null;
   gerarPrestacoes: (id: string, semEntrada?: boolean) => void;
-  marcarPrestacao: (reservationId: string, numero: number, paga: boolean) => void;
+  marcarPrestacao: (reservationId: string, numero: number, paga: boolean, valorPago?: number) => void;
 }
 
 const ReservationsContext = createContext<ReservationsContextType | null>(null);
@@ -103,11 +103,11 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
     const vehicleName = vehicle?.name || `Viatura #${data.vehicleId}`;
     addNotification(
       'admin',
-      'Nova Operação Pendente',
-      `O cliente "${data.clientName}" realizou um pedido de ${operacaoLabel} (${vehicleName}) e está pendente à espera de resposta do admin.`,
+      `Novo pedido de ${operacaoLabel} — ${vehicleName}`,
+      `"${data.clientName}" submeteu um pedido de ${operacaoLabel}. Documentos já verificados — aguarda apenas confirmação de pagamento.`,
       'warning',
       newRes.id,
-      isPurchase ? '/admin/compra' : '/admin/aluguer'
+      isPurchase ? '/admin/compra?tab=acoes' : '/admin/aluguer?tab=acoes'
     );
 
     return { ok: true };
@@ -226,19 +226,42 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const marcarPrestacao = (reservationId: string, numero: number, paga: boolean) => {
+  const marcarPrestacao = (reservationId: string, numero: number, paga: boolean, valorPago?: number) => {
     if (authUser?.role !== 'admin') return;
     const today = new Date().toISOString().split('T')[0];
     setReservations(prev =>
       prev.map(r => {
         if (r.id !== reservationId) return r;
-        const prestacoes = (r.prestacoes ?? []).map(p =>
+
+        // Mark the target installment
+        let prestacoes = (r.prestacoes ?? []).map(p =>
           p.numero === numero
-            ? { ...p, paga, dataPagamento: paga ? today : undefined }
+            ? { ...p, paga, valorPago: paga ? (valorPago ?? p.valor) : undefined, dataPagamento: paga ? today : undefined }
             : p
         );
+
+        // If paid with an amount higher than the agreed value, redistribute the surplus
+        if (paga) {
+          const efectivo = valorPago ?? prestacoes.find(p => p.numero === numero)?.valor ?? 0;
+          const acordado = r.prestacoes?.find(p => p.numero === numero)?.valor ?? 0;
+          const extra = Math.max(0, efectivo - acordado);
+
+          if (extra > 0) {
+            const unpaid = prestacoes.filter(p => !p.paga);
+            if (unpaid.length > 0) {
+              const totalUnpaid = unpaid.reduce((s, p) => s + p.valor, 0);
+              const newTotal    = Math.max(0, totalUnpaid - extra);
+              const novoValor   = Math.round(newTotal / unpaid.length);
+              prestacoes = prestacoes.map(p => !p.paga ? { ...p, valor: novoValor } : p);
+            }
+          }
+        }
+
         const prestacoesPagas = prestacoes.filter(p => p.paga).length;
-        return { ...r, prestacoes, prestacoesPagas };
+        const todasPagas = prestacoes.every(p => p.paga);
+        const newStatus  = todasPagas ? ('liquidada' as ReservationStatus) : r.status;
+
+        return { ...r, prestacoes, prestacoesPagas, status: newStatus };
       })
     );
   };

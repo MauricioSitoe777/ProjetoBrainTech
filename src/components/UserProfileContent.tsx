@@ -10,7 +10,7 @@ interface UserProfileContentProps {
 }
 
 const STATUS_RESERVA: Record<string, { label: string; cls: string; dot: string }> = {
-  pendente:  { label: 'Pendente',   cls: 'bg-amber-400/10 text-amber-400 border-amber-400/20',   dot: 'bg-amber-400' },
+  pendente:  { label: 'Ag. Pagamento', cls: 'bg-amber-400/10 text-amber-400 border-amber-400/20', dot: 'bg-amber-400' },
   confirmada:{ label: 'Confirmada', cls: 'bg-blue-400/10 text-blue-400 border-blue-400/20',       dot: 'bg-blue-400' },
   ativa:     { label: 'Ativa',      cls: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20', dot: 'bg-emerald-400' },
   concluida: { label: 'Concluída',  cls: 'bg-zinc-700 text-white border-zinc-600',                dot: 'bg-zinc-400' },
@@ -52,12 +52,24 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
   // H3/H5 — confirmação antes de acção destrutiva
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  // H1 — feedback claro de cópia com label textual
+  const fallbackCopy = (texto: string) => {
+    const el = document.createElement('textarea');
+    el.value = texto;
+    el.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+  };
+
   const copiar = (texto: string, chave: string) => {
-    navigator.clipboard.writeText(texto).then(() => {
-      setCopiado(chave);
-      setTimeout(() => setCopiado(null), 2000);
-    });
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(texto).catch(() => fallbackCopy(texto));
+    } else {
+      fallbackCopy(texto);
+    }
+    setCopiado(chave);
+    setTimeout(() => setCopiado(null), 2000);
   };
 
   const userReservations = reservations.filter(r => r.userId === user.id);
@@ -159,7 +171,7 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
         {[
           { label: 'Alugueres',      value: alugueres.length,                         color: 'text-white' },
           { label: 'Compras',        value: compras.length,                            color: 'text-white' },
-          { label: 'Total investido',value: `${totalGasto.toLocaleString('pt-PT')} MT`, color: 'text-amber-400', small: true },
+          { label: 'Total investido',value: `${Math.round(totalGasto).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')} MT`, color: 'text-amber-400', small: true },
         ].map(k => (
           <div key={k.label} className="bg-zinc-800/50 rounded-xl p-3 border border-zinc-800 text-center">
             <p className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">{k.label}</p>
@@ -382,8 +394,8 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
                       </span>
                       <p className="text-sm font-black text-white">
                         {isPurchase && isInstallment
-                          ? `${a.deposito.toLocaleString('pt-PT')} MT/mês`
-                          : `${a.valorTotal.toLocaleString('pt-PT')} MT`}
+                          ? `${Math.round(a.deposito).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')} MT/mês`
+                          : `${Math.round(a.valorTotal).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')} MT`}
                       </p>
                       {isAdmin && (
                         /* H3/H5 — pede confirmação antes de eliminar */

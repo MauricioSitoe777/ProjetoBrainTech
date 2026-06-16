@@ -1,186 +1,167 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import type { MembroXitique, RegistoSorteio, EstadoGrupo, InscricaoXitique, EstadoMembroXitique } from '../types/xitique';
+import type { GrupoXitique, MembroXitique, EstadoGrupo, InscricaoXitique, EstadoMembroXitique } from '../types/xitique';
 
-const STORAGE_KEY    = 'rentcar:xitique:v1';
-const INSCRICOES_KEY = 'rentcar:xitique:inscricoes:v1';
-const NUM_MEMBROS    = 10;
-const QUOTA_MT       = 30_000;
-const PREMIO_MT      = NUM_MEMBROS * QUOTA_MT; // 300 000 MT
+const GRUPOS_KEY     = 'rentcar:xitique:v2';
+const INSCRICOES_KEY = 'rentcar:xitique:inscricoes:v2';
+// Legacy keys for migration
+const LEGACY_KEY     = 'rentcar:xitique:v1';
+const LEGACY_INSC    = 'rentcar:xitique:inscricoes:v1';
 
-interface XitiqueState {
-  membros: MembroXitique[];
-  sorteios: RegistoSorteio[];
-  estadoGrupo: EstadoGrupo;
-  mesAtual: number;
+const DEFAULT_MAX    = 10;
+const DEFAULT_QUOTA  = 30_000;
+
+function novoGrupo(nome: string, maxMembros = DEFAULT_MAX, quotaMT = DEFAULT_QUOTA): GrupoXitique {
+  return {
+    id: `g${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    nome,
+    maxMembros,
+    quotaMT,
+    premioMT: maxMembros * quotaMT,
+    membros: [],
+    sorteios: [],
+    estadoGrupo: 'Aberto',
+    mesAtual: 1,
+  };
 }
 
+// ── Normalização de membros vindos do storage ─────────────────────────────────
+const estadosMembro: EstadoMembroXitique[] = ['Pendente', 'Aceite', 'Sorteado'];
+
+function normalizeMembro(raw: MembroXitique & { jaSorteado?: boolean; pagamentoConfirmado?: boolean }): MembroXitique {
+  const estado: EstadoMembroXitique = estadosMembro.includes(raw.estado)
+    ? raw.estado
+    : raw.jaSorteado ? 'Sorteado' : raw.pagamentoConfirmado ? 'Aceite' : 'Pendente';
+  return { id: raw.id, nome: raw.nome, estado, pagamentoMes: raw.pagamentoMes ?? false, mesesPagos: raw.mesesPagos ?? [], userId: raw.userId };
+}
+
+function normalizeGrupo(g: GrupoXitique): GrupoXitique {
+  return { ...g, membros: (g.membros ?? []).map(m => normalizeMembro(m as MembroXitique & { jaSorteado?: boolean; pagamentoConfirmado?: boolean })) };
+}
+
+// ── Migration from v1 (single group) → v2 (array of groups) ─────────────────
+function loadGrupos(): GrupoXitique[] {
+  const saved = localStorage.getItem(GRUPOS_KEY);
+  if (saved) return (JSON.parse(saved) as GrupoXitique[]).map(normalizeGrupo);
+
+  // Migrate from v1
+  const legacy = localStorage.getItem(LEGACY_KEY);
+  if (legacy) {
+    const old = JSON.parse(legacy) as { membros?: MembroXitique[]; sorteios?: GrupoXitique['sorteios']; estadoGrupo?: EstadoGrupo; mesAtual?: number };
+    const g: GrupoXitique = {
+      id: 'g_legado',
+      nome: 'Grupo A',
+      maxMembros: DEFAULT_MAX,
+      quotaMT: DEFAULT_QUOTA,
+      premioMT: DEFAULT_MAX * DEFAULT_QUOTA,
+      membros: (old.membros ?? []).map(m => normalizeMembro(m as MembroXitique & { jaSorteado?: boolean; pagamentoConfirmado?: boolean })),
+      sorteios: old.sorteios ?? [],
+      estadoGrupo: old.estadoGrupo ?? 'Aberto',
+      mesAtual: old.mesAtual ?? 1,
+    };
+    return [g];
+  }
+
+  return [];
+}
+
+function loadInscricoes(): InscricaoXitique[] {
+  const saved = localStorage.getItem(INSCRICOES_KEY);
+  if (saved) return JSON.parse(saved);
+
+  // Migrate from v1: assign to the legacy group
+  const legacy = localStorage.getItem(LEGACY_INSC);
+  if (legacy) {
+    const old = JSON.parse(legacy) as Omit<InscricaoXitique, 'grupoId'>[];
+    return old.map(i => ({ ...i, grupoId: 'g_legado' }));
+  }
+
+  return [];
+}
+
+// ── Context type ─────────────────────────────────────────────────────────────
 interface XitiqueContextType {
-  membros: MembroXitique[];
-  sorteios: RegistoSorteio[];
-  estadoGrupo: EstadoGrupo;
-  mesAtual: number;
-  quotaMT: number;
-  premioMT: number;
-  numMembros: number;
-  // grupo
-  addMembro: (nome: string) => void;
-  removeMembro: (id: string) => void;
-  confirmarPagamento: (id: string) => void;
-  realizarSorteio: () => string | null;
-  reiniciarGrupo: () => void;
-  // lista de espera
+  grupos: GrupoXitique[];
   inscricoes: InscricaoXitique[];
-  adicionarInscricao: (dados: Pick<InscricaoXitique, 'nome' | 'telefone' | 'email'>) => void;
+  criarGrupo: (nome: string, maxMembros: number, quotaMT: number) => void;
+  addMembro: (grupoId: string, nome: string, userId?: string) => void;
+  removeMembro: (grupoId: string, id: string) => void;
+  confirmarPagamento: (grupoId: string, id: string) => void;
+  realizarSorteio: (grupoId: string) => string | null;
+  reiniciarGrupo: (grupoId: string) => void;
+  adicionarInscricao: (dados: Pick<InscricaoXitique, 'nome' | 'telefone' | 'email' | 'grupoId'>) => void;
   aprovarInscricao: (id: string, userId?: string) => void;
   rejeitarInscricao: (id: string) => void;
 }
 
-const defaultState: XitiqueState = {
-  membros: [],
-  sorteios: [],
-  estadoGrupo: 'Aberto',
-  mesAtual: 1,
-};
-
 const XitiqueContext = createContext<XitiqueContextType | null>(null);
 
-type StoredMembroXitique = MembroXitique & {
-  jaSorteado?: boolean;
-  pagamentoConfirmado?: boolean;
-};
-
-const estadosMembro: EstadoMembroXitique[] = ['Pendente', 'Aceite', 'Sorteado'];
-
-const normalizeMembro = (membro: StoredMembroXitique): MembroXitique => {
-  const estado: EstadoMembroXitique = estadosMembro.includes(membro.estado)
-    ? membro.estado
-    : membro.jaSorteado ? 'Sorteado' : membro.pagamentoConfirmado ? 'Aceite' : 'Pendente';
-  return {
-    id: membro.id,
-    nome: membro.nome,
-    estado,
-    pagamentoMes: (membro as MembroXitique).pagamentoMes ?? false,
-    mesesPagos: (membro as MembroXitique).mesesPagos ?? [],
-    userId: (membro as MembroXitique).userId,
-  };
-};
-
-const normalizeState = (saved: XitiqueState): XitiqueState => ({
-  ...defaultState,
-  ...saved,
-  membros: (saved.membros || []).map(membro => normalizeMembro(membro as StoredMembroXitique)),
-});
-
 export function XitiqueProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<XitiqueState>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? normalizeState(JSON.parse(saved)) : defaultState;
-  });
+  const [grupos,     setGrupos]     = useState<GrupoXitique[]>(loadGrupos);
+  const [inscricoes, setInscricoes] = useState<InscricaoXitique[]>(loadInscricoes);
 
-  const [inscricoes, setInscricoes] = useState<InscricaoXitique[]>(() => {
-    const saved = localStorage.getItem(INSCRICOES_KEY);
-    return saved ? JSON.parse(saved) : [];
-  });
+  useEffect(() => { localStorage.setItem(GRUPOS_KEY, JSON.stringify(grupos)); }, [grupos]);
+  useEffect(() => { localStorage.setItem(INSCRICOES_KEY, JSON.stringify(inscricoes)); }, [inscricoes]);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [state]);
+  const updateGrupo = (grupoId: string, fn: (g: GrupoXitique) => GrupoXitique) =>
+    setGrupos(prev => prev.map(g => g.id === grupoId ? fn(g) : g));
 
-  useEffect(() => {
-    localStorage.setItem(INSCRICOES_KEY, JSON.stringify(inscricoes));
-  }, [inscricoes]);
+  const criarGrupo = (nome: string, maxMembros: number, quotaMT: number) =>
+    setGrupos(prev => [...prev, novoGrupo(nome.trim() || `Grupo ${String.fromCharCode(65 + prev.length)}`, maxMembros, quotaMT)]);
 
-  // ── Grupo ──────────────────────────────────────────────────────────────────
-
-  const addMembro = (nome: string, userId?: string) => {
-    if (state.estadoGrupo !== 'Aberto') return;
-    if (state.membros.length >= NUM_MEMBROS) return;
-
-    const novo: MembroXitique = {
-      id: `m${Date.now()}`,
-      nome: nome.trim(),
-      estado: 'Pendente',
-      pagamentoMes: false,
-      mesesPagos: [],
-      userId,
-    };
-
-    setState(prev => {
-      const novosMembros = [...prev.membros, novo];
-      const novoEstado = novosMembros.length >= NUM_MEMBROS ? 'EmAndamento' : 'Aberto';
-      return { ...prev, membros: novosMembros, estadoGrupo: novoEstado };
+  const addMembro = (grupoId: string, nome: string, userId?: string) => {
+    updateGrupo(grupoId, g => {
+      if (g.estadoGrupo !== 'Aberto' || g.membros.length >= g.maxMembros) return g;
+      const novo: MembroXitique = { id: `m${Date.now()}`, nome: nome.trim(), estado: 'Pendente', pagamentoMes: false, mesesPagos: [], userId };
+      const novosMembros = [...g.membros, novo];
+      return { ...g, membros: novosMembros, estadoGrupo: novosMembros.length >= g.maxMembros ? 'EmAndamento' : 'Aberto' };
     });
   };
 
-  const removeMembro = (id: string) => {
-    if (state.estadoGrupo !== 'Aberto') return;
-    setState(prev => ({ ...prev, membros: prev.membros.filter(m => m.id !== id) }));
+  const removeMembro = (grupoId: string, id: string) =>
+    updateGrupo(grupoId, g => g.estadoGrupo !== 'Aberto' ? g : { ...g, membros: g.membros.filter(m => m.id !== id) });
+
+  const confirmarPagamento = (grupoId: string, id: string) => {
+    updateGrupo(grupoId, g => {
+      if (g.estadoGrupo !== 'EmAndamento') return g;
+      return {
+        ...g, membros: g.membros.map(m => {
+          if (m.id !== id) return m;
+          const jaRegistado = m.mesesPagos.includes(g.mesAtual);
+          return { ...m, pagamentoMes: true, estado: m.estado === 'Sorteado' ? 'Sorteado' : 'Aceite', mesesPagos: jaRegistado ? m.mesesPagos : [...m.mesesPagos, g.mesAtual] };
+        }),
+      };
+    });
   };
 
-  const confirmarPagamento = (id: string) => {
-    if (state.estadoGrupo !== 'EmAndamento') return;
-    setState(prev => ({
-      ...prev,
-      membros: prev.membros.map(m => {
-        if (m.id !== id) return m;
-        const jaRegistado = m.mesesPagos.includes(prev.mesAtual);
-        return {
-          ...m,
-          pagamentoMes: true,
-          estado: m.estado === 'Sorteado' ? 'Sorteado' : 'Aceite',
-          mesesPagos: jaRegistado ? m.mesesPagos : [...m.mesesPagos, prev.mesAtual],
-        };
-      }),
-    }));
-  };
+  const realizarSorteio = (grupoId: string): string | null => {
+    const g = grupos.find(g => g.id === grupoId);
+    if (!g || g.estadoGrupo !== 'EmAndamento') return null;
+    if (!g.membros.every(m => m.pagamentoMes)) return null;
 
-  const realizarSorteio = (): string | null => {
-    if (state.estadoGrupo !== 'EmAndamento') return null;
-    // TODOS os membros (incluindo já sorteados) devem ter pagamentoMes = true
-    if (!state.membros.every(m => m.pagamentoMes === true)) return null;
-
-    // Passo 1 — Filtragem estrita: apenas elegíveis (ainda não sorteados)
-    const elegiveis = state.membros.filter(m => m.estado !== 'Sorteado');
+    const elegiveis = g.membros.filter(m => m.estado !== 'Sorteado');
     if (elegiveis.length === 0) return null;
 
-    // Passo 2 — Cálculo aleatório dentro do universo elegível
-    const indice = Math.floor(Math.random() * elegiveis.length);
-    const vencedor = elegiveis[indice];
+    const vencedor = elegiveis[Math.floor(Math.random() * elegiveis.length)];
+    const grupoConcluido = g.mesAtual === g.maxMembros;
 
-    const novoRegisto: RegistoSorteio = {
-      mes: state.mesAtual,
-      vencedor: vencedor.nome,
-      valorPremio: PREMIO_MT,
-    };
-
-    // Gatilho de finalização: o sorteio do mês 10 foi computado
-    const grupoConcluido = state.mesAtual === NUM_MEMBROS;
-    const proximoMes = grupoConcluido ? NUM_MEMBROS : state.mesAtual + 1;
-
-    // Passo 3 — Imutabilidade: marca o vencedor como Sorteado;
-    // reset pagamentoMes = false para TODOS (incluindo já sorteados — continuam a pagar)
-    setState(prev => ({
-      ...prev,
-      membros: prev.membros.map(m => ({
-        ...m,
-        estado: m.id === vencedor.id ? 'Sorteado' : m.estado,
-        pagamentoMes: false,
-      })),
-      sorteios: [...prev.sorteios, novoRegisto],
-      mesAtual: proximoMes,
+    updateGrupo(grupoId, g => ({
+      ...g,
+      membros: g.membros.map(m => ({ ...m, estado: m.id === vencedor.id ? 'Sorteado' : m.estado, pagamentoMes: false })),
+      sorteios: [...g.sorteios, { mes: g.mesAtual, vencedor: vencedor.nome, valorPremio: g.premioMT }],
+      mesAtual: grupoConcluido ? g.maxMembros : g.mesAtual + 1,
       estadoGrupo: grupoConcluido ? 'Concluido' : 'EmAndamento',
     }));
 
     return vencedor.nome;
   };
 
-  const reiniciarGrupo = () => setState(defaultState);
+  const reiniciarGrupo = (grupoId: string) =>
+    updateGrupo(grupoId, g => ({ ...g, membros: [], sorteios: [], estadoGrupo: 'Aberto', mesAtual: 1 }));
 
-  // ── Lista de espera ────────────────────────────────────────────────────────
-
-  const adicionarInscricao = (dados: Pick<InscricaoXitique, 'nome' | 'telefone' | 'email'>) => {
+  const adicionarInscricao = (dados: Pick<InscricaoXitique, 'nome' | 'telefone' | 'email' | 'grupoId'>) => {
     const nova: InscricaoXitique = {
       id: `insc${Date.now()}`,
+      grupoId: dados.grupoId,
       nome: dados.nome.trim(),
       telefone: dados.telefone.trim(),
       email: dados.email.trim(),
@@ -193,40 +174,18 @@ export function XitiqueProvider({ children }: { children: ReactNode }) {
   const aprovarInscricao = (id: string, userId?: string) => {
     const insc = inscricoes.find(i => i.id === id);
     if (!insc) return;
-    // Promove para membro do grupo se ainda houver vaga
-    if (state.estadoGrupo === 'Aberto' && state.membros.length < NUM_MEMBROS) {
-      addMembro(insc.nome, userId);
+    const g = grupos.find(g => g.id === insc.grupoId);
+    if (g && g.estadoGrupo === 'Aberto' && g.membros.length < g.maxMembros) {
+      addMembro(insc.grupoId, insc.nome, userId);
     }
-    setInscricoes(prev =>
-      prev.map(i => i.id === id ? { ...i, status: 'aprovado' } : i)
-    );
+    setInscricoes(prev => prev.map(i => i.id === id ? { ...i, status: 'aprovado' } : i));
   };
 
-  const rejeitarInscricao = (id: string) => {
-    setInscricoes(prev =>
-      prev.map(i => i.id === id ? { ...i, status: 'rejeitado' } : i)
-    );
-  };
+  const rejeitarInscricao = (id: string) =>
+    setInscricoes(prev => prev.map(i => i.id === id ? { ...i, status: 'rejeitado' } : i));
 
   return (
-    <XitiqueContext.Provider value={{
-      membros: state.membros,
-      sorteios: state.sorteios,
-      estadoGrupo: state.estadoGrupo,
-      mesAtual: state.mesAtual,
-      quotaMT: QUOTA_MT,
-      premioMT: PREMIO_MT,
-      numMembros: NUM_MEMBROS,
-      addMembro,
-      removeMembro,
-      confirmarPagamento,
-      realizarSorteio,
-      reiniciarGrupo,
-      inscricoes,
-      adicionarInscricao,
-      aprovarInscricao,
-      rejeitarInscricao,
-    }}>
+    <XitiqueContext.Provider value={{ grupos, inscricoes, criarGrupo, addMembro, removeMembro, confirmarPagamento, realizarSorteio, reiniciarGrupo, adicionarInscricao, aprovarInscricao, rejeitarInscricao }}>
       {children}
     </XitiqueContext.Provider>
   );

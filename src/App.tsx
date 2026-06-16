@@ -38,16 +38,26 @@ import { MotoristasPage } from "./pages/MotoristasPage";
 import { AdminNav } from "./components/AdminNav";
 import { AdminSidebar } from "./components/AdminSidebar";
 import { DashboardPage } from "./pages/DashboardPage";
+import { ChangePasswordModal } from "./components/ChangePasswordModal";
+import { ToastContainer } from "./components/ToastContainer";
 
 type SimulatorFlow = "aluguer" | "compra";
 
 // ─── Admin shell (login gate) ────────────────────────────────────────────────
 function AdminShell({ onExit }: { onExit: () => void }) {
-  const { user } = useAuth();
+  const { user, allUsers } = useAuth();
   const { path } = useRoute();
+  const [passwordChanged, setPasswordChanged] = useState(false);
 
   if (!user) return <LoginPage onCancel={onExit} />;
-  if (user.role === "cliente") return <ClientProfilePage onExit={onExit} />;
+
+  if (user.role === "cliente") {
+    const fullUser = allUsers.find(u => u.id === user.id);
+    if (fullUser?.mustChangePassword && !passwordChanged) {
+      return <ChangePasswordModal onDone={() => setPasswordChanged(true)} />;
+    }
+    return <ClientProfilePage onExit={onExit} />;
+  }
 
   const renderPage = () => {
     if (path === "/admin" || path === "/admin/dashboard") return <DashboardPage />;
@@ -239,6 +249,7 @@ export default function App() {
             </VehiclesProvider>
           </ReservationsProvider>
           </GuestsProvider>
+          <ToastContainer />
         </NotificationsProvider>
       </UsersProvider>
     </AuthProvider>

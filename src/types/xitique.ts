@@ -4,9 +4,9 @@ export interface MembroXitique {
   id: string;
   nome: string;
   estado: EstadoMembroXitique;
-  pagamentoMes: boolean; // pagamento do mês corrente — reset após cada sorteio
-  mesesPagos: number[];  // histórico: meses em que o pagamento foi confirmado
-  userId?: string;       // ligação ao User autenticado (definido quando aprovado via inscrição)
+  pagamentoMes: boolean;
+  mesesPagos: number[];
+  userId?: string;
 }
 
 export interface RegistoSorteio {
@@ -17,8 +17,21 @@ export interface RegistoSorteio {
 
 export type EstadoGrupo = 'Aberto' | 'EmAndamento' | 'Concluido';
 
+export interface GrupoXitique {
+  id: string;
+  nome: string;
+  maxMembros: number;
+  quotaMT: number;
+  premioMT: number;
+  membros: MembroXitique[];
+  sorteios: RegistoSorteio[];
+  estadoGrupo: EstadoGrupo;
+  mesAtual: number;
+}
+
 export interface InscricaoXitique {
   id: string;
+  grupoId: string;
   nome: string;
   telefone: string;
   email: string;

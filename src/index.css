@@ -3,6 +3,7 @@
 @import "tailwindcss";
 
 @theme {
+  --font-sans: 'Archivo', sans-serif;
   --color-zinc-950: #353535;
   --color-amber-50: #fff8df;
   --color-amber-100: #fff0b8;
@@ -109,3 +110,22 @@ input[type="range"].months-slider::-moz-range-thumb {
 .dropdown-animate {
   animation: dropdownFade 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateX(110%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes toastSlideOut {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(110%); }
+}
+
+.toast-in  { animation: toastSlideIn  0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.toast-out { animation: toastSlideOut 0.3s  ease-in forwards; }
+
+@keyframes toastProgress {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+.toast-progress { animation: toastProgress 4.5s linear forwards; }

@@ -19,7 +19,8 @@ export type BlockReason = 'manutencao' | 'reserva_interna' | 'indisponivel' | 'o
 export interface Prestacao {
   numero: number;          // 1-based index
   dataVencimento: string;  // ISO date
-  valor: number;
+  valor: number;           // valor acordado/previsto
+  valorPago?: number;      // valor efectivamente recebido (pode ser > valor)
   paga: boolean;
   dataPagamento?: string;  // ISO date when marked paid
 }

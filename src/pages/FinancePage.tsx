@@ -5,7 +5,7 @@ import { useVehicles } from '../context/VehiclesContext';
 import { useXitique } from '../context/XitiqueContext';
 import type { CategoriaTransacao } from '../types/finance';
 
-const fmt = (n: number) => new Intl.NumberFormat('pt-PT').format(Math.round(n)) + ' MT';
+const fmt = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' MT';
 
 type Tab = 'historico' | 'viaturas';
 
@@ -22,7 +22,9 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
 
   const { reservations } = useReservations();
   const { vehicles }     = useVehicles();
-  const { membros, sorteios, inscricoes, quotaMT, premioMT, numMembros, estadoGrupo, mesAtual } = useXitique();
+  const { grupos, inscricoes } = useXitique();
+  const todosOsMembros  = useMemo(() => grupos.flatMap(g => g.membros),  [grupos]);
+  const todosOsSorteios = useMemo(() => grupos.flatMap(g => g.sorteios), [grupos]);
 
   const [tab, setTab] = useState<Tab>('historico');
 
@@ -101,10 +103,14 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
           const compraLiquidadas = reservations.filter(r => r.status === 'liquidada' && vehicles.find((v: { id: number; mode?: string }) => v.id === r.vehicleId && v.mode === 'compra'));
           const totalCompra      = compraLiquidadas.reduce((s, r) => s + r.valorTotal, 0) + compraAtivos.reduce((s, r) => s + r.valorTotal, 0);
 
-          const membrosAceites     = membros.filter(m => m.estado === 'Aceite' || m.estado === 'Sorteado');
-          const totalArrecadado    = membrosAceites.length * quotaMT;
-          const totalDistribuido   = sorteios.length * premioMT;
+          const totalArrecadado    = grupos.reduce((s, g) => {
+            const aceites = g.membros.filter(m => m.estado === 'Aceite' || m.estado === 'Sorteado');
+            return s + aceites.length * g.quotaMT;
+          }, 0);
+          const totalDistribuido   = todosOsSorteios.reduce((s, sr) => s + sr.valorPremio, 0);
           const inscricoesPendentes = inscricoes.filter(i => i.status === 'aguarda_validacao').length;
+          const gruposAtivos       = grupos.filter(g => g.estadoGrupo === 'EmAndamento').length;
+          const gruposAbertos      = grupos.filter(g => g.estadoGrupo === 'Aberto').length;
 
           return (
             <div className="space-y-6">
@@ -116,20 +122,25 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
                     <div className="w-2 h-2 rounded-full bg-amber-400" />
                     <h3 className="text-white font-black text-sm uppercase tracking-wider">Xitique</h3>
                   </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                    estadoGrupo === 'Aberto' ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20'
-                    : estadoGrupo === 'EmAndamento' ? 'bg-blue-400/10 text-blue-400 border-blue-400/20'
-                    : 'bg-zinc-700 text-zinc-400 border-zinc-600'
-                  }`}>
-                    {estadoGrupo === 'EmAndamento' ? 'Em Andamento' : estadoGrupo}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {gruposAtivos > 0 && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-blue-400/10 text-blue-400 border-blue-400/20">
+                        {gruposAtivos} em andamento
+                      </span>
+                    )}
+                    {gruposAbertos > 0 && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-emerald-400/10 text-emerald-400 border-emerald-400/20">
+                        {gruposAbertos} aberto{gruposAbertos !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-zinc-800">
                   {[
-                    { label: 'Membros',           value: `${membros.length} / ${numMembros}`, color: 'text-white' },
-                    { label: 'Mês Actual',        value: `${mesAtual} / ${numMembros}`,       color: 'text-amber-400' },
-                    { label: 'Total Arrecadado',  value: fmt(totalArrecadado),                color: 'text-emerald-400' },
-                    { label: 'Total Distribuído', value: fmt(totalDistribuido),               color: 'text-blue-400' },
+                    { label: 'Total Membros',     value: String(todosOsMembros.length),    color: 'text-white' },
+                    { label: 'Grupos',            value: String(grupos.length),            color: 'text-amber-400' },
+                    { label: 'Total Arrecadado',  value: fmt(totalArrecadado),             color: 'text-emerald-400' },
+                    { label: 'Total Distribuído', value: fmt(totalDistribuido),            color: 'text-blue-400' },
                   ].map(k => (
                     <div key={k.label} className="bg-zinc-900 px-5 py-4">
                       <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider mb-1">{k.label}</div>
@@ -138,10 +149,8 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
                   ))}
                 </div>
                 <div className="px-5 py-3 flex gap-6 flex-wrap border-t border-zinc-800">
-                  <span className="text-xs text-zinc-400">Sorteios realizados: <strong className="text-white">{sorteios.length}</strong></span>
+                  <span className="text-xs text-zinc-400">Sorteios realizados: <strong className="text-white">{todosOsSorteios.length}</strong></span>
                   <span className="text-xs text-zinc-400">Inscrições pendentes: <strong className="text-amber-400">{inscricoesPendentes}</strong></span>
-                  <span className="text-xs text-zinc-400">Prémio mensal: <strong className="text-white">{fmt(premioMT)}</strong></span>
-                  <span className="text-xs text-zinc-400">Quota: <strong className="text-white">{fmt(quotaMT)}</strong></span>
                 </div>
               </div>
 

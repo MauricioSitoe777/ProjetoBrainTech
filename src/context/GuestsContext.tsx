@@ -35,7 +35,7 @@ export function GuestsProvider({ children }: { children: ReactNode }) {
       ...data,
       id: `g-${Date.now()}`,
       dataCriacao: new Date().toISOString(),
-      status: 'documentos_submetidos',
+      status: 'aguarda_documentos',
     };
     const next = [...guests, guest];
     set(next);

@@ -195,7 +195,7 @@ export default function VehicleDetailsPage({
                     <div className="text-4xl font-black text-amber-500">{vehicle.price}</div>
                   </div>
                   <div className="text-xs text-green-500 font-bold mt-1">
-                    (Approx. { (Number(String(vehicle.price).replace(/[^\d]/g, "")) * 1.1).toLocaleString() } MT total com taxas)
+                    (Approx. { Math.round(Number(String(vehicle.price).replace(/[^\d]/g, "")) * 1.1).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') } MT total com taxas)
                   </div>
                 </div>
 

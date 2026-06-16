@@ -10,6 +10,8 @@ interface BookingPanelProps {
   onSuccess?: () => void;
 }
 
+const fmtN = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
 export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps) {
   const { user, allUsers } = useAuth();
   const { motoristas } = useMotoristas();
@@ -26,8 +28,8 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
   const [horaLevantamento, setHoraLevantamento] = useState('09:00');
   const [horaDevolucao, setHoraDevolucao] = useState('17:00');
   const [motivoViagem, setMotivoViagem] = useState('');
-  const [localLevantamento, setLocalLevantamento] = useState('Escritório Central (Av. Julius Nyerere, Maputo)');
-  const [localDevolucao, setLocalDevolucao] = useState('Escritório Central (Av. Julius Nyerere, Maputo)');
+  const localLevantamento = 'Escritório Central (Av. Julius Nyerere, Maputo)';
+  const localDevolucao    = 'Escritório Central (Av. Julius Nyerere, Maputo)';
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientEmail, setClientEmail] = useState('');
@@ -146,9 +148,15 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 max-w-md w-full text-center">
           <div className="w-12 h-12 bg-emerald-400/10 rounded-xl flex items-center justify-center mx-auto mb-4 text-emerald-400 text-xl">✓</div>
           <h2 className="text-lg font-semibold text-white mb-2">Reserva submetida</h2>
-          <p className="text-sm text-white mb-6">
-            A sua reserva de <strong className="text-white">{vehicle.name}</strong> foi registada como pendente de confirmação.
+          <p className="text-sm text-white mb-2">
+            A sua reserva de <strong className="text-white">{vehicle.name}</strong> foi registada com sucesso.
           </p>
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 mb-6 text-left">
+            <p className="text-xs font-bold text-amber-400 mb-1">⏳ A aguardar confirmação de pagamento</p>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Os seus documentos já estão verificados. O administrador irá confirmar o pagamento para concluir a operação.
+            </p>
+          </div>
           <button onClick={onClose} className="w-full bg-amber-400 hover:bg-amber-300 text-zinc-950 font-semibold rounded-lg py-2.5 text-sm">
             Fechar
           </button>
@@ -223,35 +231,18 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-white mb-1">Local de levantamento (Pickup Location)</label>
-              <select
-                value={localLevantamento}
-                onChange={e => setLocalLevantamento(e.target.value)}
-                className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400"
-              >
-                <option value="Aeroporto de Maputo (MPM)">Aeroporto de Maputo (MPM)</option>
-                <option value="Escritório Central (Av. Julius Nyerere, Maputo)">Escritório Central (Av. Julius Nyerere, Maputo)</option>
-                <option value="Matola (Bairro Central)">Matola (Bairro Central)</option>
-                <option value="Entrega ao Domicílio (Maputo)">Entrega ao Domicílio (Maputo)</option>
-                <option value="Entrega ao Domicílio (Matola)">Entrega ao Domicílio (Matola)</option>
-              </select>
+          <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 flex items-center gap-3">
+            <div className="shrink-0 w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
             </div>
-            <div>
-              <label className="block text-xs text-white mb-1">Local de devolução (Return Location)</label>
-              <select
-                value={localDevolucao}
-                onChange={e => setLocalDevolucao(e.target.value)}
-                className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400"
-              >
-                <option value="Aeroporto de Maputo (MPM)">Aeroporto de Maputo (MPM)</option>
-                <option value="Escritório Central (Av. Julius Nyerere, Maputo)">Escritório Central (Av. Julius Nyerere, Maputo)</option>
-                <option value="Matola (Bairro Central)">Matola (Bairro Central)</option>
-                <option value="Entrega ao Domicílio (Maputo)">Entrega ao Domicílio (Maputo)</option>
-                <option value="Entrega ao Domicílio (Matola)">Entrega ao Domicílio (Matola)</option>
-              </select>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider mb-0.5">Local de levantamento e devolução</p>
+              <p className="text-sm font-bold text-white truncate">Escritório Central</p>
+              <p className="text-xs text-zinc-400">Av. Julius Nyerere, Maputo</p>
             </div>
+            <span className="shrink-0 text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full px-2 py-0.5 font-bold">Fixo</span>
           </div>
 
           {dateValidation && !dateValidation.valid && (
@@ -269,8 +260,8 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
           {quote && (
             <div className="bg-zinc-800/50 border border-zinc-800 rounded-xl p-4 space-y-2 text-sm">
               <div className="flex justify-between text-white">
-                <span>{quote.days} dia(s) × {quote.dailyRate.toLocaleString("pt-PT")} MT</span>
-                <span>{quote.subtotal.toLocaleString("pt-PT")} MT</span>
+                <span>{quote.days} dia(s) × {fmtN(quote.dailyRate)} MT</span>
+                <span>{fmtN(quote.subtotal)} MT</span>
               </div>
               {quote.desconto > 0 && (
                 <div className="flex justify-between text-emerald-400">
@@ -287,16 +278,16 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
                       </span>
                     )}
                   </span>
-                  <span>-{quote.desconto.toLocaleString("pt-PT")} MT</span>
+                  <span>-{fmtN(quote.desconto)} MT</span>
                 </div>
               )}
               <div className="flex justify-between text-white text-xs">
                 <span>Taxas + depósito ({rules.depositoPercentual}%)</span>
-                <span>{(quote.total - quote.subtotal + quote.desconto).toLocaleString("pt-PT")} MT</span>
+                <span>{fmtN(quote.total - quote.subtotal + quote.desconto)} MT</span>
               </div>
               <div className="flex justify-between text-white font-semibold pt-2 border-t border-zinc-700">
                 <span>Total estimado</span>
-                <span className="text-amber-400">{quote.total.toLocaleString("pt-PT")} MT</span>
+                <span className="text-amber-400">{fmtN(quote.total)} MT</span>
               </div>
             </div>
           )}

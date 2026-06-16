@@ -11,11 +11,11 @@ import type { ReservationStatus } from '../types/reservation';
 
 type Tab = 'resumo' | 'aluguer' | 'compra' | 'xitique';
 
-const fmt = (n: number) => new Intl.NumberFormat('pt-PT').format(n) + ' MT';
+const fmt = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' MT';
 
 const RES_STATUS: Record<ReservationStatus, { label: string; cls: string }> = {
   // Aluguer
-  pendente:            { label: 'Reserva Pendente',       cls: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
+  pendente:            { label: 'Aguarda Pagamento',      cls: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
   confirmada:          { label: 'Reserva Confirmada',     cls: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
   pronta_levantamento: { label: 'Pronta p/ Levantamento', cls: 'bg-sky-400/10 text-sky-400 border-sky-400/20' },
   ativa:               { label: 'Aluguer Ativo',          cls: 'bg-blue-400/10 text-blue-400 border-blue-400/20' },
@@ -47,7 +47,7 @@ function diffDias(inicio: string, fim: string) {
 export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
   const { user: authUser, logout, allUsers } = useAuth();
   const { reservations } = useReservations();
-  const { membros, sorteios, mesAtual, quotaMT, premioMT, numMembros, estadoGrupo, inscricoes } = useXitique();
+  const { grupos, inscricoes } = useXitique();
   const { dividas } = useFinance();
 
   // ── Dados derivados ────────────────────────────────────────────────────────
@@ -63,17 +63,29 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
     return v?.mode === 'compra';
   });
 
-  const membro = membros.find(m =>
-    (authUser?.id && m.userId === authUser.id) ||
-    m.nome.toLowerCase().trim() === authUser?.nome.toLowerCase().trim()
-  );
+  // Encontra o grupo e membro do utilizador
+  let grupoDoUser = null;
+  let membro = null;
+  for (const g of grupos) {
+    const m = g.membros.find(m =>
+      (authUser?.id && m.userId === authUser.id) ||
+      m.nome.toLowerCase().trim() === authUser?.nome?.toLowerCase().trim()
+    );
+    if (m) { grupoDoUser = g; membro = m; break; }
+  }
+
+  const sorteios   = grupoDoUser?.sorteios   ?? [];
+  const mesAtual   = grupoDoUser?.mesAtual   ?? 1;
+  const quotaMT    = grupoDoUser?.quotaMT    ?? 0;
+  const premioMT   = grupoDoUser?.premioMT   ?? 0;
+  const numMembros = grupoDoUser?.maxMembros ?? 0;
 
   const inscricaoPendente = !membro && inscricoes.find(i =>
     i.email === authUser?.email && i.status === 'aguarda_validacao'
   );
 
   const sorteioGanho = membro?.estado === 'Sorteado'
-    ? sorteios.find(s => s.vencedor === membro.nome)
+    ? sorteios.find(s => s.vencedor === membro!.nome)
     : null;
 
   const minhasDividas = dividas.filter(d =>
@@ -108,6 +120,7 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
   ];
 
   const [tab, setTab] = useState<Tab>('resumo');
+  const [prestOpen, setPrestOpen] = useState<Set<string>>(new Set());
 
   const getVehicleName = (id: number) => VEHICLES.find(v => v.id === id)?.name ?? `Viatura #${id}`;
   const getVehicle     = (id: number) => VEHICLES.find(v => v.id === id);
@@ -500,21 +513,21 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
 
                     {/* Valores */}
                     <div className="space-y-2">
-                      <p className="text-[10px] text-amber-400 font-black uppercase tracking-widest">Valores</p>
-                      <div className="bg-zinc-800/60 rounded-xl px-4 py-3 space-y-2 text-sm">
-                        <div className="flex justify-between items-center">
-                          <span className="text-white">💰 Valor total do aluguer</span>
+                      <p className="text-[10px] text-amber-400 font-black uppercase tracking-widest">Valores do Aluguer</p>
+                      <div className="bg-zinc-800/60 rounded-xl overflow-hidden text-sm">
+                        <div className="flex justify-between items-center px-4 py-3">
+                          <span className="text-zinc-300">💰 Valor total do aluguer</span>
                           <span className="font-black text-amber-400">{fmt(r.valorTotal)}</span>
                         </div>
                         {r.deposito > 0 && (
                           <>
-                            <div className="flex justify-between items-center">
-                              <span className="text-white">✅ Caução já paga (reserva)</span>
+                            <div className="flex justify-between items-center px-4 py-3 border-t border-zinc-700/60">
+                              <span className="text-zinc-300">✅ Valor já pago (caução/reserva)</span>
                               <span className="font-bold text-emerald-400">{fmt(r.deposito)}</span>
                             </div>
                             {valorRestante > 0 && r.status !== 'concluida' && (
-                              <div className="flex justify-between items-center border-t border-zinc-700 pt-2">
-                                <span className="text-white font-black">⏳ Valor a pagar na devolução</span>
+                              <div className="flex justify-between items-center px-4 py-3 border-t border-zinc-700/60 bg-zinc-700/30">
+                                <span className="text-white font-bold">📌 Valor restante a pagar</span>
                                 <span className="font-black text-white">{fmt(valorRestante)}</span>
                               </div>
                             )}
@@ -545,8 +558,14 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
                 const totalPrestacoes = c.totalPrestacoes ?? 0;
                 const prestRestantes  = totalPrestacoes - prestacoesPagas;
                 const progressPct     = totalPrestacoes > 0 ? (prestacoesPagas / totalPrestacoes) * 100 : 0;
-                const totalPago       = prestacoesPagas * c.deposito;
-                const totalEmFalta    = prestRestantes * c.deposito;
+                const prestacoes      = c.prestacoes ?? [];
+                const totalPago       = prestacoes.length > 0
+                  ? prestacoes.filter(p => p.paga).reduce((s, p) => s + (p.valorPago ?? p.valor), 0)
+                  : prestacoesPagas * c.deposito;
+                const totalEmFalta    = prestacoes.length > 0
+                  ? prestacoes.filter(p => !p.paga).reduce((s, p) => s + p.valor, 0)
+                  : prestRestantes * c.deposito;
+                const proximaNumero   = prestacoes.find(p => !p.paga)?.numero ?? null;
 
                 return (
                   <div key={c.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
@@ -595,7 +614,7 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
                         <div>
                           <div className="flex justify-between text-xs mb-1.5">
                             <span className="text-white font-bold">{Math.round(progressPct)}% pago</span>
-                            <span className="text-white">{fmt(c.deposito)}/mês</span>
+                            <span className="text-white">{fmt(prestacoes.find(p => !p.paga)?.valor ?? c.deposito)}/mês</span>
                           </div>
                           <div className="w-full h-3 bg-zinc-800 rounded-full overflow-hidden">
                             <div
@@ -614,24 +633,115 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
                           </div>
                         </div>
 
-                        {/* Valores pagos / em falta */}
-                        <div className="bg-zinc-800/60 rounded-xl px-4 py-3 space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-white">✅ Total já pago</span>
+                        {/* Totais */}
+                        <div className="bg-zinc-800/60 rounded-xl overflow-hidden text-sm">
+                          <div className="flex justify-between items-center px-4 py-2.5">
+                            <span className="text-zinc-300">✅ Total já pago</span>
                             <span className="font-black text-emerald-400">{fmt(totalPago)}</span>
                           </div>
                           {totalEmFalta > 0 && (
-                            <div className="flex justify-between border-t border-zinc-700 pt-2">
-                              <span className="text-white font-black">⏳ Valor ainda em falta</span>
+                            <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-700/60 bg-zinc-700/20">
+                              <span className="text-white font-bold">📌 Valor ainda em falta</span>
                               <span className="font-black text-amber-400">{fmt(totalEmFalta)}</span>
                             </div>
                           )}
                           {prestRestantes === 0 && (
-                            <div className="text-center pt-1">
+                            <div className="text-center py-2 border-t border-zinc-700/60">
                               <span className="text-emerald-400 font-black text-xs">🎉 Viatura totalmente liquidada!</span>
                             </div>
                           )}
                         </div>
+
+                        {/* Histórico detalhado de prestações — toggle */}
+                        {prestacoes.length > 0 && (
+                          <div className="space-y-1">
+                            <button
+                              type="button"
+                              onClick={() => setPrestOpen(prev => {
+                                const next = new Set(prev);
+                                next.has(c.id) ? next.delete(c.id) : next.add(c.id);
+                                return next;
+                              })}
+                              className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 border border-zinc-700/50 hover:border-zinc-600 transition-all group"
+                            >
+                              <span className="flex items-center gap-2 text-xs font-black text-white">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400">
+                                  <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                                </svg>
+                                Minhas Prestações
+                                <span className="text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/20 rounded-full px-2 py-0.5 font-bold">
+                                  {prestacoesPagas}/{totalPrestacoes}
+                                </span>
+                              </span>
+                              <svg
+                                width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                                className={`text-zinc-400 group-hover:text-white transition-all duration-200 ${prestOpen.has(c.id) ? 'rotate-180' : ''}`}
+                              >
+                                <polyline points="6 9 12 15 18 9"/>
+                              </svg>
+                            </button>
+
+                            {prestOpen.has(c.id) && (
+                            <div className="bg-zinc-800/40 rounded-xl overflow-hidden divide-y divide-zinc-700/40">
+                            <p className="hidden text-[10px] text-amber-400 font-black uppercase tracking-widest">Histórico de Prestações</p>
+                            <div className="bg-zinc-800/40 rounded-xl overflow-hidden divide-y divide-zinc-700/40">
+                              {prestacoes.map(p => {
+                                const isProxima = p.numero === proximaNumero;
+                                const hoje = new Date().toISOString().split('T')[0];
+                                const emAtraso = !p.paga && p.dataVencimento < hoje;
+                                return (
+                                  <div key={p.numero} className={`flex items-center gap-3 px-4 py-2.5 ${
+                                    p.paga      ? 'bg-emerald-500/5'
+                                    : isProxima ? 'bg-amber-500/8'
+                                    : ''
+                                  }`}>
+                                    {/* Ícone / número */}
+                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 border ${
+                                      p.paga      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                                      : isProxima ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                                      : emAtraso  ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                                      : 'bg-zinc-800 text-zinc-500 border-zinc-700'
+                                    }`}>
+                                      {p.paga ? '✓' : p.numero}
+                                    </div>
+
+                                    {/* Info */}
+                                    <div className="flex-1 min-w-0">
+                                      <p className={`text-xs font-bold ${p.paga ? 'text-emerald-300' : isProxima ? 'text-amber-300' : 'text-zinc-500'}`}>
+                                        Prestação {p.numero}
+                                        {isProxima && <span className="ml-1.5 text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-full font-black">Próxima</span>}
+                                        {emAtraso && <span className="ml-1.5 text-[9px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full font-black">Em atraso</span>}
+                                      </p>
+                                      <p className="text-[10px] text-zinc-500 tabular-nums">
+                                        {p.paga && p.dataPagamento
+                                          ? `Pago a ${fmtData(p.dataPagamento)}`
+                                          : `Vence a ${fmtData(p.dataVencimento)}`}
+                                      </p>
+                                    </div>
+
+                                    {/* Valor */}
+                                    <div className="text-right shrink-0">
+                                      {p.paga ? (
+                                        <>
+                                          <p className="text-xs font-black text-emerald-400">{fmt(p.valorPago ?? p.valor)}</p>
+                                          {p.valorPago && p.valorPago !== p.valor && (
+                                            <p className="text-[9px] text-zinc-500 line-through tabular-nums">{fmt(p.valor)}</p>
+                                          )}
+                                        </>
+                                      ) : (
+                                        <p className={`text-xs font-bold tabular-nums ${isProxima ? 'text-amber-400' : 'text-zinc-500'}`}>
+                                          {fmt(p.valor)}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                       </div>
                     )}
 

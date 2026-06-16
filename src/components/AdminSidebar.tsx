@@ -90,12 +90,14 @@ export function AdminSidebar({ onClose }: Props) {
       />
       {visitantesOpen && (
         <div className="ml-3 pl-2.5 border-l border-zinc-800 flex flex-col gap-0.5 pb-1">
+          <SubLink active={isActive('/admin/visitantes')} onClick={() => go('/admin/visitantes')} label="Todos" />
           <SubLink
-            active={isActive('/admin/visitantes/pendentes')}
-            onClick={() => go('/admin/visitantes/pendentes')}
-            label="Pendentes"
-            badge={pendingCount > 0 ? pendingCount : undefined}
+            active={isActive('/admin/visitantes/aguarda-documentos')}
+            onClick={() => go('/admin/visitantes/aguarda-documentos')}
+            label="Aguarda Documentos"
+            badge={guests.filter(g => g.status === 'aguarda_documentos').length || undefined}
           />
+          <SubLink active={isActive('/admin/visitantes/em-analise')} onClick={() => go('/admin/visitantes/em-analise')} label="Em Análise" />
           <SubLink active={isActive('/admin/visitantes/aprovados')} onClick={() => go('/admin/visitantes/aprovados')} label="Aprovados" />
           <SubLink active={isActive('/admin/visitantes/rejeitados')} onClick={() => go('/admin/visitantes/rejeitados')} label="Rejeitados" />
         </div>
@@ -152,10 +154,10 @@ function NavLink({ active, onClick, label, icon, badge }: {
       className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
         active
           ? 'bg-amber-500/15 text-amber-400 font-bold'
-          : 'text-zinc-400 hover:text-white hover:bg-zinc-800 font-medium'
+          : 'text-white hover:bg-zinc-800 font-medium'
       }`}
     >
-      <span className={active ? 'text-amber-400' : 'text-zinc-500'}>{icon}</span>
+      <span className={active ? 'text-amber-400' : 'text-white'}>{icon}</span>
       <span className="flex-1 text-left">{label}</span>
       {badge !== undefined && (
         <span className="text-[10px] min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-purple-500/20 text-purple-400 font-black px-1">
@@ -178,7 +180,7 @@ function SubLink({ active, onClick, label, badge }: {
       className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md text-xs transition-colors ${
         active
           ? 'bg-amber-500/15 text-amber-400 font-bold'
-          : 'text-zinc-500 hover:text-white hover:bg-zinc-800 font-medium'
+          : 'text-white hover:bg-zinc-800 font-medium'
       }`}
     >
       <span>{label}</span>
@@ -203,10 +205,10 @@ function SectionToggle({ label, open, active, onToggle, icon, badge }: {
     <button
       onClick={onToggle}
       className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-bold transition-colors ${
-        active && !open ? 'text-amber-400' : 'text-zinc-300 hover:text-white hover:bg-zinc-800/60'
+        active && !open ? 'text-amber-400' : 'text-white hover:bg-zinc-800/60'
       }`}
     >
-      <span className={active && !open ? 'text-amber-400' : 'text-zinc-500'}>{icon}</span>
+      <span className={active && !open ? 'text-amber-400' : 'text-white'}>{icon}</span>
       <span className="flex-1 text-left">{label}</span>
       {badge !== undefined && !open && (
         <span className="text-[10px] min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-purple-500/20 text-purple-400 font-black px-1">
