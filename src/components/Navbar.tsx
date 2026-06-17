@@ -9,9 +9,10 @@ interface NavbarProps {
   scrolled: boolean;
   onShowSimulator?: () => void;
   onOpenAdmin?: () => void;
+  onOpenAbout?: () => void;
 }
 
-export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdmin }: NavbarProps) {
+export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdmin, onOpenAbout }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showSearchInput, setShowSearchInput] = useState(false);
   const scrollTo = useScrollTo();
@@ -21,9 +22,13 @@ export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdm
   const handleNav = (id: string) => {
     setMenuOpen(false);
 
+    if (id === "sobre") {
+      onOpenAbout?.();
+      return;
+    }
+
     if (path !== "/") {
       navigate("/");
-      // Aguarda a navegação e renderização da landing page antes de fazer scroll
       setTimeout(() => {
         if (id === "simulador") onShowSimulator?.();
         scrollTo(id);

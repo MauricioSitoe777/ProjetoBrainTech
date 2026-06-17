@@ -28,7 +28,7 @@ export default function VehicleDetailsPage({
   const [currentImg, setCurrentImg] = useState(0);
 
   useEffect(() => {
-    const v = vehicles.find((item) => item.id === vehicleId);
+    const v = vehicles.find((item) => String(item.id) === String(vehicleId));
     if (v) {
       setVehicle(v);
     }

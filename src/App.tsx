@@ -6,7 +6,7 @@ import Hero            from "./components/Hero";
 import CatalogSection  from "./components/CatalogSection";
 import HowItWorks      from "./components/HowItWorks";
 import XitiqueSection  from "./components/XitiqueSection";
-import AboutSection    from "./components/AboutSection";
+import AboutModal      from "./components/AboutModal";
 import XitiqueModal    from "./components/XitiqueModal";
 import XitiqueRegulationsModal from "./components/XitiqueRegulationsModal";
 import Simulator       from "./components/Simulator";
@@ -107,6 +107,7 @@ function LandingPage({ onOpenAdmin }: { onOpenAdmin: () => void }) {
   const scrolled = useScrolled(40);
   const [showXitiqueModal,  setShowXitiqueModal]  = useState(false);
   const [showXitiqueRegs,   setShowXitiqueRegs]   = useState(false);
+  const [showAbout,         setShowAbout]          = useState(false);
   const [flowModalOpen,     setFlowModalOpen]      = useState(false);
   const [simulatorFlowLock, setSimulatorFlowLock]  = useState<SimulatorFlow | undefined>();
 
@@ -134,7 +135,12 @@ function LandingPage({ onOpenAdmin }: { onOpenAdmin: () => void }) {
 
   return (
     <div className="min-h-screen bg-zinc-950 antialiased">
-      <Navbar scrolled={scrolled} onShowSimulator={scrollToSimulator} onOpenAdmin={onOpenAdmin} />
+      <Navbar
+        scrolled={scrolled}
+        onShowSimulator={scrollToSimulator}
+        onOpenAdmin={onOpenAdmin}
+        onOpenAbout={() => setShowAbout(true)}
+      />
       <main>
         <Hero />
         <CatalogSection
@@ -148,10 +154,10 @@ function LandingPage({ onOpenAdmin }: { onOpenAdmin: () => void }) {
         <XitiqueSection onShowSimulator={scrollToSimulator} />
         <Simulator showClose={false} />
         <PaymentsSection onShowSimulator={scrollToSimulator} />
-        <AboutSection />
       </main>
       <Footer />
 
+      {showAbout       && <AboutModal onClose={() => setShowAbout(false)} />}
       {showXitiqueModal && <XitiqueModal onClose={() => setShowXitiqueModal(false)} />}
       {showXitiqueRegs  && <XitiqueRegulationsModal onClose={() => setShowXitiqueRegs(false)} />}
 
