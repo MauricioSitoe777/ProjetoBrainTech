@@ -91,6 +91,7 @@ function LandingPage({
         <div id="simulador" />
         {showSimulator ? <Simulator /> : null}
         <PaymentsSection onShowSimulator={() => setShowSimulator(true)} />
+        <AboutSection />
       </main>
       <Footer />
 
