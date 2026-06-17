@@ -7,7 +7,7 @@ const MODES = ['aluguer', 'compra'];
 const FUELS = ['Diesel', 'Gasolina', 'Híbrido', 'Eléctrico'];
 
 const emptyForm: Omit<VehicleData, 'id'> = {
-  name: '', brand: '', cat: 'suv', mode: 'aluguer', price: '', description: '', img: '', images: [], fuel: 'Gasolina', seats: 5, year: 2024, discount: 0, available: true,
+  name: '', brand: '', cat: 'suv', mode: 'aluguer', price: '', description: '', img: '', images: [], fuel: 'Gasolina', seats: 5, year: 2024, discount: 0, available: true, matricula: '',
 };
 
 export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
@@ -74,7 +74,8 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
       seats: v.seats || 5, 
       year: v.year || 2024,
       discount: v.discount ?? 0,
-      available: v.available ?? true
+      available: v.available ?? true,
+      matricula: v.matricula ?? '',
     });
     setImageInput('');
     setShowForm(true);
@@ -212,7 +213,7 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div>
                     <h3 className="text-white font-bold text-sm">{v.name}</h3>
-                    <p className="text-white text-xs mt-0.5">{v.year} · {v.fuel} · {v.seats} lugares</p>
+                    <p className="text-white text-xs mt-0.5">{v.year} · {v.fuel} · {v.seats} lugares{v.matricula ? ` · ${v.matricula}` : ''}</p>
                   </div>
                   <div className="text-amber-400 font-black text-xs text-right whitespace-nowrap">{v.price}</div>
                 </div>
@@ -355,6 +356,17 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
                       className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white outline-none focus:border-zinc-600"
                     />
                   </div>
+                </div>
+
+                {/* Matrícula */}
+                <div>
+                  <label className="text-white text-sm font-medium block mb-1.5">Matrícula</label>
+                  <input
+                    value={form.matricula ?? ''}
+                    onChange={e => setForm(f => ({ ...f, matricula: e.target.value.toUpperCase() }))}
+                    placeholder="Ex: MZ-12-AB-34"
+                    className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-zinc-600 font-mono tracking-widest uppercase"
+                  />
                 </div>
 
                 {/* Desconto + Disponibilidade */}

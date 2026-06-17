@@ -46,7 +46,7 @@ type Row = { kind: 'user'; data: User } | { kind: 'motorista'; data: Motorista }
 const guestStatusConfig: Record<GuestStatus, { label: string; dot: string }> = {
   aguarda_documentos:    { label: 'Aguarda Docs',     dot: 'bg-zinc-500' },
   documentos_submetidos: { label: 'Docs Submetidos',  dot: 'bg-amber-400 animate-pulse' },
-  em_analise:            { label: 'Em Análise',        dot: 'bg-blue-400 animate-pulse' },
+  em_analise:            { label: 'Registrar',           dot: 'bg-blue-400 animate-pulse' },
   aprovado:              { label: 'Aprovado',          dot: 'bg-emerald-400' },
   rejeitado:             { label: 'Rejeitado',         dot: 'bg-red-400' },
 };
@@ -127,7 +127,7 @@ function MotoristaModal({ initial, onSave, onClose }: {
 
 // ── Page ──────────────────────────────────────────────────────────────────
 
-export function UsersPage() {
+export function UsersPage({ onExit }: { onExit?: () => void }) {
   const { users, addUser, updateUser, deleteUser } = useUsers();
   const { motoristas, addMotorista, updateMotorista, deleteMotorista } = useMotoristas();
   const { guests, updateGuest } = useGuests();
@@ -312,14 +312,31 @@ export function UsersPage() {
             )}
           </div>
 
-          {/* Visitantes — header contextual (quando navegado via sidebar) */}
+          {/* Sub-filters — Visitantes */}
           {mainTab === 'visitantes' && (
-            <div className="flex items-center gap-2 px-1">
-              <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-              <span className="text-xs font-black text-amber-500 uppercase tracking-widest">Visitantes</span>
-              <span className="text-xs text-zinc-500 font-bold">
-                {guests.filter(g => g.status !== 'aprovado' && g.status !== 'rejeitado').length} pendentes
-              </span>
+            <div className="flex gap-2 flex-wrap">
+              {([
+                { value: 'todos',               label: 'Todos' },
+                { value: 'aguarda_documentos',  label: 'Aguarda Docs', badge: guests.filter(g => g.status === 'aguarda_documentos' || g.status === 'documentos_submetidos').length || undefined },
+                { value: 'em_analise',          label: 'Registrar',     badge: guests.filter(g => g.status === 'em_analise').length || undefined },
+                { value: 'aprovado',            label: 'Aprovados' },
+                { value: 'rejeitado',           label: 'Rejeitados' },
+              ] as { value: GuestSubFilter; label: string; badge?: number }[]).map(sf => (
+                <button key={sf.value}
+                  onClick={() => setGuestSub(sf.value)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                    guestSub === sf.value
+                      ? 'bg-amber-500 text-zinc-950 border-amber-500'
+                      : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-white'
+                  }`}>
+                  {sf.label}
+                  {sf.badge !== undefined && (
+                    <span className={`min-w-[16px] h-4 flex items-center justify-center rounded-full text-[10px] font-black px-1 ${
+                      guestSub === sf.value ? 'bg-zinc-950/30 text-zinc-950' : 'bg-amber-500/20 text-amber-400'
+                    }`}>{sf.badge}</span>
+                  )}
+                </button>
+              ))}
             </div>
           )}
 

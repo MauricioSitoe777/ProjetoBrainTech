@@ -16,6 +16,7 @@ export interface VehicleData {
   year: number;
   discount?: number; // percentage
   available?: boolean;
+  matricula?: string;
 }
 
 interface VehiclesContextType {
@@ -29,35 +30,62 @@ interface VehiclesContextType {
 
 const VehiclesContext = createContext<VehiclesContextType | null>(null);
 
-const STORAGE_KEY = 'rentcar:vehicles:v1';
+const API_URL = 'http://localhost:3001/vehicles';
 
 export function VehiclesProvider({ children }: { children: ReactNode }) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [vehicles, setVehicles] = useState<VehicleData[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) return JSON.parse(stored);
-    } catch { /* ignore */ }
-    return VEHICLES.map(v => ({ ...v }));
-  });
+  const [vehicles, setVehicles] = useState<VehicleData[]>([]);
 
   useEffect(() => {
+    fetch(API_URL)
+      .then(res => res.json())
+      .then(data => setVehicles(data))
+      .catch(err => console.error("Erro ao carregar veículos:", err));
+  }, []);
+
+  const addVehicle = async (vehicle: Omit<VehicleData, 'id'>) => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(vehicles));
-    } catch { /* ignore */ }
-  }, [vehicles]);
-
-  const addVehicle = (vehicle: Omit<VehicleData, 'id'>) => {
-    const maxId = vehicles.reduce((max, v) => Math.max(max, v.id), 0);
-    setVehicles(prev => [...prev, { ...vehicle, id: maxId + 1 }]);
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(vehicle)
+      });
+      if (res.ok) {
+        const newVehicle = await res.json();
+        setVehicles(prev => [...prev, newVehicle]);
+      }
+    } catch (err) {
+      console.error("Erro ao adicionar veículo:", err);
+    }
   };
 
-  const updateVehicle = (id: number, updates: Partial<VehicleData>) => {
-    setVehicles(prev => prev.map(v => v.id === id ? { ...v, ...updates } : v));
+  const updateVehicle = async (id: number, updates: Partial<VehicleData>) => {
+    try {
+      const res = await fetch(`${API_URL}/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+      if (res.ok) {
+        const updatedVehicle = await res.json();
+        setVehicles(prev => prev.map(v => v.id === id ? updatedVehicle : v));
+      }
+    } catch (err) {
+      console.error("Erro ao actualizar veículo:", err);
+    }
   };
 
-  const removeVehicle = (id: number) => {
-    setVehicles(prev => prev.filter(v => v.id !== id));
+  const removeVehicle = async (id: number) => {
+    try {
+      const res = await fetch(`${API_URL}/${id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        setVehicles(prev => prev.filter(v => v.id !== id));
+      }
+    } catch (err) {
+      console.error("Erro ao remover veículo:", err);
+    }
   };
 
   return (

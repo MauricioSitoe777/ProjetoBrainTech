@@ -1,7 +1,8 @@
+import type { ReactElement } from 'react';
 import { useNotifications, type Toast, type AppNotification } from '../context/NotificationsContext';
 import { useRoute } from '../hooks/useRoute';
 
-const TYPE_STYLES: Record<AppNotification['type'], { bar: string; icon: string; iconEl: JSX.Element }> = {
+const TYPE_STYLES: Record<AppNotification['type'], { bar: string; icon: string; iconEl: ReactElement }> = {
   success: {
     bar:    'bg-emerald-500',
     icon:   'bg-emerald-500/15 border-emerald-500/30 text-emerald-400',

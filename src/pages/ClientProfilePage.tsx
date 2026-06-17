@@ -768,7 +768,7 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
             {/* Estado do grupo */}
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: 'Estado',       value: estadoGrupo === 'EmAndamento' ? 'Em Andamento' : estadoGrupo },
+                { label: 'Estado',       value: (grupoDoUser?.estadoGrupo ?? 'Aberto') === 'EmAndamento' ? 'Em Andamento' : (grupoDoUser?.estadoGrupo ?? 'Aberto') },
                 { label: 'Mês Actual',   value: `${mesAtual} / ${numMembros}` },
                 { label: 'Prémio Mensal',value: fmt(premioMT) },
               ].map(s => (

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 
 export interface AppNotification {
@@ -48,6 +48,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   });
 
   const [toasts, setToasts] = useState<Toast[]>([]);
+  // IDs já mostrados como toast nesta sessão (evita duplicados)
+  const shownToastIds = useRef(new Set<string>());
 
   useEffect(() => {
     localStorage.setItem('rentcar:notifications:v1', JSON.stringify(allNotifications));
@@ -66,7 +68,6 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const dismissToast = useCallback((id: string) => {
-    // Mark as leaving (triggers exit animation), then remove
     setToasts(prev => prev.map(t => t.id === id ? { ...t, leaving: true } : t));
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), TOAST_LEAVE);
   }, []);
@@ -76,6 +77,30 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     setToasts(prev => [...prev, { id, title, message, type, link }]);
     setTimeout(() => dismissToast(id), TOAST_DURATION);
   }, [dismissToast]);
+
+  // Ref estável para usar dentro de timeouts sem criar dependências circulares
+  const showToastRef = useRef(showToast);
+  useEffect(() => { showToastRef.current = showToast; }, [showToast]);
+
+  // Ao fazer login: mostrar toasts das notificações não lidas pendentes (máx. 3)
+  useEffect(() => {
+    if (!user) return;
+    const pending = allNotifications
+      .filter(n => {
+        const isForUser = user.role === 'admin' ? n.userId === 'admin' : n.userId === user.id;
+        return isForUser && !n.read && !shownToastIds.current.has(n.id);
+      })
+      .slice(0, 3);
+
+    pending.forEach((n, i) => {
+      setTimeout(() => {
+        showToastRef.current(n.title, n.message, n.type, n.link);
+        shownToastIds.current.add(n.id);
+      }, i * 700);
+    });
+  // Só re-executa quando o utilizador muda (login/logout)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const addNotification = useCallback((
     userId: string,
@@ -97,7 +122,6 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       link,
     };
     setAllNotifications(prev => {
-      // Dedup: skip if identical title+message within last 2 seconds
       const recent = prev[0];
       if (recent && recent.title === title && recent.message === message &&
           Date.now() - new Date(recent.createdAt).getTime() < 2000) {
@@ -105,9 +129,15 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       }
       return [newNotif, ...prev];
     });
-    // Also show as visible toast (pass the link so it becomes clickable)
-    showToast(title, message, type, link);
-  }, [showToast]);
+    // Só mostra toast se a notificação for para o utilizador actualmente logado
+    const isForCurrentUser = user?.role === 'admin'
+      ? userId === 'admin'
+      : userId === user?.id;
+    if (isForCurrentUser) {
+      showToast(title, message, type, link);
+      shownToastIds.current.add(newNotif.id);
+    }
+  }, [user, showToast]);
 
   const markAsRead = (id: string) => {
     setAllNotifications(prev =>

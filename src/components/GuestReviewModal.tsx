@@ -24,7 +24,7 @@ const STATUS_STYLE: Record<string, string> = {
 const STATUS_LABEL: Record<string, string> = {
   aguarda_documentos:    'Aguarda Documentos',
   documentos_submetidos: 'Docs Submetidos',
-  em_analise:            'Em Análise',
+  em_analise:            'Registrar',
   aprovado:              'Aprovado',
   rejeitado:             'Rejeitado',
 };
@@ -58,7 +58,7 @@ export function GuestReviewModal({ guest, onClose }: Props) {
 
   const handleAnalise = () => {
     updateGuest(guest.id, { status: 'em_analise' });
-    addNotification('admin', 'Visitante em análise', `${guest.nome} foi movido para "Em Análise".`, 'info');
+    addNotification('admin', 'Visitante registado', `${guest.nome} foi movido para "Registrar".`, 'info');
   };
 
   const handleAprovar = () => {
@@ -168,7 +168,7 @@ export function GuestReviewModal({ guest, onClose }: Props) {
                           </button>
                         )}
                         <label className={`text-[10px] font-bold px-2.5 py-1 rounded-lg cursor-pointer transition-colors ${saved ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-700 text-white hover:bg-zinc-600'}`}>
-                          {saved ? '✓ OK' : 'Registar'}
+                          {saved ? '✓ OK' : 'Registrar'}
                           <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png"
                             onChange={e => {
                               const file = e.target.files?.[0];
@@ -226,7 +226,7 @@ export function GuestReviewModal({ guest, onClose }: Props) {
               {guest.status !== 'em_analise' && action === 'idle' && (
                 <button onClick={handleAnalise}
                   className="w-full bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 font-bold rounded-lg py-2.5 text-sm transition-colors">
-                  Marcar Em Análise
+                  Registrar
                 </button>
               )}
 
