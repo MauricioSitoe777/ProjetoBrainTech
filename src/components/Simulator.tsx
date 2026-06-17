@@ -6,7 +6,8 @@ import { useAuth } from "../context/AuthContext";
 import { useReservations } from "../context/ReservationsContext";
 import { useUsers } from "../context/UsersContext";
 import { useMotoristas } from "../context/MotoristasContext";
-import { CATEGORY_LABEL, VEHICLES } from "../data/constants";
+import { useVehicles } from "../context/VehiclesContext";
+import { CATEGORY_LABEL } from "../data/constants";
 import { GuestRequestModal } from "./GuestRequestModal";
 
 const TAXA_MENSAL = 0.015;
