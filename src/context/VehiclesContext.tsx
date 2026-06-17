@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { VEHICLES } from '../data/constants';
 
+
 export interface VehicleData {
   id: number;
   name: string;
@@ -30,17 +31,17 @@ interface VehiclesContextType {
 
 const VehiclesContext = createContext<VehiclesContextType | null>(null);
 
-const API_URL = 'http://localhost:3001/vehicles';
+const API_URL = 'http://localhost:4001/vehicles';
 
 export function VehiclesProvider({ children }: { children: ReactNode }) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [vehicles, setVehicles] = useState<VehicleData[]>([]);
+  const [vehicles, setVehicles] = useState<VehicleData[]>(VEHICLES as unknown as VehicleData[]);
 
   useEffect(() => {
     fetch(API_URL)
       .then(res => res.json())
-      .then(data => setVehicles(data))
-      .catch(err => console.error("Erro ao carregar veículos:", err));
+      .then(data => { if (Array.isArray(data) && data.length > 0) setVehicles(data); })
+      .catch(() => { /* mantém os dados estáticos se a API não estiver disponível */ });
   }, []);
 
   const addVehicle = async (vehicle: Omit<VehicleData, 'id'>) => {

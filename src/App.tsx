@@ -19,6 +19,11 @@ import { NotificationsProvider } from "./context/NotificationsContext";
 import { VehiclesProvider } from "./context/VehiclesContext";
 import { VehiclesPage } from "./pages/VehiclesPage";
 import VehicleDetailsPage from "./components/VehicleDetailsPage";
+import { MotoristasProvider } from "./context/MotoristasContext";
+import { GuestsProvider } from "./context/GuestsContext";
+import { XitiqueProvider } from "./context/XitiqueContext";
+import { FinanceProvider } from "./context/FinanceContext";
+import { InvitesProvider } from "./context/InvitesContext";
 
 type SimulatorFlow = "aluguer" | "compra";
 
@@ -144,24 +149,34 @@ export default function App() {
         <NotificationsProvider>
           <ReservationsProvider>
             <VehiclesProvider>
-              {isAdmin ? (
-                <AdminShell onExit={() => navigate("/")} />
-              ) : isVehicleDetails ? (
-                <VehicleDetailsPage
-                  vehicleId={vehicleId}
-                  onExit={() => navigate("/")}
-                  onOpenFlowModal={(lockedFlow) => {
-                    navigate("/");
-                    setTimeout(() => {
-                      window.dispatchEvent(new CustomEvent("rentcar:open-flow-modal", { detail: lockedFlow }));
-                    }, 100);
-                  }}
-                />
-              ) : (
-                <LandingPage
-                  onOpenAdmin={() => navigate("/admin")}
-                />
-              )}
+              <MotoristasProvider>
+                <GuestsProvider>
+                  <XitiqueProvider>
+                    <FinanceProvider>
+                      <InvitesProvider>
+                        {isAdmin ? (
+                          <AdminShell onExit={() => navigate("/")} />
+                        ) : isVehicleDetails ? (
+                          <VehicleDetailsPage
+                            vehicleId={vehicleId}
+                            onExit={() => navigate("/")}
+                            onOpenFlowModal={(lockedFlow) => {
+                              navigate("/");
+                              setTimeout(() => {
+                                window.dispatchEvent(new CustomEvent("rentcar:open-flow-modal", { detail: lockedFlow }));
+                              }, 100);
+                            }}
+                          />
+                        ) : (
+                          <LandingPage
+                            onOpenAdmin={() => navigate("/admin")}
+                          />
+                        )}
+                      </InvitesProvider>
+                    </FinanceProvider>
+                  </XitiqueProvider>
+                </GuestsProvider>
+              </MotoristasProvider>
             </VehiclesProvider>
           </ReservationsProvider>
         </NotificationsProvider>
