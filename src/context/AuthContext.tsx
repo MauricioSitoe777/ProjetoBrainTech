@@ -20,13 +20,30 @@ const AuthContext = createContext<AuthContextType | null>(null);
 // Password default para o demo
 const DEFAULT_PASSWORD = '123';
 
+const SESSION_KEY = 'rentcar:session:v1';
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    try {
+      const saved = sessionStorage.getItem(SESSION_KEY);
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [allUsers, setAllUsers] = useState<User[]>(() => {
     const saved = localStorage.getItem('rentcar:users:v2');
     return saved ? JSON.parse(saved) : initialMockUsers;
   });
+
+  useEffect(() => {
+    if (user) {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(user));
+      console.log('[Auth] sessão guardada:', user.nome, '|', user.role);
+    } else {
+      sessionStorage.removeItem(SESSION_KEY);
+      console.log('[Auth] sessão encerrada');
+    }
+  }, [user]);
 
   useEffect(() => {
     localStorage.setItem('rentcar:users:v2', JSON.stringify(allUsers));
@@ -51,11 +68,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       : password === DEFAULT_PASSWORD;
 
     if (foundUser && validPassword) {
-      setUser({ id: foundUser.id, nome: foundUser.nome, email: foundUser.email, role: foundUser.role, xitique: foundUser.xitique ?? false });
+      const authUser = { id: foundUser.id, nome: foundUser.nome, email: foundUser.email, role: foundUser.role, xitique: foundUser.xitique ?? false };
+      setUser(authUser);
+      console.log('[Auth] login OK:', authUser.nome, '|', authUser.role);
       setIsLoading(false);
       return true;
     }
 
+    console.warn('[Auth] login falhou — utilizador:', identifier);
     setIsLoading(false);
     return false;
   };
@@ -81,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
-  const logout = () => setUser(null);
+  const logout = () => { console.log('[Auth] logout'); setUser(null); };
 
   const addUser = (userData: Omit<User, 'id' | 'dataCriacao' | 'ultimoAcesso' | 'totalAlugueres'>): User => {
     const newUser: User = {

@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useVehicles, type VehicleData } from '../context/VehiclesContext';
 import { useReservations } from '../context/ReservationsContext';
 
 const CATEGORIES = ['suv', 'pickup', 'sedan', 'hatchback', 'van'];
 const MODES = ['aluguer', 'compra'];
 const FUELS = ['Diesel', 'Gasolina', 'Híbrido', 'Eléctrico'];
+const UPLOAD_URL = 'http://localhost:4002/upload';
 
 const emptyForm: Omit<VehicleData, 'id'> = {
   name: '', brand: '', cat: 'suv', mode: 'aluguer', price: '', description: '', img: '', images: [], fuel: 'Gasolina', seats: 5, year: 2024, discount: 0, available: true, matricula: '',
@@ -49,10 +50,14 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
   const [imageInput, setImageInput] = useState('');
   const [filterCat, setFilterCat] = useState('todos');
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filtered = filterCat === 'todos' ? vehicles : vehicles.filter(v => v.cat === filterCat);
 
   const openAdd = () => {
+    console.log('[VehiclesPage] openAdd — a abrir formulário');
     setEditId(null);
     setForm(emptyForm);
     setImageInput('');
@@ -103,19 +108,51 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
     setForm(f => ({ ...f, img: url }));
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError('');
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await fetch(UPLOAD_URL, { method: 'POST', body: formData });
+      if (!res.ok) throw new Error(`Servidor devolveu ${res.status}`);
+      const { url } = await res.json();
+      setForm(f => ({
+        ...f,
+        images: [...f.images, url],
+        img: f.img || url,
+      }));
+    } catch (err) {
+      const isNetwork = err instanceof TypeError;
+      setUploadError(
+        isNetwork
+          ? 'Servidor de upload não encontrado. Reinicia o npm run dev.'
+          : `Erro: ${err instanceof Error ? err.message : 'desconhecido'}`
+      );
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!form.name.trim() || !form.price.trim()) return;
-    
-    // Extrair a marca como a primeira palavra do nome
+    console.log('[VehiclesPage] handleSubmit — nome:', form.name, '| preço:', form.price, '| editId:', editId);
+    if (!form.name.trim() || !form.price.trim()) {
+      console.warn('[VehiclesPage] submit bloqueado — nome ou preço em falta');
+      return;
+    }
+
     const autoBrand = form.name.trim().split(' ')[0] || '';
-    
     const finalForm = {
       ...form,
       brand: autoBrand,
       img: form.img || (form.images[0] ?? ''),
       images: form.images.length > 0 ? form.images : (form.img ? [form.img] : []),
     };
+    console.log('[VehiclesPage] a enviar para API:', finalForm);
     if (editId !== null) {
       updateVehicle(editId, finalForm);
     } else {
@@ -407,13 +444,61 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
 
                 {/* Imagens */}
                 <div>
-                  <label className="text-white text-sm font-medium block mb-1.5">Imagens ({form.images.length})</label>
+                  <label className="text-white text-sm font-medium block mb-1.5">
+                    Imagens ({form.images.length})
+                  </label>
+
+                  {/* Upload de ficheiro */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={handleFileUpload}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className={`w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed py-4 text-sm font-semibold transition mb-3 ${
+                      uploading
+                        ? 'border-amber-500/40 text-amber-400 cursor-wait'
+                        : 'border-zinc-700 text-white hover:border-amber-500/50 hover:text-amber-400'
+                    }`}
+                  >
+                    {uploading ? (
+                      <>
+                        <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 12a9 9 0 11-6.219-8.56" strokeLinecap="round"/>
+                        </svg>
+                        A carregar...
+                      </>
+                    ) : (
+                      <>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                        </svg>
+                        Selecionar imagem do computador
+                      </>
+                    )}
+                  </button>
+
+                  {uploadError && (
+                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1.5">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+                      </svg>
+                      {uploadError}
+                    </p>
+                  )}
+
+                  {/* URL manual */}
                   <div className="flex gap-2">
                     <input
                       value={imageInput}
                       onChange={e => setImageInput(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddImage())}
-                      placeholder="Cole o URL da imagem e pressione Enter"
+                      placeholder="Ou cole o URL da imagem"
                       className="flex-1 rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-zinc-600"
                     />
                     <button

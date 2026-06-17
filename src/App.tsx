@@ -65,7 +65,12 @@ function AdminShell({ onExit }: { onExit: () => void }) {
     if (!user) prevUserId.current = null;
   }, [user]);
 
-  if (!user) return <LoginPage onCancel={onExit} />;
+  if (!user) {
+    console.warn('[AdminShell] user é null → a mostrar LoginPage. Path:', path);
+    return <LoginPage onCancel={onExit} />;
+  }
+
+  console.log('[AdminShell] user autenticado:', user.nome, '| role:', user.role, '| path:', path);
 
   if (user.role === "cliente") {
     const fullUser = allUsers.find(u => u.id === user.id);

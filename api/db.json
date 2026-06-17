@@ -293,6 +293,44 @@
       "discount": 0,
       "available": true,
       "matricula": "MZ-22-BD-19"
+    },
+    {
+      "name": "Bugatti",
+      "brand": "Bugatti",
+      "cat": "suv",
+      "mode": "aluguer",
+      "price": "405000000",
+      "description": "desc desc desdc testet ete",
+      "img": "http://localhost:4002/uploads/vehicle_1781704518234.jpg",
+      "images": [
+        "http://localhost:4002/uploads/vehicle_1781704518234.jpg"
+      ],
+      "fuel": "Gasolina",
+      "seats": 2,
+      "year": 2024,
+      "discount": 3,
+      "available": true,
+      "matricula": "HFG4E",
+      "id": "HjOKPcZtg0A"
+    },
+    {
+      "name": "Bugatti",
+      "brand": "Bugatti",
+      "cat": "suv",
+      "mode": "aluguer",
+      "price": "405000000",
+      "description": "desc",
+      "img": "http://localhost:4002/uploads/vehicle_1781705016203.jpg",
+      "images": [
+        "http://localhost:4002/uploads/vehicle_1781705016203.jpg"
+      ],
+      "fuel": "Gasolina",
+      "seats": 2,
+      "year": 2024,
+      "discount": 0,
+      "available": true,
+      "matricula": "EGT5U",
+      "id": "N2eUw1C_T8o"
     }
   ],
   "users": [
