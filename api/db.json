@@ -1,28 +1,6 @@
 {
   "vehicles": [
     {
-      "id": "1",
-      "name": "Toyota Land Cruiser Prado",
-      "brand": "Toyota",
-      "cat": "suv",
-      "mode": "aluguer",
-      "price": "6.500 MT/dia",
-      "description": "O Toyota Land Cruiser Prado é um ícone de durabilidade e desempenho off-road. Equipado com um motor diesel potente e um sistema de tração nas quatro rodas sofisticado, é ideal para as condições variadas das estradas moçambicanas. O interior espaçoso e luxuoso oferece conforto premium para até 7 passageiros, tornando-o perfeito para expedições em família ou viagens de negócios exigentes.",
-      "img": "https://images.unsplash.com/photo-1572629166063-011a332eafed?w=800&q=80",
-      "images": [
-        "https://images.unsplash.com/photo-1572629166063-011a332eafed?w=800&q=80",
-        "https://images.unsplash.com/photo-1625753783753-855783cde647?w=800&q=80",
-        "https://images.unsplash.com/photo-1581235707960-35f13de5aff2?w=800&q=80",
-        "https://images.unsplash.com/photo-1606148632349-564e8c897018?w=800&q=80"
-      ],
-      "fuel": "Diesel",
-      "seats": 7,
-      "year": 2023,
-      "discount": 10,
-      "available": true,
-      "matricula": "MZ-14-AB-23"
-    },
-    {
       "id": "2",
       "name": "BMW X5",
       "brand": "BMW",
@@ -395,13 +373,76 @@
     }
   ],
   "alugueres": [
-    { "id": "a1", "userId": "3", "viatura": "Toyota Hilux", "matricula": "MPC-1234-MP", "dataInicio": "2025-04-01", "dataFim": "2025-04-05", "valor": 25000, "status": "concluido" },
-    { "id": "a2", "userId": "3", "viatura": "Nissan Navara", "matricula": "MPC-5678-MP", "dataInicio": "2025-04-15", "dataFim": "2025-04-20", "valor": 30000, "status": "concluido" },
-    { "id": "a3", "userId": "3", "viatura": "Toyota Land Cruiser", "matricula": "MPC-9012-MP", "dataInicio": "2025-05-01", "dataFim": "2025-05-10", "valor": 45000, "status": "ativo" },
-    { "id": "a4", "userId": "4", "viatura": "Honda CR-V", "matricula": "MPC-3456-MP", "dataInicio": "2025-03-10", "dataFim": "2025-03-12", "valor": 12000, "status": "concluido" },
-    { "id": "a5", "userId": "4", "viatura": "Toyota RAV4", "matricula": "MPC-7890-MP", "dataInicio": "2025-05-05", "dataFim": "2025-05-08", "valor": 18000, "status": "concluido" },
-    { "id": "a6", "userId": "5", "viatura": "Mitsubishi L200", "matricula": "MPC-2345-MP", "dataInicio": "2025-02-01", "dataFim": "2025-02-03", "valor": 8000, "status": "cancelado" },
-    { "id": "a7", "userId": "6", "viatura": "Ford Ranger", "matricula": "MPC-6789-MP", "dataInicio": "2025-01-10", "dataFim": "2025-01-15", "valor": 20000, "status": "concluido" }
+    {
+      "id": "a1",
+      "userId": "3",
+      "viatura": "Toyota Hilux",
+      "matricula": "MPC-1234-MP",
+      "dataInicio": "2025-04-01",
+      "dataFim": "2025-04-05",
+      "valor": 25000,
+      "status": "concluido"
+    },
+    {
+      "id": "a2",
+      "userId": "3",
+      "viatura": "Nissan Navara",
+      "matricula": "MPC-5678-MP",
+      "dataInicio": "2025-04-15",
+      "dataFim": "2025-04-20",
+      "valor": 30000,
+      "status": "concluido"
+    },
+    {
+      "id": "a3",
+      "userId": "3",
+      "viatura": "Toyota Land Cruiser",
+      "matricula": "MPC-9012-MP",
+      "dataInicio": "2025-05-01",
+      "dataFim": "2025-05-10",
+      "valor": 45000,
+      "status": "ativo"
+    },
+    {
+      "id": "a4",
+      "userId": "4",
+      "viatura": "Honda CR-V",
+      "matricula": "MPC-3456-MP",
+      "dataInicio": "2025-03-10",
+      "dataFim": "2025-03-12",
+      "valor": 12000,
+      "status": "concluido"
+    },
+    {
+      "id": "a5",
+      "userId": "4",
+      "viatura": "Toyota RAV4",
+      "matricula": "MPC-7890-MP",
+      "dataInicio": "2025-05-05",
+      "dataFim": "2025-05-08",
+      "valor": 18000,
+      "status": "concluido"
+    },
+    {
+      "id": "a6",
+      "userId": "5",
+      "viatura": "Mitsubishi L200",
+      "matricula": "MPC-2345-MP",
+      "dataInicio": "2025-02-01",
+      "dataFim": "2025-02-03",
+      "valor": 8000,
+      "status": "cancelado"
+    },
+    {
+      "id": "a7",
+      "userId": "6",
+      "viatura": "Ford Ranger",
+      "matricula": "MPC-6789-MP",
+      "dataInicio": "2025-01-10",
+      "dataFim": "2025-01-15",
+      "valor": 20000,
+      "status": "concluido"
+    }
   ],
   "reservations": [
     {
@@ -463,9 +504,30 @@
     }
   ],
   "blockedPeriods": [
-    { "id": "b1", "vehicleId": 1, "dataInicio": "2026-05-18", "dataFim": "2026-05-22", "motivo": "manutencao", "descricao": "Revisão programada" },
-    { "id": "b2", "vehicleId": null, "dataInicio": "2026-12-25", "dataFim": "2026-12-26", "motivo": "indisponivel", "descricao": "Feriado — frota fechada" },
-    { "id": "b3", "vehicleId": 13, "dataInicio": "2026-05-25", "dataFim": "2026-05-27", "motivo": "reserva_interna", "descricao": "Evento corporativo" }
+    {
+      "id": "b1",
+      "vehicleId": 1,
+      "dataInicio": "2026-05-18",
+      "dataFim": "2026-05-22",
+      "motivo": "manutencao",
+      "descricao": "Revisão programada"
+    },
+    {
+      "id": "b2",
+      "vehicleId": null,
+      "dataInicio": "2026-12-25",
+      "dataFim": "2026-12-26",
+      "motivo": "indisponivel",
+      "descricao": "Feriado — frota fechada"
+    },
+    {
+      "id": "b3",
+      "vehicleId": 13,
+      "dataInicio": "2026-05-25",
+      "dataFim": "2026-05-27",
+      "motivo": "reserva_interna",
+      "descricao": "Evento corporativo"
+    }
   ],
   "settings": [
     {
@@ -495,14 +557,33 @@
     }
   ],
   "motoristas": [
-    { "id": "m1", "nome": "António Cossa",   "telefone": "+258 84 123 0001", "status": "disponivel", "dataCriacao": "2024-01-10" },
-    { "id": "m2", "nome": "Salomão Nhaca",   "telefone": "+258 84 456 0002", "status": "disponivel", "dataCriacao": "2024-03-05" },
-    { "id": "m3", "nome": "Feliciano Matos", "telefone": "+258 84 789 0003", "status": "em_servico", "dataCriacao": "2024-05-20" }
+    {
+      "id": "m1",
+      "nome": "António Cossa",
+      "telefone": "+258 84 123 0001",
+      "status": "disponivel",
+      "dataCriacao": "2024-01-10"
+    },
+    {
+      "id": "m2",
+      "nome": "Salomão Nhaca",
+      "telefone": "+258 84 456 0002",
+      "status": "disponivel",
+      "dataCriacao": "2024-03-05"
+    },
+    {
+      "id": "m3",
+      "nome": "Feliciano Matos",
+      "telefone": "+258 84 789 0003",
+      "status": "em_servico",
+      "dataCriacao": "2024-05-20"
+    }
   ],
   "notifications": [],
   "guests": [],
   "transacoes": [],
   "dividas": [],
   "xitiqueGrupos": [],
-  "xitiqueInscricoes": []
+  "xitiqueInscricoes": [],
+  "$schema": "./node_modules/json-server/schema.json"
 }
