@@ -678,7 +678,8 @@ export default function Simulator({
                 {/* 2. Preço + Salário */}
                 <div className="grid grid-cols-2 gap-3">
                   <NumberField label="💰 Preço do Veículo" value={vehiclePrice}
-                    onChange={(v) => setVehiclePrice(Math.min(8_000_000, Math.max(0, v)))} min={0} suffix="MT" />
+                    onChange={(v) => setVehiclePrice(Math.min(8_000_000, Math.max(0, v)))} min={0} suffix="MT"
+                    disabled={!isAdmin} />
                   <NumberField label="💵 O Meu Salário" value={income}
                     onChange={(v) => setIncome(Math.min(100_000_000, Math.max(0, v)))} min={0} suffix="MT/mês" />
                 </div>

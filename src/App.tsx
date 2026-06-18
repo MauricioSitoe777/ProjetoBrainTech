@@ -40,13 +40,15 @@ import { AdminSidebar } from "./components/AdminSidebar";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ChangePasswordModal } from "./components/ChangePasswordModal";
 import { ToastContainer } from "./components/ToastContainer";
+import { RecuperarSenhaPage } from "./pages/RecuperarSenhaPage";
+import { RedefinirSenhaPage } from "./pages/RedefinirSenhaPage";
 
 type SimulatorFlow = "aluguer" | "compra";
 
 // ─── Admin shell ──────────────────────────────────────────────────────────────
 function AdminShell({ onExit }: { onExit: () => void }) {
   const { user, allUsers } = useAuth();
-  const { path } = useRoute();
+  const { path, navigate } = useRoute();
   const { showToast } = useNotifications();
   const [passwordChanged, setPasswordChanged] = useState(false);
   const prevUserId = useRef<string | null>(null);
@@ -67,7 +69,7 @@ function AdminShell({ onExit }: { onExit: () => void }) {
 
   if (!user) {
     console.warn('[AdminShell] user é null → a mostrar LoginPage. Path:', path);
-    return <LoginPage onCancel={onExit} />;
+    return <LoginPage onCancel={onExit} onRecuperar={() => navigate('/recuperar-senha')} />;
   }
 
   console.log('[AdminShell] user autenticado:', user.nome, '| role:', user.role, '| path:', path);
@@ -207,11 +209,14 @@ function restoreScroll() {
 // ─── Root ─────────────────────────────────────────────────────────────────────
 export default function App() {
   const { path, navigate } = useRoute();
-  const isAdmin        = path.startsWith("/admin");
-  const isVehicleDetails = path.startsWith("/veiculo/");
-  const isInvite       = path.startsWith("/convite/");
-  const vehicleId      = isVehicleDetails ? parseInt(path.split("/").pop() || "0") : 0;
-  const inviteToken    = isInvite ? path.split("/convite/")[1] ?? "" : "";
+  const isAdmin           = path.startsWith("/admin");
+  const isVehicleDetails  = path.startsWith("/veiculo/");
+  const isInvite          = path.startsWith("/convite/");
+  const isRecuperar       = path === "/recuperar-senha";
+  const isRedefinir       = path.startsWith("/recuperar-senha/") && path.length > "/recuperar-senha/".length;
+  const vehicleId         = isVehicleDetails ? parseInt(path.split("/").pop() || "0") : 0;
+  const inviteToken       = isInvite ? path.split("/convite/")[1] ?? "" : "";
+  const resetToken        = isRedefinir ? path.split("/recuperar-senha/")[1] ?? "" : "";
 
   const goBack = () => { navigate("/"); restoreScroll(); };
 
@@ -226,7 +231,11 @@ export default function App() {
                   <MotoristasProvider>
                     <XitiqueProvider>
                       <InvitesProvider>
-                        {isInvite ? (
+                        {isRecuperar ? (
+                          <RecuperarSenhaPage onVoltar={() => navigate("/admin")} />
+                        ) : isRedefinir ? (
+                          <RedefinirSenhaPage token={resetToken} onVoltar={() => navigate("/admin")} />
+                        ) : isInvite ? (
                           <InvitePage token={inviteToken} onSuccess={() => navigate("/")} />
                         ) : isAdmin ? (
                           <AdminShell onExit={goBack} />

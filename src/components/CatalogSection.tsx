@@ -59,62 +59,24 @@ export default function CatalogSection({
   const [mode, setMode] = useState<Mode>("todos");
   const [cat,  setCat]  = useState<Cat>(null);
 
-  // New filters state
-  const [brand, setBrand] = useState("todos");
-  const [maxPrice, setMaxPrice] = useState<number>(10000000); // High default
-  const [onlyDiscount, setOnlyDiscount] = useState(false);
-  const [onlyAvailable, setOnlyAvailable] = useState(false);
-
   const handleMode = (m: Mode) => {
     setMode(m);
     setCat(null);
     setSearchTerm("");
-    setBrand("todos");
-    setOnlyDiscount(false);
-    setOnlyAvailable(false);
-    setMaxPrice(m === "aluguer" ? 20000 : 15000000);
   };
 
   const allVehicles = dynamicVehicles as unknown as Vehicle[];
 
-  const uniqueBrands = Array.from(new Set(
-    allVehicles
-      .filter(v => v && (mode === "todos" || v.mode === mode))
-      .map(v => v.brand)
-      .filter(Boolean) // Remove null/undefined/empty brands
-  )).sort();
-
   const filtered = allVehicles.filter((v) => {
-    // Safety check for vehicle data
     if (!v) return false;
-
-    // Mode filter
     if (mode !== "todos" && v.mode !== mode) return false;
-
-    // Type filter
     if (cat && v.cat !== cat) return false;
-
-    // Brand filter
-    if (brand !== "todos" && v.brand !== brand) return false;
-
-    // Search filter (name or brand) - Added safety checks with optional chaining and fallback
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       const nameMatch = (v.name || "").toLowerCase().includes(searchLower);
       const brandMatch = (v.brand || "").toLowerCase().includes(searchLower);
       if (!nameMatch && !brandMatch) return false;
     }
-
-    // Price filter
-    const priceValue = Number(String(v.price || "0").replace(/[^\d]/g, "")) || 0;
-    if (maxPrice > 0 && priceValue > maxPrice) return false;
-
-    // Discount filter
-    if (onlyDiscount && (!v.discount || v.discount <= 0)) return false;
-
-    // Availability filter (only for rental)
-    if (mode === "aluguer" && onlyAvailable && v.available === false) return false;
-
     return true;
   });
 
@@ -254,80 +216,6 @@ export default function CatalogSection({
               ))}
             </div>
 
-            {/* Advanced Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 p-6 bg-zinc-900/40 rounded-3xl border border-zinc-800/50">
-              {/* Brand Select */}
-              <div className="flex flex-col gap-2">
-                <label className="text-white text-[10px] uppercase font-bold tracking-wider ml-1">Marca</label>
-                <div className="relative">
-                  <select
-                    value={brand}
-                    onChange={(e) => setBrand(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500/50 outline-none transition-all appearance-none"
-                  >
-                    <option value="todos">Todas as marcas</option>
-                    {uniqueBrands.map(b => (
-                      <option key={b} value={b}>{b}</option>
-                    ))}
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white text-[10px]">▼</div>
-                </div>
-              </div>
-
-              {/* Price Range */}
-              <div className="flex flex-col gap-2">
-                <label className="text-white text-[10px] uppercase font-bold tracking-wider ml-1">
-                  Preço Máximo {mode === "aluguer" ? "(MT/dia)" : "(MT)"}
-                </label>
-                <input
-                  type="range"
-                  min={mode === "aluguer" ? "500" : "500000"}
-                  max={mode === "aluguer" ? "20000" : "15000000"}
-                  step={mode === "aluguer" ? "500" : "250000"}
-                  value={maxPrice}
-                  onChange={(e) => setMaxPrice(Number(e.target.value))}
-                  className="w-full accent-amber-500 h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer mt-3"
-                />
-                <div className="flex justify-between text-[10px] text-white font-mono mt-1">
-                  <span>{mode === "aluguer" ? "500" : "500k"}</span>
-                  <span className="text-amber-500 font-bold">{maxPrice >= (mode === "aluguer" ? 20000 : 15000000) ? "Qualquer" : Math.round(maxPrice).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + " MT"}</span>
-                  <span>{mode === "aluguer" ? "20k" : "15M"}</span>
-                </div>
-              </div>
-
-              {/* Toggles */}
-              <div className="flex flex-col justify-end gap-3">
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <div className="relative">
-                    <input
-                      type="checkbox"
-                      checked={onlyDiscount}
-                      onChange={(e) => setOnlyDiscount(e.target.checked)}
-                      className="sr-only"
-                    />
-                    <div className={`w-10 h-5 rounded-full transition-colors ${onlyDiscount ? "bg-amber-500" : "bg-zinc-800"}`} />
-                    <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${onlyDiscount ? "translate-x-5" : ""}`} />
-                  </div>
-                  <span className="text-xs font-semibold text-white group-hover:text-white transition-colors">Com Desconto</span>
-                </label>
-
-                {mode === "aluguer" && (
-                  <label className="flex items-center gap-3 cursor-pointer group">
-                    <div className="relative">
-                      <input
-                        type="checkbox"
-                        checked={onlyAvailable}
-                        onChange={(e) => setOnlyAvailable(e.target.checked)}
-                        className="sr-only"
-                      />
-                      <div className={`w-10 h-5 rounded-full transition-colors ${onlyAvailable ? "bg-amber-500" : "bg-zinc-800"}`} />
-                      <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${onlyAvailable ? "translate-x-5" : ""}`} />
-                    </div>
-                    <span className="text-xs font-semibold text-white group-hover:text-white transition-colors">Disponível Agora</span>
-                  </label>
-                )}
-              </div>
-            </div>
           </>
         )}
 

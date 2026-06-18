@@ -26,7 +26,7 @@ const ROLES: { id: UserRole; label: string; icon: React.ReactNode; desc: string 
   }
 ];
 
-export function LoginPage({ onCancel }: { onCancel?: () => void }) {
+export function LoginPage({ onCancel, onRecuperar }: { onCancel?: () => void; onRecuperar?: () => void }) {
   const { login, isLoading, allUsers } = useAuth();
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
@@ -214,6 +214,18 @@ export function LoginPage({ onCancel }: { onCancel?: () => void }) {
                 </div>
               ) : 'Entrar no Sistema'}
             </button>
+
+            {onRecuperar && (
+              <div className="text-center pt-1">
+                <button
+                  type="button"
+                  onClick={onRecuperar}
+                  className="text-xs text-zinc-500 hover:text-amber-400 transition"
+                >
+                  Esqueceu a senha?
+                </button>
+              </div>
+            )}
           </form>
         </div>
 

@@ -103,42 +103,66 @@ export function XitiqueClientPage({ onExit, embedded }: { onExit?: () => void; e
 
         {/* Estado do Grupo */}
         {grupo && (
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { label: 'Estado',        value: estadoGrupo === 'EmAndamento' ? 'Em Andamento' : estadoGrupo },
-              { label: 'Mês Actual',    value: `${mesAtual} / ${numMembros}` },
-              { label: 'Prémio Mensal', value: fmt(premioMT) },
-            ].map(s => (
-              <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
-                <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">{s.label}</div>
-                <div className="text-sm font-black text-white leading-tight">{s.value}</div>
+          <div className="space-y-2">
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: 'Estado', value: estadoGrupo === 'EmAndamento' ? 'Em Andamento' : estadoGrupo === 'Concluido' ? 'Concluído' : 'Aberto' },
+                estadoGrupo === 'Aberto'
+                  ? { label: 'Membros', value: `${grupo.membros.length} / ${numMembros}` }
+                  : { label: 'Mês Actual', value: `${mesAtual} / ${numMembros}` },
+                { label: 'Prémio Mensal', value: fmt(premioMT) },
+              ].map(s => (
+                <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
+                  <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">{s.label}</div>
+                  <div className="text-sm font-black text-white leading-tight">{s.value}</div>
+                </div>
+              ))}
+            </div>
+            {grupo.dataInicio && (
+              <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span className="text-[10px] text-zinc-400">Início do ciclo:</span>
+                <span className="text-[10px] font-black text-amber-400">{(() => { const [y,m,d] = grupo.dataInicio!.split('-'); const ms=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; return `${d} ${ms[parseInt(m,10)-1]} ${y}`; })()}</span>
               </div>
-            ))}
+            )}
           </div>
         )}
 
         {/* Caso 1: É membro */}
         {membro && cores && (
-          <div className={`rounded-2xl border p-5 space-y-4 ${cores.bg}`}>
+          <div className={`rounded-2xl border p-5 space-y-4 ${
+            estadoGrupo === 'Aberto' && membro.estado === 'Pendente'
+              ? 'bg-zinc-900 border-zinc-800'
+              : cores.bg
+          }`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`w-2.5 h-2.5 rounded-full ${cores.dot} ${membro.estado !== 'Sorteado' ? 'animate-pulse' : ''}`} />
-                <span className={`text-sm font-black uppercase tracking-wide ${cores.text}`}>
-                  {membro.estado === 'Pendente' ? 'Pagamento Pendente'
+                <div className={`w-2.5 h-2.5 rounded-full ${
+                  estadoGrupo === 'Aberto' && membro.estado === 'Pendente' ? 'bg-zinc-500' : cores.dot
+                } ${estadoGrupo === 'Aberto' && membro.estado === 'Pendente' ? '' : membro.estado !== 'Sorteado' ? 'animate-pulse' : ''}`} />
+                <span className={`text-sm font-black uppercase tracking-wide ${
+                  estadoGrupo === 'Aberto' && membro.estado === 'Pendente' ? 'text-white' : cores.text
+                }`}>
+                  {membro.estado === 'Sorteado' ? 'Contemplado 🎉'
                     : membro.estado === 'Aceite' ? 'Pagamento Confirmado'
-                    : 'Contemplado 🎉'}
+                    : estadoGrupo === 'Aberto' ? 'Inscrito no Grupo'
+                    : 'Pagamento Pendente'}
                 </span>
               </div>
-              <span className="text-xs text-white">Mês {mesAtual}</span>
+              {estadoGrupo === 'EmAndamento' && (
+                <span className="text-xs text-white">Mês {mesAtual}</span>
+              )}
             </div>
 
             <p className="text-xs text-white leading-relaxed">
-              {membro.estado === 'Pendente' &&
-                `Efectue o pagamento de ${fmt(quotaMT)} via M-Pesa e aguarde a confirmação do administrador.`}
+              {membro.estado === 'Pendente' && estadoGrupo === 'Aberto' &&
+                `O grupo ainda está a aguardar os restantes ${numMembros - grupo!.membros.length} membros. O ciclo inicia quando o grupo estiver completo.`}
+              {membro.estado === 'Pendente' && estadoGrupo === 'EmAndamento' &&
+                `Efectue o pagamento de ${fmt(quotaMT)} e aguarde a confirmação do administrador.`}
               {membro.estado === 'Aceite' &&
                 `O seu pagamento de ${fmt(quotaMT)} foi confirmado. Está elegível para o sorteio deste mês.`}
               {membro.estado === 'Sorteado' &&
-                `Parabéns! Foi sorteado e irá receber ${fmt(premioMT)}. O administrador entrará em contacto.`}
+                `Parabéns! Foi contemplado e irá receber ${fmt(premioMT)}. O administrador entrará em contacto.`}
             </p>
 
             {/* Progresso visual do ciclo */}
@@ -224,27 +248,45 @@ export function XitiqueClientPage({ onExit, embedded }: { onExit?: () => void; e
                 const sorteio = sorteios.find(s => s.mes === mes);
                 const pagou   = membro.mesesPagos.includes(mes);
                 const ganhou  = sorteio?.vencedor === membro.nome;
+                const registo = membro.pagamentos?.[mes];
                 return (
-                  <div key={mes} className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 ${
-                    ganhou ? 'bg-emerald-400/10 border border-emerald-400/20' : 'bg-zinc-800/50'
+                  <div key={mes} className={`rounded-xl overflow-hidden border ${
+                    ganhou ? 'border-emerald-400/20' : 'border-transparent'
                   }`}>
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="w-6 h-6 rounded-full bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-[10px] font-black text-amber-400 shrink-0">{mes}</span>
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-xs text-zinc-400">Mês {mes}</span>
-                        {ganhou && <span className="text-xs text-emerald-400 font-black">🏆 Sorteado</span>}
+                    <div className={`flex items-center justify-between gap-2 px-3 py-2.5 ${
+                      ganhou ? 'bg-emerald-400/10' : 'bg-zinc-800/50'
+                    }`}>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="w-6 h-6 rounded-full bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-[10px] font-black text-amber-400 shrink-0">{mes}</span>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs text-zinc-400">Mês {mes}</span>
+                          {ganhou && <span className="text-xs text-emerald-400 font-black">🏆 Sorteado</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {pagou ? (
+                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 rounded-full">Pago</span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-zinc-500 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded-full">Pendente</span>
+                        )}
+                        {ganhou && sorteio && (
+                          <span className="text-xs text-amber-400 font-black">{fmt(sorteio.valorPremio)}</span>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {pagou ? (
-                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 rounded-full">Pago</span>
-                      ) : (
-                        <span className="text-[10px] font-bold text-zinc-500 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded-full">Pendente</span>
-                      )}
-                      {ganhou && sorteio && (
-                        <span className="text-xs text-amber-400 font-black">{fmt(sorteio.valorPremio)}</span>
-                      )}
-                    </div>
+                    {pagou && registo && (
+                      <div className="flex flex-wrap gap-x-4 gap-y-0.5 px-3 py-1.5 bg-zinc-900/60 border-t border-zinc-700/40">
+                        <span className="text-[10px] text-zinc-400">
+                          Via <span className="text-white font-bold">{registo.metodo}</span>
+                        </span>
+                        {registo.referencia && (
+                          <span className="text-[10px] text-zinc-400">
+                            Ref: <span className="text-white font-mono">{registo.referencia}</span>
+                          </span>
+                        )}
+                        <span className="text-[10px] text-zinc-400">{registo.data}</span>
+                      </div>
+                    )}
                   </div>
                 );
               })}

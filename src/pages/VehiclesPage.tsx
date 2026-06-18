@@ -5,7 +5,6 @@ import { useReservations } from '../context/ReservationsContext';
 const CATEGORIES = ['suv', 'pickup', 'sedan', 'hatchback', 'van'];
 const MODES = ['aluguer', 'compra'];
 const FUELS = ['Diesel', 'Gasolina', 'Híbrido', 'Eléctrico'];
-const UPLOAD_URL = 'http://localhost:4002/upload';
 
 const emptyForm: Omit<VehicleData, 'id'> = {
   name: '', brand: '', cat: 'suv', mode: 'aluguer', price: '', description: '', img: '', images: [], fuel: 'Gasolina', seats: 5, year: 2024, discount: 0, available: true, matricula: '',
@@ -108,33 +107,27 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
     setForm(f => ({ ...f, img: url }));
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
     setUploadError('');
-    try {
-      const formData = new FormData();
-      formData.append('image', file);
-      const res = await fetch(UPLOAD_URL, { method: 'POST', body: formData });
-      if (!res.ok) throw new Error(`Servidor devolveu ${res.status}`);
-      const { url } = await res.json();
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
       setForm(f => ({
         ...f,
-        images: [...f.images, url],
-        img: f.img || url,
+        images: [...f.images, dataUrl],
+        img: f.img || dataUrl,
       }));
-    } catch (err) {
-      const isNetwork = err instanceof TypeError;
-      setUploadError(
-        isNetwork
-          ? 'Servidor de upload não encontrado. Reinicia o npm run dev.'
-          : `Erro: ${err instanceof Error ? err.message : 'desconhecido'}`
-      );
-    } finally {
       setUploading(false);
-      e.target.value = '';
-    }
+    };
+    reader.onerror = () => {
+      setUploadError('Erro ao ler o ficheiro. Tenta novamente.');
+      setUploading(false);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleSubmit = (e?: React.FormEvent) => {
@@ -353,13 +346,25 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-white text-sm font-medium block mb-1.5">Preço *</label>
-                    <input
-                      required
-                      value={form.price}
-                      onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
-                      placeholder="Ex: 4.500 MT/dia"
-                      className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-zinc-600"
-                    />
+                    <div className="relative">
+                      <input
+                        required
+                        inputMode="numeric"
+                        value={form.price.replace(/\s*(MT\/dia|MT)\s*$/, '')}
+                        onChange={e => {
+                          const digits = e.target.value.replace(/\D/g, '');
+                          if (!digits) { setForm(f => ({ ...f, price: '' })); return; }
+                          const formatted = parseInt(digits, 10).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                          const suffix = form.mode === 'aluguer' ? ' MT/dia' : ' MT';
+                          setForm(f => ({ ...f, price: formatted + suffix }));
+                        }}
+                        placeholder={form.mode === 'aluguer' ? '4.500' : '7.200.000'}
+                        className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 pl-4 pr-20 py-2.5 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-zinc-600"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-black text-amber-400 pointer-events-none">
+                        {form.mode === 'aluguer' ? 'MT/dia' : 'MT'}
+                      </span>
+                    </div>
                   </div>
                   <div>
                     <label className="text-white text-sm font-medium block mb-1.5">Combustível</label>

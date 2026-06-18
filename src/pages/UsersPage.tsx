@@ -321,22 +321,34 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                 { value: 'em_analise',          label: 'Registrar',     badge: guests.filter(g => g.status === 'em_analise').length || undefined },
                 { value: 'aprovado',            label: 'Aprovados' },
                 { value: 'rejeitado',           label: 'Rejeitados' },
-              ] as { value: GuestSubFilter; label: string; badge?: number }[]).map(sf => (
-                <button key={sf.value}
-                  onClick={() => setGuestSub(sf.value)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
-                    guestSub === sf.value
-                      ? 'bg-amber-500 text-zinc-950 border-amber-500'
-                      : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-white'
-                  }`}>
-                  {sf.label}
-                  {sf.badge !== undefined && (
-                    <span className={`min-w-[16px] h-4 flex items-center justify-center rounded-full text-[10px] font-black px-1 ${
-                      guestSub === sf.value ? 'bg-zinc-950/30 text-zinc-950' : 'bg-amber-500/20 text-amber-400'
-                    }`}>{sf.badge}</span>
-                  )}
-                </button>
-              ))}
+              ] as { value: GuestSubFilter; label: string; badge?: number }[]).map(sf => {
+                const isActive  = guestSub === sf.value;
+                const isUrgent  = !!sf.badge && sf.badge > 0 && !isActive;
+                return (
+                  <button key={sf.value}
+                    onClick={() => setGuestSub(sf.value)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                      isActive
+                        ? 'bg-amber-500 text-zinc-950 border-amber-500'
+                        : isUrgent
+                        ? 'bg-zinc-900 text-red-400 border-red-500/40 animate-pulse hover:border-red-500/70 hover:text-red-300'
+                        : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-white'
+                    }`}>
+                    {sf.label}
+                    {sf.badge !== undefined && (
+                      <span className={`min-w-[16px] h-4 flex items-center justify-center rounded-full text-[10px] font-black px-1 ${
+                        isActive ? 'bg-zinc-950/30 text-zinc-950' : 'bg-red-500/20 text-red-400'
+                      }`}>{sf.badge}</span>
+                    )}
+                    {isUrgent && (
+                      <span className="relative flex h-1.5 w-1.5 shrink-0">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
 

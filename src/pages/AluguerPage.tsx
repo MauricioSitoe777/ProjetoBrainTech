@@ -88,9 +88,11 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
 
   const accionaveisCount = aluguerReservations.filter(r => r.status !== 'cancelada' && r.status !== 'concluida').length;
 
-  const tabList: { key: Tab; label: string }[] = [
+  const acoesUrgente = kpis.pendentes > 0 || kpis.devolucaoPendente > 0;
+
+  const tabList: { key: Tab; label: string; urgent?: boolean }[] = [
     { key: 'reservas',   label: `Histórico (${historico.length})` },
-    { key: 'acoes',      label: `Ações (${accionaveisCount})` },
+    { key: 'acoes',      label: `Ações (${accionaveisCount})`,     urgent: acoesUrgente },
     { key: 'calendario', label: 'Calendário' },
     { key: 'bloqueios',  label: `Bloqueios (${blocks.length})` },
     { key: 'regras',     label: 'Regras' },
@@ -130,13 +132,21 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
         <div className="flex gap-1 border-b border-zinc-800 overflow-x-auto">
           {tabList.map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
-              className={`px-4 py-2.5 text-xs font-bold whitespace-nowrap rounded-t-lg border-b-2 transition ${
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold whitespace-nowrap rounded-t-lg border-b-2 transition ${
                 tab === t.key
                   ? 'border-amber-500 text-amber-400'
+                  : t.urgent
+                  ? 'border-transparent text-red-400 animate-pulse hover:text-red-300'
                   : 'border-transparent text-white hover:text-white'
               }`}
             >
               {t.label}
+              {t.urgent && tab !== t.key && (
+                <span className="relative flex h-1.5 w-1.5 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" />
+                </span>
+              )}
             </button>
           ))}
         </div>

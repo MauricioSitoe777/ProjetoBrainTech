@@ -1,6 +1,19 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import emailjs from '@emailjs/browser';
 import type { AuthUser, User } from '../types/user';
 import { mockUsers as initialMockUsers } from '../data/mockData';
+import { EMAILJS_CONFIG, RESET_EXPIRES_MS } from '../config/emailjs';
+
+const RESET_KEY = 'rentcar:reset:v1';
+
+interface ResetEntry { userId: string; expires: number; }
+
+function getResetStore(): Record<string, ResetEntry> {
+  try { return JSON.parse(localStorage.getItem(RESET_KEY) ?? '{}'); } catch { return {}; }
+}
+function saveResetStore(store: Record<string, ResetEntry>) {
+  localStorage.setItem(RESET_KEY, JSON.stringify(store));
+}
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -13,6 +26,9 @@ interface AuthContextType {
   updateUser: (id: string, data: Partial<User>) => void;
   deleteUser: (id: string) => void;
   loginById: (id: string) => void;
+  solicitarResetSenha: (email: string) => Promise<'sent' | 'not_found' | 'error'>;
+  validarTokenReset: (token: string) => string | null;
+  redefinirSenha: (token: string, novaSenha: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -133,6 +149,70 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const solicitarResetSenha = async (email: string): Promise<'sent' | 'not_found' | 'error'> => {
+    const found = allUsers.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
+    if (!found) return 'not_found';
+
+    // Gera token seguro de 48 chars hex
+    const token = Array.from(crypto.getRandomValues(new Uint8Array(24)))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+
+    // Guarda token em localStorage com validade de 1 hora
+    const store = getResetStore();
+    // Remove tokens antigos do mesmo utilizador
+    for (const [k, v] of Object.entries(store)) {
+      if (v.userId === found.id) delete store[k];
+    }
+    store[token] = { userId: found.id, expires: Date.now() + RESET_EXPIRES_MS };
+    saveResetStore(store);
+
+    const resetLink = `${window.location.origin}/recuperar-senha/${token}`;
+
+    try {
+      await emailjs.send(
+        EMAILJS_CONFIG.serviceId,
+        EMAILJS_CONFIG.templateId,
+        {
+          to_name:    found.nome,
+          to_email:   found.email,
+          reset_link: resetLink,
+          expires_in: '1 hora',
+        },
+        EMAILJS_CONFIG.publicKey,
+      );
+      return 'sent';
+    } catch (err) {
+      console.error('[Auth] EmailJS error:', err);
+      // Em desenvolvimento, mostra o link na consola para testes
+      console.info('[Auth] Reset link (dev):', resetLink);
+      return 'error';
+    }
+  };
+
+  const validarTokenReset = (token: string): string | null => {
+    const store = getResetStore();
+    const entry = store[token];
+    if (!entry) return null;
+    if (Date.now() > entry.expires) {
+      // Token expirado — limpa
+      delete store[token];
+      saveResetStore(store);
+      return null;
+    }
+    return entry.userId;
+  };
+
+  const redefinirSenha = (token: string, novaSenha: string): boolean => {
+    const userId = validarTokenReset(token);
+    if (!userId) return false;
+    setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, password: novaSenha, mustChangePassword: false } : u));
+    // Invalida o token após uso
+    const store = getResetStore();
+    delete store[token];
+    saveResetStore(store);
+    return true;
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -145,6 +225,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateUser,
       deleteUser,
       loginById,
+      solicitarResetSenha,
+      validarTokenReset,
+      redefinirSenha,
     }}>
       {children}
     </AuthContext.Provider>

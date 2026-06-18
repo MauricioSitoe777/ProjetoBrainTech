@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Users, DollarSign, Ban, Lock, ArrowRight, FileText } from "lucide-react";
 import { useScrollTo } from "../hooks";
 import { useXitique } from "../context/XitiqueContext";
 
@@ -26,38 +27,31 @@ export default function XitiqueSection({
     return () => observer.disconnect();
   }, []);
 
+  const openGroups = grupos.filter(g => g.estadoGrupo === 'Aberto' && g.membros.length < g.maxMembros);
+  const fmt = (n: number) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const quotaDisplay = openGroups.length > 0
+    ? `${fmt(openGroups[0].quotaMT)} MT`
+    : 'A definir';
+  const premioDisplay = openGroups.length > 0
+    ? `${fmt(openGroups[0].premioMT)} MT`
+    : 'A definir';
+
   const features = [
     {
       title: "Poupança Colectiva",
-      desc: "Um grupo de 10 pessoas une-se para alcançar o sonho do carro próprio através de contribuições mensais.",
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-          <circle cx="9" cy="7" r="4" />
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-        </svg>
-      )
+      desc: "Grupos organizados pelo admin com número de membros e quota próprios — cada ciclo tem as suas condições.",
+      icon: <Users size={22} strokeWidth={2} />,
     },
     {
       title: "Sorteios Mensais",
-      desc: "Todos os meses, um membro é contemplado com 300.000 MT para a entrada ou compra da sua viatura.",
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-        </svg>
-      )
+      desc: "Todos os meses, um membro é contemplado com o fundo total do grupo para entrada ou compra da viatura.",
+      icon: <DollarSign size={22} strokeWidth={2} />,
     },
     {
       title: "Sem Juros Bancários",
       desc: "Uma alternativa justa e tradicional para quem quer evitar as taxas elevadas dos financiamentos bancários.",
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-        </svg>
-      )
-    }
+      icon: <Ban size={22} strokeWidth={2} />,
+    },
   ];
 
   return (
@@ -110,28 +104,38 @@ export default function XitiqueSection({
             </div>
 
             <div className="mt-12 flex flex-wrap gap-4">
-              <button 
+              <button
                 onClick={() => {
-                   try {
-                     window.dispatchEvent(new CustomEvent("rentcar:open-xitique-modal"));
-                   } catch { /* ignore */ }
+                  try { window.dispatchEvent(new CustomEvent("rentcar:open-xitique-modal")); } catch { /* ignore */ }
                 }}
-                className={`px-8 py-4 font-black uppercase text-sm tracking-wider rounded-2xl transition-all hover:scale-105 active:scale-95 shadow-xl ${
-                  isClosed 
-                  ? "bg-zinc-800 text-white border border-zinc-700 cursor-not-allowed" 
-                  : "bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-amber-500/10"
+                disabled={isClosed}
+                className={`group relative flex items-center gap-3 px-8 py-4 rounded-2xl font-black uppercase text-sm tracking-wider transition-all duration-300 overflow-hidden ${
+                  isClosed
+                    ? "bg-zinc-800/60 text-zinc-500 border border-zinc-700/50 cursor-not-allowed"
+                    : "bg-amber-500 text-zinc-950 hover:bg-amber-400 hover:scale-[1.03] active:scale-[0.97] shadow-[0_8px_32px_rgba(245,158,11,0.35)] hover:shadow-[0_12px_40px_rgba(245,158,11,0.5)]"
                 }`}
               >
-                {isClosed ? "Inscrições Encerradas" : "Quero Participar"}
+                {isClosed ? (
+                  <>
+                    <Lock size={15} strokeWidth={2.5} />
+                    Inscrições Encerradas
+                  </>
+                ) : (
+                  <>
+                    <Users size={15} strokeWidth={2.5} />
+                    Quero Participar
+                    <ArrowRight size={14} strokeWidth={3} className="transition-transform duration-300 group-hover:translate-x-1" />
+                  </>
+                )}
               </button>
-              <button 
+
+              <button
                 onClick={() => {
-                   try {
-                     window.dispatchEvent(new CustomEvent("rentcar:open-xitique-regs"));
-                   } catch { /* ignore */ }
+                  try { window.dispatchEvent(new CustomEvent("rentcar:open-xitique-regs")); } catch { /* ignore */ }
                 }}
-                className="px-8 py-4 bg-zinc-900 text-white border border-zinc-800 font-black uppercase text-sm tracking-wider rounded-2xl hover:bg-zinc-800 transition-all"
+                className="group flex items-center gap-3 px-8 py-4 rounded-2xl font-black uppercase text-sm tracking-wider transition-all duration-300 border border-zinc-700 bg-zinc-900/50 text-white hover:border-amber-500/50 hover:bg-zinc-800/80 hover:text-amber-400 active:scale-[0.97]"
               >
+                <FileText size={15} strokeWidth={2.5} className="text-amber-500 group-hover:text-amber-400 transition-colors" />
                 Ver Regulamento
               </button>
             </div>
@@ -152,17 +156,17 @@ export default function XitiqueSection({
               
               <div className="space-y-6">
                 {[
-                  { step: "1", text: "Grupo de 10 membros formado pelo Admin.", active: true },
-                  { step: "2", text: "Cada membro contribui com 30.000 MT por mês.", active: true },
-                  { step: "3", text: "Sorteio mensal de 300.000 MT para um contemplado.", active: true },
-                  { step: "4", text: "Entrega imediata da viatura ou crédito em conta.", active: true },
-                  { step: "5", text: "O ciclo continua por 10 meses até todos serem premiados.", active: true },
+                  { step: "1", text: "O admin cria o grupo e define o número de membros e a quota mensal." },
+                  { step: "2", text: "Cada membro contribui com a quota mensal definida para o grupo." },
+                  { step: "3", text: "Sorteio mensal do fundo acumulado entre todos os membros." },
+                  { step: "4", text: "O contemplado recebe a viatura ou o crédito em conta." },
+                  { step: "5", text: "O ciclo repete-se até todos os membros serem contemplados." },
                 ].map((s, i) => (
                   <div key={i} className="flex items-center gap-4">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black border ${s.active ? 'bg-amber-500 border-amber-400 text-zinc-950' : 'bg-zinc-800 border-zinc-700 text-white'}`}>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black border bg-amber-500 border-amber-400 text-zinc-950 shrink-0">
                       {s.step}
                     </div>
-                    <p className={`text-sm md:text-base font-bold ${s.active ? 'text-white' : 'text-white'}`}>{s.text}</p>
+                    <p className="text-sm md:text-base font-bold text-white">{s.text}</p>
                   </div>
                 ))}
               </div>
@@ -170,17 +174,17 @@ export default function XitiqueSection({
               <div className="mt-10 pt-8 border-t border-zinc-700 flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-black text-white uppercase tracking-widest mb-1">Quota Mensal</p>
-                  <p className="text-3xl font-black text-white">30.000 <span className="text-amber-500 text-sm">MT</span></p>
+                  <p className="text-2xl font-black text-white">{quotaDisplay}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-black text-white uppercase tracking-widest mb-1">Prémio Final</p>
-                  <p className="text-3xl font-black text-amber-500">300.000 <span className="text-white text-sm">MT</span></p>
+                  <p className="text-[10px] font-black text-white uppercase tracking-widest mb-1">Fundo do Grupo</p>
+                  <p className="text-2xl font-black text-amber-500">{premioDisplay}</p>
                 </div>
               </div>
 
               <div className="mt-8 bg-amber-500/10 border border-amber-500/30 p-5 rounded-2xl">
                 <p className="text-xs text-amber-400 font-black leading-tight">
-                  ⚠️ NOTA: Os valores e o número de membros podem variar de acordo com o grupo disponível no momento da inscrição.
+                  ⚠️ Os valores, número de membros e duração variam consoante o grupo. Consulte os grupos disponíveis ao inscrever-se.
                 </p>
               </div>
             </div>

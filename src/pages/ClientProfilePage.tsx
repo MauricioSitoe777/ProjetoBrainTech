@@ -9,7 +9,7 @@ import { NotificationBell } from '../components/NotificationBell';
 import { ReservationTracker } from '../components/ReservationTracker';
 import type { ReservationStatus } from '../types/reservation';
 
-type Tab = 'resumo' | 'aluguer' | 'compra' | 'xitique';
+type Tab = 'resumo' | 'aluguer' | 'compra' | 'xitique' | 'dados';
 
 const fmt = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' MT';
 
@@ -113,22 +113,29 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
 
   // ── Tabs disponíveis ───────────────────────────────────────────────────────
   const availableTabs: { key: Tab; label: string; badge?: number }[] = [
-    { key: 'resumo', label: 'Resumo' },
+    { key: 'resumo', label: 'Histórico' },
     ...(alugueres.length > 0 ? [{ key: 'aluguer' as Tab, label: 'Aluguer', badge: alugueres.length }] : []),
     ...(compras.length > 0   ? [{ key: 'compra'  as Tab, label: 'Compra',  badge: compras.length  }] : []),
     ...((membro || inscricaoPendente) ? [{ key: 'xitique' as Tab, label: 'Xitique' }] : []),
+    { key: 'dados', label: 'Dados Pessoais' },
   ];
+
+  const fullUser = allUsers.find(u => u.id === authUser?.id) ?? null;
 
   const [tab, setTab] = useState<Tab>('resumo');
   const [prestOpen, setPrestOpen] = useState<Set<string>>(new Set());
+  const [secOpen, setSecOpen]     = useState<Set<string>>(new Set());
+  const toggleSec = (k: string) => setSecOpen(prev => { const s = new Set(prev); s.has(k) ? s.delete(k) : s.add(k); return s; });
 
   const getVehicleName = (id: number) => VEHICLES.find(v => v.id === id)?.name ?? `Viatura #${id}`;
   const getVehicle     = (id: number) => VEHICLES.find(v => v.id === id);
 
+  const xitiquePendentePagamento = membro?.estado === 'Pendente' && grupoDoUser?.estadoGrupo === 'EmAndamento';
+
   const totalAlertas =
     prestacoesPendentes.length +
     minhasDividas.length +
-    (membro?.estado === 'Pendente' ? 1 : 0);
+    (xitiquePendentePagamento ? 1 : 0);
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -217,13 +224,13 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
         {/* ── Alertas ── */}
         {totalAlertas > 0 && (
           <div className="space-y-2">
-            {membro?.estado === 'Pendente' && (
+            {xitiquePendentePagamento && (
               <div className="flex items-center gap-3 bg-amber-400/5 border border-amber-400/20 rounded-2xl px-4 py-3">
                 <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
                 <div className="min-w-0">
                   <p className="text-sm font-black text-amber-400">Pagamento Xitique Pendente</p>
                   <p className="text-xs text-white mt-0.5">
-                    Efectue o pagamento de {fmt(quotaMT)} via M-Pesa — Mês {mesAtual}.
+                    Efectue o pagamento de {fmt(quotaMT)} — Mês {mesAtual}. Confirme o canal de pagamento com o administrador.
                   </p>
                 </div>
               </div>
@@ -287,7 +294,6 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
 
             {/* Conta suspensa */}
             {(() => {
-              const fullUser = allUsers.find(u => u.id === authUser?.id);
               return fullUser?.status === 'suspenso' && fullUser.motivoSuspensao ? (
                 <div className="flex gap-3 bg-red-500/5 border border-red-500/20 rounded-xl px-4 py-3 mb-2">
                   <svg className="shrink-0 mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2">
@@ -766,24 +772,44 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
           <div className="space-y-4">
 
             {/* Estado do grupo */}
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: 'Estado',       value: (grupoDoUser?.estadoGrupo ?? 'Aberto') === 'EmAndamento' ? 'Em Andamento' : (grupoDoUser?.estadoGrupo ?? 'Aberto') },
-                { label: 'Mês Actual',   value: `${mesAtual} / ${numMembros}` },
-                { label: 'Prémio Mensal',value: fmt(premioMT) },
-              ].map(s => (
-                <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
-                  <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">{s.label}</div>
-                  <div className="text-sm font-black text-white leading-tight">{s.value}</div>
+            {(() => {
+              const estadoGrupo = grupoDoUser?.estadoGrupo ?? 'Aberto';
+              const membrosActuais = grupoDoUser?.membros.length ?? 0;
+              const dataInicio = grupoDoUser?.dataInicio;
+              const stats = [
+                { label: 'Estado', value: estadoGrupo === 'EmAndamento' ? 'Em Andamento' : estadoGrupo === 'Concluido' ? 'Concluído' : 'Aberto' },
+                estadoGrupo === 'Aberto'
+                  ? { label: 'Membros', value: `${membrosActuais} / ${numMembros}` }
+                  : { label: 'Mês Actual', value: `${mesAtual} / ${numMembros}` },
+                { label: 'Prémio Mensal', value: fmt(premioMT) },
+              ];
+              return (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-3 gap-3">
+                    {stats.map(s => (
+                      <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
+                        <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">{s.label}</div>
+                        <div className="text-sm font-black text-white leading-tight">{s.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {dataInicio && (
+                    <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                      <span className="text-[10px] text-zinc-400">Início do ciclo:</span>
+                      <span className="text-[10px] font-black text-amber-400">{fmtData(dataInicio)}</span>
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
+              );
+            })()}
 
             {/* Card estado do membro */}
             {membro && (
               <div className={`rounded-2xl border p-5 space-y-4 ${
                 membro.estado === 'Sorteado' ? 'bg-emerald-400/10 border-emerald-400/20' :
                 membro.estado === 'Aceite'   ? 'bg-amber-400/10 border-amber-400/20'     :
+                grupoDoUser?.estadoGrupo === 'Aberto' ? 'bg-zinc-900 border-zinc-800'    :
                                                'bg-zinc-900 border-zinc-800'
               }`}>
                 <div className="flex items-center justify-between">
@@ -791,22 +817,28 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
                     <div className={`w-2.5 h-2.5 rounded-full ${
                       membro.estado === 'Sorteado' ? 'bg-emerald-400' :
                       membro.estado === 'Aceite'   ? 'bg-amber-400 animate-pulse' :
+                      grupoDoUser?.estadoGrupo === 'Aberto' ? 'bg-zinc-500' :
                                                      'bg-zinc-500 animate-pulse'
                     }`} />
                     <span className={`text-sm font-black uppercase tracking-wide ${
                       membro.estado === 'Sorteado' ? 'text-emerald-400' :
                       membro.estado === 'Aceite'   ? 'text-amber-400'   : 'text-white'
                     }`}>
-                      {membro.estado === 'Pendente' ? 'Pagamento Pendente'
+                      {membro.estado === 'Sorteado' ? 'Contemplado 🎉'
                         : membro.estado === 'Aceite' ? 'Pagamento Confirmado'
-                        : 'Contemplado 🎉'}
+                        : grupoDoUser?.estadoGrupo === 'Aberto' ? 'Inscrito no Grupo'
+                        : 'Pagamento Pendente'}
                     </span>
                   </div>
-                  <span className="text-xs text-white">Mês {mesAtual}</span>
+                  {grupoDoUser?.estadoGrupo === 'EmAndamento' && (
+                    <span className="text-xs text-white">Mês {mesAtual}</span>
+                  )}
                 </div>
                 <p className="text-xs text-white leading-relaxed">
-                  {membro.estado === 'Pendente' &&
-                    `Efectue o pagamento de ${fmt(quotaMT)} via M-Pesa e aguarde a confirmação do administrador.`}
+                  {membro.estado === 'Pendente' && grupoDoUser?.estadoGrupo === 'Aberto' &&
+                    `O grupo ainda está a aguardar os restantes ${numMembros - (grupoDoUser?.membros.length ?? 0)} membros. O ciclo inicia quando o grupo estiver completo.`}
+                  {membro.estado === 'Pendente' && grupoDoUser?.estadoGrupo === 'EmAndamento' &&
+                    `Efectue o pagamento de ${fmt(quotaMT)} e aguarde a confirmação do administrador.`}
                   {membro.estado === 'Aceite' &&
                     `O seu pagamento de ${fmt(quotaMT)} foi confirmado. Está elegível para o sorteio deste mês.`}
                   {membro.estado === 'Sorteado' &&
@@ -866,32 +898,53 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
                 <h3 className="text-xs font-black text-white uppercase tracking-wider mb-3">O Meu Histórico</h3>
                 <div className="space-y-2">
                   {Array.from({ length: Math.max(sorteios.length, membro.mesesPagos.length, mesAtual - 1) }, (_, i) => i + 1).map(mes => {
-                    const sorteio = sorteios.find(s => s.mes === mes);
-                    const pagou   = membro.mesesPagos.includes(mes);
-                    const ganhou  = sorteio?.vencedor === membro.nome;
+                    const sorteio  = sorteios.find(s => s.mes === mes);
+                    const pagou    = membro.mesesPagos.includes(mes);
+                    const ganhou   = sorteio?.vencedor === membro.nome;
+                    const registo  = membro.pagamentos?.[mes];
                     return (
-                      <div key={mes} className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 ${
-                        ganhou ? 'bg-emerald-400/10 border border-emerald-400/20' : 'bg-zinc-800/50'
+                      <div key={mes} className={`rounded-xl overflow-hidden border ${
+                        ganhou ? 'border-emerald-400/20' : 'border-transparent'
                       }`}>
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span className="w-6 h-6 rounded-full bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-[10px] font-black text-amber-400 shrink-0">
-                            {mes}
-                          </span>
-                          <div>
-                            <span className="text-xs text-white">Mês {mes}</span>
-                            {ganhou && <p className="text-[10px] text-emerald-400 font-black">🏆 Contemplado</p>}
+                        <div className={`flex items-center justify-between gap-2 px-3 py-2.5 ${
+                          ganhou ? 'bg-emerald-400/10' : 'bg-zinc-800/50'
+                        }`}>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="w-6 h-6 rounded-full bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-[10px] font-black text-amber-400 shrink-0">
+                              {mes}
+                            </span>
+                            <div>
+                              <span className="text-xs text-white">Mês {mes}</span>
+                              {ganhou && <p className="text-[10px] text-emerald-400 font-black">🏆 Contemplado</p>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {pagou ? (
+                              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 rounded-full">Pago</span>
+                            ) : (
+                              <span className="text-[10px] font-bold text-white bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded-full">Pendente</span>
+                            )}
+                            {ganhou && sorteio && (
+                              <span className="text-xs text-amber-400 font-black">{fmt(sorteio.valorPremio)}</span>
+                            )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {pagou ? (
-                            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 rounded-full">Pago</span>
-                          ) : (
-                            <span className="text-[10px] font-bold text-white bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded-full">Pendente</span>
-                          )}
-                          {ganhou && sorteio && (
-                            <span className="text-xs text-amber-400 font-black">{fmt(sorteio.valorPremio)}</span>
-                          )}
-                        </div>
+                        {/* Detalhe do pagamento */}
+                        {pagou && registo && (
+                          <div className="flex flex-wrap gap-x-4 gap-y-0.5 px-3 py-1.5 bg-zinc-900/60 border-t border-zinc-700/40">
+                            <span className="text-[10px] text-zinc-400">
+                              Via <span className="text-white font-bold">{registo.metodo}</span>
+                            </span>
+                            {registo.referencia && (
+                              <span className="text-[10px] text-zinc-400">
+                                Ref: <span className="text-white font-mono">{registo.referencia}</span>
+                              </span>
+                            )}
+                            <span className="text-[10px] text-zinc-400">
+                              {registo.data}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -933,6 +986,197 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
                 <p className="text-white text-xs">Contacte o administrador para mais informações.</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ══ TAB: DADOS PESSOAIS ══════════════════════════════════════════════ */}
+        {tab === 'dados' && (
+          <div className="space-y-3">
+
+            {/* ── Informação Pessoal ── */}
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                </svg>
+                <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Informação Pessoal</span>
+              </div>
+              <div className="divide-y divide-zinc-800/50">
+                {([
+                  { label: 'Nome completo', value: fullUser?.nome ?? authUser?.nome },
+                  { label: 'Email',         value: fullUser?.email ?? authUser?.email },
+                  { label: 'Telefone',      value: fullUser?.telefone },
+                  { label: 'Endereço',      value: fullUser?.endereco },
+                  {
+                    label: 'Categoria',
+                    value: fullUser?.category === 'func_publico' ? 'Funcionário Público' :
+                           fullUser?.category === 'func_privado' ? 'Funcionário Privado' :
+                           fullUser?.category === 'empreendedor' ? 'Empreendedor'        : undefined,
+                  },
+                  {
+                    label: 'Membro desde',
+                    value: fullUser?.dataCriacao ? fmtData(fullUser.dataCriacao.slice(0, 10)) : undefined,
+                  },
+                ] as { label: string; value?: string }[])
+                  .filter(f => !!f.value)
+                  .map(f => (
+                    <div key={f.label} className="flex items-start justify-between gap-4 px-4 py-3">
+                      <span className="text-xs text-zinc-400 shrink-0">{f.label}</span>
+                      <span className="text-xs text-white font-bold text-right break-all">{f.value}</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* ── Estado da Conta ── */}
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Estado da Conta</span>
+              </div>
+              <div className="divide-y divide-zinc-800/50">
+                <div className="flex items-center justify-between gap-3 px-4 py-3">
+                  <span className="text-xs text-zinc-400">Estado</span>
+                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${
+                    fullUser?.status === 'ativo'    ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' :
+                    fullUser?.status === 'suspenso' ? 'bg-red-400/10 text-red-400 border-red-400/20'            :
+                    fullUser?.status === 'inativo'  ? 'bg-zinc-700 text-white border-zinc-600'                  :
+                                                     'bg-amber-400/10 text-amber-400 border-amber-400/20'
+                  }`}>
+                    {fullUser?.status === 'ativo'    ? 'Activo'   :
+                     fullUser?.status === 'suspenso' ? 'Suspenso' :
+                     fullUser?.status === 'inativo'  ? 'Inactivo' : 'Pendente'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3 px-4 py-3">
+                  <span className="text-xs text-zinc-400">Regularidade</span>
+                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${
+                    fullUser?.regularity === 'regular'      ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' :
+                    fullUser?.regularity === 'inadimplente' ? 'bg-red-400/10 text-red-400 border-red-400/20'            :
+                                                             'bg-amber-400/10 text-amber-400 border-amber-400/20'
+                  }`}>
+                    {fullUser?.regularity === 'regular'      ? 'Regular'      :
+                     fullUser?.regularity === 'inadimplente' ? 'Inadimplente' : 'Pendente'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3 px-4 py-3">
+                  <span className="text-xs text-zinc-400">Xitique</span>
+                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${
+                    fullUser?.xitique ? 'bg-amber-400/10 text-amber-400 border-amber-400/20' : 'bg-zinc-700 text-zinc-400 border-zinc-600'
+                  }`}>
+                    {fullUser?.xitique ? 'Inscrito' : 'Não inscrito'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Documentos (expansível) ── */}
+            {(() => {
+              const allDocs = [
+                { key: 'bi',                   label: 'Bilhete de Identidade (BI)',  value: fullUser?.documentos?.bi  ?? (fullUser?.bi   ? true : undefined) },
+                { key: 'nuit',                  label: 'NUIT',                        value: fullUser?.documentos?.nuit ?? (fullUser?.nuit  ? true : undefined) },
+                { key: 'declaracao_rendimento', label: 'Declaração de Rendimento',    value: fullUser?.documentos?.declaracao_rendimento },
+                { key: 'contrato_trabalho',     label: 'Contrato de Trabalho',        value: fullUser?.documentos?.contrato_trabalho },
+                { key: 'carta_conducao',        label: 'Carta de Condução',           value: fullUser?.documentos?.carta_conducao },
+                { key: 'declaracao_bairro',     label: 'Declaração de Bairro',        value: fullUser?.documentos?.declaracao_bairro },
+              ] as { key: string; label: string; value?: string | boolean }[];
+
+              const conhecidos  = allDocs.filter(d => d.value !== undefined);
+              const entregues   = conhecidos.filter(d => !!d.value).length;
+              const emFalta     = conhecidos.filter(d => !d.value).length;
+              const hasAnyDoc   = fullUser?.bi || fullUser?.nuit || fullUser?.documentos;
+
+              return (
+                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                  <button
+                    onClick={() => toggleSec('docs')}
+                    className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-zinc-800/40 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                      </svg>
+                      <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Documentos</span>
+                      {hasAnyDoc && (
+                        <div className="flex items-center gap-1">
+                          {entregues > 0 && (
+                            <span className="text-[10px] bg-emerald-400/15 text-emerald-400 border border-emerald-400/20 rounded-full px-1.5 py-0.5 font-black">{entregues} ok</span>
+                          )}
+                          {emFalta > 0 && (
+                            <span className="text-[10px] bg-red-400/15 text-red-400 border border-red-400/20 rounded-full px-1.5 py-0.5 font-black">{emFalta} em falta</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <svg
+                      width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#71717a" strokeWidth="2.5" strokeLinecap="round"
+                      className={`transition-transform duration-200 ${secOpen.has('docs') ? 'rotate-180' : ''}`}
+                    >
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </button>
+
+                  {secOpen.has('docs') && (
+                    !hasAnyDoc ? (
+                      <div className="px-4 py-5 text-center text-xs text-zinc-500 border-t border-zinc-800">
+                        Nenhum documento registado. Contacte o administrador.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-zinc-800/50 border-t border-zinc-800">
+                        {conhecidos.map(d => {
+                          const presente = !!d.value;
+                          return (
+                            <div key={d.key} className={`flex items-center justify-between gap-3 px-4 py-3 ${presente ? '' : 'opacity-70'}`}>
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border ${
+                                  presente ? 'bg-emerald-400/10 border-emerald-400/20' : 'bg-red-400/10 border-red-400/20'
+                                }`}>
+                                  {presente ? (
+                                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                                      <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                  ) : (
+                                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="3" strokeLinecap="round">
+                                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                                    </svg>
+                                  )}
+                                </div>
+                                <span className="text-xs text-white truncate">{d.label}</span>
+                              </div>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
+                                presente ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' : 'bg-red-400/10 text-red-400 border-red-400/20'
+                              }`}>
+                                {presente ? 'Entregue' : 'Em falta'}
+                              </span>
+                            </div>
+                          );
+                        })}
+                        {/* Summary footer */}
+                        {conhecidos.length > 0 && (
+                          <div className="flex items-center justify-between px-4 py-2.5 bg-zinc-800/30">
+                            <span className="text-[10px] text-zinc-400 font-bold">Total registados</span>
+                            <span className="text-[10px] text-white font-black">{entregues} / {conhecidos.length}</span>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Aviso de alteração ── */}
+            <div className="flex items-start gap-3 bg-zinc-900/60 border border-zinc-800 rounded-2xl px-4 py-3">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" className="mt-0.5 shrink-0">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.8" fill="#6b7280"/>
+              </svg>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Para alterar os seus dados ou credenciais, contacte o administrador da SOS Motors.
+              </p>
+            </div>
+
           </div>
         )}
 

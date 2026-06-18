@@ -11,9 +11,27 @@ const fmtK = (n: number) => n >= 1_000_000 ? (n / 1_000_000).toFixed(1) + 'M MT'
 const MESES_ABR  = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-type Tab = 'geral' | 'mensal' | 'viaturas' | 'transacoes';
+type Tab = 'geral' | 'mensal' | 'viaturas' | 'transacoes' | 'aluguer' | 'compra';
 
 const compraIds = new Set(VEHICLES_STATIC.filter(v => v.mode === 'compra').map(v => v.id));
+
+const STATUS_ALUGUER: Record<string, { label: string; color: string; bg: string }> = {
+  pendente:            { label: 'Pendente',         color: 'text-amber-400',   bg: 'bg-amber-400/10 border-amber-400/20' },
+  confirmada:          { label: 'Confirmada',        color: 'text-blue-400',    bg: 'bg-blue-400/10 border-blue-400/20' },
+  pronta_levantamento: { label: 'P/ Levantamento',   color: 'text-cyan-400',    bg: 'bg-cyan-400/10 border-cyan-400/20' },
+  ativa:               { label: 'Activa',            color: 'text-emerald-400', bg: 'bg-emerald-400/10 border-emerald-400/20' },
+  devolucao_pendente:  { label: 'Dev. Pendente',     color: 'text-orange-400',  bg: 'bg-orange-400/10 border-orange-400/20' },
+  concluida:           { label: 'Concluída',         color: 'text-zinc-400',    bg: 'bg-zinc-700/40 border-zinc-700' },
+  cancelada:           { label: 'Cancelada',         color: 'text-red-400',     bg: 'bg-red-400/10 border-red-400/20' },
+};
+
+const STATUS_COMPRA: Record<string, { label: string; color: string; bg: string }> = {
+  compra_aprovada:  { label: 'Aprovada',     color: 'text-blue-400',    bg: 'bg-blue-400/10 border-blue-400/20' },
+  entrada_paga:     { label: 'Entrada Paga', color: 'text-cyan-400',    bg: 'bg-cyan-400/10 border-cyan-400/20' },
+  em_prestacao:     { label: 'Em Prestação', color: 'text-amber-400',   bg: 'bg-amber-400/10 border-amber-400/20' },
+  prestacao_atraso: { label: 'Em Atraso',    color: 'text-red-400',     bg: 'bg-red-400/10 border-red-400/20' },
+  liquidada:        { label: 'Liquidada',    color: 'text-emerald-400', bg: 'bg-emerald-400/10 border-emerald-400/20' },
+};
 
 // ── Spark bar ─────────────────────────────────────────────────────────────────
 function Bar({ pct, color = 'bg-amber-500', thin }: { pct: number; color?: string; thin?: boolean }) {
@@ -147,6 +165,40 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
   // ── Métricas de detalhe para o mês selecionado ─────────────────────────────
   const mesSelecionado = mesSel !== null ? dadosAno.find(d => d.month === mesSel) : null;
 
+  // ── Dados específicos de aluguer ─────────────────────────────────────────
+  const aluguerSorted = useMemo(() =>
+    [...aluguerRes].sort((a, b) => b.dataInicio.localeCompare(a.dataInicio)),
+  [aluguerRes]);
+
+  const avgDiasAluguer = useMemo(() => {
+    if (aluguerRes.length === 0) return 0;
+    const total = aluguerRes.reduce((s, r) => {
+      const dias = Math.round((new Date(r.dataFim).getTime() - new Date(r.dataInicio).getTime()) / 86_400_000);
+      return s + Math.max(1, dias);
+    }, 0);
+    return Math.round(total / aluguerRes.length);
+  }, [aluguerRes]);
+
+  const aluguerByStatus = useMemo(() => {
+    const mapa: Record<string, number> = {};
+    for (const r of aluguerRes) mapa[r.status] = (mapa[r.status] ?? 0) + 1;
+    return mapa;
+  }, [aluguerRes]);
+
+  // ── Dados específicos de compra ──────────────────────────────────────────
+  const compraSorted = useMemo(() =>
+    [...compraRes].sort((a, b) => b.dataInicio.localeCompare(a.dataInicio)),
+  [compraRes]);
+
+  const compraByStatus = useMemo(() => {
+    const mapa: Record<string, number> = {};
+    for (const r of compraRes) mapa[r.status] = (mapa[r.status] ?? 0) + 1;
+    return mapa;
+  }, [compraRes]);
+
+  const totalPrestacoesPagas  = useMemo(() => compraRes.reduce((s, r) => s + (r.prestacoesPagas  ?? 0), 0), [compraRes]);
+  const totalPrestacoesTotal  = useMemo(() => compraRes.reduce((s, r) => s + (r.totalPrestacoes  ?? 0), 0), [compraRes]);
+
   return (
     <div className="bg-zinc-950 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
@@ -166,6 +218,8 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
             { key: 'mensal',     label: 'Por Mês' },
             { key: 'viaturas',   label: 'Viaturas' },
             { key: 'transacoes', label: 'Transações' },
+            { key: 'aluguer',    label: 'Alugueres' },
+            { key: 'compra',     label: 'Compras' },
           ] as { key: Tab; label: string }[]).map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`px-4 py-2.5 text-xs font-bold rounded-t-lg border-b-2 transition ${
@@ -605,6 +659,174 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════ TAB: ALUGUER ══ */}
+        {tab === 'aluguer' && (
+          <div className="space-y-6">
+
+            {/* KPIs */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <KpiCard label="Total Contratos"  value={String(aluguerRes.length)}  color="text-blue-400"    accent="border-blue-500/20" />
+              <KpiCard label="Receita Total"    value={fmt(receitaAluguer)}         color="text-amber-400"   accent="border-amber-500/20" />
+              <KpiCard label="Ticket Médio"     value={fmt(aluguerRes.length > 0 ? receitaAluguer / aluguerRes.length : 0)} color="text-white" />
+              <KpiCard label="Duração Média"    value={`${avgDiasAluguer} dias`}    color="text-zinc-300" />
+            </div>
+
+            {/* Distribuição por estado */}
+            {aluguerRes.length > 0 && (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-3">
+                <h2 className="text-white font-black text-sm uppercase tracking-wider">Estado dos Contratos</h2>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(aluguerByStatus).sort((a, b) => b[1] - a[1]).map(([status, qty]) => {
+                    const s = STATUS_ALUGUER[status] ?? { label: status, color: 'text-zinc-400', bg: 'bg-zinc-800 border-zinc-700' };
+                    return (
+                      <div key={status} className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold ${s.bg}`}>
+                        <span className={s.color}>{s.label}</span>
+                        <span className="bg-zinc-800/80 text-white px-1.5 py-0.5 rounded-full text-[10px] font-black">{qty}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Tabela de contratos */}
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
+                <h2 className="text-white font-black text-sm uppercase tracking-wider">Contratos de Aluguer</h2>
+                <span className="text-[10px] text-zinc-500">{aluguerRes.length} contrato{aluguerRes.length !== 1 ? 's' : ''}</span>
+              </div>
+              {aluguerRes.length === 0 ? (
+                <p className="text-center text-zinc-500 text-sm py-12">Sem contratos de aluguer registados.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-zinc-800/50 bg-zinc-800/20">
+                        {['Data Início','Data Fim','Viatura','Cliente','Duração','Valor','Estado'].map(h => (
+                          <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-800/40">
+                      {aluguerSorted.map(r => {
+                        const dias = Math.max(1, Math.round((new Date(r.dataFim).getTime() - new Date(r.dataInicio).getTime()) / 86_400_000));
+                        const s = STATUS_ALUGUER[r.status] ?? { label: r.status, color: 'text-zinc-400', bg: 'bg-zinc-800 border-zinc-700' };
+                        return (
+                          <tr key={r.id} className="hover:bg-zinc-800/30 transition-colors">
+                            <td className="px-4 py-3 text-xs text-zinc-400 whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
+                            <td className="px-4 py-3 text-xs text-zinc-400 whitespace-nowrap">{new Date(r.dataFim).toLocaleDateString('pt-PT')}</td>
+                            <td className="px-4 py-3 text-sm font-semibold text-white truncate max-w-[140px]">{getVehicleName(r.vehicleId)}</td>
+                            <td className="px-4 py-3 text-xs text-zinc-400 truncate max-w-[120px]">{r.clientName ?? '—'}</td>
+                            <td className="px-4 py-3 text-xs text-zinc-300 whitespace-nowrap">{dias} dia{dias !== 1 ? 's' : ''}</td>
+                            <td className="px-4 py-3 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(r.valorTotal)}</td>
+                            <td className="px-4 py-3">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${s.bg} ${s.color}`}>{s.label}</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-zinc-800/40 border-t border-zinc-700">
+                        <td colSpan={5} className="px-4 py-3 text-xs font-black text-white uppercase">Total</td>
+                        <td className="px-4 py-3 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(receitaAluguer)}</td>
+                        <td />
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════ TAB: COMPRA ══ */}
+        {tab === 'compra' && (
+          <div className="space-y-6">
+
+            {/* KPIs */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <KpiCard label="Total Contratos"    value={String(compraRes.length)}   color="text-purple-400"  accent="border-purple-500/20" />
+              <KpiCard label="Receita Total"      value={fmt(receitaCompra)}          color="text-amber-400"   accent="border-amber-500/20" />
+              <KpiCard label="Ticket Médio"       value={fmt(compraRes.length > 0 ? receitaCompra / compraRes.length : 0)} color="text-white" />
+              <KpiCard label="Prestações Pagas"
+                value={totalPrestacoesTotal > 0 ? `${totalPrestacoesPagas}/${totalPrestacoesTotal}` : '—'}
+                color="text-emerald-400"
+                sub={totalPrestacoesTotal > 0 ? `${Math.round((totalPrestacoesPagas / totalPrestacoesTotal) * 100)}% cumpridas` : undefined} />
+            </div>
+
+            {/* Distribuição por estado */}
+            {compraRes.length > 0 && (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-3">
+                <h2 className="text-white font-black text-sm uppercase tracking-wider">Estado dos Contratos</h2>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(compraByStatus).sort((a, b) => b[1] - a[1]).map(([status, qty]) => {
+                    const s = STATUS_COMPRA[status] ?? { label: status, color: 'text-zinc-400', bg: 'bg-zinc-800 border-zinc-700' };
+                    return (
+                      <div key={status} className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold ${s.bg}`}>
+                        <span className={s.color}>{s.label}</span>
+                        <span className="bg-zinc-800/80 text-white px-1.5 py-0.5 rounded-full text-[10px] font-black">{qty}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Tabela de contratos */}
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
+                <h2 className="text-white font-black text-sm uppercase tracking-wider">Contratos de Compra & Venda</h2>
+                <span className="text-[10px] text-zinc-500">{compraRes.length} contrato{compraRes.length !== 1 ? 's' : ''}</span>
+              </div>
+              {compraRes.length === 0 ? (
+                <p className="text-center text-zinc-500 text-sm py-12">Sem contratos de compra registados.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-zinc-800/50 bg-zinc-800/20">
+                        {['Data','Viatura','Cliente','Prestações','Valor Total','Estado'].map(h => (
+                          <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-800/40">
+                      {compraSorted.map(r => {
+                        const s = STATUS_COMPRA[r.status] ?? { label: r.status, color: 'text-zinc-400', bg: 'bg-zinc-800 border-zinc-700' };
+                        const prestStr = r.totalPrestacoes
+                          ? `${r.prestacoesPagas ?? 0}/${r.totalPrestacoes}`
+                          : '—';
+                        return (
+                          <tr key={r.id} className="hover:bg-zinc-800/30 transition-colors">
+                            <td className="px-4 py-3 text-xs text-zinc-400 whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
+                            <td className="px-4 py-3 text-sm font-semibold text-white truncate max-w-[140px]">{getVehicleName(r.vehicleId)}</td>
+                            <td className="px-4 py-3 text-xs text-zinc-400 truncate max-w-[120px]">{r.clientName ?? '—'}</td>
+                            <td className="px-4 py-3 text-xs font-bold text-zinc-300 whitespace-nowrap">{prestStr}</td>
+                            <td className="px-4 py-3 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(r.valorTotal)}</td>
+                            <td className="px-4 py-3">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${s.bg} ${s.color}`}>{s.label}</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-zinc-800/40 border-t border-zinc-700">
+                        <td colSpan={4} className="px-4 py-3 text-xs font-black text-white uppercase">Total</td>
+                        <td className="px-4 py-3 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(receitaCompra)}</td>
+                        <td />
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </div>
+
           </div>
         )}
 

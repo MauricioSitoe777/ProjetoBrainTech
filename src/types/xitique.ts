@@ -1,11 +1,18 @@
 export type EstadoMembroXitique = 'Pendente' | 'Aceite' | 'Sorteado';
 
+export interface RegistoPagamento {
+  metodo: string;
+  referencia?: string;
+  data: string;
+}
+
 export interface MembroXitique {
   id: string;
   nome: string;
   estado: EstadoMembroXitique;
   pagamentoMes: boolean;
   mesesPagos: number[];
+  pagamentos?: Record<number, RegistoPagamento>;
   userId?: string;
 }
 
@@ -27,6 +34,7 @@ export interface GrupoXitique {
   sorteios: RegistoSorteio[];
   estadoGrupo: EstadoGrupo;
   mesAtual: number;
+  dataInicio?: string;
 }
 
 export interface InscricaoXitique {

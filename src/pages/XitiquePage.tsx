@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import { useXitique } from '../context/XitiqueContext';
 import { useAuth } from '../context/AuthContext';
 import type { EstadoGrupo, EstadoMembroXitique, InscricaoXitique, GrupoXitique } from '../types/xitique';
@@ -43,8 +44,14 @@ const estadoMembroText: Record<EstadoMembroXitique, { label: string; className: 
 };
 
 // ── Painel de gestão de um grupo ─────────────────────────────────────────────
+const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+function fmtDataPt(iso: string) {
+  const [y, m, d] = iso.split('-');
+  return `${d} ${MESES_PT[parseInt(m, 10) - 1]} ${y}`;
+}
+
 function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void }) {
-  const { addMembro, removeMembro, confirmarPagamento, realizarSorteio, reiniciarGrupo, inscricoes, aprovarInscricao, rejeitarInscricao } = useXitique();
+  const { addMembro, removeMembro, confirmarPagamento, realizarSorteio, reiniciarGrupo, definirDataInicio, inscricoes, aprovarInscricao, rejeitarInscricao } = useXitique();
   const { allUsers, addUser, updateUser } = useAuth();
 
   const [tab,           setTab]           = useState<Tab>('grupo');
@@ -53,6 +60,13 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
   const [confirmRein,   setConfirmRein]   = useState(false);
   const [credencial,    setCredencial]    = useState<Credencial | null>(null);
   const [copiado,       setCopiado]       = useState<string | null>(null);
+  const [docPanelUser,  setDocPanelUser]  = useState<string | null>(null);
+  const [docOp,         setDocOp]         = useState<'aluguer' | 'compra'>('aluguer');
+  const [confirmando,   setConfirmando]   = useState<string | null>(null);
+  const [metodoTemp,    setMetodoTemp]    = useState('');
+  const [refTemp,       setRefTemp]       = useState('');
+  const [editandoData,  setEditandoData]  = useState(false);
+  const [dataTemp,      setDataTemp]      = useState(grupo.dataInicio ?? '');
 
   const { membros, sorteios, estadoGrupo, mesAtual, quotaMT, premioMT, maxMembros } = grupo;
 
@@ -95,19 +109,20 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
   };
 
   const handleAprovar = (insc: InscricaoXitique) => {
-    const senha = gerarSenha();
-    const utilizador = insc.telefone.replace(/\D/g, '').replace(/^258/, '');
-    const existente = allUsers.find(u => u.email === insc.email);
-    let userId: string;
+    const existente = allUsers.find(u => u.email === insc.email || u.telefone === insc.telefone);
     if (existente) {
-      updateUser(existente.id, { password: senha, status: 'ativo', xitique: true });
-      userId = existente.id;
+      // Utilizador já tem conta — apenas marcar como xitique e aprovar
+      updateUser(existente.id, { status: 'ativo', xitique: true });
+      aprovarInscricao(insc.id, existente.id);
+      // Sem modal de credenciais — já tem acesso
     } else {
-      const novoUser = addUser({ nome: insc.nome, email: insc.email, telefone: insc.telefone, role: 'cliente', status: 'ativo', regularity: 'regular', restriction: 'nenhuma', password: senha, xitique: true });
-      userId = novoUser.id;
+      // Novo utilizador — criar conta e mostrar credenciais
+      const senha = gerarSenha();
+      const utilizador = insc.telefone.replace(/\D/g, '').replace(/^258/, '');
+      const novoUser = addUser({ nome: insc.nome, email: insc.email, telefone: insc.telefone, role: 'cliente', status: 'ativo', regularity: 'regular', restriction: 'nenhuma', password: senha, mustChangePassword: true, xitique: true });
+      aprovarInscricao(insc.id, novoUser.id);
+      setCredencial({ nome: insc.nome, utilizador, email: insc.email, senha });
     }
-    aprovarInscricao(insc.id, userId);
-    setCredencial({ nome: insc.nome, utilizador, email: insc.email, senha });
   };
 
   const grupoCompleto = membros.length >= maxMembros || estadoGrupo !== 'Aberto';
@@ -132,6 +147,27 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
           {estadoGrupo === 'EmAndamento' && (
             <span className="text-xs font-bold px-3 py-1.5 rounded-full border border-zinc-700 bg-zinc-800 text-white">Mês {mesAtual} / {maxMembros}</span>
           )}
+          {/* Data de início */}
+          {!editandoData && (
+            <button
+              onClick={() => { setDataTemp(grupo.dataInicio ?? ''); setEditandoData(true); }}
+              className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border border-zinc-700 bg-zinc-800 text-white hover:border-amber-500/50 hover:text-amber-400 transition"
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              {grupo.dataInicio ? fmtDataPt(grupo.dataInicio) : 'Definir data início'}
+            </button>
+          )}
+          {editandoData && (
+            <div className="flex items-center gap-2">
+              <input type="date" value={dataTemp} onChange={e => setDataTemp(e.target.value)}
+                className="text-xs bg-zinc-800 border border-amber-500/50 rounded-lg px-3 py-1.5 text-white outline-none [color-scheme:dark]" />
+              <button
+                onClick={() => { if (dataTemp) definirDataInicio(grupo.id, dataTemp); setEditandoData(false); }}
+                className="text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-500 text-zinc-950 hover:bg-amber-400 transition"
+              >Guardar</button>
+              <button onClick={() => setEditandoData(false)} className="text-xs text-zinc-400 hover:text-white transition">✕</button>
+            </div>
+          )}
           {estadoGrupo === 'Concluido' && (
             <button onClick={() => setConfirmRein(true)} className="text-xs font-bold px-4 py-2 rounded-xl bg-zinc-800 text-white hover:bg-zinc-700 border border-zinc-700 transition">
               Reiniciar Grupo
@@ -143,13 +179,25 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
       {/* Tabs */}
       <div className="flex gap-1 border-b border-zinc-800">
         {([
-          { key: 'grupo',    label: 'Grupo' },
-          { key: 'espera',   label: `Lista de Espera${pendentes.length > 0 ? ` (${pendentes.length})` : ''}` },
-          { key: 'clientes', label: `Clientes${xitiqueUsers.length > 0 ? ` (${xitiqueUsers.length})` : ''}` },
-        ] as { key: Tab; label: string }[]).map(t => (
+          { key: 'grupo',    label: 'Grupo',                                                                                         urgent: false },
+          { key: 'espera',   label: `Lista de Espera${pendentes.length > 0 ? ` (${pendentes.length})` : ''}`,                       urgent: pendentes.length > 0 },
+          { key: 'clientes', label: `Clientes${xitiqueUsers.length > 0 ? ` (${xitiqueUsers.length})` : ''}`,                        urgent: false },
+        ] as { key: Tab; label: string; urgent: boolean }[]).map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className={`px-4 py-2.5 text-xs font-bold rounded-t-lg border-b-2 transition ${tab === t.key ? 'border-amber-500 text-amber-400' : 'border-transparent text-white hover:text-white'}`}>
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-t-lg border-b-2 transition ${
+              tab === t.key
+                ? 'border-amber-500 text-amber-400'
+                : t.urgent
+                ? 'border-transparent text-red-400 animate-pulse hover:text-red-300'
+                : 'border-transparent text-white hover:text-white'
+            }`}>
             {t.label}
+            {t.urgent && tab !== t.key && (
+              <span className="relative flex h-1.5 w-1.5 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" />
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -205,6 +253,25 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
 
       {/* TAB: Grupo */}
       {tab === 'grupo' && <>
+
+        {/* Alerta: grupo completo sem data de início definida */}
+        {membros.length >= maxMembros && !grupo.dataInicio && (
+          <div className="flex items-start gap-3 bg-amber-400/10 border border-amber-400/30 rounded-2xl px-5 py-4">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" className="mt-0.5 shrink-0 animate-pulse"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.8" fill="#fbbf24"/></svg>
+            <div className="flex-1 min-w-0">
+              <p className="text-amber-400 font-black text-sm uppercase tracking-wide">Grupo Completo — Defina a Data de Início</p>
+              <p className="text-white text-xs mt-1 leading-relaxed">
+                O grupo atingiu {maxMembros}/{maxMembros} membros. Defina a data de início do ciclo para que os membros saibam quando efectuar o primeiro pagamento.
+              </p>
+              <button
+                onClick={() => { setDataTemp(''); setEditandoData(true); }}
+                className="mt-3 text-xs font-black px-4 py-2 rounded-xl bg-amber-500 text-zinc-950 hover:bg-amber-400 transition"
+              >
+                Definir Data de Início
+              </button>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: 'Membros',          value: `${membros.length} / ${maxMembros}` },
@@ -244,34 +311,98 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
               )}
               {membros.map((m, i) => {
                 const estado = estadoMembroText[m.estado];
+                const isConfirmando = confirmando === m.id;
+                const registoPago = m.pagamentos?.[mesAtual];
                 return (
-                  <div key={m.id} className={`flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border transition ${estadoMembroStyle[m.estado]}`}>
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="w-7 h-7 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs font-bold text-white shrink-0">{i + 1}</span>
-                      <div className="min-w-0">
-                        <div className="text-sm font-bold text-white truncate">{m.nome}</div>
-                        <div className={`text-xs mt-0.5 ${estado.className}`}>{estado.label}</div>
+                  <div key={m.id} className={`rounded-2xl border transition ${estadoMembroStyle[m.estado]}`}>
+                    {/* ── Linha principal ── */}
+                    <div className="flex items-center justify-between gap-3 px-4 py-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="w-7 h-7 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs font-bold text-white shrink-0">{i + 1}</span>
+                        <div className="min-w-0">
+                          <div className="text-sm font-bold text-white truncate">{m.nome}</div>
+                          <div className={`text-xs mt-0.5 ${estado.className}`}>{estado.label}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {estadoGrupo === 'EmAndamento' && !m.pagamentoMes && !isConfirmando && (
+                          <button
+                            onClick={() => { setConfirmando(m.id); setMetodoTemp(''); setRefTemp(''); }}
+                            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-400/20 hover:bg-amber-500/20 transition">
+                            Confirmar {fmt(quotaMT)}
+                          </button>
+                        )}
+                        {estadoGrupo === 'EmAndamento' && !m.pagamentoMes && isConfirmando && (
+                          <button onClick={() => setConfirmando(null)} className="text-xs text-white hover:text-white transition px-2 py-1 rounded-lg hover:bg-zinc-700">
+                            Cancelar
+                          </button>
+                        )}
+                        {estadoGrupo === 'EmAndamento' && m.pagamentoMes && (
+                          <div className="text-right">
+                            <span className="text-xs text-emerald-400 font-bold flex items-center gap-1 justify-end">
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                              Pago
+                            </span>
+                            {registoPago && (
+                              <span className="text-[10px] text-zinc-400 block mt-0.5">{registoPago.metodo}</span>
+                            )}
+                          </div>
+                        )}
+                        {estadoGrupo === 'Aberto' && (
+                          <button onClick={() => removeMembro(grupo.id, m.id)} className="text-white hover:text-red-400 transition p-1.5 rounded-lg hover:bg-red-400/10">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                          </button>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {estadoGrupo === 'EmAndamento' && !m.pagamentoMes && (
-                        <button onClick={() => confirmarPagamento(grupo.id, m.id)}
-                          className="text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-400/20 hover:bg-amber-500/20 transition">
-                          Confirmar {fmt(quotaMT)}
+
+                    {/* ── Formulário de confirmação de pagamento ── */}
+                    {isConfirmando && (
+                      <div className="px-4 pb-4 pt-1 border-t border-zinc-800/60 space-y-3">
+                        <p className="text-[10px] text-white uppercase font-black tracking-widest pt-1">Forma de Pagamento</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {['M-Pesa', 'e-Mola', 'Transferência', 'Numerário', 'Outro'].map(op => (
+                            <button key={op} onClick={() => setMetodoTemp(op)}
+                              className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition ${
+                                metodoTemp === op
+                                  ? 'bg-amber-500 text-zinc-950 border-amber-500'
+                                  : 'bg-zinc-800 text-white border-zinc-700 hover:border-zinc-500'
+                              }`}>{op}</button>
+                          ))}
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-white uppercase font-black tracking-widest mb-1.5">
+                            Referência <span className="text-zinc-500 font-medium normal-case">(opcional)</span>
+                          </p>
+                          <input
+                            value={refTemp}
+                            onChange={e => setRefTemp(e.target.value)}
+                            placeholder="N.º transação, ref. bancária…"
+                            className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-amber-500 transition"
+                          />
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (!metodoTemp) return;
+                            confirmarPagamento(grupo.id, m.id, metodoTemp, refTemp.trim() || undefined);
+                            setConfirmando(null); setMetodoTemp(''); setRefTemp('');
+                          }}
+                          disabled={!metodoTemp}
+                          className="w-full py-2.5 rounded-xl bg-amber-500 text-zinc-950 text-xs font-black uppercase tracking-widest hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        >
+                          Confirmar Pagamento
                         </button>
-                      )}
-                      {estadoGrupo === 'EmAndamento' && m.pagamentoMes && (
-                        <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                          Pago
-                        </span>
-                      )}
-                      {estadoGrupo === 'Aberto' && (
-                        <button onClick={() => removeMembro(grupo.id, m.id)} className="text-white hover:text-red-400 transition p-1.5 rounded-lg hover:bg-red-400/10">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                        </button>
-                      )}
-                    </div>
+                      </div>
+                    )}
+
+                    {/* ── Detalhe do pagamento já registado ── */}
+                    {registoPago && m.pagamentoMes && (
+                      <div className="px-4 pb-3 border-t border-zinc-800/40 pt-2 flex flex-wrap gap-x-4 gap-y-0.5">
+                        <span className="text-[10px] text-zinc-400">Método: <span className="text-white font-bold">{registoPago.metodo}</span></span>
+                        {registoPago.referencia && <span className="text-[10px] text-zinc-400">Ref: <span className="text-white font-mono">{registoPago.referencia}</span></span>}
+                        <span className="text-[10px] text-zinc-400">Data: <span className="text-white">{registoPago.data}</span></span>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -395,6 +526,133 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
                     <span className="text-white font-black">{fmt(membro.mesesPagos.length * quotaMT)}</span>
                   </div>
                 )}
+
+                {/* ── Documentos para Operação ── */}
+                {(() => {
+                  const isDocOpen = docPanelUser === u.id;
+                  const docs = u.documentos ?? {};
+
+                  const docsAluguer = [
+                    { key: 'bi' as const,            label: 'Bilhete de Identidade (BI)' },
+                    { key: 'carta_conducao' as const, label: 'Carta de Condução' },
+                  ];
+
+                  const docsCompra = [
+                    { key: 'bi' as const,                     label: 'Bilhete de Identidade (BI)' },
+                    { key: 'nuit' as const,                   label: 'NUIT' },
+                    { key: 'declaracao_rendimento' as const,   label: 'Declaração de Rendimento' },
+                    ...(!u.category || u.category === 'func_publico' || u.category === 'func_privado'
+                      ? [{ key: 'contrato_trabalho' as const,  label: 'Contrato de Trabalho' }]
+                      : []),
+                    ...(!u.category || u.category === 'empreendedor'
+                      ? [{ key: 'declaracao_bairro' as const,  label: 'Declaração de Bairro' }]
+                      : []),
+                  ];
+
+                  const docList = docOp === 'aluguer' ? docsAluguer : docsCompra;
+                  const complete = docList.filter(d => !!u.documentos?.[d.key]).length;
+                  const total    = docList.length;
+                  const allOk   = complete === total;
+
+                  const categoryLabel =
+                    u.category === 'func_publico'  ? 'Funcionário Público'  :
+                    u.category === 'func_privado'   ? 'Funcionário Privado'  :
+                    u.category === 'empreendedor'   ? 'Empreendedor'         : null;
+
+                  return (
+                    <div className="border-t border-zinc-800/60 pt-2.5">
+                      <button
+                        onClick={() => setDocPanelUser(isDocOpen ? null : u.id)}
+                        className="w-full flex items-center justify-between gap-2 text-xs transition"
+                      >
+                        <span className="font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+                          <FileText size={12} strokeWidth={2.5} className="text-amber-500" />
+                          Documentos para Operação
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] border ${
+                            allOk
+                              ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20'
+                              : complete > 0
+                              ? 'bg-amber-400/10 text-amber-400 border-amber-400/20'
+                              : 'bg-red-400/10 text-red-400 border-red-400/20'
+                          }`}>{complete}/{total}</span>
+                          {isDocOpen
+                            ? <ChevronUp size={13} className="text-white" />
+                            : <ChevronDown size={13} className="text-white" />}
+                        </div>
+                      </button>
+
+                      {isDocOpen && (
+                        <div className="mt-3 space-y-3">
+                          {/* Operation type tabs */}
+                          <div className="flex gap-1 bg-zinc-800/60 p-1 rounded-xl">
+                            {(['aluguer', 'compra'] as const).map(op => (
+                              <button
+                                key={op}
+                                onClick={() => setDocOp(op)}
+                                className={`flex-1 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition ${
+                                  docOp === op ? 'bg-amber-500 text-zinc-950' : 'text-white hover:text-white'
+                                }`}
+                              >{op}</button>
+                            ))}
+                          </div>
+
+                          {categoryLabel && (
+                            <div className="text-[10px] text-amber-500/80 font-bold uppercase tracking-widest">
+                              Perfil: {categoryLabel}
+                            </div>
+                          )}
+
+                          {/* Document checklist */}
+                          <div className="space-y-1.5">
+                            {docList.map(doc => {
+                              const hasDoc = !!u.documentos?.[doc.key];
+                              return (
+                                <button
+                                  key={doc.key}
+                                  onClick={() => updateUser(u.id, {
+                                    documentos: { ...docs, [doc.key]: !hasDoc },
+                                  })}
+                                  className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border transition text-left ${
+                                    hasDoc
+                                      ? 'bg-emerald-400/5 border-emerald-400/20 hover:bg-emerald-400/10'
+                                      : 'bg-zinc-800/50 border-zinc-700 hover:border-amber-500/30'
+                                  }`}
+                                >
+                                  <span className="text-xs font-bold text-white">{doc.label}</span>
+                                  <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 border transition ${
+                                    hasDoc ? 'bg-emerald-400 border-emerald-400' : 'bg-zinc-800 border-zinc-600'
+                                  }`}>
+                                    {hasDoc && (
+                                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#09090b" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="20 6 9 17 4 12" />
+                                      </svg>
+                                    )}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Status summary */}
+                          {allOk ? (
+                            <div className="bg-emerald-400/10 border border-emerald-400/20 rounded-xl px-3 py-2 flex items-center gap-2">
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                              </svg>
+                              <span className="text-xs text-emerald-400 font-black">Documentação completa — pode prosseguir para {docOp}.</span>
+                            </div>
+                          ) : (
+                            <div className="bg-red-400/5 border border-red-400/20 rounded-xl px-3 py-2 text-xs text-red-400 font-bold">
+                              Faltam {total - complete} documento(s) obrigatório(s) para {docOp}.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}
@@ -473,10 +731,20 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
 }
 
 // ── Modal criar grupo ─────────────────────────────────────────────────────────
-function CriarGrupoModal({ onClose, onCriar }: { onClose: () => void; onCriar: (nome: string, max: number, quota: number) => void }) {
-  const [nome,  setNome]  = useState('');
-  const [max,   setMax]   = useState(10);
-  const [quota, setQuota] = useState(30000);
+function CriarGrupoModal({ onClose, onCriar }: { onClose: () => void; onCriar: (nome: string, max: number, quota: number, dataInicio?: string) => void }) {
+  const [nome,       setNome]       = useState('');
+  const [max,        setMax]        = useState(10);
+  const [quota,      setQuota]      = useState(30000);
+  const [quotaStr,   setQuotaStr]   = useState('30.000');
+  const [dataInicio, setDataInicio] = useState('');
+
+  const handleQuotaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/\D/g, '');
+    if (!digits) { setQuotaStr(''); setQuota(0); return; }
+    const num = parseInt(digits, 10);
+    setQuota(num);
+    setQuotaStr(num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'));
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -498,8 +766,16 @@ function CriarGrupoModal({ onClose, onCriar }: { onClose: () => void; onCriar: (
           </div>
           <div>
             <label className="text-xs text-white font-bold uppercase tracking-wider block mb-1.5">Quota (MT/mês)</label>
-            <input type="number" min={1000} step={1000} value={quota} onChange={e => setQuota(Number(e.target.value))}
-              className="w-full rounded-xl bg-zinc-800 border border-zinc-700 px-4 py-3 text-sm text-white outline-none focus:border-amber-500 transition" />
+            <div className="relative">
+              <input
+                inputMode="numeric"
+                value={quotaStr}
+                onChange={handleQuotaChange}
+                placeholder="Ex: 30.000"
+                className="w-full rounded-xl bg-zinc-800 border border-zinc-700 pl-4 pr-10 py-3 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-amber-500 transition"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-amber-400 pointer-events-none">MT</span>
+            </div>
           </div>
         </div>
 
@@ -507,10 +783,19 @@ function CriarGrupoModal({ onClose, onCriar }: { onClose: () => void; onCriar: (
           Prémio mensal: <span className="text-amber-400 font-black">{Math.round(max * quota).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')} MT</span>
         </div>
 
+        <div>
+          <label className="text-xs text-white font-bold uppercase tracking-wider block mb-1.5">Data de Início (opcional)</label>
+          <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)}
+            className="w-full rounded-xl bg-zinc-800 border border-zinc-700 px-4 py-3 text-sm text-white outline-none focus:border-amber-500 transition [color-scheme:dark]" />
+        </div>
+
         <div className="flex gap-3 pt-1">
           <button onClick={onClose} className="flex-1 py-3 rounded-2xl bg-zinc-800 text-white font-bold hover:bg-zinc-700 transition">Cancelar</button>
-          <button onClick={() => { if (!nome.trim()) return; onCriar(nome, max, quota); onClose(); }}
-            className="flex-1 py-3 rounded-2xl bg-amber-500 text-zinc-950 font-black hover:bg-amber-400 transition">
+          <button
+            onClick={() => { if (quota <= 0) return; onCriar(nome, max, quota, dataInicio || undefined); onClose(); }}
+            disabled={quota <= 0}
+            className="flex-1 py-3 rounded-2xl bg-amber-500 text-zinc-950 font-black hover:bg-amber-400 transition disabled:opacity-40 disabled:cursor-not-allowed"
+          >
             Criar Grupo
           </button>
         </div>
