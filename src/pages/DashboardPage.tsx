@@ -27,7 +27,6 @@ function MiniBar({ value, max, color = 'bg-amber-500' }: { value: number; max: n
 }
 
 // ── Detail Card ───────────────────────────────────────────────────────────────
-interface SubItem { label: string; value: string | number; color?: string; dot?: string }
 interface DetailCardProps {
   icon: React.ReactNode;
   iconColor?: string;
@@ -35,12 +34,11 @@ interface DetailCardProps {
   value: string | number;
   valueColor?: string;
   accent?: string;
-  items: SubItem[];
   bar?: { value: number; max: number; color?: string };
   onClick?: () => void;
 }
 
-function DetailCard({ icon, iconColor = 'text-zinc-400', label, value, valueColor = 'text-white', accent = 'border-zinc-800', items, bar, onClick }: DetailCardProps) {
+function DetailCard({ icon, iconColor = 'text-zinc-400', label, value, valueColor = 'text-white', accent = 'border-zinc-800', bar, onClick }: DetailCardProps) {
   const Tag = onClick ? 'button' : 'div';
   return (
     <Tag
@@ -63,23 +61,6 @@ function DetailCard({ icon, iconColor = 'text-zinc-400', label, value, valueColo
 
       {/* Progress bar */}
       {bar && <MiniBar value={bar.value} max={bar.max} color={bar.color} />}
-
-      {/* Sub items */}
-      {items.length > 0 && (
-        <div className="space-y-1.5 pt-1 border-t border-zinc-800/70">
-          {items.map((item, i) => (
-            <div key={i} className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5">
-                {item.dot && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${item.dot}`} />}
-                <span className="text-[11px] text-zinc-500">{item.label}</span>
-              </div>
-              <span className={`text-[11px] font-black tabular-nums ${item.color ?? 'text-zinc-300'}`}>
-                {item.value}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
     </Tag>
   );
 }
@@ -180,12 +161,6 @@ export function DashboardPage() {
             valueColor="text-white"
             accent={s.pendentUsers > 0 ? 'border-amber-500/30' : 'border-zinc-800'}
             onClick={() => navigate('/admin/utilizadores')}
-            items={[
-              { label: 'Total registados', value: s.totalUsers, color: 'text-zinc-300' },
-              { label: 'Administradores',  value: s.adminUsers,  color: 'text-amber-400',   dot: 'bg-amber-400' },
-              { label: 'Clientes',         value: s.clientUsers, color: 'text-blue-400',    dot: 'bg-blue-400' },
-              ...(s.pendentUsers > 0 ? [{ label: 'Pendentes activação', value: s.pendentUsers, color: 'text-red-400', dot: 'bg-red-400' }] : []),
-            ]}
           />
 
           {/* Alugueres */}
@@ -197,13 +172,6 @@ export function DashboardPage() {
             valueColor="text-amber-400"
             accent={s.aluguerAtraso > 0 ? 'border-red-500/40' : s.aluguerPendentes > 0 ? 'border-amber-500/30' : 'border-zinc-800'}
             onClick={() => navigate('/admin/aluguer?tab=acoes')}
-            items={[
-              { label: 'Pendentes confirmação',    value: s.aluguerPendentes, color: s.aluguerPendentes > 0 ? 'text-amber-400' : 'text-zinc-500', dot: s.aluguerPendentes > 0 ? 'bg-amber-400' : 'bg-zinc-700' },
-              { label: 'Prontas p/ levantamento',  value: s.aluguerProntos,   color: s.aluguerProntos > 0 ? 'text-sky-400' : 'text-zinc-500',    dot: s.aluguerProntos > 0 ? 'bg-sky-400' : 'bg-zinc-700' },
-              { label: 'Devolvem hoje',            value: s.devolvemHoje,     color: s.devolvemHoje > 0 ? 'text-emerald-400' : 'text-zinc-500',  dot: s.devolvemHoje > 0 ? 'bg-emerald-400' : 'bg-zinc-700' },
-              { label: 'Em atraso',                value: s.aluguerAtraso,    color: s.aluguerAtraso > 0 ? 'text-red-400' : 'text-zinc-500',     dot: s.aluguerAtraso > 0 ? 'bg-red-500' : 'bg-zinc-700' },
-              { label: 'Devolução pendente',       value: s.devolucaoPend,    color: s.devolucaoPend > 0 ? 'text-orange-400' : 'text-zinc-500',  dot: s.devolucaoPend > 0 ? 'bg-orange-400' : 'bg-zinc-700' },
-            ]}
           />
 
           {/* Compras */}
@@ -215,12 +183,6 @@ export function DashboardPage() {
             valueColor="text-blue-400"
             accent={s.compraAtraso > 0 ? 'border-red-500/40' : 'border-zinc-800'}
             onClick={() => navigate('/admin/compra?tab=acoes')}
-            items={[
-              { label: 'Pendentes aprovação',   value: s.compraPendentes, color: s.compraPendentes > 0 ? 'text-amber-400' : 'text-zinc-500', dot: s.compraPendentes > 0 ? 'bg-amber-400' : 'bg-zinc-700' },
-              { label: 'Aprovadas',             value: s.compraAprovadas, color: s.compraAprovadas > 0 ? 'text-teal-400' : 'text-zinc-500',  dot: s.compraAprovadas > 0 ? 'bg-teal-400' : 'bg-zinc-700' },
-              { label: 'Em prestações',         value: s.compraEmPrest,   color: s.compraEmPrest > 0 ? 'text-blue-400' : 'text-zinc-500',    dot: s.compraEmPrest > 0 ? 'bg-blue-400' : 'bg-zinc-700' },
-              { label: 'Prestação em atraso',   value: s.compraAtraso,    color: s.compraAtraso > 0 ? 'text-red-400' : 'text-zinc-500',      dot: s.compraAtraso > 0 ? 'bg-red-500' : 'bg-zinc-700' },
-            ]}
           />
 
           {/* Frota */}
@@ -233,11 +195,6 @@ export function DashboardPage() {
             accent="border-zinc-800"
             onClick={() => navigate('/admin/veiculos')}
             bar={{ value: s.disponíveis, max: s.totalVeiculos, color: 'bg-sky-500' }}
-            items={[
-              { label: 'Disponíveis',         value: `${s.disponíveis} / ${s.totalVeiculos}`, color: 'text-sky-400',    dot: 'bg-sky-400' },
-              { label: 'Para aluguer',        value: s.totalAluguer,   color: 'text-amber-400',  dot: 'bg-amber-400' },
-              { label: 'Para compra',         value: s.totalCompra,    color: 'text-purple-400', dot: 'bg-purple-400' },
-            ]}
           />
 
           {/* Motoristas */}
@@ -249,11 +206,6 @@ export function DashboardPage() {
             valueColor="text-blue-400"
             accent="border-zinc-800"
             bar={{ value: s.motorDisp, max: s.totalMotoristas, color: 'bg-blue-500' }}
-            items={[
-              { label: 'Disponíveis',    value: s.motorDisp,    color: s.motorDisp > 0 ? 'text-emerald-400' : 'text-zinc-500',  dot: s.motorDisp > 0 ? 'bg-emerald-400' : 'bg-zinc-700' },
-              { label: 'Em viagem',      value: s.motorOcupado, color: s.motorOcupado > 0 ? 'text-amber-400' : 'text-zinc-500', dot: s.motorOcupado > 0 ? 'bg-amber-400' : 'bg-zinc-700' },
-              { label: 'Indisponíveis',  value: s.motorIndisp,  color: s.motorIndisp > 0 ? 'text-red-400' : 'text-zinc-500',   dot: s.motorIndisp > 0 ? 'bg-red-400' : 'bg-zinc-700' },
-            ]}
           />
 
           {/* Xitique */}
@@ -265,12 +217,6 @@ export function DashboardPage() {
             valueColor="text-emerald-400"
             accent={s.inscricoesPend > 0 ? 'border-amber-500/30' : 'border-zinc-800'}
             onClick={() => navigate('/admin/xitique')}
-            items={[
-              { label: 'Grupos abertos',       value: s.gruposAbertos,   color: s.gruposAbertos > 0 ? 'text-blue-400' : 'text-zinc-500',    dot: s.gruposAbertos > 0 ? 'bg-blue-400' : 'bg-zinc-700' },
-              { label: 'Grupos em andamento',  value: s.gruposAtivos,    color: s.gruposAtivos > 0 ? 'text-emerald-400' : 'text-zinc-500',  dot: s.gruposAtivos > 0 ? 'bg-emerald-400' : 'bg-zinc-700' },
-              { label: 'Membros activos',      value: s.inscricoesAprov, color: 'text-zinc-300',  dot: 'bg-zinc-600' },
-              ...(s.inscricoesPend > 0 ? [{ label: 'Inscrições pendentes', value: s.inscricoesPend, color: 'text-amber-400', dot: 'bg-amber-400' }] : []),
-            ]}
           />
 
         </div>
