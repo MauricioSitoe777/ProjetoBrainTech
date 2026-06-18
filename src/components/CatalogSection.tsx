@@ -105,21 +105,19 @@ export default function CatalogSection({
   };
 
   return (
-    <section id="catalogo" className="py-12 bg-zinc-950">
-      <div className="max-w-7xl mx-auto px-6">
+    <section id="catalogo" className="py-10 md:py-14 bg-zinc-950">
+      <div className="max-w-7xl mx-auto px-5 md:px-8">
 
         {/* ── Header ── */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
           <div>
-            <div className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-3">
+            <div className="text-amber-500 text-[10px] font-bold uppercase tracking-widest mb-2">
               Catálogo
             </div>
-            <h2
-              className="text-white text-4xl md:text-5xl font-black leading-tight"
-            >
+            <h2 className="text-white text-2xl md:text-3xl font-black leading-tight tracking-tight">
               Frota Disponível
             </h2>
-            <p className="text-white text-base mt-3 max-w-md">
+            <p className="text-zinc-400 text-sm mt-1.5 max-w-md">
               Defina o destino, nós tratamos do caminho. Comece aqui.
             </p>
           </div>
@@ -130,10 +128,10 @@ export default function CatalogSection({
               <button
                 key={f.key}
                 onClick={() => handleMode(f.key)}
-                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${
                   mode === f.key
                     ? "bg-amber-500 text-zinc-950"
-                    : "bg-zinc-900 text-white border border-zinc-800 hover:border-zinc-600 hover:text-white"
+                    : "bg-zinc-900 text-zinc-300 border border-zinc-800 hover:border-zinc-600 hover:text-white"
                 }`}
               >
                 {f.label}
@@ -144,13 +142,12 @@ export default function CatalogSection({
 
         {/* ── Category description ── */}
         {cat && (
-          <div className="mb-6 p-4 rounded-2xl bg-zinc-900/30 border border-zinc-800/50">
-            <h3 className="text-white font-bold text-lg mb-1 capitalize">
+          <div className="mb-4 px-4 py-3 rounded-xl bg-zinc-900/30 border border-zinc-800/50">
+            <h3 className="text-white font-semibold text-sm mb-0.5 capitalize">
               {CAT_FILTERS.find(f => f.key === cat)?.label}
             </h3>
-            <p className="text-white text-xs leading-relaxed">
-              Explore a nossa seleção premium de {CAT_FILTERS.find(f => f.key === cat)?.label.toLowerCase()}. 
-              Veículos mantidos com os mais altos padrões de qualidade e segurança para a sua jornada.
+            <p className="text-zinc-500 text-[13px] leading-relaxed">
+              Explore a nossa seleção de {CAT_FILTERS.find(f => f.key === cat)?.label.toLowerCase()} — mantidos com os mais altos padrões de qualidade.
             </p>
           </div>
         )}
@@ -158,7 +155,7 @@ export default function CatalogSection({
         {/* ── Category pills (visible only for Aluguer / Compra) ── */}
         {mode !== "todos" && (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6 items-stretch">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 mb-5 items-stretch">
               {/* Reset pill */}
               <button
                 onClick={() => setCat(null)}
@@ -220,14 +217,14 @@ export default function CatalogSection({
         )}
 
         {/* ── Results count ── */}
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-white text-xs uppercase tracking-widest">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-zinc-500 text-[11px] uppercase tracking-widest">
             {filtered.length} veículo{filtered.length !== 1 ? "s" : ""} encontrado{filtered.length !== 1 ? "s" : ""}
           </p>
         </div>
 
         {/* ── Grid ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((v) => (
             <VehicleCard
               key={v.id}
@@ -239,10 +236,10 @@ export default function CatalogSection({
 
         {/* ── Empty state ── */}
         {filtered.length === 0 && (
-          <div className="py-20 text-center bg-zinc-900/30 rounded-3xl border border-zinc-800/50">
-            <div className="text-4xl mb-4 grayscale opacity-50">🔍</div>
-            <h3 className="text-white font-bold text-xl mb-2">Nenhum veículo encontrado</h3>
-            <p className="text-white text-sm max-w-xs mx-auto">
+          <div className="py-14 text-center bg-zinc-900/30 rounded-2xl border border-zinc-800/50">
+            <div className="text-3xl mb-3 grayscale opacity-50">🔍</div>
+            <h3 className="text-white font-bold text-base mb-1.5">Nenhum veículo encontrado</h3>
+            <p className="text-zinc-500 text-sm max-w-xs mx-auto">
               Tente ajustar os filtros ou a sua pesquisa para encontrar o que procura.
             </p>
           </div>

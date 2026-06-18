@@ -250,7 +250,7 @@ function RotatingHeading() {
       initial={{ opacity: 0, y: 35 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.7 }}
-      className="text-center text-4xl font-black uppercase leading-[0.9] tracking-tight text-white sm:text-5xl md:text-left lg:text-6xl xl:text-7xl"
+      className="text-center text-3xl font-black uppercase leading-[0.9] tracking-tight text-white sm:text-4xl md:text-left lg:text-5xl xl:text-6xl"
     >
       O Seu
       <br />
@@ -351,7 +351,7 @@ function ShufflingCards() {
             background: "rgba(255,255,255,0.06)",
             boxShadow: `0 4px 24px ${card.glowColor}, inset 0 1px 0 rgba(255,255,255,0.10)`,
           }}
-          className="flex flex-col justify-between rounded-2xl border border-white/10 p-3.5 backdrop-blur-md sm:rounded-[20px] sm:p-4 min-h-[120px] sm:min-h-[135px] lg:min-h-[150px]"
+          className="flex flex-col justify-between rounded-2xl border border-white/10 p-3 backdrop-blur-md sm:rounded-[18px] sm:p-3.5 min-h-[110px] sm:min-h-[120px] lg:min-h-[130px]"
         >
           <div className="flex items-center justify-between gap-2">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-amber-400/30 bg-amber-400/15 sm:h-8 sm:w-8">
@@ -509,7 +509,7 @@ export default function Hero({ onShowSimulator }: { onShowSimulator?: () => void
       <div className="pointer-events-none absolute -top-20 -left-20 h-80 w-80 rounded-full bg-amber-500/10 blur-3xl" />
 
       {/* Conteúdo */}
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col items-center justify-center gap-10 px-5 py-24 sm:px-8 md:flex-row md:items-center md:gap-12 lg:gap-16">
+      <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col items-center justify-center gap-6 px-5 pt-20 pb-10 sm:px-8 md:flex-row md:items-center md:gap-10 lg:gap-14">
 
         {/* ESQUERDA — heading + descrição + CTAs */}
         <div className="flex w-full flex-col items-center gap-6 md:w-1/2 md:items-start">
@@ -519,7 +519,7 @@ export default function Hero({ onShowSimulator }: { onShowSimulator?: () => void
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="max-w-md text-center text-base font-medium leading-relaxed text-white/70 md:text-left md:text-lg"
+            className="max-w-md text-center text-sm font-medium leading-relaxed text-white/60 md:text-left md:text-base"
           >
             Descubra o veículo certo para si — para comprar ou alugar.
             Catálogo completo, preços transparentes e entrega rápida em Moçambique.
@@ -533,7 +533,7 @@ export default function Hero({ onShowSimulator }: { onShowSimulator?: () => void
           >
             <button
               onClick={() => scrollTo("catalogo")}
-              className="group flex items-center justify-center gap-2 rounded-full bg-amber-500 px-8 py-4 text-sm font-black uppercase tracking-wider text-zinc-950 transition-all hover:-translate-y-1 hover:bg-amber-400 active:scale-95"
+              className="group flex items-center justify-center gap-2 rounded-full bg-amber-500 px-6 py-2.5 text-sm font-black uppercase tracking-wider text-zinc-950 transition-all hover:-translate-y-0.5 hover:bg-amber-400 active:scale-95"
             >
               Ver Catálogo
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -544,7 +544,7 @@ export default function Hero({ onShowSimulator }: { onShowSimulator?: () => void
                 onShowSimulator?.();
                 scrollTo("simulador");
               }}
-              className="flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 px-8 py-4 text-sm font-black uppercase tracking-wider text-white backdrop-blur-sm transition-all hover:-translate-y-1 hover:border-amber-500/50 hover:text-white"
+              className="flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 px-6 py-2.5 text-sm font-black uppercase tracking-wider text-white backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-amber-500/50 hover:text-white"
             >
               Simular Prestações
             </button>

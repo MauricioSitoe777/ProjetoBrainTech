@@ -214,7 +214,7 @@ export default function App() {
   const isInvite          = path.startsWith("/convite/");
   const isRecuperar       = path === "/recuperar-senha";
   const isRedefinir       = path.startsWith("/recuperar-senha/") && path.length > "/recuperar-senha/".length;
-  const vehicleId         = isVehicleDetails ? parseInt(path.split("/").pop() || "0") : 0;
+  const vehicleId         = isVehicleDetails ? (path.split("/veiculo/")[1] ?? "") : "";
   const inviteToken       = isInvite ? path.split("/convite/")[1] ?? "" : "";
   const resetToken        = isRedefinir ? path.split("/recuperar-senha/")[1] ?? "" : "";
 

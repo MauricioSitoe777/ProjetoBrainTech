@@ -8,7 +8,7 @@ import Footer from "./Footer";
 type SimulatorFlow = "aluguer" | "compra";
 
 interface VehicleDetailsPageProps {
-  vehicleId: number;
+  vehicleId: string | number;
   onExit: () => void;
   onOpenFlowModal?: (lockedFlow?: SimulatorFlow) => void;
   onShowSimulator?: () => void;
