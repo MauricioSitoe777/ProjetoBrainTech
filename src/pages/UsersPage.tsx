@@ -12,6 +12,7 @@ import { GuestReviewModal } from '../components/GuestReviewModal';
 import { AcoesNecessarias } from '../components/AcoesNecessarias';
 import { useRoute } from '../hooks/useRoute';
 import { useNotifications } from '../context/NotificationsContext';
+import { IconKey, IconCar } from '../components/Icons';
 
 // ── Configs ────────────────────────────────────────────────────────────────
 
@@ -406,7 +407,9 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                     const prevIntent = prev?.kind === 'guest' ? prev.data.intent : null;
                     const showSep = prevIntent !== null && prevIntent !== row.data.intent;
                     const showFirst = prevIntent === null;
-                    const groupLabel = row.data.intent === 'aluguer' ? '🔑 Aluguer' : '🚗 Compra';
+                    const groupLabel = row.data.intent === 'aluguer'
+                      ? <span className="flex items-center gap-1.5"><IconKey size={12} /> Aluguer</span>
+                      : <span className="flex items-center gap-1.5"><IconCar size={12} /> Compra</span>;
                     const guestRowEl = (
                       <GuestRow key={`g-${row.data.id}`} g={row.data} guestStatusConfig={guestStatusConfig}
                         onReview={setReviewGuest} onAdvance={(g, next) => next ? updateGuest(g.id, { status: next }) : setReviewGuest(g)} />

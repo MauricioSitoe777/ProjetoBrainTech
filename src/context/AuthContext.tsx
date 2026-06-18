@@ -26,7 +26,7 @@ interface AuthContextType {
   updateUser: (id: string, data: Partial<User>) => void;
   deleteUser: (id: string) => void;
   loginById: (id: string) => void;
-  solicitarResetSenha: (email: string) => Promise<'sent' | 'not_found' | 'error'>;
+  solicitarResetSenha: (email: string) => Promise<{ status: 'sent' | 'not_found' | 'error'; link?: string }>;
   validarTokenReset: (token: string) => string | null;
   redefinirSenha: (token: string, novaSenha: string) => boolean;
 }
@@ -149,9 +149,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const solicitarResetSenha = async (email: string): Promise<'sent' | 'not_found' | 'error'> => {
+  const solicitarResetSenha = async (email: string): Promise<{ status: 'sent' | 'not_found' | 'error'; link?: string }> => {
     const found = allUsers.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
-    if (!found) return 'not_found';
+    if (!found) return { status: 'not_found' };
 
     // Gera token seguro de 48 chars hex
     const token = Array.from(crypto.getRandomValues(new Uint8Array(24)))
@@ -159,7 +159,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Guarda token em localStorage com validade de 1 hora
     const store = getResetStore();
-    // Remove tokens antigos do mesmo utilizador
     for (const [k, v] of Object.entries(store)) {
       if (v.userId === found.id) delete store[k];
     }
@@ -168,25 +167,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const resetLink = `${window.location.origin}/recuperar-senha/${token}`;
 
-    try {
-      await emailjs.send(
-        EMAILJS_CONFIG.serviceId,
-        EMAILJS_CONFIG.templateId,
-        {
-          to_name:    found.nome,
-          to_email:   found.email,
-          reset_link: resetLink,
-          expires_in: '1 hora',
-        },
-        EMAILJS_CONFIG.publicKey,
-      );
-      return 'sent';
-    } catch (err) {
-      console.error('[Auth] EmailJS error:', err);
-      // Em desenvolvimento, mostra o link na consola para testes
-      console.info('[Auth] Reset link (dev):', resetLink);
-      return 'error';
+    // Verifica se as credenciais EmailJS estão configuradas
+    const emailjsConfigurado = !EMAILJS_CONFIG.serviceId.includes('xxx') && !EMAILJS_CONFIG.publicKey.includes('XX');
+
+    if (emailjsConfigurado) {
+      try {
+        await emailjs.send(
+          EMAILJS_CONFIG.serviceId,
+          EMAILJS_CONFIG.templateId,
+          { to_name: found.nome, to_email: found.email, reset_link: resetLink, expires_in: '1 hora' },
+          EMAILJS_CONFIG.publicKey,
+        );
+        return { status: 'sent' };
+      } catch (err) {
+        console.error('[Auth] EmailJS error:', err);
+      }
     }
+
+    // Fallback: devolve o link para ser exibido/copiado no ecrã
+    console.info('[Auth] Reset link:', resetLink);
+    return { status: 'error', link: resetLink };
   };
 
   const validarTokenReset = (token: string): string | null => {

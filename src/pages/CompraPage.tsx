@@ -265,22 +265,40 @@ type Tab = 'compras' | 'acoes';
 // ── Página principal ──────────────────────────────────────────────────────────
 export function CompraPage({ onExit }: { onExit?: () => void }) {
   const { reservations, updateReservation, cancelReservation, gerarPrestacoes, marcarPrestacao } = useReservations();
-  const [tab,         setTab]          = useState<Tab>(() =>
-    new URLSearchParams(window.location.search).get('tab') === 'acoes' ? 'acoes' : 'compras'
+
+  const getUrlParams = () => new URLSearchParams(window.location.search);
+
+  const [tab,            setTab]           = useState<Tab>(() =>
+    getUrlParams().get('tab') === 'acoes' ? 'acoes' : 'compras'
+  );
+  const [highlightStatus, setHighlightStatus] = useState<string | null>(() =>
+    getUrlParams().get('status')
   );
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const [updating,       setUpdating]       = useState<string | null>(null);
-  const [modalAberto,    setModalAberto]    = useState<string | null>(null); // id da reserva
+  const [updating,        setUpdating]        = useState<string | null>(null);
+  const [modalAberto,     setModalAberto]     = useState<string | null>(null);
 
-  // Sync tab with URL when navigating from a notification while already on this page
+  // Sync tab + status with URL on navigation
   React.useEffect(() => {
     const sync = () => {
-      const t = new URLSearchParams(window.location.search).get('tab');
+      const p = getUrlParams();
+      const t = p.get('tab');
       setTab(t === 'acoes' ? 'acoes' : 'compras');
+      setHighlightStatus(p.get('status'));
     };
     window.addEventListener('popstate', sync);
     return () => window.removeEventListener('popstate', sync);
   }, []);
+
+  // Scroll to first card of the highlighted status
+  React.useEffect(() => {
+    if (tab !== 'acoes' || !highlightStatus) return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`compra-status-${highlightStatus}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [tab, highlightStatus]);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -486,6 +504,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
               return (urgencia[a.status] ?? 9) - (urgencia[b.status] ?? 9);
             });
 
+          const seenStatuses = new Set<string>();
           return (
             <div className="space-y-3">
               {accionaveis.length === 0 && (
@@ -494,19 +513,28 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                 </div>
               )}
               {accionaveis.map(r => {
-                const st         = STATUS_CFG[r.status];
-                const prestacoes = r.prestacoes ?? [];
-                const pagas      = prestacoes.filter(p => p.paga).length;
-                const total      = prestacoes.length;
-                const allPaid    = total > 0 && pagas >= total;
-                const hasOverdue = prestacoes.some(p => !p.paga && p.dataVencimento < today);
-                const isAtraso   = r.status === 'prestacao_atraso';
-                const isBlocked  = updating === r.id;
+                const st              = STATUS_CFG[r.status];
+                const prestacoes      = r.prestacoes ?? [];
+                const pagas           = prestacoes.filter(p => p.paga).length;
+                const total           = prestacoes.length;
+                const allPaid         = total > 0 && pagas >= total;
+                const hasOverdue      = prestacoes.some(p => !p.paga && p.dataVencimento < today);
+                const isAtraso        = r.status === 'prestacao_atraso';
+                const isBlocked       = updating === r.id;
+                const isHighlighted   = highlightStatus === r.status;
+                const isFirstOfStatus = !seenStatuses.has(r.status);
+                if (isFirstOfStatus) seenStatuses.add(r.status);
 
                 return (
-                  <div key={r.id} className={`bg-zinc-900 border rounded-xl px-5 py-4 flex flex-wrap items-center justify-between gap-3 ${
-                    isAtraso ? 'border-red-500/30 bg-red-500/5' : 'border-zinc-800'
-                  }`}>
+                  <div
+                    key={r.id}
+                    id={isFirstOfStatus ? `compra-status-${r.status}` : undefined}
+                    className={`bg-zinc-900 border rounded-xl px-5 py-4 flex flex-wrap items-center justify-between gap-3 transition-all ${
+                      isAtraso      ? 'border-red-500/30 bg-red-500/5' :
+                      isHighlighted ? 'border-amber-400/50 ring-1 ring-amber-400/20' :
+                      'border-zinc-800'
+                    }`}
+                  >
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-white font-black text-sm">{r.clientName}</p>

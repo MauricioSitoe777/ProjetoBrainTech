@@ -11,7 +11,7 @@ const fmtK = (n: number) => n >= 1_000_000 ? (n / 1_000_000).toFixed(1) + 'M MT'
 const MESES_ABR  = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-type Tab = 'geral' | 'mensal' | 'viaturas' | 'transacoes' | 'aluguer' | 'compra';
+type Tab = 'geral' | 'mensal' | 'transacoes' | 'aluguer' | 'compra';
 
 const compraIds = new Set(VEHICLES_STATIC.filter(v => v.mode === 'compra').map(v => v.id));
 
@@ -60,10 +60,9 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
   const { grupos, inscricoes }                                = useXitique();
   const { transacoes, totalEntradas, totalSaidas, lucroLiquido, totalDividasPendentes } = useFinance();
 
-  const [tab,       setTab]       = useState<Tab>('geral');
-  const [anoSel,    setAnoSel]    = useState(() => new Date().getFullYear());
-  const [mesSel,    setMesSel]    = useState<number | null>(null); // null = todos
-  const [rankMode,  setRankMode]  = useState<'aluguer' | 'compra'>('aluguer');
+  const [tab,    setTab]    = useState<Tab>('geral');
+  const [anoSel, setAnoSel] = useState(() => new Date().getFullYear());
+  const [mesSel, setMesSel] = useState<number | null>(null); // null = todos
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const getVehicleName = (id: number) => {
@@ -131,9 +130,8 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
   // Melhor mês
   const melhorMes = useMemo(() => dadosMensais.length > 0 ? dadosMensais.reduce((a, b) => a.total >= b.total ? a : b) : null, [dadosMensais]);
 
-  // ── Ranking de viaturas ─────────────────────────────────────────────────────
-  const rankingViaturas = useMemo(() => {
-    const pool = rankMode === 'aluguer' ? aluguerRes : compraRes;
+  // ── Ranking de viaturas por tipo ───────────────────────────────────────────
+  const buildRanking = (pool: typeof aluguerRes) => {
     const mapa: Record<number, { nome: string; qty: number; receita: number; mediaValor: number }> = {};
     for (const r of pool) {
       if (!mapa[r.vehicleId]) mapa[r.vehicleId] = { nome: getVehicleName(r.vehicleId), qty: 0, receita: 0, mediaValor: 0 };
@@ -143,9 +141,13 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
     return Object.values(mapa)
       .map(v => ({ ...v, mediaValor: v.qty > 0 ? v.receita / v.qty : 0 }))
       .sort((a, b) => b.receita - a.receita);
-  }, [aluguerRes, compraRes, rankMode, vehicles]);
+  };
 
-  const maxReceita = useMemo(() => Math.max(1, ...rankingViaturas.map(v => v.receita)), [rankingViaturas]);
+  const rankingAluguer = useMemo(() => buildRanking(aluguerRes), [aluguerRes, vehicles]);
+  const rankingCompra  = useMemo(() => buildRanking(compraRes),  [compraRes,  vehicles]);
+
+  const maxReceitaAluguer = useMemo(() => Math.max(1, ...rankingAluguer.map(v => v.receita)), [rankingAluguer]);
+  const maxReceitaCompra  = useMemo(() => Math.max(1, ...rankingCompra .map(v => v.receita)), [rankingCompra]);
 
   // ── Lucratividade por categoria ─────────────────────────────────────────────
   const porCategoria = useMemo(() => {
@@ -216,7 +218,6 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
           {([
             { key: 'geral',      label: 'Visão Geral' },
             { key: 'mensal',     label: 'Por Mês' },
-            { key: 'viaturas',   label: 'Viaturas' },
             { key: 'transacoes', label: 'Transações' },
             { key: 'aluguer',    label: 'Alugueres' },
             { key: 'compra',     label: 'Compras' },
@@ -521,93 +522,6 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
           </div>
         )}
 
-        {/* ══════════════════════════════════════════════════════ TAB: VIATURAS ══ */}
-        {tab === 'viaturas' && (
-          <div className="space-y-6">
-
-            {/* Toggle aluguer / compra */}
-            <div className="flex gap-1.5">
-              {([
-                { key: 'aluguer', label: 'Ranking Aluguer' },
-                { key: 'compra',  label: 'Ranking Compra' },
-              ] as { key: typeof rankMode; label: string }[]).map(r => (
-                <button key={r.key} onClick={() => setRankMode(r.key)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold border transition ${
-                    rankMode === r.key ? 'bg-amber-500 text-zinc-950 border-amber-500' : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:text-white'
-                  }`}>{r.label}</button>
-              ))}
-            </div>
-
-            {rankingViaturas.length === 0 ? (
-              <div className="text-center text-zinc-500 text-sm py-16 bg-zinc-900 rounded-2xl border border-zinc-800 border-dashed">
-                Sem contratos de {rankMode === 'aluguer' ? 'aluguer' : 'compra'} registados.
-              </div>
-            ) : (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
-                  <h2 className="text-white font-black text-sm uppercase tracking-wider">
-                    {rankMode === 'aluguer' ? 'Viaturas com Mais Saída' : 'Viaturas Mais Vendidas'}
-                  </h2>
-                  <span className="text-[10px] text-zinc-500">{rankingViaturas.length} viatura{rankingViaturas.length !== 1 ? 's' : ''}</span>
-                </div>
-                <div className="divide-y divide-zinc-800/40">
-                  {rankingViaturas.map((v, i) => {
-                    const pct = (v.receita / maxReceita) * 100;
-                    return (
-                      <div key={v.nome + i} className="px-5 py-4 space-y-2">
-                        <div className="flex items-center gap-3">
-                          <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
-                            i === 0 ? 'bg-amber-500 text-zinc-950' : i === 1 ? 'bg-zinc-400 text-zinc-950' : i === 2 ? 'bg-amber-800 text-white' : 'bg-zinc-800 text-zinc-400'
-                          }`}>{i + 1}</span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2 mb-1.5">
-                              <span className="text-sm font-bold text-white truncate">{v.nome}</span>
-                              <span className="text-sm font-black text-amber-400 shrink-0">{fmt(v.receita)}</span>
-                            </div>
-                            <Bar pct={pct} color={i === 0 ? 'bg-amber-500' : 'bg-zinc-600'} />
-                          </div>
-                        </div>
-                        <div className="ml-10 flex gap-5 text-xs text-zinc-500">
-                          <span>Contratos: <strong className="text-white">{v.qty}</strong></span>
-                          <span>Média/contrato: <strong className="text-amber-400">{fmt(v.mediaValor)}</strong></span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                {/* Total */}
-                <div className="px-5 py-3 border-t border-zinc-800 bg-zinc-800/20 flex justify-between text-sm">
-                  <span className="text-zinc-500 font-semibold">Total {rankMode === 'aluguer' ? 'alugueres' : 'vendas'}</span>
-                  <div className="flex gap-6">
-                    <span className="text-white font-bold">{rankingViaturas.reduce((s, v) => s + v.qty, 0)} contratos</span>
-                    <span className="text-amber-400 font-black">{fmt(rankingViaturas.reduce((s, v) => s + v.receita, 0))}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Comparativo aluguer vs compra por viatura */}
-            {aluguerRes.length > 0 && compraRes.length > 0 && (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4">
-                <h2 className="text-white font-black text-sm uppercase tracking-wider">Comparativo Geral</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-                  {[
-                    { label: 'Contratos Aluguer', value: String(aluguerRes.length), color: 'text-blue-400' },
-                    { label: 'Contratos Compra',  value: String(compraRes.length),  color: 'text-purple-400' },
-                    { label: 'Ticket Médio Aluguer', value: fmt(aluguerRes.length > 0 ? receitaAluguer / aluguerRes.length : 0), color: 'text-blue-400' },
-                    { label: 'Ticket Médio Compra',  value: fmt(compraRes.length  > 0 ? receitaCompra  / compraRes.length  : 0), color: 'text-purple-400' },
-                  ].map(s => (
-                    <div key={s.label} className="bg-zinc-800/60 rounded-xl p-3">
-                      <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider mb-1">{s.label}</p>
-                      <p className={`text-lg font-black ${s.color}`}>{s.value}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* ══════════════════════════════════════════════════════ TAB: TRANSAÇÕES ══ */}
         {tab === 'transacoes' && (
           <div className="space-y-4">
@@ -741,6 +655,48 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
               )}
             </div>
 
+            {/* Viaturas com mais saída */}
+            {rankingAluguer.length > 0 && (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
+                  <h2 className="text-white font-black text-sm uppercase tracking-wider">Viaturas com Mais Saída</h2>
+                  <span className="text-[10px] text-zinc-500">{rankingAluguer.length} viatura{rankingAluguer.length !== 1 ? 's' : ''}</span>
+                </div>
+                <div className="divide-y divide-zinc-800/40">
+                  {rankingAluguer.map((v, i) => {
+                    const pct = (v.receita / maxReceitaAluguer) * 100;
+                    return (
+                      <div key={v.nome + i} className="px-5 py-4 space-y-2">
+                        <div className="flex items-center gap-3">
+                          <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
+                            i === 0 ? 'bg-amber-500 text-zinc-950' : i === 1 ? 'bg-zinc-400 text-zinc-950' : i === 2 ? 'bg-amber-800 text-white' : 'bg-zinc-800 text-zinc-400'
+                          }`}>{i + 1}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2 mb-1.5">
+                              <span className="text-sm font-bold text-white truncate">{v.nome}</span>
+                              <span className="text-sm font-black text-amber-400 shrink-0">{fmt(v.receita)}</span>
+                            </div>
+                            <Bar pct={pct} color={i === 0 ? 'bg-amber-500' : 'bg-zinc-600'} />
+                          </div>
+                        </div>
+                        <div className="ml-10 flex gap-5 text-xs text-zinc-500">
+                          <span>Contratos: <strong className="text-white">{v.qty}</strong></span>
+                          <span>Média/contrato: <strong className="text-amber-400">{fmt(v.mediaValor)}</strong></span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="px-5 py-3 border-t border-zinc-800 bg-zinc-800/20 flex justify-between text-sm">
+                  <span className="text-zinc-500 font-semibold">Total alugueres</span>
+                  <div className="flex gap-6">
+                    <span className="text-white font-bold">{rankingAluguer.reduce((s, v) => s + v.qty, 0)} contratos</span>
+                    <span className="text-amber-400 font-black">{fmt(rankingAluguer.reduce((s, v) => s + v.receita, 0))}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
 
@@ -826,6 +782,48 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
                 </div>
               )}
             </div>
+
+            {/* Viaturas mais vendidas */}
+            {rankingCompra.length > 0 && (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
+                  <h2 className="text-white font-black text-sm uppercase tracking-wider">Viaturas Mais Vendidas</h2>
+                  <span className="text-[10px] text-zinc-500">{rankingCompra.length} viatura{rankingCompra.length !== 1 ? 's' : ''}</span>
+                </div>
+                <div className="divide-y divide-zinc-800/40">
+                  {rankingCompra.map((v, i) => {
+                    const pct = (v.receita / maxReceitaCompra) * 100;
+                    return (
+                      <div key={v.nome + i} className="px-5 py-4 space-y-2">
+                        <div className="flex items-center gap-3">
+                          <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
+                            i === 0 ? 'bg-amber-500 text-zinc-950' : i === 1 ? 'bg-zinc-400 text-zinc-950' : i === 2 ? 'bg-amber-800 text-white' : 'bg-zinc-800 text-zinc-400'
+                          }`}>{i + 1}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2 mb-1.5">
+                              <span className="text-sm font-bold text-white truncate">{v.nome}</span>
+                              <span className="text-sm font-black text-amber-400 shrink-0">{fmt(v.receita)}</span>
+                            </div>
+                            <Bar pct={pct} color={i === 0 ? 'bg-purple-500' : 'bg-zinc-600'} />
+                          </div>
+                        </div>
+                        <div className="ml-10 flex gap-5 text-xs text-zinc-500">
+                          <span>Contratos: <strong className="text-white">{v.qty}</strong></span>
+                          <span>Média/contrato: <strong className="text-amber-400">{fmt(v.mediaValor)}</strong></span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="px-5 py-3 border-t border-zinc-800 bg-zinc-800/20 flex justify-between text-sm">
+                  <span className="text-zinc-500 font-semibold">Total vendas</span>
+                  <div className="flex gap-6">
+                    <span className="text-white font-bold">{rankingCompra.reduce((s, v) => s + v.qty, 0)} contratos</span>
+                    <span className="text-amber-400 font-black">{fmt(rankingCompra.reduce((s, v) => s + v.receita, 0))}</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
           </div>
         )}

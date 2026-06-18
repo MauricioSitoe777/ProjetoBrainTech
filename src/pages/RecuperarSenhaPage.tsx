@@ -6,18 +6,31 @@ type Estado = 'form' | 'enviado' | 'erro_email' | 'nao_encontrado';
 
 export function RecuperarSenhaPage({ onVoltar }: { onVoltar: () => void }) {
   const { solicitarResetSenha } = useAuth();
-  const [email,   setEmail]   = useState('');
-  const [estado,  setEstado]  = useState<Estado>('form');
-  const [loading, setLoading] = useState(false);
+  const [email,    setEmail]    = useState('');
+  const [estado,   setEstado]   = useState<Estado>('form');
+  const [loading,  setLoading]  = useState(false);
+  const [resetLink, setResetLink] = useState<string | null>(null);
+  const [copiado,  setCopiado]  = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     const resultado = await solicitarResetSenha(email);
     setLoading(false);
-    if (resultado === 'sent')       setEstado('enviado');
-    else if (resultado === 'not_found') setEstado('nao_encontrado');
-    else                            setEstado('erro_email');
+    if (resultado.status === 'sent')       setEstado('enviado');
+    else if (resultado.status === 'not_found') setEstado('nao_encontrado');
+    else {
+      setResetLink(resultado.link ?? null);
+      setEstado('erro_email');
+    }
+  };
+
+  const copiarLink = () => {
+    if (!resetLink) return;
+    navigator.clipboard.writeText(resetLink).then(() => {
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    });
   };
 
   return (
@@ -37,14 +50,14 @@ export function RecuperarSenhaPage({ onVoltar }: { onVoltar: () => void }) {
             <>
               <div>
                 <h2 className="text-xl font-black text-white">Recuperar Senha</h2>
-                <p className="text-zinc-400 text-sm mt-1 leading-relaxed">
+                <p className="text-white text-sm mt-1 leading-relaxed opacity-70">
                   Introduza o seu endereço de e-mail. Enviaremos um link para redefinir a senha.
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">E-mail</label>
+                  <label className="text-xs font-bold text-white uppercase tracking-wider">E-mail</label>
                   <div className="relative">
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -72,7 +85,7 @@ export function RecuperarSenhaPage({ onVoltar }: { onVoltar: () => void }) {
                   {loading ? (
                     <div className="flex items-center justify-center gap-2">
                       <div className="w-4 h-4 border-2 border-zinc-950/20 border-t-zinc-950 rounded-full animate-spin" />
-                      A enviar...
+                      A processar...
                     </div>
                   ) : 'Enviar Link de Recuperação'}
                 </button>
@@ -91,10 +104,10 @@ export function RecuperarSenhaPage({ onVoltar }: { onVoltar: () => void }) {
               </div>
               <div>
                 <h3 className="text-white font-black text-lg">E-mail Enviado!</h3>
-                <p className="text-zinc-400 text-sm mt-2 leading-relaxed">
-                  Se o endereço <span className="text-amber-400 font-bold">{email}</span> estiver registado no sistema, receberá um link de recuperação em breve.
+                <p className="text-white text-sm mt-2 leading-relaxed opacity-80">
+                  Se o endereço <span className="text-amber-400 font-bold opacity-100">{email}</span> estiver registado no sistema, receberá um link de recuperação em breve.
                 </p>
-                <p className="text-zinc-500 text-xs mt-3">O link expira em <span className="text-white font-bold">1 hora</span>. Verifique também a pasta de spam.</p>
+                <p className="text-white text-xs mt-3 opacity-60">O link expira em <span className="text-white font-bold opacity-100">1 hora</span>. Verifique também a pasta de spam.</p>
               </div>
             </div>
           )}
@@ -111,8 +124,8 @@ export function RecuperarSenhaPage({ onVoltar }: { onVoltar: () => void }) {
               </div>
               <div>
                 <h3 className="text-white font-black text-lg">E-mail Não Encontrado</h3>
-                <p className="text-zinc-400 text-sm mt-2 leading-relaxed">
-                  Não existe nenhuma conta registada com o endereço <span className="text-red-400 font-bold">{email}</span>.
+                <p className="text-white text-sm mt-2 leading-relaxed opacity-80">
+                  Não existe nenhuma conta registada com o endereço <span className="text-red-400 font-bold opacity-100">{email}</span>.
                 </p>
               </div>
               <button
@@ -124,7 +137,7 @@ export function RecuperarSenhaPage({ onVoltar }: { onVoltar: () => void }) {
             </div>
           )}
 
-          {/* ── Erro de envio ── */}
+          {/* ── Erro de envio / link directo ── */}
           {estado === 'erro_email' && (
             <div className="text-center space-y-4 py-2">
               <div className="w-14 h-14 rounded-full bg-amber-400/10 border border-amber-400/20 flex items-center justify-center mx-auto">
@@ -135,16 +148,44 @@ export function RecuperarSenhaPage({ onVoltar }: { onVoltar: () => void }) {
                 </svg>
               </div>
               <div>
-                <h3 className="text-white font-black text-lg">Erro ao Enviar E-mail</h3>
-                <p className="text-zinc-400 text-sm mt-2 leading-relaxed">
-                  Não foi possível enviar o e-mail neste momento. Por favor, contacte o administrador do sistema.
-                </p>
-                <p className="text-zinc-500 text-xs mt-2">
-                  (Em modo de desenvolvimento, o link de recuperação foi registado na consola do browser.)
+                <h3 className="text-white font-black text-lg">Link de Recuperação Gerado</h3>
+                <p className="text-white text-sm mt-2 leading-relaxed opacity-80">
+                  O e-mail automático não pôde ser enviado. Copie o link abaixo e partilhe diretamente com o utilizador.
                 </p>
               </div>
+
+              {resetLink && (
+                <div className="space-y-2 text-left">
+                  <p className="text-xs font-bold text-white uppercase tracking-wider opacity-60">Link de recuperação</p>
+                  <div className="bg-zinc-950 border border-zinc-700 rounded-xl p-3 flex items-start gap-3">
+                    <p className="text-xs text-white flex-1 break-all leading-relaxed">{resetLink}</p>
+                    <button
+                      onClick={copiarLink}
+                      className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                        copiado
+                          ? 'bg-emerald-400/20 text-emerald-400 border border-emerald-400/30'
+                          : 'bg-amber-400/20 text-amber-400 border border-amber-400/30 hover:bg-amber-400/30'
+                      }`}
+                    >
+                      {copiado ? (
+                        <>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                          Copiado
+                        </>
+                      ) : (
+                        <>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                          Copiar
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-white text-xs opacity-50">Este link expira em 1 hora.</p>
+                </div>
+              )}
+
               <button
-                onClick={() => setEstado('form')}
+                onClick={() => { setEstado('form'); setResetLink(null); }}
                 className="text-amber-400 text-sm font-bold hover:text-amber-300 transition"
               >
                 Tentar novamente
@@ -157,7 +198,7 @@ export function RecuperarSenhaPage({ onVoltar }: { onVoltar: () => void }) {
         <div className="text-center">
           <button
             onClick={onVoltar}
-            className="flex items-center gap-2 text-zinc-400 text-sm hover:text-white transition mx-auto"
+            className="flex items-center gap-2 text-white text-sm hover:text-amber-400 transition mx-auto opacity-60 hover:opacity-100"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <path d="M19 12H5M12 5l-7 7 7 7"/>

@@ -47,21 +47,39 @@ const aluguerIds = new Set(aluguerVehicles.map(v => v.id));
 export function AluguerPage({ onExit }: { onExit?: () => void }) {
   const { reservations, blocks, updateReservation, cancelReservation, removeBlock } = useReservations();
   const { motoristas } = useMotoristas();
+
+  const getUrlParams = () => new URLSearchParams(window.location.search);
+
   const [tab, setTab] = useState<Tab>(() =>
-    new URLSearchParams(window.location.search).get('tab') === 'acoes' ? 'acoes' : 'reservas'
+    getUrlParams().get('tab') === 'acoes' ? 'acoes' : 'reservas'
+  );
+  const [highlightStatus, setHighlightStatus] = useState<string | null>(() =>
+    getUrlParams().get('status')
   );
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
   const [showBlockModal, setShowBlockModal] = useState(false);
 
-  // Sync tab with URL when navigating from a notification while already on this page
+  // Sync tab + status with URL on navigation
   useEffect(() => {
     const sync = () => {
-      const t = new URLSearchParams(window.location.search).get('tab');
+      const p = getUrlParams();
+      const t = p.get('tab');
       setTab(t === 'acoes' ? 'acoes' : 'reservas');
+      setHighlightStatus(p.get('status'));
     };
     window.addEventListener('popstate', sync);
     return () => window.removeEventListener('popstate', sync);
   }, []);
+
+  // Scroll to the highlighted group after rendering
+  useEffect(() => {
+    if (tab !== 'acoes' || !highlightStatus) return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`aluguer-grupo-${highlightStatus}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [tab, highlightStatus]);
 
   const aluguerReservations = useMemo(() =>
     reservations.filter(r => aluguerIds.has(r.vehicleId)),
@@ -223,8 +241,13 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
               {GRUPOS.map(grupo => {
                 const lista = aluguerReservations.filter(r => r.status === grupo.status);
                 if (lista.length === 0) return null;
+                const isHighlighted = highlightStatus === grupo.status;
                 return (
-                  <div key={grupo.status} className="space-y-3">
+                  <div
+                    key={grupo.status}
+                    id={`aluguer-grupo-${grupo.status}`}
+                    className={`space-y-3 rounded-2xl transition-all duration-500 ${isHighlighted ? 'ring-2 ring-amber-400/50 ring-offset-2 ring-offset-zinc-950 p-3 -mx-3' : ''}`}
+                  >
                     {/* Cabeçalho de secção */}
                     <div className="flex items-center gap-3">
                       <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${grupo.dot}`} />
@@ -327,12 +350,6 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                   {aluguerVehicles.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                 </select>
               </div>
-              <button
-                onClick={() => setShowBlockModal(true)}
-                className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-400/20 rounded-lg py-2.5 text-sm font-semibold transition-colors"
-              >
-                + Bloquear período
-              </button>
             </div>
             <div className="lg:col-span-2">
               <AvailabilityCalendar vehicleId={selectedVehicle} />
