@@ -9,6 +9,7 @@ import { useMotoristas } from "../context/MotoristasContext";
 import { useVehicles } from "../context/VehiclesContext";
 import { CATEGORY_LABEL } from "../data/constants";
 import { GuestRequestModal } from "./GuestRequestModal";
+import { IconCar, IconKey, IconWallet } from "./Icons";
 
 const TAXA_MENSAL = 0.015;
 const MAX_MESES_PADRAO = 12;
@@ -545,8 +546,8 @@ export default function Simulator({
                 <label className="text-white text-xs font-bold block mb-1.5 uppercase tracking-tight">O que pretende?</label>
                 <div className="grid grid-cols-2 gap-1.5">
                   {([
-                    { key: "compra",  label: "🚗  Comprar",  sub: "Prestações mensais" },
-                    { key: "aluguer", label: "🔑  Alugar",   sub: "Diário ou mensal" },
+                    { key: "compra",  icon: <IconCar size={13} />, label: "Comprar",  sub: "Prestações mensais" },
+                    { key: "aluguer", icon: <IconKey size={13} />, label: "Alugar",   sub: "Diário ou mensal" },
                   ] as const).map((o) => (
                     <button
                       key={o.key}
@@ -556,15 +557,15 @@ export default function Simulator({
                         : "bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700"
                       }`}
                     >
-                      <p className="text-xs font-black">{o.label}</p>
+                      <p className="flex items-center gap-1.5 text-xs font-black">{o.icon}{o.label}</p>
                       <p className={`text-[9px] font-semibold mt-0.5 ${flow === o.key ? 'text-zinc-800' : 'text-white'}`}>{o.sub}</p>
                     </button>
                   ))}
                 </div>
               </div>
             ) : (
-              <div className="py-2 rounded-lg text-xs font-bold text-center bg-amber-500 text-zinc-950">
-                {lockedFlow === "aluguer" ? "🔑 Aluguer" : "🚗 Compra"}
+              <div className="py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 bg-amber-500 text-zinc-950">
+                {lockedFlow === "aluguer" ? <><IconKey size={13} /> Aluguer</> : <><IconCar size={13} /> Compra</>}
               </div>
             )}
 
@@ -677,10 +678,10 @@ export default function Simulator({
 
                 {/* 2. Preço + Salário */}
                 <div className="grid grid-cols-2 gap-3">
-                  <NumberField label="💰 Preço do Veículo" value={vehiclePrice}
+                  <NumberField label="Preço do Veículo" value={vehiclePrice}
                     onChange={(v) => setVehiclePrice(Math.min(8_000_000, Math.max(0, v)))} min={0} suffix="MT"
                     disabled={!isAdmin} />
-                  <NumberField label="💵 O Meu Salário" value={income}
+                  <NumberField label="O Meu Salário" value={income}
                     onChange={(v) => setIncome(Math.min(100_000_000, Math.max(0, v)))} min={0} suffix="MT/mês" />
                 </div>
 

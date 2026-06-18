@@ -7,6 +7,7 @@ import { useUsers } from '../context/UsersContext';
 import { useGuests } from '../context/GuestsContext';
 import { VEHICLES } from '../data/constants';
 import { useRoute } from '../hooks/useRoute';
+import { IconAlertCircle, IconInfoCircle, IconCheckCircle } from './Icons';
 
 const compraIds = new Set(VEHICLES.filter(v => v.mode === 'compra').map(v => v.id));
 
@@ -15,10 +16,16 @@ const STORAGE_KEY = 'rentcar:acoes:dismissed';
 type Urgency = 'alta' | 'media' | 'info';
 interface Acao { label: string; route: string; urgency: Urgency }
 
+const UIcon = {
+  alta:  <IconAlertCircle size={14} className="text-red-400 shrink-0" />,
+  media: <IconAlertCircle size={14} className="text-amber-400 shrink-0" />,
+  info:  <IconInfoCircle  size={14} className="text-blue-400 shrink-0" />,
+};
+
 const U = {
-  alta:  { bar: 'bg-red-500',   icon: '🔴', text: 'text-red-400',   bg: 'hover:bg-red-500/5' },
-  media: { bar: 'bg-amber-400', icon: '🟡', text: 'text-amber-400', bg: 'hover:bg-amber-500/5' },
-  info:  { bar: 'bg-blue-500',  icon: '🔵', text: 'text-blue-400',  bg: 'hover:bg-blue-500/5' },
+  alta:  { bar: 'bg-red-500',   text: 'text-red-400',   bg: 'hover:bg-red-500/5' },
+  media: { bar: 'bg-amber-400', text: 'text-amber-400', bg: 'hover:bg-amber-500/5' },
+  info:  { bar: 'bg-blue-500',  text: 'text-blue-400',  bg: 'hover:bg-blue-500/5' },
 };
 
 function p(n: number, s: string, pl?: string) {
@@ -80,27 +87,27 @@ export function AcoesNecessarias() {
       !compraIds.has(r.vehicleId) && r.status === 'devolucao_pendente'
     ).length;
     if (devolucaoPendente > 0)
-      items.push({ label: `${p(devolucaoPendente, 'devolução', 'devoluções')} pendente${devolucaoPendente > 1 ? 's' : ''} — aguarda viatura recebida`, route: '/admin/aluguer', urgency: 'alta' });
+      items.push({ label: `${p(devolucaoPendente, 'devolução', 'devoluções')} pendente${devolucaoPendente > 1 ? 's' : ''} — aguarda viatura recebida`, route: '/admin/aluguer?tab=acoes&status=devolucao_pendente', urgency: 'alta' });
 
     const emAtraso = reservations.filter(r =>
       !compraIds.has(r.vehicleId) && r.status === 'ativa' && r.dataFim < today
     ).length;
     if (emAtraso > 0)
-      items.push({ label: `${p(emAtraso, 'aluguer')} em atraso — viatura${emAtraso > 1 ? 's' : ''} não devolvida${emAtraso > 1 ? 's' : ''}`, route: '/admin/aluguer', urgency: 'alta' });
+      items.push({ label: `${p(emAtraso, 'aluguer')} em atraso — viatura${emAtraso > 1 ? 's' : ''} não devolvida${emAtraso > 1 ? 's' : ''}`, route: '/admin/aluguer?tab=acoes&status=ativa', urgency: 'alta' });
 
     const pendentes = reservations.filter(r => r.status === 'pendente' && !compraIds.has(r.vehicleId)).length;
     if (pendentes > 0)
-      items.push({ label: `${p(pendentes, 'reserva')} aguarda${pendentes === 1 ? '' : 'm'} confirmação`, route: '/admin/aluguer', urgency: 'alta' });
+      items.push({ label: `${p(pendentes, 'reserva')} aguarda${pendentes === 1 ? '' : 'm'} confirmação`, route: '/admin/aluguer?tab=acoes&status=pendente', urgency: 'alta' });
 
     const devolvemHoje = reservations.filter(r =>
       !compraIds.has(r.vehicleId) && r.status === 'ativa' && r.dataFim === today
     ).length;
     if (devolvemHoje > 0)
-      items.push({ label: `${p(devolvemHoje, 'cliente')} devolve${devolvemHoje === 1 ? '' : 'm'} hoje`, route: '/admin/aluguer', urgency: 'alta' });
+      items.push({ label: `${p(devolvemHoje, 'cliente')} devolve${devolvemHoje === 1 ? '' : 'm'} hoje`, route: '/admin/aluguer?tab=acoes&status=ativa', urgency: 'alta' });
 
     const compraAtraso = reservations.filter(r => compraIds.has(r.vehicleId) && r.status === 'prestacao_atraso').length;
     if (compraAtraso > 0)
-      items.push({ label: `${p(compraAtraso, 'compra')} com prestação em atraso — regularizar urgente`, route: '/admin/compra', urgency: 'alta' });
+      items.push({ label: `${p(compraAtraso, 'compra')} com prestação em atraso — regularizar urgente`, route: '/admin/compra?tab=acoes&status=prestacao_atraso', urgency: 'alta' });
 
     const dividasVencidas = dividas.filter(d => d.dataVencimento && d.dataVencimento < today && d.status !== 'quitado');
     if (dividasVencidas.length > 0) {
@@ -116,13 +123,13 @@ export function AcoesNecessarias() {
       !compraIds.has(r.vehicleId) && r.status === 'pronta_levantamento'
     ).length;
     if (prontasLevantamento > 0)
-      items.push({ label: `${p(prontasLevantamento, 'viatura')} pronta${prontasLevantamento > 1 ? 's' : ''} para levantamento`, route: '/admin/aluguer', urgency: 'media' });
+      items.push({ label: `${p(prontasLevantamento, 'viatura')} pronta${prontasLevantamento > 1 ? 's' : ''} para levantamento`, route: '/admin/aluguer?tab=acoes&status=pronta_levantamento', urgency: 'media' });
 
     const iniciaHoje = reservations.filter(r =>
       !compraIds.has(r.vehicleId) && r.status === 'confirmada' && r.dataInicio === today
     ).length;
     if (iniciaHoje > 0)
-      items.push({ label: `${p(iniciaHoje, 'aluguer')} começa${iniciaHoje === 1 ? '' : 'm'} hoje — marcar viatura como pronta`, route: '/admin/aluguer', urgency: 'media' });
+      items.push({ label: `${p(iniciaHoje, 'aluguer')} começa${iniciaHoje === 1 ? '' : 'm'} hoje — marcar viatura como pronta`, route: '/admin/aluguer?tab=acoes&status=confirmada', urgency: 'media' });
 
     const vencemAmanha = dividas.filter(d => d.dataVencimento === tomorrow && d.status !== 'quitado').length;
     if (vencemAmanha > 0)
@@ -130,13 +137,13 @@ export function AcoesNecessarias() {
 
     const vendasPendentes = reservations.filter(r => compraIds.has(r.vehicleId) && r.status === 'pendente').length;
     if (vendasPendentes > 0)
-      items.push({ label: `${p(vendasPendentes, 'venda')} pendente${vendasPendentes > 1 ? 's' : ''} por concluir`, route: '/admin/compra', urgency: 'media' });
+      items.push({ label: `${p(vendasPendentes, 'venda')} pendente${vendasPendentes > 1 ? 's' : ''} por concluir`, route: '/admin/compra?tab=acoes&status=pendente', urgency: 'media' });
 
     const comprasPrestacoes = reservations.filter(r =>
       compraIds.has(r.vehicleId) && r.status === 'em_prestacao'
     ).length;
     if (comprasPrestacoes > 0)
-      items.push({ label: `${p(comprasPrestacoes, 'compra')} em regime de prestações`, route: '/admin/compra', urgency: 'media' });
+      items.push({ label: `${p(comprasPrestacoes, 'compra')} em regime de prestações`, route: '/admin/compra?tab=acoes&status=em_prestacao', urgency: 'media' });
 
     const inscricoesPendentes = inscricoes.filter(i => i.status === 'aguarda_validacao').length;
     if (inscricoesPendentes > 0)
@@ -174,7 +181,7 @@ export function AcoesNecessarias() {
   if (acoes.length === 0) {
     return (
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 flex items-center gap-3">
-        <span className="text-lg">✅</span>
+        <IconCheckCircle size={18} className="text-emerald-400 shrink-0" />
         <div>
           <p className="text-white font-black text-sm uppercase tracking-wider">Ações Necessárias</p>
           <p className="text-emerald-400 text-xs mt-0.5">Tudo em ordem — sem acções pendentes.</p>
@@ -193,7 +200,7 @@ export function AcoesNecessarias() {
     return (
       <div className={`flex items-center gap-3 px-5 py-3 transition-colors group ${isDismissed ? 'opacity-40' : s.bg}`}>
         <div className={`w-1 self-stretch rounded-full shrink-0 ${s.bar}`} />
-        <span className="text-sm shrink-0">{s.icon}</span>
+        {UIcon[a.urgency]}
         <button
           onClick={() => !isDismissed && navigate(a.route)}
           className={`text-sm font-semibold flex-1 text-left ${isDismissed ? 'text-zinc-500 line-through' : `${s.text} hover:underline underline-offset-2`}`}

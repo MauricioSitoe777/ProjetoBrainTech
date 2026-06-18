@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useGuests } from '../context/GuestsContext';
 import type { GuestCategory, GuestIntent } from '../types/guest';
+import { IconKey, IconCar } from './Icons';
 
 interface Props {
   intent?: GuestIntent;
@@ -108,7 +109,9 @@ export function GuestRequestModal({ intent: initialIntent = 'aluguer', vehicleNa
                           ? 'bg-amber-500 text-zinc-950 border-amber-500'
                           : 'bg-zinc-800 text-white border-zinc-700 hover:border-amber-500/50'
                       }`}>
-                      {t === 'aluguer' ? '🔑 Aluguer' : '🚗 Compra'}
+                      <span className="flex items-center justify-center gap-1.5">
+                        {t === 'aluguer' ? <><IconKey size={13} /> Aluguer</> : <><IconCar size={13} /> Compra</>}
+                      </span>
                     </button>
                   ))}
                 </div>
