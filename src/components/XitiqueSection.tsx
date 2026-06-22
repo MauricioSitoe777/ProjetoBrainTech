@@ -83,7 +83,7 @@ export default function XitiqueSection({
             </h2>
 
             {/* Description */}
-            <p className="text-zinc-400 text-sm md:text-base mb-6 leading-relaxed max-w-lg">
+            <p className="text-white text-sm md:text-base mb-6 leading-relaxed max-w-lg">
               O Xitique é a nossa solução de poupança comunitária. Junte-se a um grupo, contribua mensalmente e seja o próximo a receber as chaves.
             </p>
 
@@ -96,7 +96,7 @@ export default function XitiqueSection({
                   </div>
                   <div>
                     <h3 className="text-white font-bold text-sm mb-0.5">{f.title}</h3>
-                    <p className="text-zinc-500 text-[13px] leading-relaxed">{f.desc}</p>
+                    <p className="text-white text-[13px] leading-relaxed">{f.desc}</p>
                   </div>
                 </div>
               ))}

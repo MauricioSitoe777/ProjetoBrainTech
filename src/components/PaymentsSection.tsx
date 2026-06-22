@@ -20,7 +20,7 @@ export default function PaymentsSection({
           <h2 className="text-white text-2xl md:text-3xl font-black tracking-tight">
             Pague como preferir
           </h2>
-          <p className="text-zinc-400 text-sm mt-2 max-w-lg mx-auto leading-relaxed">
+          <p className="text-white text-sm mt-2 max-w-lg mx-auto leading-relaxed">
             Aceitamos os principais métodos de pagamento móvel em Moçambique através de negociação directa e offline.
           </p>
         </div>
@@ -61,7 +61,7 @@ export default function PaymentsSection({
                 />
               </div>
               <h3 className="text-white font-semibold text-sm mb-1">{m.name}</h3>
-              <p className="text-zinc-500 text-[13px] leading-relaxed">{m.desc}</p>
+              <p className="text-white text-[13px] leading-relaxed">{m.desc}</p>
             </div>
           ))}
         </div>
@@ -79,7 +79,7 @@ export default function PaymentsSection({
             <h3 className="text-white text-xl md:text-2xl font-black tracking-tight mb-2">
               Pague Enquanto Usa
             </h3>
-            <p className="text-zinc-400 text-sm max-w-md mx-auto mb-5 leading-relaxed">
+            <p className="text-white text-sm max-w-md mx-auto mb-5 leading-relaxed">
               Desconto direto no salário. Taxas preferenciais e prazo até 12 meses sem entrada.
             </p>
             <button
