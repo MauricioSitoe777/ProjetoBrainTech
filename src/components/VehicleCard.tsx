@@ -12,6 +12,9 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
   const [imgFailed, setImgFailed] = useState(false);
   const { navigate } = useRoute();
 
+  const isUnavailable = (vehicle as any).available === false;
+  const motivo = (vehicle as any).motivoIndisponibilidade as string | undefined;
+
   const handleNavigate = () => {
     sessionStorage.setItem("rentcar:returnScroll", String(window.scrollY));
     navigate(`/veiculo/${vehicle.id}`);
@@ -22,9 +25,11 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={`group relative rounded-3xl overflow-hidden bg-zinc-900 border transition-all duration-500 ${
-        hovered
-          ? "border-amber-500/60 shadow-[0_20px_40px_rgba(0,0,0,0.5),0_0_24px_rgba(216,160,32,0.15)] -translate-y-2"
-          : "border-zinc-800 shadow-xl"
+        isUnavailable
+          ? "border-red-500/30 opacity-75"
+          : hovered
+            ? "border-amber-500/60 shadow-[0_20px_40px_rgba(0,0,0,0.5),0_0_24px_rgba(216,160,32,0.15)] -translate-y-2"
+            : "border-zinc-800 shadow-xl"
       }`}
     >
       {/* Image */}
@@ -48,6 +53,20 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
 
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/20 to-transparent" />
+
+        {/* Indisponível overlay */}
+        {isUnavailable && (
+          <div className="absolute inset-0 bg-zinc-950/60 flex flex-col items-center justify-center gap-2 backdrop-blur-[1px]">
+            <div className="bg-red-500/90 text-white text-[11px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full">
+              Indisponível
+            </div>
+            {motivo && (
+              <p className="text-white text-[11px] font-medium text-center px-4 leading-tight">
+                {motivo}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Mode badge */}
         <div className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg ${
@@ -97,9 +116,13 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
             e.stopPropagation();
             handleNavigate();
           }}
-          className="w-full py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest bg-amber-500 text-zinc-950 hover:bg-amber-400 active:scale-[0.97] transition-all duration-200 shadow-lg shadow-amber-500/20 hover:shadow-amber-400/30"
+          className={`w-full py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all duration-200 ${
+            isUnavailable
+              ? "bg-red-500/20 text-white border border-red-500/40"
+              : "bg-amber-500 text-zinc-950 hover:bg-amber-400 active:scale-[0.97] shadow-lg shadow-amber-500/20 hover:shadow-amber-400/30"
+          }`}
         >
-          Ver Detalhe
+          {isUnavailable ? "Temporariamente Indisponível" : "Ver Detalhe"}
         </button>
       </div>
     </div>

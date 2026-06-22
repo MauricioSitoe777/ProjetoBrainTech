@@ -441,16 +441,25 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
                       className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white outline-none focus:border-zinc-600"
                     />
                   </div>
-                  <div className="flex flex-col justify-end">
-                    <label className="flex items-center gap-3 cursor-pointer h-full pb-2">
+                  <div className="flex flex-col justify-end gap-2">
+                    <label className="flex items-center gap-3 cursor-pointer pb-1">
                       <input
                         type="checkbox"
                         checked={form.available}
-                        onChange={e => setForm(f => ({ ...f, available: e.target.checked }))}
+                        onChange={e => setForm(f => ({ ...f, available: e.target.checked, motivoIndisponibilidade: e.target.checked ? '' : f.motivoIndisponibilidade }))}
                         className="w-4 h-4 rounded border-zinc-800 bg-zinc-950 text-amber-500"
                       />
                       <span className="text-white text-sm font-medium">Disponível</span>
                     </label>
+                    {!form.available && (
+                      <input
+                        type="text"
+                        value={(form as any).motivoIndisponibilidade ?? ''}
+                        onChange={e => setForm(f => ({ ...f, motivoIndisponibilidade: e.target.value }))}
+                        placeholder="Motivo (ex: Em manutenção, Reservada...)"
+                        className="w-full rounded-xl bg-zinc-950/40 border border-red-500/30 px-3 py-2 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-red-400/50"
+                      />
+                    )}
                   </div>
                 </div>
 

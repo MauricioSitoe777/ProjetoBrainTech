@@ -17,6 +17,7 @@ export interface VehicleData {
   year: number;
   discount?: number;
   available?: boolean;
+  motivoIndisponibilidade?: string;
   matricula?: string;
 }
 
