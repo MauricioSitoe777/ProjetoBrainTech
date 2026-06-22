@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useScrolled } from "./hooks";
 import { useRoute } from "./hooks/useRoute";
 import Navbar          from "./components/Navbar";
@@ -51,21 +51,20 @@ function AdminShell({ onExit }: { onExit: () => void }) {
   const { path, navigate } = useRoute();
   const { showToast } = useNotifications();
   const [passwordChanged, setPasswordChanged] = useState(false);
-  const prevUserId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (user && prevUserId.current !== user.id) {
-      const primeiroNome = user.nome.split(' ')[0];
-      const isAdmin = user.role === 'admin';
-      showToast(
-        `Bem-vindo${isAdmin ? '' : ' de volta'}, ${primeiroNome}!`,
-        isAdmin ? 'Sessão de administrador iniciada.' : 'A sua conta está activa.',
-        'success'
-      );
-      prevUserId.current = user.id;
-    }
-    if (!user) prevUserId.current = null;
-  }, [user]);
+    if (!user) return;
+    const key = `rentcar:welcomed:${user.id}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+    const primeiroNome = user.nome.split(' ')[0];
+    const isAdmin = user.role === 'admin';
+    showToast(
+      `Bem-vindo${isAdmin ? '' : ' de volta'}, ${primeiroNome}!`,
+      isAdmin ? 'Sessão de administrador iniciada.' : 'A sua conta está activa.',
+      'success'
+    );
+  }, [user?.id]);
 
   if (!user) {
     console.warn('[AdminShell] user é null → a mostrar LoginPage. Path:', path);

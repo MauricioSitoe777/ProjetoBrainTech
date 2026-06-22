@@ -3,7 +3,12 @@ import { NAV_LINKS } from "../data/constants";
 import { useScrollTo } from "../hooks";
 import { useRoute } from "../hooks/useRoute";
 import { useVehicles } from "../context/VehiclesContext";
+import { useAuth } from "../context/AuthContext";
 import { BrandLogo } from "./BrandLogo";
+
+function getInitials(nome: string) {
+  return nome.trim().split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase();
+}
 
 interface NavbarProps {
   scrolled: boolean;
@@ -18,6 +23,8 @@ export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdm
   const scrollTo = useScrollTo();
   const { path, navigate } = useRoute();
   const { searchTerm, setSearchTerm } = useVehicles();
+  const { user, allUsers } = useAuth();
+  const fullUser = user ? allUsers.find(u => u.id === user.id) : null;
 
   const handleNav = (id: string) => {
     setMenuOpen(false);
@@ -111,14 +118,24 @@ export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdm
 
           {/* Login — abre painel de gestão */}
           <button
-            aria-label="Entrar"
+            aria-label={user ? user.nome : "Entrar"}
             onClick={() => onOpenAdmin?.()}
-            className="w-9 h-9 flex items-center justify-center rounded-full text-white hover:text-white hover:bg-zinc-800 transition-all duration-200"
+            className="w-9 h-9 flex items-center justify-center rounded-full transition-all duration-200 overflow-hidden hover:ring-2 hover:ring-amber-500/50"
           >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" strokeLinecap="round" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
+            {user && fullUser?.avatar ? (
+              <img src={fullUser.avatar} alt={user.nome} className="w-full h-full object-cover" />
+            ) : user ? (
+              <span className="w-full h-full flex items-center justify-center rounded-full bg-amber-500 text-zinc-950 text-xs font-black">
+                {getInitials(user.nome)}
+              </span>
+            ) : (
+              <span className="w-full h-full flex items-center justify-center text-white hover:bg-zinc-800 rounded-full">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" strokeLinecap="round" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </span>
+            )}
           </button>
 
           {/* Divider */}
@@ -180,13 +197,21 @@ export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdm
             
             <button
               onClick={() => { onOpenAdmin?.(); setMenuOpen(false); }}
-              className="flex items-center gap-3 px-4 py-2 text-white hover:text-white text-base font-bold transition-colors"
+              className="flex items-center gap-3 px-4 py-2 text-white hover:text-amber-400 text-base font-bold transition-colors"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" strokeLinecap="round" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-              Entrar no Painel
+              {user && fullUser?.avatar ? (
+                <img src={fullUser.avatar} alt={user.nome} className="w-7 h-7 rounded-full object-cover" />
+              ) : user ? (
+                <span className="w-7 h-7 rounded-full bg-amber-500 text-zinc-950 text-xs font-black flex items-center justify-center shrink-0">
+                  {getInitials(user.nome)}
+                </span>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" strokeLinecap="round" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              )}
+              {user ? user.nome.split(' ')[0] : 'Entrar no Painel'}
             </button>
           </div>
 

@@ -7,7 +7,7 @@ import { useReservations } from "../context/ReservationsContext";
 import { useUsers } from "../context/UsersContext";
 import { useMotoristas } from "../context/MotoristasContext";
 import { useVehicles } from "../context/VehiclesContext";
-import { CATEGORY_LABEL } from "../data/constants";
+import { CATEGORY_LABEL, VEHICLES } from "../data/constants";
 import { GuestRequestModal } from "./GuestRequestModal";
 import { IconCar, IconKey, IconWallet } from "./Icons";
 
@@ -502,7 +502,7 @@ export default function Simulator({
 
   return (
     <>
-    <section id="simulador" className="py-5 bg-zinc-950 relative overflow-hidden">
+    <section id="simulador" className="py-5 bg-zinc-900 relative overflow-hidden">
       {/* Ambient glow */}
       <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-5 pointer-events-none"
@@ -558,7 +558,7 @@ export default function Simulator({
                       }`}
                     >
                       <p className="flex items-center gap-1.5 text-xs font-black">{o.icon}{o.label}</p>
-                      <p className={`text-[9px] font-semibold mt-0.5 ${flow === o.key ? 'text-zinc-800' : 'text-white'}`}>{o.sub}</p>
+                      <p className={`text-[9px] font-semibold mt-0.5 ${flow === o.key ? 'text-zinc-900' : 'text-zinc-200'}`}>{o.sub}</p>
                     </button>
                   ))}
                 </div>
@@ -699,7 +699,7 @@ export default function Simulator({
                           : "bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700"}`}
                       >
                         <p className="text-xs font-black">{o.label}</p>
-                        <p className={`text-[9px] font-semibold mt-0.5 ${paymentPlan === o.key ? 'text-zinc-800' : 'text-white'}`}>{o.sub}</p>
+                        <p className={`text-[9px] font-semibold mt-0.5 ${paymentPlan === o.key ? 'text-zinc-900' : 'text-zinc-200'}`}>{o.sub}</p>
                       </button>
                     ))}
                   </div>
@@ -832,9 +832,9 @@ export default function Simulator({
                     </svg>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider mb-0.5">Local de levantamento e devolução</p>
+                    <p className="text-[10px] text-zinc-300 font-semibold uppercase tracking-wider mb-0.5">Local de levantamento e devolução</p>
                     <p className="text-xs font-bold text-white truncate">Escritório Central</p>
-                    <p className="text-[11px] text-zinc-400">Av. Julius Nyerere, Maputo</p>
+                    <p className="text-[11px] text-zinc-200">Av. Julius Nyerere, Maputo</p>
                   </div>
                   <span className="shrink-0 text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full px-2 py-0.5 font-bold">Fixo</span>
                 </div>

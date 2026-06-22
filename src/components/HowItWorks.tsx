@@ -21,7 +21,7 @@ export default function HowItWorks({
   }, []);
 
   return (
-    <section id="como-funciona" className="py-10 md:py-14 relative overflow-hidden bg-zinc-950">
+    <section id="como-funciona" className="py-10 md:py-14 relative overflow-hidden bg-zinc-900">
       {/* Ambient glows */}
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] pointer-events-none"

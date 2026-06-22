@@ -5,7 +5,7 @@ import { BrandLogo } from './BrandLogo';
 import { AdminSidebar } from './AdminSidebar';
 
 const roleConfig = {
-  admin:   { label: 'Administrador', className: 'bg-purple-400/10 text-purple-400 border-purple-400/20' },
+  admin:   { label: 'Administrador', className: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
   cliente: { label: 'Cliente',       className: 'bg-zinc-700 text-white border-zinc-600' },
 };
 

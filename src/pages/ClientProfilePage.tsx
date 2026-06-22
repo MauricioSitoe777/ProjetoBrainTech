@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Mail, Phone, MapPin, Briefcase, Calendar } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useReservations } from '../context/ReservationsContext';
 import { useXitique } from '../context/XitiqueContext';
@@ -993,52 +994,62 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
         {tab === 'dados' && (
           <div className="space-y-3">
 
-            {/* ── Informação Pessoal ── */}
+            {/* ── Profile Card ── */}
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                </svg>
-                <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Informação Pessoal</span>
+              {/* Avatar + Name */}
+              <div className="px-5 pt-5 pb-4">
+                {/* Avatar */}
+                <div className="w-20 h-20 rounded-full overflow-hidden bg-amber-500 flex items-center justify-center text-zinc-950 font-black text-xl shrink-0 shadow-lg mb-4">
+                  {fullUser?.avatar
+                    ? <img src={fullUser.avatar} alt={authUser?.nome} className="w-full h-full object-cover" />
+                    : <span>{authUser ? initials(authUser.nome) : '?'}</span>
+                  }
+                </div>
+
+                {/* Name + Category */}
+                <h2 className="text-white font-black text-xl leading-tight">
+                  {fullUser?.nome ?? authUser?.nome}
+                </h2>
+                {fullUser?.category && (
+                  <p className="text-zinc-400 text-sm mt-0.5">
+                    {fullUser.category === 'func_publico' ? 'Funcionário Público' :
+                     fullUser.category === 'func_privado' ? 'Funcionário Privado' :
+                     fullUser.category === 'empreendedor' ? 'Empreendedor' : ''}
+                  </p>
+                )}
               </div>
-              <div className="divide-y divide-zinc-800/50">
-                {([
-                  { label: 'Nome completo', value: fullUser?.nome ?? authUser?.nome },
-                  { label: 'Email',         value: fullUser?.email ?? authUser?.email },
-                  { label: 'Telefone',      value: fullUser?.telefone },
-                  { label: 'Endereço',      value: fullUser?.endereco },
-                  {
-                    label: 'Categoria',
-                    value: fullUser?.category === 'func_publico' ? 'Funcionário Público' :
-                           fullUser?.category === 'func_privado' ? 'Funcionário Privado' :
-                           fullUser?.category === 'empreendedor' ? 'Empreendedor'        : undefined,
-                  },
-                  {
-                    label: 'Membro desde',
-                    value: fullUser?.dataCriacao ? fmtData(fullUser.dataCriacao.slice(0, 10)) : undefined,
-                  },
-                ] as { label: string; value?: string }[])
-                  .filter(f => !!f.value)
-                  .map(f => (
-                    <div key={f.label} className="flex items-start justify-between gap-4 px-4 py-3">
-                      <span className="text-xs text-zinc-400 shrink-0">{f.label}</span>
-                      <span className="text-xs text-white font-bold text-right break-all">{f.value}</span>
-                    </div>
-                  ))}
+
+              {/* Divider */}
+              <div className="border-t border-zinc-800 mx-5" />
+
+              {/* Info grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5 px-5 py-5">
+                {[
+                  { icon: <Mail size={14} />,      value: fullUser?.email ?? authUser?.email },
+                  { icon: <Phone size={14} />,     value: fullUser?.telefone },
+                  { icon: <MapPin size={14} />,    value: fullUser?.endereco },
+                  { icon: <Briefcase size={14} />, value: fullUser?.category === 'func_publico' ? 'Funcionário Público' : fullUser?.category === 'func_privado' ? 'Funcionário Privado' : fullUser?.category === 'empreendedor' ? 'Empreendedor' : undefined },
+                  { icon: <Calendar size={14} />,  value: fullUser?.dataCriacao ? `Membro desde ${fmtData(fullUser.dataCriacao.slice(0, 10))}` : undefined },
+                ].filter(f => !!f.value).map((f, i) => (
+                  <div key={i} className="flex items-center gap-2.5 min-w-0">
+                    <span className="text-zinc-500 shrink-0">{f.icon}</span>
+                    <span className="text-sm text-zinc-200 truncate">{f.value}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
             {/* ── Estado da Conta ── */}
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                 </svg>
-                <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Estado da Conta</span>
+                <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Estado da Conta</span>
               </div>
               <div className="divide-y divide-zinc-800/50">
                 <div className="flex items-center justify-between gap-3 px-4 py-3">
-                  <span className="text-xs text-zinc-400">Estado</span>
+                  <span className="text-xs text-white">Estado</span>
                   <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${
                     fullUser?.status === 'ativo'    ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' :
                     fullUser?.status === 'suspenso' ? 'bg-red-400/10 text-red-400 border-red-400/20'            :
@@ -1051,7 +1062,7 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3 px-4 py-3">
-                  <span className="text-xs text-zinc-400">Regularidade</span>
+                  <span className="text-xs text-white">Regularidade</span>
                   <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${
                     fullUser?.regularity === 'regular'      ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' :
                     fullUser?.regularity === 'inadimplente' ? 'bg-red-400/10 text-red-400 border-red-400/20'            :
@@ -1062,7 +1073,7 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3 px-4 py-3">
-                  <span className="text-xs text-zinc-400">Xitique</span>
+                  <span className="text-xs text-white">Xitique</span>
                   <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${
                     fullUser?.xitique ? 'bg-amber-400/10 text-amber-400 border-amber-400/20' : 'bg-zinc-700 text-zinc-400 border-zinc-600'
                   }`}>
@@ -1098,7 +1109,7 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
                       </svg>
-                      <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Documentos</span>
+                      <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Documentos</span>
                       {hasAnyDoc && (
                         <div className="flex items-center gap-1">
                           {entregues > 0 && (
@@ -1172,7 +1183,7 @@ export function ClientProfilePage({ onExit }: { onExit?: () => void }) {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" className="mt-0.5 shrink-0">
                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.8" fill="#6b7280"/>
               </svg>
-              <p className="text-xs text-zinc-400 leading-relaxed">
+              <p className="text-xs text-white leading-relaxed">
                 Para alterar os seus dados ou credenciais, contacte o administrador da SOS Motors.
               </p>
             </div>

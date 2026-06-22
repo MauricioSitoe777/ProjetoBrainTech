@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { Vehicle } from "../data/constants";
 import VehicleCard from "./VehicleCard";
 import { useScrollTo } from "../hooks";
 import { useVehicles } from "../context/VehiclesContext";
+
+const ITEMS_PER_PAGE = 8;
 
 type Mode = "todos" | "aluguer" | "compra";
 type SimulatorFlow = "aluguer" | "compra";
@@ -58,16 +60,36 @@ export default function CatalogSection({
   const { vehicles: dynamicVehicles, searchTerm, setSearchTerm } = useVehicles();
   const [mode, setMode] = useState<Mode>("todos");
   const [cat,  setCat]  = useState<Cat>(null);
+  const [page, setPage] = useState(1);
 
   const handleMode = (m: Mode) => {
     setMode(m);
     setCat(null);
     setSearchTerm("");
+    setPage(1);
   };
+
+  // Volta à página 1 quando filtros/pesquisa mudam
+  useEffect(() => { setPage(1); }, [cat, searchTerm]);
 
   const allVehicles = dynamicVehicles as unknown as Vehicle[];
 
-  const filtered = allVehicles.filter((v) => {
+  // Função que gera os números de página com reticências
+  const getPageNums = (total: number, current: number): (number | '...')[] => {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages: (number | '...')[] = [];
+    const addRange = (start: number, end: number) => {
+      for (let i = start; i <= end; i++) pages.push(i);
+    };
+    pages.push(1);
+    if (current > 3) pages.push('...');
+    addRange(Math.max(2, current - 1), Math.min(total - 1, current + 1));
+    if (current < total - 2) pages.push('...');
+    pages.push(total);
+    return pages;
+  };
+
+  const filtered = useMemo(() => allVehicles.filter((v) => {
     if (!v) return false;
     if (mode !== "todos" && v.mode !== mode) return false;
     if (cat && v.cat !== cat) return false;
@@ -78,7 +100,18 @@ export default function CatalogSection({
       if (!nameMatch && !brandMatch) return false;
     }
     return true;
-  });
+  }), [allVehicles, mode, cat, searchTerm]);
+
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const paginatedVehicles = useMemo(
+    () => filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE),
+    [filtered, page]
+  );
+
+  const goToPage = (p: number) => {
+    setPage(p);
+    document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const handleAction = (vehicle: Vehicle) => {
     const mt = Number(String(vehicle.price).replace(/[^\d]/g, "")) || 0;
@@ -117,7 +150,7 @@ export default function CatalogSection({
             <h2 className="text-white text-2xl md:text-3xl font-black leading-tight tracking-tight">
               Frota Disponível
             </h2>
-            <p className="text-zinc-400 text-sm mt-1.5 max-w-md">
+            <p className="text-white text-sm mt-1.5 max-w-md">
               Defina o destino, nós tratamos do caminho. Comece aqui.
             </p>
           </div>
@@ -218,14 +251,14 @@ export default function CatalogSection({
 
         {/* ── Results count ── */}
         <div className="flex items-center justify-between mb-3">
-          <p className="text-zinc-500 text-[11px] uppercase tracking-widest">
+          <p className="text-white text-[11px] uppercase tracking-widest">
             {filtered.length} veículo{filtered.length !== 1 ? "s" : ""} encontrado{filtered.length !== 1 ? "s" : ""}
           </p>
         </div>
 
         {/* ── Grid ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map((v) => (
+          {paginatedVehicles.map((v) => (
             <VehicleCard
               key={v.id}
               vehicle={v}
@@ -242,6 +275,48 @@ export default function CatalogSection({
             <p className="text-zinc-500 text-sm max-w-xs mx-auto">
               Tente ajustar os filtros ou a sua pesquisa para encontrar o que procura.
             </p>
+          </div>
+        )}
+
+        {/* ── Pagination ── */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-1.5 mt-8 flex-wrap">
+            {/* Anterior */}
+            <button
+              onClick={() => goToPage(page - 1)}
+              disabled={page === 1}
+              className="px-4 py-1.5 rounded-lg text-sm font-bold transition-all bg-zinc-800 border border-zinc-700 text-white hover:bg-zinc-700 hover:border-zinc-500 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              ← Anterior
+            </button>
+
+            {/* Page numbers */}
+            {getPageNums(totalPages, page).map((p, i) =>
+              p === '...' ? (
+                <span key={`ellipsis-${i}`} className="px-2 text-zinc-600 text-sm select-none">…</span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => goToPage(p)}
+                  className={`w-8 h-8 rounded-lg text-sm font-bold transition-all border ${
+                    p === page
+                      ? 'bg-amber-500 text-zinc-950 border-amber-500'
+                      : 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:border-zinc-600 hover:text-white'
+                  }`}
+                >
+                  {p}
+                </button>
+              )
+            )}
+
+            {/* Próxima */}
+            <button
+              onClick={() => goToPage(page + 1)}
+              disabled={page === totalPages}
+              className="px-4 py-1.5 rounded-lg text-sm font-bold transition-all bg-zinc-800 border border-zinc-700 text-white hover:bg-zinc-700 hover:border-zinc-500 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Próxima →
+            </button>
           </div>
         )}
 

@@ -48,8 +48,16 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   });
 
   const [toasts, setToasts] = useState<Toast[]>([]);
-  // IDs já mostrados como toast nesta sessão (evita duplicados)
-  const shownToastIds = useRef(new Set<string>());
+
+  // IDs já mostrados como toast — persiste no localStorage para não repetir após refresh
+  const SHOWN_KEY = 'rentcar:shown-toasts:v1';
+  const shownToastIds = useRef(new Set<string>(
+    (() => { try { return JSON.parse(localStorage.getItem(SHOWN_KEY) || '[]'); } catch { return []; } })()
+  ));
+  const markToastShown = (id: string) => {
+    shownToastIds.current.add(id);
+    try { localStorage.setItem(SHOWN_KEY, JSON.stringify([...shownToastIds.current])); } catch { /* ignore */ }
+  };
 
   useEffect(() => {
     localStorage.setItem('rentcar:notifications:v1', JSON.stringify(allNotifications));
@@ -95,7 +103,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     pending.forEach((n, i) => {
       setTimeout(() => {
         showToastRef.current(n.title, n.message, n.type, n.link);
-        shownToastIds.current.add(n.id);
+        markToastShown(n.id);
       }, i * 700);
     });
   // Só re-executa quando o utilizador muda (login/logout)
@@ -135,7 +143,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       : userId === user?.id;
     if (isForCurrentUser) {
       showToast(title, message, type, link);
-      shownToastIds.current.add(newNotif.id);
+      markToastShown(newNotif.id);
     }
   }, [user, showToast]);
 

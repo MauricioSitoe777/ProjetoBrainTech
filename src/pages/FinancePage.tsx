@@ -46,15 +46,15 @@ function Bar({ pct, color = 'bg-amber-500', thin }: { pct: number; color?: strin
 function KpiCard({ label, value, sub, color = 'text-white', accent }: { label: string; value: string; sub?: string; color?: string; accent?: string }) {
   return (
     <div className={`bg-zinc-900 border rounded-2xl p-4 space-y-1 ${accent ?? 'border-zinc-800'}`}>
-      <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">{label}</p>
+      <p className="text-[10px] text-zinc-400 uppercase font-bold tracking-wider">{label}</p>
       <p className={`text-xl font-black leading-tight ${color}`}>{value}</p>
-      {sub && <p className="text-[10px] text-zinc-500">{sub}</p>}
+      {sub && <p className="text-[10px] text-zinc-300">{sub}</p>}
     </div>
   );
 }
 
 // ── Página ────────────────────────────────────────────────────────────────────
-export function FinancePage({ onExit }: { onExit?: () => void }) {
+export function FinancePage() {
   const { reservations }                                      = useReservations();
   const { vehicles }                                          = useVehicles();
   const { grupos, inscricoes }                                = useXitique();
@@ -324,7 +324,7 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
               <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
                 <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
                   <h2 className="text-white font-black text-sm uppercase tracking-wider">Lucratividade por Categoria</h2>
-                  <span className="text-[10px] text-zinc-500">Transações manuais</span>
+                  <span className="text-[10px] text-zinc-300">Transações manuais</span>
                 </div>
                 <div className="divide-y divide-zinc-800/50">
                   {porCategoria.map((c, i) => (
@@ -372,7 +372,7 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
             </div>
 
             {dadosAno.length === 0 ? (
-              <div className="text-center text-zinc-500 text-sm py-16 bg-zinc-900 rounded-2xl border border-zinc-800 border-dashed">
+              <div className="text-center text-zinc-400 text-sm py-16 bg-zinc-900 rounded-2xl border border-zinc-800 border-dashed">
                 Sem dados para {anoSel}
               </div>
             ) : (
@@ -421,7 +421,7 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
                       <thead>
                         <tr className="border-b border-zinc-800/50 bg-zinc-800/20">
                           {['Mês', 'Alugueres', 'Rec. Aluguer', 'Vendas', 'Rec. Venda', 'Total', 'Var.'].map(h => (
-                            <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                            <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-zinc-300 uppercase tracking-wider whitespace-nowrap">{h}</th>
                           ))}
                         </tr>
                       </thead>
@@ -489,7 +489,7 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
                           <thead>
                             <tr className="border-b border-zinc-800/50">
                               {['Data','Viatura','Cliente','Tipo','Valor','Estado'].map(h => (
-                                <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">{h}</th>
+                                <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-zinc-300 uppercase tracking-wider">{h}</th>
                               ))}
                             </tr>
                           </thead>
@@ -498,16 +498,16 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
                               const isCompra = compraIds.has(r.vehicleId);
                               return (
                                 <tr key={r.id} className="hover:bg-zinc-800/30 transition-colors">
-                                  <td className="px-4 py-3 text-xs text-zinc-400 whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
+                                  <td className="px-4 py-3 text-xs text-zinc-200 whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
                                   <td className="px-4 py-3 text-sm font-semibold text-white truncate max-w-[140px]">{getVehicleName(r.vehicleId)}</td>
-                                  <td className="px-4 py-3 text-xs text-zinc-400 truncate max-w-[120px]">{r.clientName ?? '—'}</td>
+                                  <td className="px-4 py-3 text-xs text-zinc-200 truncate max-w-[120px]">{r.clientName ?? '—'}</td>
                                   <td className="px-4 py-3">
                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                                       isCompra ? 'bg-purple-400/10 text-purple-400 border-purple-400/20' : 'bg-blue-400/10 text-blue-400 border-blue-400/20'
                                     }`}>{isCompra ? 'Compra' : 'Aluguer'}</span>
                                   </td>
                                   <td className="px-4 py-3 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(r.valorTotal)}</td>
-                                  <td className="px-4 py-3 text-xs text-zinc-400 capitalize">{r.status.replace(/_/g, ' ')}</td>
+                                  <td className="px-4 py-3 text-xs text-zinc-200 capitalize">{r.status.replace(/_/g, ' ')}</td>
                                 </tr>
                               );
                             })}
@@ -536,26 +536,26 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
               <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
                 <h2 className="text-white font-black text-sm uppercase tracking-wider">Transações Manuais</h2>
-                <span className="text-[10px] text-zinc-500">{transacoes.length} registos</span>
+                <span className="text-[10px] text-zinc-300">{transacoes.length} registos</span>
               </div>
               {transacoes.length === 0 ? (
-                <p className="text-center text-zinc-500 text-sm py-12">Sem transações manuais registadas.</p>
+                <p className="text-center text-zinc-400 text-sm py-12">Sem transações manuais registadas.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-zinc-800/50">
                         {['Data','Descrição','Categoria','Tipo','Valor'].map(h => (
-                          <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">{h}</th>
+                          <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-zinc-300 uppercase tracking-wider">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-800/40">
                       {[...transacoes].sort((a, b) => b.data.localeCompare(a.data)).map(t => (
                         <tr key={t.id} className="hover:bg-zinc-800/20 transition-colors">
-                          <td className="px-4 py-3 text-xs text-zinc-400 whitespace-nowrap">{new Date(t.data).toLocaleDateString('pt-PT')}</td>
+                          <td className="px-4 py-3 text-xs text-zinc-200 whitespace-nowrap">{new Date(t.data).toLocaleDateString('pt-PT')}</td>
                           <td className="px-4 py-3 text-sm text-white font-medium truncate max-w-[200px]">{t.descricao}</td>
-                          <td className="px-4 py-3 text-xs text-zinc-400">{CATEGORIA_LABEL[t.categoria] ?? t.categoria}</td>
+                          <td className="px-4 py-3 text-xs text-zinc-200">{CATEGORIA_LABEL[t.categoria] ?? t.categoria}</td>
                           <td className="px-4 py-3">
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                               t.tipo === 'entrada'
@@ -584,7 +584,7 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <KpiCard label="Total Contratos"  value={String(aluguerRes.length)}  color="text-blue-400"    accent="border-blue-500/20" />
               <KpiCard label="Receita Total"    value={fmt(receitaAluguer)}         color="text-amber-400"   accent="border-amber-500/20" />
-              <KpiCard label="Ticket Médio"     value={fmt(aluguerRes.length > 0 ? receitaAluguer / aluguerRes.length : 0)} color="text-white" />
+              <KpiCard label="Valor Médio"     value={fmt(aluguerRes.length > 0 ? receitaAluguer / aluguerRes.length : 0)} color="text-white" />
               <KpiCard label="Duração Média"    value={`${avgDiasAluguer} dias`}    color="text-zinc-300" />
             </div>
 
@@ -610,17 +610,17 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
               <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
                 <h2 className="text-white font-black text-sm uppercase tracking-wider">Contratos de Aluguer</h2>
-                <span className="text-[10px] text-zinc-500">{aluguerRes.length} contrato{aluguerRes.length !== 1 ? 's' : ''}</span>
+                <span className="text-[10px] text-zinc-300">{aluguerRes.length} contrato{aluguerRes.length !== 1 ? 's' : ''}</span>
               </div>
               {aluguerRes.length === 0 ? (
-                <p className="text-center text-zinc-500 text-sm py-12">Sem contratos de aluguer registados.</p>
+                <p className="text-center text-zinc-400 text-sm py-12">Sem contratos de aluguer registados.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-zinc-800/50 bg-zinc-800/20">
                         {['Data Início','Data Fim','Viatura','Cliente','Duração','Valor','Estado'].map(h => (
-                          <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                          <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-zinc-300 uppercase tracking-wider whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -630,10 +630,10 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
                         const s = STATUS_ALUGUER[r.status] ?? { label: r.status, color: 'text-zinc-400', bg: 'bg-zinc-800 border-zinc-700' };
                         return (
                           <tr key={r.id} className="hover:bg-zinc-800/30 transition-colors">
-                            <td className="px-4 py-3 text-xs text-zinc-400 whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
-                            <td className="px-4 py-3 text-xs text-zinc-400 whitespace-nowrap">{new Date(r.dataFim).toLocaleDateString('pt-PT')}</td>
+                            <td className="px-4 py-3 text-xs text-zinc-200 whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
+                            <td className="px-4 py-3 text-xs text-zinc-200 whitespace-nowrap">{new Date(r.dataFim).toLocaleDateString('pt-PT')}</td>
                             <td className="px-4 py-3 text-sm font-semibold text-white truncate max-w-[140px]">{getVehicleName(r.vehicleId)}</td>
-                            <td className="px-4 py-3 text-xs text-zinc-400 truncate max-w-[120px]">{r.clientName ?? '—'}</td>
+                            <td className="px-4 py-3 text-xs text-zinc-200 truncate max-w-[120px]">{r.clientName ?? '—'}</td>
                             <td className="px-4 py-3 text-xs text-zinc-300 whitespace-nowrap">{dias} dia{dias !== 1 ? 's' : ''}</td>
                             <td className="px-4 py-3 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(r.valorTotal)}</td>
                             <td className="px-4 py-3">
@@ -660,7 +660,7 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
               <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
                 <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
                   <h2 className="text-white font-black text-sm uppercase tracking-wider">Viaturas com Mais Saída</h2>
-                  <span className="text-[10px] text-zinc-500">{rankingAluguer.length} viatura{rankingAluguer.length !== 1 ? 's' : ''}</span>
+                  <span className="text-[10px] text-zinc-300">{rankingAluguer.length} viatura{rankingAluguer.length !== 1 ? 's' : ''}</span>
                 </div>
                 <div className="divide-y divide-zinc-800/40">
                   {rankingAluguer.map((v, i) => {
@@ -708,7 +708,7 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <KpiCard label="Total Contratos"    value={String(compraRes.length)}   color="text-purple-400"  accent="border-purple-500/20" />
               <KpiCard label="Receita Total"      value={fmt(receitaCompra)}          color="text-amber-400"   accent="border-amber-500/20" />
-              <KpiCard label="Ticket Médio"       value={fmt(compraRes.length > 0 ? receitaCompra / compraRes.length : 0)} color="text-white" />
+              <KpiCard label="Valor Médio"       value={fmt(compraRes.length > 0 ? receitaCompra / compraRes.length : 0)} color="text-white" />
               <KpiCard label="Prestações Pagas"
                 value={totalPrestacoesTotal > 0 ? `${totalPrestacoesPagas}/${totalPrestacoesTotal}` : '—'}
                 color="text-emerald-400"
@@ -737,17 +737,17 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
               <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
                 <h2 className="text-white font-black text-sm uppercase tracking-wider">Contratos de Compra & Venda</h2>
-                <span className="text-[10px] text-zinc-500">{compraRes.length} contrato{compraRes.length !== 1 ? 's' : ''}</span>
+                <span className="text-[10px] text-zinc-300">{compraRes.length} contrato{compraRes.length !== 1 ? 's' : ''}</span>
               </div>
               {compraRes.length === 0 ? (
-                <p className="text-center text-zinc-500 text-sm py-12">Sem contratos de compra registados.</p>
+                <p className="text-center text-zinc-400 text-sm py-12">Sem contratos de compra registados.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-zinc-800/50 bg-zinc-800/20">
                         {['Data','Viatura','Cliente','Prestações','Valor Total','Estado'].map(h => (
-                          <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                          <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-zinc-300 uppercase tracking-wider whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -759,9 +759,9 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
                           : '—';
                         return (
                           <tr key={r.id} className="hover:bg-zinc-800/30 transition-colors">
-                            <td className="px-4 py-3 text-xs text-zinc-400 whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
+                            <td className="px-4 py-3 text-xs text-zinc-200 whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
                             <td className="px-4 py-3 text-sm font-semibold text-white truncate max-w-[140px]">{getVehicleName(r.vehicleId)}</td>
-                            <td className="px-4 py-3 text-xs text-zinc-400 truncate max-w-[120px]">{r.clientName ?? '—'}</td>
+                            <td className="px-4 py-3 text-xs text-zinc-200 truncate max-w-[120px]">{r.clientName ?? '—'}</td>
                             <td className="px-4 py-3 text-xs font-bold text-zinc-300 whitespace-nowrap">{prestStr}</td>
                             <td className="px-4 py-3 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(r.valorTotal)}</td>
                             <td className="px-4 py-3">
@@ -788,7 +788,7 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
               <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
                 <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
                   <h2 className="text-white font-black text-sm uppercase tracking-wider">Viaturas Mais Vendidas</h2>
-                  <span className="text-[10px] text-zinc-500">{rankingCompra.length} viatura{rankingCompra.length !== 1 ? 's' : ''}</span>
+                  <span className="text-[10px] text-zinc-300">{rankingCompra.length} viatura{rankingCompra.length !== 1 ? 's' : ''}</span>
                 </div>
                 <div className="divide-y divide-zinc-800/40">
                   {rankingCompra.map((v, i) => {

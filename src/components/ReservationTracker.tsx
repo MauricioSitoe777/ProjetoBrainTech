@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ReservationStatus } from '../types/reservation';
 
 const STEPS: Array<{ status: ReservationStatus; label: string; short: string }> = [
@@ -25,7 +26,6 @@ const NEXT_LABEL: Partial<Record<ReservationStatus, string>> = {
   devolucao_pendente:  'Concluir',
 };
 
-// Tooltip: nome do estado para onde o botão avança
 const NEXT_STATE_LABEL: Partial<Record<ReservationStatus, string>> = {
   pendente:            'Avança para → Confirmada',
   confirmada:          'Avança para → Veículo Entregue',
@@ -42,12 +42,23 @@ interface Props {
 }
 
 export function ReservationTracker({ status, onAdvance, onCancel, readonly }: Props) {
-  const currentIdx = STEPS.findIndex(s => s.status === status);
+  const [confirming, setConfirming] = useState<'advance' | 'cancel' | null>(null);
+
+  const currentIdx     = STEPS.findIndex(s => s.status === status);
   const nextStatus     = NEXT_STATUS[status];
   const nextLabel      = NEXT_LABEL[status];
   const nextStateLabel = NEXT_STATE_LABEL[status];
 
   if (currentIdx === -1) return null;
+
+  const handleConfirm = () => {
+    if (confirming === 'advance' && nextStatus && onAdvance) {
+      onAdvance(nextStatus);
+    } else if (confirming === 'cancel' && onCancel) {
+      onCancel();
+    }
+    setConfirming(null);
+  };
 
   return (
     <div className="space-y-4">
@@ -60,7 +71,6 @@ export function ReservationTracker({ status, onAdvance, onCancel, readonly }: Pr
 
             return (
               <div key={step.status} className="flex items-start">
-                {/* Step */}
                 <div className="flex flex-col items-center gap-1.5 w-16">
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black border-2 transition-all shrink-0 ${
                     isDone    ? 'bg-emerald-400/20 border-emerald-400 text-emerald-400' :
@@ -84,7 +94,6 @@ export function ReservationTracker({ status, onAdvance, onCancel, readonly }: Pr
                   </span>
                 </div>
 
-                {/* Connector */}
                 {idx < STEPS.length - 1 && (
                   <div className="flex items-center mt-3 shrink-0">
                     <div className={`h-0.5 w-6 ${isDone ? 'bg-emerald-400' : 'bg-zinc-700'}`} />
@@ -104,31 +113,59 @@ export function ReservationTracker({ status, onAdvance, onCancel, readonly }: Pr
         </div>
       </div>
 
-      {/* Botões de acção (apenas admin) */}
+      {/* Botões / Confirmação */}
       {!readonly && (nextStatus || onCancel) && (
-        <div className="flex gap-2 flex-wrap">
-          {nextStatus && nextLabel && onAdvance && (
+        confirming ? (
+          /* ── Confirmação inline ── */
+          <div className="flex items-center gap-3 bg-zinc-800/60 border border-zinc-700 rounded-xl px-4 py-3">
+            <span className="text-xs text-white font-semibold flex-1">
+              {confirming === 'cancel'
+                ? 'Cancelar esta reserva. Tem a certeza?'
+                : `${nextLabel} — Tem a certeza?`}
+            </span>
             <button
-              onClick={() => onAdvance(nextStatus)}
-              title={nextStateLabel}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-black bg-amber-400 text-zinc-950 hover:bg-amber-300 active:scale-95 transition-all"
+              onClick={handleConfirm}
+              className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all active:scale-95 ${
+                confirming === 'cancel'
+                  ? 'bg-red-500 text-white hover:bg-red-400'
+                  : 'bg-amber-400 text-zinc-950 hover:bg-amber-300'
+              }`}
             >
-              {nextLabel}
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
+              Confirmar
             </button>
-          )}
-          {status !== 'devolucao_pendente' && status !== 'concluida' && onCancel && (
             <button
-              onClick={onCancel}
-              title="Avança para → Cancelado"
-              className="px-4 py-2 rounded-lg text-xs font-semibold bg-red-400/10 text-red-400 border border-red-400/20 hover:bg-red-400/20 active:scale-95 transition-all"
+              onClick={() => setConfirming(null)}
+              className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-zinc-700 text-white hover:bg-zinc-600 transition-all active:scale-95"
             >
-              Cancelar
+              Voltar
             </button>
-          )}
-        </div>
+          </div>
+        ) : (
+          /* ── Botões normais ── */
+          <div className="flex gap-2 flex-wrap">
+            {nextStatus && nextLabel && onAdvance && (
+              <button
+                onClick={() => setConfirming('advance')}
+                title={nextStateLabel}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-black bg-amber-400 text-zinc-950 hover:bg-amber-300 active:scale-95 transition-all"
+              >
+                {nextLabel}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+            )}
+            {status !== 'devolucao_pendente' && status !== 'concluida' && onCancel && (
+              <button
+                onClick={() => setConfirming('cancel')}
+                title="Avança para → Cancelado"
+                className="px-4 py-2 rounded-lg text-xs font-semibold bg-red-400/10 text-red-400 border border-red-400/20 hover:bg-red-400/20 active:scale-95 transition-all"
+              >
+                Cancelar
+              </button>
+            )}
+          </div>
+        )
       )}
     </div>
   );

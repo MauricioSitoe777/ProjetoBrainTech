@@ -51,7 +51,7 @@ function DetailCard({ icon, iconColor = 'text-zinc-400', label, value, valueColo
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <span className={`shrink-0 ${iconColor}`}>{icon}</span>
-          <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider leading-tight">{label}</p>
+          <p className="text-xs font-bold text-zinc-200 uppercase tracking-wider leading-tight">{label}</p>
         </div>
         {onClick && <IconChevronRight size={16} className="text-zinc-600 group-hover:text-zinc-400 transition-colors shrink-0 mt-0.5" />}
       </div>
@@ -146,7 +146,7 @@ export function DashboardPage() {
         {/* Header */}
         <div>
           <h1 className="text-2xl font-black text-white">Dashboard</h1>
-          <p className="text-zinc-500 text-sm mt-1">Resumo do estado actual do sistema</p>
+          <p className="text-zinc-300 text-sm mt-1">Resumo do estado actual do sistema</p>
         </div>
 
         {/* Cards */}

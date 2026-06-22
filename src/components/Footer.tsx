@@ -17,7 +17,7 @@ const CONTACTS = [
  */
 export default function Footer() {
   return (
-    <footer className="bg-zinc-950 border-t border-zinc-900 py-10">
+    <footer className="bg-zinc-900 border-t border-zinc-800 py-10">
       <div className="max-w-7xl mx-auto px-6">
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
