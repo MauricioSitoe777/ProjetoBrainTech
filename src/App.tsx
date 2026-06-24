@@ -42,6 +42,7 @@ import { ChangePasswordModal } from "./components/ChangePasswordModal";
 import { ToastContainer } from "./components/ToastContainer";
 import { RecuperarSenhaPage } from "./pages/RecuperarSenhaPage";
 import { RedefinirSenhaPage } from "./pages/RedefinirSenhaPage";
+import { SectionReveal } from "./components/SectionReveal";
 
 type SimulatorFlow = "aluguer" | "compra";
 
@@ -98,7 +99,7 @@ function AdminShell({ onExit }: { onExit: () => void }) {
       <AdminNav onExit={onExit} />
       <div className="flex flex-1">
         <div className="hidden md:block shrink-0 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto">
-          <AdminSidebar />
+          <AdminSidebar onExit={onExit} />
         </div>
         <main className="flex-1 min-w-0 overflow-x-hidden">
           {renderPage()}
@@ -149,17 +150,27 @@ function LandingPage({ onOpenAdmin }: { onOpenAdmin: () => void }) {
       />
       <main>
         <Hero />
-        <CatalogSection
-          onShowSimulator={scrollToSimulator}
-          onOpenFlowModal={(lockedFlow) => {
-            setSimulatorFlowLock(lockedFlow);
-            setFlowModalOpen(true);
-          }}
-        />
-        <HowItWorks onShowSimulator={scrollToSimulator} />
-        <XitiqueSection onShowSimulator={scrollToSimulator} />
-        <Simulator showClose={false} />
-        <PaymentsSection onShowSimulator={scrollToSimulator} />
+        <SectionReveal>
+          <CatalogSection
+            onShowSimulator={scrollToSimulator}
+            onOpenFlowModal={(lockedFlow) => {
+              setSimulatorFlowLock(lockedFlow);
+              setFlowModalOpen(true);
+            }}
+          />
+        </SectionReveal>
+        <SectionReveal>
+          <HowItWorks onShowSimulator={scrollToSimulator} />
+        </SectionReveal>
+        <SectionReveal>
+          <XitiqueSection onShowSimulator={scrollToSimulator} />
+        </SectionReveal>
+        <SectionReveal>
+          <Simulator showClose={false} />
+        </SectionReveal>
+        <SectionReveal>
+          <PaymentsSection onShowSimulator={scrollToSimulator} />
+        </SectionReveal>
       </main>
       <Footer />
 

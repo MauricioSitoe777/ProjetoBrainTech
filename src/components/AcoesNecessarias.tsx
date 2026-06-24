@@ -87,27 +87,27 @@ export function AcoesNecessarias() {
       !compraIds.has(r.vehicleId) && r.status === 'devolucao_pendente'
     ).length;
     if (devolucaoPendente > 0)
-      items.push({ label: `${p(devolucaoPendente, 'devolução', 'devoluções')} pendente${devolucaoPendente > 1 ? 's' : ''} — aguarda viatura recebida`, route: '/admin/aluguer?tab=acoes&status=devolucao_pendente', urgency: 'alta' });
+      items.push({ label: `${p(devolucaoPendente, 'carro', 'carros')} para receber de volta — o cliente já devia ter devolvido`, route: '/admin/aluguer?tab=acoes&status=devolucao_pendente', urgency: 'alta' });
 
     const emAtraso = reservations.filter(r =>
       !compraIds.has(r.vehicleId) && r.status === 'ativa' && r.dataFim < today
     ).length;
     if (emAtraso > 0)
-      items.push({ label: `${p(emAtraso, 'aluguer')} em atraso — viatura${emAtraso > 1 ? 's' : ''} não devolvida${emAtraso > 1 ? 's' : ''}`, route: '/admin/aluguer?tab=acoes&status=ativa', urgency: 'alta' });
+      items.push({ label: `${p(emAtraso, 'carro', 'carros')} fora do prazo — o cliente ainda não devolveu`, route: '/admin/aluguer?tab=acoes&status=ativa', urgency: 'alta' });
 
     const pendentes = reservations.filter(r => r.status === 'pendente' && !compraIds.has(r.vehicleId)).length;
     if (pendentes > 0)
-      items.push({ label: `${p(pendentes, 'reserva')} aguarda${pendentes === 1 ? '' : 'm'} confirmação`, route: '/admin/aluguer?tab=acoes&status=pendente', urgency: 'alta' });
+      items.push({ label: `${p(pendentes, 'pedido', 'pedidos')} de aluguer à espera de confirmação`, route: '/admin/aluguer?tab=acoes&status=pendente', urgency: 'alta' });
 
     const devolvemHoje = reservations.filter(r =>
       !compraIds.has(r.vehicleId) && r.status === 'ativa' && r.dataFim === today
     ).length;
     if (devolvemHoje > 0)
-      items.push({ label: `${p(devolvemHoje, 'cliente')} devolve${devolvemHoje === 1 ? '' : 'm'} hoje`, route: '/admin/aluguer?tab=acoes&status=ativa', urgency: 'alta' });
+      items.push({ label: `${p(devolvemHoje, 'cliente')} vai devolver o carro hoje`, route: '/admin/aluguer?tab=acoes&status=ativa', urgency: 'alta' });
 
     const compraAtraso = reservations.filter(r => compraIds.has(r.vehicleId) && r.status === 'prestacao_atraso').length;
     if (compraAtraso > 0)
-      items.push({ label: `${p(compraAtraso, 'compra')} com prestação em atraso — regularizar urgente`, route: '/admin/compra?tab=acoes&status=prestacao_atraso', urgency: 'alta' });
+      items.push({ label: `${p(compraAtraso, 'compra')} com pagamento em atraso — tratar com urgência`, route: '/admin/compra?tab=acoes&status=prestacao_atraso', urgency: 'alta' });
 
     const dividasVencidas = dividas.filter(d => d.dataVencimento && d.dataVencimento < today && d.status !== 'quitado');
     if (dividasVencidas.length > 0) {
@@ -115,7 +115,7 @@ export function AcoesNecessarias() {
         const dias = Math.floor((Date.now() - new Date(d.dataVencimento!).getTime()) / 86_400_000);
         return dias > max ? dias : max;
       }, 0);
-      items.push({ label: `${p(dividasVencidas.length, 'prestação', 'prestações')} atrasada${dividasVencidas.length > 1 ? 's' : ''} (maior atraso: ${maxAtraso} dias)`, route: '/admin/financas', urgency: 'alta' });
+      items.push({ label: `${p(dividasVencidas.length, 'pagamento', 'pagamentos')} em atraso — o mais antigo há ${maxAtraso} dias`, route: '/admin/financas', urgency: 'alta' });
     }
 
     // ── MÉDIA ─────────────────────────────────────────────────────────────────
@@ -123,44 +123,44 @@ export function AcoesNecessarias() {
       !compraIds.has(r.vehicleId) && r.status === 'pronta_levantamento'
     ).length;
     if (prontasLevantamento > 0)
-      items.push({ label: `${p(prontasLevantamento, 'viatura')} pronta${prontasLevantamento > 1 ? 's' : ''} para levantamento`, route: '/admin/aluguer?tab=acoes&status=pronta_levantamento', urgency: 'media' });
+      items.push({ label: `${p(prontasLevantamento, 'carro', 'carros')} pronto${prontasLevantamento > 1 ? 's' : ''} para o cliente ir buscar`, route: '/admin/aluguer?tab=acoes&status=pronta_levantamento', urgency: 'media' });
 
     const iniciaHoje = reservations.filter(r =>
       !compraIds.has(r.vehicleId) && r.status === 'confirmada' && r.dataInicio === today
     ).length;
     if (iniciaHoje > 0)
-      items.push({ label: `${p(iniciaHoje, 'aluguer')} começa${iniciaHoje === 1 ? '' : 'm'} hoje — marcar viatura como pronta`, route: '/admin/aluguer?tab=acoes&status=confirmada', urgency: 'media' });
+      items.push({ label: `${p(iniciaHoje, 'aluguer')} começa hoje — preparar o carro`, route: '/admin/aluguer?tab=acoes&status=confirmada', urgency: 'media' });
 
     const vencemAmanha = dividas.filter(d => d.dataVencimento === tomorrow && d.status !== 'quitado').length;
     if (vencemAmanha > 0)
-      items.push({ label: `${p(vencemAmanha, 'prestação', 'prestações')} vence${vencemAmanha === 1 ? '' : 'm'} amanhã`, route: '/admin/financas', urgency: 'media' });
+      items.push({ label: `${p(vencemAmanha, 'pagamento', 'pagamentos')} vence${vencemAmanha === 1 ? '' : 'm'} amanhã`, route: '/admin/financas', urgency: 'media' });
 
     const vendasPendentes = reservations.filter(r => compraIds.has(r.vehicleId) && r.status === 'pendente').length;
     if (vendasPendentes > 0)
-      items.push({ label: `${p(vendasPendentes, 'venda')} pendente${vendasPendentes > 1 ? 's' : ''} por concluir`, route: '/admin/compra?tab=acoes&status=pendente', urgency: 'media' });
+      items.push({ label: `${p(vendasPendentes, 'venda')} por fechar`, route: '/admin/compra?tab=acoes&status=pendente', urgency: 'media' });
 
     const comprasPrestacoes = reservations.filter(r =>
       compraIds.has(r.vehicleId) && r.status === 'em_prestacao'
     ).length;
     if (comprasPrestacoes > 0)
-      items.push({ label: `${p(comprasPrestacoes, 'compra')} em regime de prestações`, route: '/admin/compra?tab=acoes&status=em_prestacao', urgency: 'media' });
+      items.push({ label: `${p(comprasPrestacoes, 'compra')} a ser paga em prestações`, route: '/admin/compra?tab=acoes&status=em_prestacao', urgency: 'media' });
 
     const inscricoesPendentes = inscricoes.filter(i => i.status === 'aguarda_validacao').length;
     if (inscricoesPendentes > 0)
-      items.push({ label: `${p(inscricoesPendentes, 'inscrição', 'inscrições')} no Xitique aguarda${inscricoesPendentes === 1 ? '' : 'm'} aprovação`, route: '/admin/xitique', urgency: 'media' });
+      items.push({ label: `${p(inscricoesPendentes, 'pessoa', 'pessoas')} quer${inscricoesPendentes === 1 ? '' : 'em'} entrar no Xitique — aprovar ou recusar`, route: '/admin/xitique', urgency: 'media' });
 
     // ── INFO ──────────────────────────────────────────────────────────────────
     const semPagamento = membros.filter(m => m.estado === 'Aceite' && !m.pagamentoMes).length;
     if (semPagamento > 0)
-      items.push({ label: `${p(semPagamento, 'membro')} Xitique sem pagamento no mês`, route: '/admin/xitique', urgency: 'info' });
+      items.push({ label: `${p(semPagamento, 'membro')} do Xitique ainda não pagou este mês`, route: '/admin/xitique', urgency: 'info' });
 
     const usersPendentes = users.filter(u => u.status === 'pendente').length;
     if (usersPendentes > 0)
-      items.push({ label: `${p(usersPendentes, 'utilizador')} com conta pendente de activação`, route: '/admin', urgency: 'info' });
+      items.push({ label: `${p(usersPendentes, 'conta', 'contas')} à espera de ser activada`, route: '/admin', urgency: 'info' });
 
     const visitantesPendentes = guests.filter(g => g.status !== 'aprovado' && g.status !== 'rejeitado').length;
     if (visitantesPendentes > 0)
-      items.push({ label: `${p(visitantesPendentes, 'visitante')} aguarda${visitantesPendentes === 1 ? '' : 'm'} validação de documentos`, route: '/admin', urgency: visitantesPendentes > 2 ? 'media' : 'info' });
+      items.push({ label: `${p(visitantesPendentes, 'visitante')} à espera que os documentos sejam verificados`, route: '/admin', urgency: visitantesPendentes > 2 ? 'media' : 'info' });
 
     const manutencaoIds = new Set<number>();
     blocks
@@ -170,7 +170,7 @@ export function AcoesNecessarias() {
         else vehicles.forEach(v => manutencaoIds.add(v.id));
       });
     if (manutencaoIds.size > 0)
-      items.push({ label: `${p(manutencaoIds.size, 'viatura')} em manutenção`, route: '/admin/veiculos', urgency: 'info' });
+      items.push({ label: `${p(manutencaoIds.size, 'carro', 'carros')} em manutenção neste momento`, route: '/admin/veiculos', urgency: 'info' });
 
     return items;
   }, [reservations, dividas, blocks, vehicles, inscricoes, grupos, membros, users, guests]);
@@ -183,8 +183,8 @@ export function AcoesNecessarias() {
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 flex items-center gap-3">
         <IconCheckCircle size={18} className="text-emerald-400 shrink-0" />
         <div>
-          <p className="text-white font-black text-sm uppercase tracking-wider">Ações Necessárias</p>
-          <p className="text-emerald-400 text-xs mt-0.5">Tudo em ordem — sem acções pendentes.</p>
+          <p className="text-white font-black text-sm uppercase tracking-wider">O Que Fazer Agora</p>
+          <p className="text-emerald-400 text-xs mt-0.5">Está tudo em ordem — não há nada para fazer.</p>
         </div>
       </div>
     );
@@ -211,7 +211,7 @@ export function AcoesNecessarias() {
         {isDismissed ? (
           <button
             onClick={(e) => restore(a.label, e)}
-            title="Tornar visível"
+            title="Mostrar de novo"
             className="shrink-0 p-1 rounded-lg text-zinc-600 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -223,7 +223,7 @@ export function AcoesNecessarias() {
           <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={(e) => dismiss(a.label, e)}
-              title="Omitir"
+              title="Esconder"
               className="p-1 rounded-lg text-zinc-600 hover:text-zinc-300 hover:bg-zinc-700/60 transition-colors opacity-0 group-hover:opacity-100"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -245,7 +245,7 @@ export function AcoesNecessarias() {
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
       <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
-        <h2 className="text-white font-black text-sm uppercase tracking-wider">Ações Necessárias</h2>
+        <h2 className="text-white font-black text-sm uppercase tracking-wider">O Que Fazer Agora</h2>
         <div className="flex items-center gap-2">
           {hidden.length > 0 && !collapsed && (
             <button
@@ -284,7 +284,7 @@ export function AcoesNecessarias() {
 
           {visible.length === 0 && hidden.length > 0 && (
             <div className="px-5 py-4 text-center text-xs text-zinc-500">
-              Todas as ações estão ocultas. Clique em <span className="text-zinc-300 font-bold">{hidden.length} oculta{hidden.length > 1 ? 's' : ''}</span> para as ver.
+              Escondeste tudo. Clica em <span className="text-zinc-300 font-bold">{hidden.length} escondida{hidden.length > 1 ? 's' : ''}</span> para ver de novo.
             </div>
           )}
         </>

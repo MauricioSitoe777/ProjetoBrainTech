@@ -2,6 +2,10 @@
 
 @import "tailwindcss";
 
+html {
+  font-size: 17px;
+}
+
 @theme {
   --font-sans: 'Archivo', sans-serif;
   --color-zinc-950: #353535;

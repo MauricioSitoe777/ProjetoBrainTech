@@ -143,12 +143,6 @@ export function DashboardPage() {
     <div className="bg-zinc-950 text-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
 
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl font-black text-white">Dashboard</h1>
-          <p className="text-zinc-300 text-sm mt-1">Resumo do estado actual do sistema</p>
-        </div>
-
         {/* Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
@@ -156,7 +150,7 @@ export function DashboardPage() {
           <DetailCard
             icon={<IconUsers size={18} />}
             iconColor="text-zinc-400"
-            label="Utilizadores"
+            label="Pessoas com conta activa"
             value={s.activeUsers}
             valueColor="text-white"
             accent={s.pendentUsers > 0 ? 'border-amber-500/30' : 'border-zinc-800'}
@@ -167,7 +161,7 @@ export function DashboardPage() {
           <DetailCard
             icon={<IconCar size={18} />}
             iconColor="text-amber-400"
-            label="Alugueres Activos"
+            label="Carros alugados agora"
             value={s.aluguerAtivos}
             valueColor="text-amber-400"
             accent={s.aluguerAtraso > 0 ? 'border-red-500/40' : s.aluguerPendentes > 0 ? 'border-amber-500/30' : 'border-zinc-800'}
@@ -178,7 +172,7 @@ export function DashboardPage() {
           <DetailCard
             icon={<IconTag size={18} />}
             iconColor="text-blue-400"
-            label="Compras em Curso"
+            label="Compras a decorrer"
             value={s.compraAtivas}
             valueColor="text-blue-400"
             accent={s.compraAtraso > 0 ? 'border-red-500/40' : 'border-zinc-800'}
@@ -189,7 +183,7 @@ export function DashboardPage() {
           <DetailCard
             icon={<IconFleet size={18} />}
             iconColor="text-sky-400"
-            label="Frota"
+            label="Total de carros"
             value={s.totalVeiculos}
             valueColor="text-sky-400"
             accent="border-zinc-800"
@@ -201,7 +195,7 @@ export function DashboardPage() {
           <DetailCard
             icon={<IconSteering size={18} />}
             iconColor="text-blue-400"
-            label="Motoristas"
+            label="Motoristas livres"
             value={`${s.motorDisp} / ${s.totalMotoristas}`}
             valueColor="text-blue-400"
             accent="border-zinc-800"
@@ -212,7 +206,7 @@ export function DashboardPage() {
           <DetailCard
             icon={<IconWallet size={18} />}
             iconColor="text-emerald-400"
-            label="Xitique"
+            label="Grupos Xitique"
             value={s.gruposAtivos + s.gruposAbertos}
             valueColor="text-emerald-400"
             accent={s.inscricoesPend > 0 ? 'border-amber-500/30' : 'border-zinc-800'}
