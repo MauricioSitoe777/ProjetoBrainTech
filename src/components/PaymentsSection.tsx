@@ -20,9 +20,6 @@ export default function PaymentsSection({
           <h2 className="text-white text-2xl md:text-3xl font-black tracking-tight">
             Pague como preferir
           </h2>
-          <p className="text-white text-sm mt-2 max-w-lg mx-auto leading-relaxed">
-            Aceitamos os principais métodos de pagamento móvel em Moçambique através de negociação directa e offline.
-          </p>
         </div>
 
         {/* Offline alert */}
@@ -64,34 +61,6 @@ export default function PaymentsSection({
               <p className="text-white text-[13px] leading-relaxed">{m.desc}</p>
             </div>
           ))}
-        </div>
-
-        {/* Promo banner */}
-        <div className="mt-8 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-6 py-8 md:px-10 md:py-10 text-center relative overflow-hidden">
-          <div
-            className="absolute inset-0 opacity-5 pointer-events-none"
-            style={{ backgroundImage: "radial-gradient(circle at 50% 50%, #d8a020, transparent 60%)" }}
-          />
-          <div className="relative">
-            <div className="text-amber-400 text-[10px] font-bold uppercase tracking-widest mb-3">
-              Oferta Especial
-            </div>
-            <h3 className="text-white text-xl md:text-2xl font-black tracking-tight mb-2">
-              Pague Enquanto Usa
-            </h3>
-            <p className="text-white text-sm max-w-md mx-auto mb-5 leading-relaxed">
-              Desconto direto no salário. Taxas preferenciais e prazo até 12 meses sem entrada.
-            </p>
-            <button
-              onClick={() => { onShowSimulator?.(); scrollTo("simulador"); }}
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full font-bold text-sm bg-amber-500 text-zinc-950 hover:bg-amber-400 transition-all duration-200 hover:scale-105 active:scale-95 shadow-md shadow-amber-500/20"
-            >
-              Simular Agora
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
         </div>
 
       </div>

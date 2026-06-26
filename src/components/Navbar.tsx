@@ -2,7 +2,6 @@ import { useState } from "react";
 import { NAV_LINKS } from "../data/constants";
 import { useScrollTo } from "../hooks";
 import { useRoute } from "../hooks/useRoute";
-import { useVehicles } from "../context/VehiclesContext";
 import { useAuth } from "../context/AuthContext";
 import { BrandLogo } from "./BrandLogo";
 
@@ -19,10 +18,8 @@ interface NavbarProps {
 
 export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdmin, onOpenAbout }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showSearchInput, setShowSearchInput] = useState(false);
   const scrollTo = useScrollTo();
   const { path, navigate } = useRoute();
-  const { searchTerm, setSearchTerm } = useVehicles();
   const { user, allUsers } = useAuth();
   const fullUser = user ? allUsers.find(u => u.id === user.id) : null;
 
@@ -34,28 +31,23 @@ export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdm
       return;
     }
 
-    if (path !== "/") {
+    if (id === "xitique") {
+      navigate("/xitique");
+      return;
+    }
+
+    if (path !== "/" && path !== "/xitique") {
       navigate("/");
       setTimeout(() => {
         if (id === "simulador") onShowSimulator?.();
         scrollTo(id);
       }, 100);
+    } else if (path === "/xitique") {
+      navigate("/");
+      setTimeout(() => scrollTo(id), 100);
     } else {
       if (id === "simulador") onShowSimulator?.();
       scrollTo(id);
-    }
-  };
-
-  const handleSearchClick = () => {
-    setShowSearchInput(!showSearchInput);
-    if (!showSearchInput) {
-      // If we are on details page and start searching, go back to catalog
-      if (path !== "/") {
-        navigate("/");
-        setTimeout(() => scrollTo("catalogo"), 100);
-      } else {
-        scrollTo("catalogo");
-      }
     }
   };
 
@@ -93,28 +85,6 @@ export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdm
 
         {/* Actions desktop */}
         <div className="hidden md:flex items-center gap-2">
-
-          {/* Pesquisa */}
-          <div className={`flex items-center transition-all duration-500 overflow-hidden ${showSearchInput ? "max-w-xs bg-zinc-900 border border-zinc-800 rounded-full px-3 py-1" : "max-w-0"}`}>
-            <input
-              type="text"
-              placeholder="Pesquisar..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-transparent border-none outline-none text-xs text-white placeholder:text-zinc-500 w-32"
-              autoFocus={showSearchInput}
-            />
-          </div>
-          <button
-            aria-label="Pesquisar"
-            onClick={handleSearchClick}
-            className={`w-9 h-9 flex items-center justify-center rounded-full transition-all duration-200 ${showSearchInput ? "text-amber-500" : "text-white hover:text-white hover:bg-zinc-800"}`}
-          >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8" />
-              <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
-            </svg>
-          </button>
 
           {/* Login — abre painel de gestão */}
           <button
@@ -179,22 +149,8 @@ export default function Navbar({ scrolled: _scrolled, onShowSimulator, onOpenAdm
             </button>
           ))}
 
-          {/* Pesquisa + Login mobile */}
+          {/* Login mobile */}
           <div className="flex flex-col gap-3 pt-1">
-            <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white">
-                <circle cx="11" cy="11" r="8" />
-                <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Pesquisar veículos..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-transparent border-none outline-none text-sm text-white placeholder:text-zinc-500 ml-3 flex-1"
-              />
-            </div>
-            
             <button
               onClick={() => { onOpenAdmin?.(); setMenuOpen(false); }}
               className="flex items-center gap-3 px-4 py-2 text-white hover:text-amber-400 text-base font-bold transition-colors"

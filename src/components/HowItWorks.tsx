@@ -67,7 +67,7 @@ export default function HowItWorks({
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
             {STEPS.map((step, i) => (
               <div
                 key={step.n}
@@ -121,23 +121,6 @@ export default function HowItWorks({
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Bottom CTA */}
-        <div
-          className="text-center mt-8 transition-all duration-700"
-          style={{ opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(16px)", transitionDelay: "0.9s" }}
-        >
-          <p className="text-zinc-500 text-sm mb-3">Pronto para começar?</p>
-          <button
-            onClick={(e) => { e.preventDefault(); onShowSimulator?.(); scrollTo("simulador"); }}
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 text-zinc-950 font-bold text-sm px-6 py-2.5 rounded-full hover:from-amber-400 hover:to-amber-500 transition-all duration-200 hover:scale-105 active:scale-95 shadow-md shadow-amber-500/20"
-          >
-            Simular agora
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
         </div>
 
       </div>

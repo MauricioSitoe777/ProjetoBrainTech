@@ -18,6 +18,7 @@ export interface VehicleData {
   discount?: number;
   available?: boolean;
   motivoIndisponibilidade?: string;
+  dataDisponibilidade?: string;
   matricula?: string;
 }
 
@@ -35,12 +36,19 @@ const VehiclesContext = createContext<VehiclesContextType | null>(null);
 const API_URL      = 'http://localhost:4001/vehicles';
 const STORAGE_KEY  = 'rentcar:vehicles:v1';
 
+const STATIC_MAP = new Map(VEHICLES.map(v => [Number(v.id), v]));
+
 function loadLocal(): VehicleData[] | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw);
-    return Array.isArray(data) && data.length > 0 ? data : null;
+    if (!Array.isArray(data) || data.length === 0) return null;
+    // Enriquece dados armazenados com campos novos dos estáticos (estático = default, stored = override)
+    return data.map(stored => {
+      const staticV = STATIC_MAP.get(Number(stored.id));
+      return staticV ? { ...staticV, ...stored } : stored;
+    });
   } catch { return null; }
 }
 

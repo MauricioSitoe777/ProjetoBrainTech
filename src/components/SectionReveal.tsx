@@ -43,9 +43,10 @@ export function SectionReveal({ children }: { children: ReactNode }) {
       >
         {children}
 
+
         {/* película que cobre a secção ao ser ultrapassada */}
         <motion.div
-          className="pointer-events-none absolute inset-0 bg-zinc-950"
+          className="pointer-events-none absolute inset-0 bg-zinc-950 z-40"
           style={{ opacity: overlay }}
         />
       </motion.div>

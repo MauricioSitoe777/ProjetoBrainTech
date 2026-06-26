@@ -32,6 +32,7 @@ export interface Reservation {
   clientName: string;
   clientEmail?: string;
   clientPhone?: string;
+  clientPhone2?: string;
   dataInicio: string;
   dataFim: string;
   horaLevantamento: string;

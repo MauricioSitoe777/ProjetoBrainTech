@@ -1,10 +1,14 @@
 import { BrandLogo } from "./BrandLogo";
+import { useRoute } from "../hooks/useRoute";
+import { useScrollTo } from "../hooks";
 
-const SERVICES = [
-  "Aluguer de Viaturas",
-  "Venda de Veículos",
-  "Aluguer para Empresas",
-] as const;
+const SERVICES: { label: string; section: string }[] = [
+  { label: "Aluguer de Viaturas",  section: "catalogo" },
+  { label: "Venda de Veículos",    section: "catalogo" },
+  { label: "Como Funciona",        section: "como-funciona" },
+  { label: "Xitique",              section: "xitique" },
+  { label: "Simulador",            section: "simulador" },
+];
 
 const CONTACTS = [
   "Maputo · Av. 25 de Setembro",
@@ -47,6 +51,22 @@ const SOCIALS = [
 ] as const;
 
 export default function Footer() {
+  const { path, navigate } = useRoute();
+  const scrollTo = useScrollTo();
+
+  const handleService = (section: string) => {
+    if (section === "xitique") {
+      navigate("/xitique");
+      return;
+    }
+    if (path !== "/") {
+      navigate("/");
+      setTimeout(() => scrollTo(section), 100);
+    } else {
+      scrollTo(section);
+    }
+  };
+
   return (
     <footer className="bg-zinc-900 border-t border-zinc-800 py-10">
       <div className="max-w-7xl mx-auto px-6">
@@ -67,13 +87,14 @@ export default function Footer() {
           {/* Services */}
           <div>
             <div className="text-white font-semibold text-sm mb-4">Serviços</div>
-            {SERVICES.map((s) => (
-              <div
-                key={s}
-                className="text-white text-sm mb-2 cursor-pointer transition-colors"
+            {SERVICES.map(({ label, section }) => (
+              <button
+                key={label}
+                onClick={() => handleService(section)}
+                className="block text-white/70 hover:text-amber-400 text-sm mb-2.5 transition-colors text-left"
               >
-                {s}
-              </div>
+                {label}
+              </button>
             ))}
           </div>
 
@@ -85,9 +106,8 @@ export default function Footer() {
             ))}
 
             {/* Redes sociais */}
-            <div className="mt-4">
-            <p className="text-amber-400 text-xs font-semibold mb-2.5">Siga-nos:</p>
-            <div className="flex items-center gap-2.5">
+            <div className="mt-4 flex items-center gap-2.5 flex-wrap">
+              <p className="text-amber-400 text-xs font-semibold">Siga-nos:</p>
               {SOCIALS.map(({ label, href, textColor, bgColor, borderColor, glowColor, path }) => (
                 <a
                   key={label}
@@ -104,7 +124,6 @@ export default function Footer() {
                 </a>
               ))}
             </div>
-            </div>
           </div>
 
         </div>
@@ -112,7 +131,7 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="border-t border-zinc-800 pt-6 flex items-center justify-between gap-4">
           <p className="text-white text-xs">
-            © 2026 RentCar &amp; Vendas Moçambique. Todos os direitos reservados.
+            © 2026 SOS Motors e Vendas Moçambique. Todos os direitos reservados.
           </p>
           <img src="/braintech-logo.svg" alt="Braintech" className="h-10 w-auto shrink-0 opacity-80 hover:opacity-100 transition-opacity" />
         </div>

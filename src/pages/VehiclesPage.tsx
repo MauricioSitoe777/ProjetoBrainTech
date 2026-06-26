@@ -7,7 +7,7 @@ const MODES = ['aluguer', 'compra'];
 const FUELS = ['Diesel', 'Gasolina', 'Híbrido', 'Eléctrico'];
 
 const emptyForm: Omit<VehicleData, 'id'> = {
-  name: '', brand: '', cat: 'suv', mode: 'aluguer', price: '', description: '', img: '', images: [], fuel: 'Gasolina', seats: 5, year: 2024, discount: 0, available: true, matricula: '',
+  name: '', brand: '', cat: 'suv', mode: 'aluguer', price: '', description: '', img: '', images: [], fuel: 'Gasolina', seats: 5, year: 2024, discount: 0, available: true, matricula: '', motivoIndisponibilidade: '', dataDisponibilidade: '',
 };
 
 export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
@@ -80,6 +80,8 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
       discount: v.discount ?? 0,
       available: v.available ?? true,
       matricula: v.matricula ?? '',
+      motivoIndisponibilidade: v.motivoIndisponibilidade ?? '',
+      dataDisponibilidade: v.dataDisponibilidade ?? '',
     });
     setImageInput('');
     setShowForm(true);
@@ -446,19 +448,30 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
                       <input
                         type="checkbox"
                         checked={form.available}
-                        onChange={e => setForm(f => ({ ...f, available: e.target.checked, motivoIndisponibilidade: e.target.checked ? '' : f.motivoIndisponibilidade }))}
+                        onChange={e => setForm(f => ({ ...f, available: e.target.checked, motivoIndisponibilidade: e.target.checked ? '' : f.motivoIndisponibilidade, dataDisponibilidade: e.target.checked ? '' : f.dataDisponibilidade }))}
                         className="w-4 h-4 rounded border-zinc-800 bg-zinc-950 text-amber-500"
                       />
                       <span className="text-white text-sm font-medium">Disponível</span>
                     </label>
                     {!form.available && (
-                      <input
-                        type="text"
-                        value={(form as any).motivoIndisponibilidade ?? ''}
-                        onChange={e => setForm(f => ({ ...f, motivoIndisponibilidade: e.target.value }))}
-                        placeholder="Motivo (ex: Em manutenção, Reservada...)"
-                        className="w-full rounded-xl bg-zinc-950/40 border border-red-500/30 px-3 py-2 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-red-400/50"
-                      />
+                      <>
+                        <input
+                          type="text"
+                          value={form.motivoIndisponibilidade ?? ''}
+                          onChange={e => setForm(f => ({ ...f, motivoIndisponibilidade: e.target.value }))}
+                          placeholder="Motivo (ex: Em manutenção...)"
+                          className="w-full rounded-xl bg-zinc-950/40 border border-red-500/30 px-3 py-2 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-red-400/50"
+                        />
+                        <div>
+                          <label className="text-zinc-400 text-xs font-medium block mb-1">Disponível a partir de</label>
+                          <input
+                            type="date"
+                            value={form.dataDisponibilidade ?? ''}
+                            onChange={e => setForm(f => ({ ...f, dataDisponibilidade: e.target.value }))}
+                            className="w-full rounded-xl bg-zinc-950/40 border border-red-500/30 px-3 py-2 text-sm text-white outline-none focus:border-red-400/50 [color-scheme:dark]"
+                          />
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>

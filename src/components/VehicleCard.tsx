@@ -14,6 +14,13 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
 
   const isUnavailable = (vehicle as any).available === false;
   const motivo = (vehicle as any).motivoIndisponibilidade as string | undefined;
+  const dataDisp = (vehicle as any).dataDisponibilidade as string | undefined;
+
+  const formatDate = (iso: string) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    return `${d} ${months[m - 1]} ${y}`;
+  };
 
   const handleNavigate = () => {
     sessionStorage.setItem("rentcar:returnScroll", String(window.scrollY));
@@ -56,14 +63,22 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
 
         {/* Indisponível overlay */}
         {isUnavailable && (
-          <div className="absolute inset-0 bg-zinc-950/60 flex flex-col items-center justify-center gap-2 backdrop-blur-[1px]">
+          <div className="absolute inset-0 bg-zinc-950/70 flex flex-col items-center justify-center gap-2 backdrop-blur-[2px] px-4">
             <div className="bg-red-500/90 text-white text-[11px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full">
               Indisponível
             </div>
             {motivo && (
-              <p className="text-white text-[11px] font-medium text-center px-4 leading-tight">
+              <p className="text-white/90 text-[11px] font-medium text-center leading-tight">
                 {motivo}
               </p>
+            )}
+            {dataDisp && (
+              <div className="flex items-center gap-1.5 bg-zinc-800/80 border border-zinc-700/60 rounded-lg px-2.5 py-1.5">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-400 shrink-0">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span className="text-amber-400 text-[10px] font-bold">Disponível a partir de {formatDate(dataDisp)}</span>
+              </div>
             )}
           </div>
         )}

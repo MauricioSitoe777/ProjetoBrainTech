@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { CalendarDays, Fuel, IdCard, UsersRound } from "lucide-react";
 import { useVehicles, type VehicleData } from "../context/VehiclesContext";
 import { useScrollTo } from "../hooks";
-import Navbar from "./Navbar";
+import { useAuth } from "../context/AuthContext";
 import Footer from "./Footer";
 
 type SimulatorFlow = "aluguer" | "compra";
@@ -20,10 +20,12 @@ export default function VehicleDetailsPage({
   onExit,
   onOpenFlowModal,
   onShowSimulator,
-  onOpenAdmin,
+  onOpenAdmin: _onOpenAdmin,
 }: VehicleDetailsPageProps) {
   const { vehicles } = useVehicles();
   const scrollTo = useScrollTo();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [vehicle, setVehicle] = useState<VehicleData | null>(null);
   const [currentImg, setCurrentImg] = useState(0);
 
@@ -68,7 +70,7 @@ export default function VehicleDetailsPage({
     }
 
     if (onOpenFlowModal) {
-      onOpenFlowModal(vehicle.mode === "aluguer" ? "aluguer" : undefined);
+      onOpenFlowModal(vehicle.mode as "aluguer" | "compra");
       return;
     }
 
@@ -78,15 +80,16 @@ export default function VehicleDetailsPage({
   };
 
   const suggestedPrice = Number(String(vehicle.price).replace(/[^\d]/g, "")) || 0;
-  const estimatedTotal = Math.round(suggestedPrice * 1.1)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  const hasDiscount = Boolean(vehicle.discount && vehicle.discount > 0);
+  const discountedPrice = hasDiscount ? Math.round(suggestedPrice * (1 - vehicle.discount! / 100)) : suggestedPrice;
+  const formattedDiscountedPrice = discountedPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  
+  const priceSuffixMatch = String(vehicle.price).match(/[^\d.,\s]+/g);
+  const priceSuffix = priceSuffixMatch ? priceSuffixMatch.join(" ") : "MT";
 
   return (
     <div className="min-h-screen bg-zinc-950 font-sans text-white antialiased">
-      <Navbar scrolled={true} onOpenAdmin={onOpenAdmin ?? (() => {})} onShowSimulator={onShowSimulator} />
-
-      <main className="mx-auto max-w-7xl px-6 pb-20 pt-32">
+      <main className="mx-auto max-w-7xl px-6 pb-20 pt-8">
         <button
           onClick={onExit}
           className="group mb-8 flex w-fit items-center gap-3 rounded-full border border-zinc-800/80 bg-zinc-900/50 py-2 pl-2 pr-5 text-zinc-300 shadow-xl backdrop-blur-md transition-all duration-300 hover:border-amber-500/30 hover:bg-zinc-800/80 hover:text-white hover:shadow-amber-500/5 active:scale-95"
@@ -197,7 +200,7 @@ export default function VehicleDetailsPage({
                   <UsersRound size={12} className="text-amber-500" strokeWidth={2.4} />
                   <span>{vehicle.seats} Lugares</span>
                 </div>
-                {vehicle.matricula && (
+                {isAdmin && vehicle.matricula && (
                   <div className="flex min-h-8 items-center gap-1.5 rounded-lg border border-amber-500/30 bg-zinc-900 px-2.5 text-white shadow-lg shadow-black/10">
                     <IdCard size={12} className="text-amber-500" strokeWidth={2.4} />
                     <span className="text-[9px] text-zinc-300">Matrícula</span>
@@ -211,18 +214,27 @@ export default function VehicleDetailsPage({
 
             <div className="mb-3 flex flex-col rounded-2xl border border-zinc-800/70 bg-zinc-900/55 p-4 shadow-xl shadow-black/20">
               <div className="flex flex-col gap-3.5">
-                <div>
-                  <p className="mb-1 text-[9px] font-black uppercase tracking-[0.17em] text-white">
-                    Preço Sugerido
-                  </p>
-                  <div className="flex items-baseline gap-2">
-                    <div className="text-[28px] font-black leading-none text-amber-500 md:text-[34px]">
-                      {vehicle.price}
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="mb-1 text-[9px] font-black uppercase tracking-[0.17em] text-white">
+                      {vehicle.mode === "aluguer" ? "Preço Diário" : "Preço Sugerido"}
+                    </p>
+                    <div className="flex flex-col gap-1">
+                      <div className={`font-black leading-none ${hasDiscount ? 'text-zinc-500 line-through text-xl md:text-2xl' : 'text-amber-500 text-[28px] md:text-[34px]'}`}>
+                        {vehicle.price}
+                      </div>
+                      {hasDiscount && (
+                        <div className="text-[28px] font-black leading-none text-green-500 md:text-[34px]">
+                          {formattedDiscountedPrice} {priceSuffix}
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className="mt-1 text-[11px] font-bold text-green-500">
-                    (Approx. {estimatedTotal} MT total com taxas)
-                  </div>
+                  {hasDiscount && (
+                    <div className="rounded-xl bg-red-500 px-3 py-1.5 text-xs font-black text-white shadow-lg shadow-red-500/20 shrink-0">
+                      -{vehicle.discount}% OFF
+                    </div>
+                  )}
                 </div>
 
                 {vehicle.mode === "compra" && (
@@ -233,20 +245,6 @@ export default function VehicleDetailsPage({
                     </span>
                   </div>
                 )}
-
-                <div className="h-px bg-zinc-800/80" />
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[9px] font-black uppercase tracking-[0.17em] text-white">Preço Final</p>
-                    <p className="mt-0.5 text-lg font-black text-white">Sob Consulta</p>
-                  </div>
-                  {Boolean(vehicle.discount && vehicle.discount > 0) && (
-                    <div className="rounded-xl bg-red-500 px-4 py-2 text-xs font-black text-white shadow-lg shadow-red-500/20">
-                      -{vehicle.discount}% OFF
-                    </div>
-                  )}
-                </div>
               </div>
 
               <div className="mt-4 border-t border-zinc-800/80 pt-4 text-white">
@@ -259,6 +257,36 @@ export default function VehicleDetailsPage({
                 </p>
               </div>
             </div>
+
+            {/* Banner de indisponibilidade */}
+            {vehicle.available === false && (() => {
+              const motivo = (vehicle as any).motivoIndisponibilidade as string | undefined;
+              const dataDisp = (vehicle as any).dataDisponibilidade as string | undefined;
+              const formatDate = (iso: string) => {
+                const [y, m, d] = iso.split('-').map(Number);
+                const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+                return `${d} de ${months[m - 1]} de ${y}`;
+              };
+              return (
+                <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-400 shrink-0">
+                      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    <span className="text-red-400 text-xs font-black uppercase tracking-widest">Temporariamente Indisponível</span>
+                  </div>
+                  {motivo && <p className="text-zinc-300 text-sm leading-snug pl-5">{motivo}</p>}
+                  {dataDisp && (
+                    <div className="flex items-center gap-1.5 pl-5">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-400 shrink-0">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                      </svg>
+                      <span className="text-amber-400 text-xs font-semibold">Previsto disponível em {formatDate(dataDisp)}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             <div className="mt-auto flex flex-row gap-3">
               <button

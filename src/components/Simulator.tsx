@@ -1,15 +1,13 @@
 
 import { useEffect, useMemo, useState } from "react";
-import { AddressSearch } from "./AddressSearch";
 import { useCurrencyFormatter } from "../hooks";
 import { useAuth } from "../context/AuthContext";
 import { useReservations } from "../context/ReservationsContext";
 import { useUsers } from "../context/UsersContext";
 import { useMotoristas } from "../context/MotoristasContext";
-import { useVehicles } from "../context/VehiclesContext";
-import { CATEGORY_LABEL, VEHICLES } from "../data/constants";
+import { VEHICLES } from "../data/constants";
 import { GuestRequestModal } from "./GuestRequestModal";
-import { IconCar, IconKey, IconWallet } from "./Icons";
+import { IconCar, IconKey } from "./Icons";
 
 const TAXA_MENSAL = 0.015;
 const MAX_MESES_PADRAO = 12;
@@ -18,14 +16,6 @@ const MAX_MESES_FUNCIONARIO = 48;
 type FlowType = "compra" | "aluguer";
 type Category = "func_publico" | "func_privado" | "empreendedor";
 type PaymentPlan = "pronto" | "prestacoes";
-
-const RENTAL_LOCATIONS = [
-  "Aeroporto de Maputo (MPM)",
-  "Escritório Central (Av. Julius Nyerere, Maputo)",
-  "Matola (Bairro Central)",
-  "Entrega ao Domicílio (Maputo)",
-  "Entrega ao Domicílio (Matola)",
-] as const;
 
 function NumberField({
   label,
@@ -151,6 +141,7 @@ export default function Simulator({
   const [clientName, setClientName] = useState("");
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [clientContact, setClientContact] = useState("");
+  const [clientContact2, setClientContact2] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   // Compra
@@ -397,36 +388,22 @@ export default function Simulator({
   const isInadimplente = currentUser?.regularity === 'inadimplente';
   const isBlocked = isRestricted || isInadimplente;
 
+  const contactValid = !!authUser || clientContact.replace(/\D/g, "").length >= 9;
+
   const canSubmit =
     !isBlocked &&
     clientName.trim().length >= 2 &&
+    contactValid &&
     rentalDetailsOk &&
-    (flow === "aluguer" || eligivel) &&
-    true;
+    (flow === "aluguer" || eligivel);
 
   const handleSubmit = () => {
     setSubmitError("");
     if (!canSubmit) return;
 
-    const values: Record<string, number> =
-      flow === "compra"
-        ? { vehiclePrice, income, downPayment, purchasePMT, purchaseTotal }
-        : {
-          days: Math.max(1, Math.round(days)),
-          dailyRate,
-          discountPct: Math.min(100, Math.max(0, discountPct)),
-          rentDailySubtotal,
-          rentDiscount,
-          rentDailyAfterDiscount,
-          cleaningFee,
-          logisticsFee,
-          otherFees,
-          deposit: rentalDeposit,
-          rentTotalPayNow: rentalTotal,
-        };
-
     // Resolve which user record to link the reservation to
     const normalizedPhone = clientContact.trim() ? `+258 ${clientContact.trim()}` : "";
+    const normalizedPhone2 = clientContact2.trim() ? `+258 ${clientContact2.trim()}` : "";
     let transactionUserId: string;
 
     if (authUser) {
@@ -464,6 +441,7 @@ export default function Simulator({
         clientName: clientName.trim(),
         clientEmail: authUser?.email ?? '',
         clientPhone: normalizedPhone || undefined,
+        clientPhone2: normalizedPhone2 || undefined,
         dataInicio,
         dataFim,
         horaLevantamento,
@@ -486,6 +464,8 @@ export default function Simulator({
         userId: transactionUserId,
         clientName: clientName.trim(),
         clientEmail: authUser?.email ?? '',
+        clientPhone: normalizedPhone || undefined,
+        clientPhone2: normalizedPhone2 || undefined,
         dataInicio: start.toISOString().split("T")[0],
         dataFim: start.toISOString().split("T")[0],
         horaLevantamento: "09:00",
@@ -502,7 +482,7 @@ export default function Simulator({
 
   return (
     <>
-    <section id="simulador" className="py-5 bg-zinc-900 relative overflow-hidden">
+    <section id="simulador" className="py-3 bg-zinc-900 relative overflow-hidden">
       {/* Ambient glow */}
       <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-5 pointer-events-none"
@@ -528,49 +508,76 @@ export default function Simulator({
         ) : null}
 
         {/* Header */}
-        <div className="text-center mb-4">
-          <div className="text-amber-500 text-[10px] font-bold uppercase tracking-widest mb-1">
+        <div className="text-center mb-2">
+          <div className="text-amber-500 text-[10px] font-bold uppercase tracking-widest mb-0.5">
             {lockedFlow === "aluguer" ? "Aluguer" : "Compra & Aluguer"}
           </div>
           <h2 className="text-white text-xl md:text-2xl font-bold">Simulador</h2>
         </div>
 
-        <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-4">
+        <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-3">
 
           {/* ── Controls panel ── */}
-          <div className="bg-zinc-900 rounded-2xl border border-zinc-700 p-4 flex flex-col gap-2.5 shadow-2xl self-start">
+          <div className="bg-zinc-800/50 backdrop-blur-md rounded-2xl border border-white/10 p-3 flex flex-col gap-2 shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)] self-start">
 
-            {/* Serviço */}
-            {!lockedFlow ? (
-              <div>
-                <label className="text-white text-xs font-bold block mb-1.5 uppercase tracking-tight">O que pretende?</label>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {([
-                    { key: "compra",  icon: <IconCar size={13} />, label: "Comprar",  sub: "Prestações mensais" },
-                    { key: "aluguer", icon: <IconKey size={13} />, label: "Alugar",   sub: "Diário ou mensal" },
-                  ] as const).map((o) => (
-                    <button
-                      key={o.key}
-                      onClick={() => setFlow(o.key)}
-                      className={`py-2 px-3 rounded-lg text-left transition-all duration-200 ${flow === o.key
-                        ? "bg-amber-500 text-zinc-950"
-                        : "bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700"
-                      }`}
-                    >
-                      <p className="flex items-center gap-1.5 text-xs font-black">{o.icon}{o.label}</p>
-                      <p className={`text-[9px] font-semibold mt-0.5 ${flow === o.key ? 'text-zinc-900' : 'text-zinc-200'}`}>{o.sub}</p>
-                    </button>
-                  ))}
+            {/* Row 1: Tipo de Serviço + Tipo de Funcionário (compra) lado a lado */}
+            <div className={`grid gap-2 ${flow === 'compra' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              {/* Serviço */}
+              {!lockedFlow ? (
+                <div>
+                  <label className="text-white text-xs font-bold block mb-1.5 uppercase tracking-tight">Tipo de Serviço</label>
+                  <select
+                    value={flow}
+                    onChange={(e) => setFlow(e.target.value as FlowType)}
+                    className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2 text-xs text-white font-bold outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 cursor-pointer"
+                  >
+                    <option value="compra">🚗  Compra</option>
+                    <option value="aluguer">🔑  Aluguer</option>
+                  </select>
                 </div>
-              </div>
-            ) : (
-              <div className="py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 bg-amber-500 text-zinc-950">
-                {lockedFlow === "aluguer" ? <><IconKey size={13} /> Aluguer</> : <><IconCar size={13} /> Compra</>}
-              </div>
-            )}
+              ) : (
+                <div className="py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 bg-amber-500 text-zinc-950">
+                  {lockedFlow === "aluguer" ? <><IconKey size={13} /> Aluguer</> : <><IconCar size={13} /> Compra</>}
+                </div>
+              )}
 
-            {/* Cliente */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Tipo de Funcionário — só aparece para compra, na mesma linha */}
+              {flow === 'compra' && (() => {
+                const PROFILES = [
+                  { key: 'func_publico', emoji: '🏛️', label: 'Func. Público',        rules: 'Sem entrada · até 48 prestações' },
+                  { key: 'func_privado', emoji: '💼', label: 'Func. Privado',         rules: 'Entrada 10–50% · até 48 prestações' },
+                  { key: 'empreendedor', emoji: '🏢', label: 'Empresário / Indep.',   rules: 'Entrada mín. 75% · até 12 prestações' },
+                ] as const;
+                const locked = !!currentUser?.category;
+                const active = PROFILES.find(p => p.key === category);
+                return (
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-white text-xs font-bold uppercase tracking-tight">Tipo de Funcionário</label>
+                      {currentUser?.category && (
+                        <span className="text-[9px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-1.5 py-0.5 rounded-full">Perfil</span>
+                      )}
+                    </div>
+                    <select
+                      value={category}
+                      disabled={locked}
+                      onChange={(e) => !locked && setCategory(e.target.value as Category)}
+                      className={`w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2 text-xs text-white font-bold outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 ${locked ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
+                    >
+                      {PROFILES.map(p => (
+                        <option key={p.key} value={p.key}>{p.emoji}  {p.label}</option>
+                      ))}
+                    </select>
+                    {active && (
+                      <p className="text-[9px] text-white mt-1 leading-tight">{active.rules}</p>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Row 2: Cliente + Contacto * + Contacto alternativo — 3 colunas */}
+            <div className="grid grid-cols-3 gap-2">
               <div className="relative">
                 <label className="text-white text-xs font-bold block mb-1.5">Cliente</label>
                 <input
@@ -609,20 +616,42 @@ export default function Simulator({
                   </div>
                 )}
               </div>
-              <div className="relative">
-                <label className="text-white text-xs font-bold block mb-1.5">Contacto</label>
+
+              {/* Contacto principal (obrigatório) */}
+              <div>
+                <label className="text-white text-xs font-bold block mb-1.5">
+                  Contacto <span className="text-amber-500">*</span>
+                </label>
                 <div className={`flex items-center w-full rounded-lg bg-zinc-950 border border-zinc-700 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500/20 overflow-hidden ${authUser ? 'opacity-70' : ''}`}>
-                  <div className="pl-3 pr-2 py-1.5 text-xs text-amber-500 font-bold bg-zinc-900 border-r border-zinc-700">
+                  <div className="pl-2 pr-1.5 py-1.5 text-xs text-amber-500 font-bold bg-zinc-900 border-r border-zinc-700 shrink-0">
                     +258
                   </div>
                   <input
                     value={clientContact}
                     onChange={(e) => !authUser && setClientContact(formatContact(e.target.value))}
-                    placeholder="Ex: 84..."
+                    placeholder="84 123 4567"
                     readOnly={!!authUser}
-                    className={`w-full bg-transparent px-2.5 py-1.5 text-xs text-white font-bold placeholder:text-zinc-500 outline-none ${
+                    className={`w-full bg-transparent px-2 py-1.5 text-xs text-white font-bold placeholder:text-zinc-500 outline-none ${
                       authUser ? 'cursor-not-allowed' : ''
                     }`}
+                  />
+                </div>
+              </div>
+
+              {/* Contacto alternativo (opcional) */}
+              <div>
+                <label className="text-white text-xs font-bold block mb-1.5">
+                  Alt. <span className="text-zinc-500 font-medium">(opcional)</span>
+                </label>
+                <div className="flex items-center w-full rounded-lg bg-zinc-950 border border-zinc-700 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500/20 overflow-hidden">
+                  <div className="pl-2 pr-1.5 py-1.5 text-xs text-amber-500 font-bold bg-zinc-900 border-r border-zinc-700 shrink-0">
+                    +258
+                  </div>
+                  <input
+                    value={clientContact2}
+                    onChange={(e) => setClientContact2(formatContact(e.target.value))}
+                    placeholder="86 987 6543"
+                    className="w-full bg-transparent px-2 py-1.5 text-xs text-white font-bold placeholder:text-zinc-500 outline-none"
                   />
                 </div>
               </div>
@@ -632,76 +661,23 @@ export default function Simulator({
             {/* ══ COMPRA ══ */}
             {flow === "compra" ? (
               <>
-                {/* 1. Perfil do comprador */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-white text-xs font-bold uppercase tracking-tight">Tipo de Funcionario</label>
-                    {currentUser?.category && (
-                      <span className="text-[9px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 rounded-full">Definido pelo perfil</span>
-                    )}
-                  </div>
-                  {(() => {
-                    const PROFILES = [
-                      { key: 'func_publico',  emoji: '🏛️', title: 'Público',    rules: 'Sem entrada · até 48 prestações' },
-                      { key: 'func_privado',  emoji: '💼', title: 'Privado',    rules: 'Entrada 10–50% · até 48 prestações' },
-                      { key: 'empreendedor',  emoji: '🏢', title: 'Empresário', rules: 'Entrada mín. 75% · até 12 prestações' },
-                    ] as const;
-                    const locked = !!currentUser?.category;
-                    const active = PROFILES.find(p => p.key === category);
-                    return (
-                      <>
-                        <div className="flex gap-1.5">
-                          {PROFILES.map(p => {
-                            const isActive = category === p.key;
-                            return (
-                              <button key={p.key} type="button" disabled={locked}
-                                onClick={() => !locked && setCategory(p.key as Category)}
-                                className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border text-[10px] font-bold transition-all ${
-                                  isActive ? 'bg-amber-500/15 border-amber-500/40 text-amber-400'
-                                  : locked  ? 'bg-zinc-800/40 border-zinc-700 text-zinc-500 cursor-not-allowed'
-                                  : 'bg-zinc-800/60 border-zinc-700 text-white hover:border-zinc-500'
-                                }`}
-                              >
-                                <span>{p.emoji}</span>
-                                <span>{p.title}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                        {active && (
-                          <p className="text-[9px] text-white mt-1 leading-tight">{active.rules}</p>
-                        )}
-                      </>
-                    );
-                  })()}
-                </div>
-
-                {/* 2. Preço + Salário */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* Row 3: Preço + Salário + Como pagar — 3 colunas */}
+                <div className="grid grid-cols-3 gap-2">
                   <NumberField label="Preço do Veículo" value={vehiclePrice}
                     onChange={(v) => setVehiclePrice(Math.min(8_000_000, Math.max(0, v)))} min={0} suffix="MT"
                     disabled={!isAdmin} />
                   <NumberField label="O Meu Salário" value={income}
                     onChange={(v) => setIncome(Math.min(100_000_000, Math.max(0, v)))} min={0} suffix="MT/mês" />
-                </div>
-
-                {/* 3. Como vai pagar? */}
-                <div>
-                  <label className="text-white text-xs font-bold block mb-1.5">Como vai pagar?</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {([
-                      { key: "pronto",     label: "💵  À Vista",       sub: "Paga tudo de uma vez" },
-                      { key: "prestacoes", label: "📅  Em Prestações", sub: `Até ${maxMonthsForCategory} meses` },
-                    ] as const).map((o) => (
-                      <button key={o.key} onClick={() => setPaymentPlan(o.key)}
-                        className={`py-2 px-3 rounded-lg text-left transition-all ${paymentPlan === o.key
-                          ? "bg-amber-500 text-zinc-950"
-                          : "bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700"}`}
-                      >
-                        <p className="text-xs font-black">{o.label}</p>
-                        <p className={`text-[9px] font-semibold mt-0.5 ${paymentPlan === o.key ? 'text-zinc-900' : 'text-zinc-200'}`}>{o.sub}</p>
-                      </button>
-                    ))}
+                  <div>
+                    <label className="text-white text-xs font-bold block mb-1">Como pagar?</label>
+                    <select
+                      value={paymentPlan}
+                      onChange={(e) => setPaymentPlan(e.target.value as PaymentPlan)}
+                      className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-2 py-1.5 text-xs text-white font-bold outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 cursor-pointer"
+                    >
+                      <option value="pronto">💵  À Vista</option>
+                      <option value="prestacoes">📅  Prestações ({maxMonthsForCategory}m)</option>
+                    </select>
                   </div>
                 </div>
 
@@ -774,24 +750,24 @@ export default function Simulator({
               </>
             ) : (
               <>
-                {/* Aluguer — datas e horas */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* Aluguer — datas e horas: 4 colunas numa linha */}
+                <div className="grid grid-cols-4 gap-2">
                   <div>
                     <label className="text-white text-xs font-bold block mb-1.5">Data início</label>
                     <input
                       type="date"
                       value={dataInicio}
                       onChange={(e) => setDataInicio(e.target.value)}
-                      className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2 text-xs text-white font-bold outline-none focus:border-amber-500"
+                      className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-2 py-1.5 text-xs text-white font-bold outline-none focus:border-amber-500"
                     />
                   </div>
                   <div>
-                    <label className="text-white text-xs font-bold block mb-1.5">Hora levantamento</label>
+                    <label className="text-white text-xs font-bold block mb-1.5">Hora lev.</label>
                     <input
                       type="time"
                       value={horaLevantamento}
                       onChange={(e) => setHoraLevantamento(e.target.value)}
-                      className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2 text-xs text-white font-bold outline-none focus:border-amber-500"
+                      className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-2 py-1.5 text-xs text-white font-bold outline-none focus:border-amber-500"
                     />
                   </div>
                   <div>
@@ -800,16 +776,16 @@ export default function Simulator({
                       type="date"
                       value={dataFim}
                       onChange={(e) => setDataFim(e.target.value)}
-                      className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2 text-xs text-white font-bold outline-none focus:border-amber-500"
+                      className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-2 py-1.5 text-xs text-white font-bold outline-none focus:border-amber-500"
                     />
                   </div>
                   <div>
-                    <label className="text-white text-xs font-bold block mb-1.5">Hora devolução</label>
+                    <label className="text-white text-xs font-bold block mb-1.5">Hora dev.</label>
                     <input
                       type="time"
                       value={horaDevolucao}
                       onChange={(e) => setHoraDevolucao(e.target.value)}
-                      className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2 text-xs text-white font-bold outline-none focus:border-amber-500"
+                      className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-2 py-1.5 text-xs text-white font-bold outline-none focus:border-amber-500"
                     />
                   </div>
                 </div>
@@ -825,7 +801,7 @@ export default function Simulator({
                   />
                 </div>
 
-                <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 flex items-center gap-3">
+                <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 px-3 py-2 flex items-center gap-3">
                   <div className="shrink-0 w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
@@ -975,7 +951,7 @@ export default function Simulator({
           </div>
 
           {/* ── Result panel ── */}
-          <div className="bg-zinc-900 rounded-2xl border border-amber-500/30 p-4 flex flex-col justify-between shadow-[0_0_50px_-12px_rgba(216,160,32,0.15)] relative overflow-hidden h-fit">
+          <div className="bg-zinc-800/50 backdrop-blur-md rounded-2xl border border-white/10 p-4 flex flex-col justify-between shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06),0_0_40px_-12px_rgba(216,160,32,0.12)] relative overflow-hidden h-fit">
             {/* Decoration */}
             <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 blur-3xl -mr-12 -mt-12" />
             

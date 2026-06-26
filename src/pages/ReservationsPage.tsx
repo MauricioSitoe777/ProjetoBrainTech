@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { VEHICLES } from '../data/constants';
-import { AdminNav } from '../components/AdminNav';
 import { AvailabilityCalendar } from '../components/reservations/AvailabilityCalendar';
 import { BlockPeriodModal } from '../components/reservations/BlockPeriodModal';
 import { BusinessRulesPanel } from '../components/reservations/BusinessRulesPanel';
@@ -70,8 +69,6 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
-      <AdminNav subtitle="Reservas & Disponibilidade" onExit={onExit} />
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
 
         <div className="flex flex-wrap gap-2">

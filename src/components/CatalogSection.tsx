@@ -155,8 +155,8 @@ export default function CatalogSection({
             </p>
           </div>
 
-          {/* Mode pills */}
-          <div className="flex flex-wrap gap-2">
+          {/* Mode pills + pesquisa */}
+          <div className="flex flex-wrap items-center gap-2">
             {MODE_FILTERS.map((f) => (
               <button
                 key={f.key}
@@ -170,6 +170,28 @@ export default function CatalogSection({
                 {f.label}
               </button>
             ))}
+
+            {/* Barra de pesquisa */}
+            <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-full px-3 py-1.5 min-w-[160px] focus-within:border-zinc-600 transition-colors">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-500 shrink-0">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Pesquisar..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="bg-transparent border-none outline-none text-xs text-white placeholder:text-zinc-500 w-full"
+              />
+              {searchTerm && (
+                <button onClick={() => setSearchTerm("")} className="text-zinc-500 hover:text-white transition-colors shrink-0">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

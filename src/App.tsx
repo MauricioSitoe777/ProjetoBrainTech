@@ -1,25 +1,24 @@
 import { useEffect, useState } from "react";
-import { useScrolled } from "./hooks";
 import { useRoute } from "./hooks/useRoute";
-import Navbar          from "./components/Navbar";
+import { useAuth } from "./context/AuthContext";
+import { useNotifications } from "./context/NotificationsContext";
+import { AppHeader } from "./components/AppHeader";
 import Hero            from "./components/Hero";
 import CatalogSection  from "./components/CatalogSection";
 import HowItWorks      from "./components/HowItWorks";
-import XitiqueSection  from "./components/XitiqueSection";
 import AboutModal      from "./components/AboutModal";
 import XitiqueModal    from "./components/XitiqueModal";
 import XitiqueRegulationsModal from "./components/XitiqueRegulationsModal";
 import Simulator       from "./components/Simulator";
 import PaymentsSection from "./components/PaymentsSection";
 import Footer          from "./components/Footer";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AuthProvider } from "./context/AuthContext";
 import { UsersProvider } from "./context/UsersContext";
 import { LoginPage } from "./pages/LoginPage";
 import { UsersPage } from "./pages/UsersPage";
 import { ClientProfilePage } from "./pages/ClientProfilePage";
-import { ReservationsPage } from "./pages/ReservationsPage";
 import { ReservationsProvider } from "./context/ReservationsContext";
-import { NotificationsProvider, useNotifications } from "./context/NotificationsContext";
+import { NotificationsProvider } from "./context/NotificationsContext";
 import { GuestsProvider } from "./context/GuestsContext";
 import { VehiclesProvider } from "./context/VehiclesContext";
 import { VehiclesPage } from "./pages/VehiclesPage";
@@ -28,14 +27,12 @@ import { InvitesProvider } from "./context/InvitesContext";
 import { InvitePage } from "./pages/InvitePage";
 import { XitiqueProvider } from "./context/XitiqueContext";
 import { XitiquePage } from "./pages/XitiquePage";
-import { XitiqueClientPage } from "./pages/XitiqueClientPage";
 import { FinanceProvider } from "./context/FinanceContext";
 import { FinancePage } from "./pages/FinancePage";
 import { AluguerPage } from "./pages/AluguerPage";
 import { CompraPage } from "./pages/CompraPage";
 import { MotoristasProvider } from "./context/MotoristasContext";
 import { MotoristasPage } from "./pages/MotoristasPage";
-import { AdminNav } from "./components/AdminNav";
 import { AdminSidebar } from "./components/AdminSidebar";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ChangePasswordModal } from "./components/ChangePasswordModal";
@@ -43,138 +40,225 @@ import { ToastContainer } from "./components/ToastContainer";
 import { RecuperarSenhaPage } from "./pages/RecuperarSenhaPage";
 import { RedefinirSenhaPage } from "./pages/RedefinirSenhaPage";
 import { SectionReveal } from "./components/SectionReveal";
+import { XitiqueInfoPage } from "./pages/XitiqueInfoPage";
 
 type SimulatorFlow = "aluguer" | "compra";
 
-// ─── Admin shell ──────────────────────────────────────────────────────────────
-function AdminShell({ onExit }: { onExit: () => void }) {
+const SCROLL_KEY = "rentcar:returnScroll";
+function saveScroll()    { sessionStorage.setItem(SCROLL_KEY, String(window.scrollY)); }
+function restoreScroll() {
+  const y = Number(sessionStorage.getItem(SCROLL_KEY) || "0");
+  sessionStorage.removeItem(SCROLL_KEY);
+  if (y > 0) setTimeout(() => window.scrollTo({ top: y, behavior: "smooth" }), 60);
+}
+
+// ─── Inner app — runs inside all providers ────────────────────────────────────
+function AppInner() {
   const { user, allUsers } = useAuth();
   const { path, navigate } = useRoute();
   const { showToast } = useNotifications();
+
+  // Sidebar drawer (admin mobile)
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Password change (client)
   const [passwordChanged, setPasswordChanged] = useState(false);
 
+  // Shared modal state (dispatched via window events)
+  const [showAbout,         setShowAbout]         = useState(false);
+  const [showXitiqueModal,  setShowXitiqueModal]  = useState(false);
+  const [showXitiqueRegs,   setShowXitiqueRegs]   = useState(false);
+  const [flowModalOpen,     setFlowModalOpen]      = useState(false);
+  const [simulatorFlowLock, setSimulatorFlowLock]  = useState<SimulatorFlow | undefined>();
+
+  // ── Route flags ────────────────────────────────────────────────────────────
+  const isRecuperar      = path === "/recuperar-senha";
+  const isRedefinir      = path.startsWith("/recuperar-senha/") && path.length > "/recuperar-senha/".length;
+  const isInvite         = path.startsWith("/convite/");
+  const isAdminPath      = path.startsWith("/admin");
+  const isVehicleDetails = path.startsWith("/veiculo/");
+  const isXitiqueInfo    = path === "/xitique";
+
+  const vehicleId    = isVehicleDetails ? (path.split("/veiculo/")[1]  ?? "") : "";
+  const inviteToken  = isInvite         ? (path.split("/convite/")[1]  ?? "") : "";
+  const resetToken   = isRedefinir      ? (path.split("/recuperar-senha/")[1] ?? "") : "";
+
+  const isAdmin  = user?.role === "admin";
+  const isClient = user?.role === "cliente";
+
+  // Show header everywhere except special auth flows
+  const showHeader = !isRecuperar && !isRedefinir && !isInvite;
+
+  const goBack = () => { navigate("/"); restoreScroll(); };
+
+  // ── Global window events ───────────────────────────────────────────────────
+  useEffect(() => {
+    const onAbout   = () => setShowAbout(true);
+    const onXitique = () => setShowXitiqueModal(true);
+    const onRegs    = () => setShowXitiqueRegs(true);
+    const onFlow    = (e: Event) => {
+      setSimulatorFlowLock((e as CustomEvent<SimulatorFlow | undefined>).detail);
+      setFlowModalOpen(true);
+    };
+
+    window.addEventListener("rentcar:open-about",         onAbout);
+    window.addEventListener("rentcar:open-xitique-modal", onXitique);
+    window.addEventListener("rentcar:open-xitique-regs",  onRegs);
+    window.addEventListener("rentcar:open-flow-modal",    onFlow as EventListener);
+    return () => {
+      window.removeEventListener("rentcar:open-about",         onAbout);
+      window.removeEventListener("rentcar:open-xitique-modal", onXitique);
+      window.removeEventListener("rentcar:open-xitique-regs",  onRegs);
+      window.removeEventListener("rentcar:open-flow-modal",    onFlow as EventListener);
+    };
+  }, []);
+
+  // ── Welcome toast on login ─────────────────────────────────────────────────
   useEffect(() => {
     if (!user) return;
     const key = `rentcar:welcomed:${user.id}`;
     if (sessionStorage.getItem(key)) return;
-    sessionStorage.setItem(key, '1');
-    const primeiroNome = user.nome.split(' ')[0];
-    const isAdmin = user.role === 'admin';
+    sessionStorage.setItem(key, "1");
+    const primeiroNome = user.nome.split(" ")[0];
     showToast(
-      `Bem-vindo${isAdmin ? '' : ' de volta'}, ${primeiroNome}!`,
-      isAdmin ? 'Sessão de administrador iniciada.' : 'A sua conta está activa.',
-      'success'
+      `Bem-vindo${isAdmin ? "" : " de volta"}, ${primeiroNome}!`,
+      isAdmin ? "Sessão de administrador iniciada." : "A sua conta está activa.",
+      "success"
     );
   }, [user?.id]);
 
-  if (!user) {
-    console.warn('[AdminShell] user é null → a mostrar LoginPage. Path:', path);
-    return <LoginPage onCancel={onExit} onRecuperar={() => navigate('/recuperar-senha')} />;
-  }
-
-  console.log('[AdminShell] user autenticado:', user.nome, '| role:', user.role, '| path:', path);
-
-  if (user.role === "cliente") {
-    const fullUser = allUsers.find(u => u.id === user.id);
-    if (fullUser?.mustChangePassword && !passwordChanged) {
-      return <ChangePasswordModal onDone={() => setPasswordChanged(true)} />;
-    }
-    return <ClientProfilePage onExit={onExit} />;
-  }
-
+  // ── Render page content ────────────────────────────────────────────────────
   const renderPage = () => {
-    if (path === "/admin" || path === "/admin/dashboard") return <DashboardPage />;
-    if (path.startsWith("/admin/utilizadores") || path.startsWith("/admin/visitantes")) return <UsersPage />;
-    if (path.startsWith("/admin/aluguer"))    return <AluguerPage />;
-    if (path.startsWith("/admin/compra"))     return <CompraPage />;
-    if (path.startsWith("/admin/veiculos"))   return <VehiclesPage />;
-    if (path.startsWith("/admin/xitique"))    return <XitiquePage />;
-    if (path.startsWith("/admin/financas"))   return <FinancePage />;
-    if (path.startsWith("/admin/motoristas")) return <MotoristasPage />;
-    return <DashboardPage />;
+    // Special auth flows — no header
+    if (isRecuperar) return <RecuperarSenhaPage onVoltar={() => navigate("/admin")} />;
+    if (isRedefinir) return <RedefinirSenhaPage token={resetToken} onVoltar={() => navigate("/admin")} />;
+    if (isInvite)    return <InvitePage token={inviteToken} onSuccess={() => navigate("/")} />;
+
+    // Admin area
+    if (isAdminPath) {
+      if (!user) {
+        return (
+          <div className="pt-16 min-h-screen bg-zinc-950">
+            <LoginPage onCancel={goBack} onRecuperar={() => navigate("/recuperar-senha")} />
+          </div>
+        );
+      }
+      if (isClient) {
+        const fullUser = allUsers.find(u => u.id === user.id);
+        if (fullUser?.mustChangePassword && !passwordChanged) {
+          return <ChangePasswordModal onDone={() => setPasswordChanged(true)} />;
+        }
+        return (
+          <div className="pt-16 min-h-screen bg-zinc-950 text-white">
+            <ClientProfilePage onExit={goBack} />
+          </div>
+        );
+      }
+      if (isAdmin) {
+        const adminPage = () => {
+          if (path === "/admin" || path === "/admin/dashboard") return <DashboardPage />;
+          if (path.startsWith("/admin/utilizadores") || path.startsWith("/admin/visitantes")) return <UsersPage />;
+          if (path.startsWith("/admin/aluguer"))    return <AluguerPage />;
+          if (path.startsWith("/admin/compra"))     return <CompraPage />;
+          if (path.startsWith("/admin/veiculos"))   return <VehiclesPage />;
+          if (path.startsWith("/admin/xitique"))    return <XitiquePage />;
+          if (path.startsWith("/admin/financas"))   return <FinancePage />;
+          if (path.startsWith("/admin/motoristas")) return <MotoristasPage />;
+          return <DashboardPage />;
+        };
+        return (
+          <div className="pt-16 min-h-screen bg-zinc-950 text-white flex flex-col">
+            <div className="flex flex-1">
+              {/* Desktop sidebar */}
+              <div className="hidden md:block shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
+                <AdminSidebar onExit={goBack} />
+              </div>
+              <main className="flex-1 min-w-0 overflow-x-hidden">
+                {adminPage()}
+              </main>
+            </div>
+          </div>
+        );
+      }
+    }
+
+    // Xitique info page
+    if (isXitiqueInfo) return (
+      <div className="pt-16">
+        <XitiqueInfoPage />
+      </div>
+    );
+
+    // Vehicle detail
+    if (isVehicleDetails) return (
+      <div className="pt-16">
+        <VehicleDetailsPage
+          vehicleId={vehicleId}
+          onExit={goBack}
+          onOpenAdmin={() => { saveScroll(); navigate("/admin"); }}
+          onOpenFlowModal={(lockedFlow) => {
+            window.dispatchEvent(new CustomEvent("rentcar:open-flow-modal", { detail: lockedFlow }));
+          }}
+        />
+      </div>
+    );
+
+    // Landing page (default)
+    return (
+      <div className="min-h-screen bg-zinc-950 antialiased">
+        <div className="pt-16">
+          <Hero />
+          <SectionReveal>
+            <CatalogSection
+              onShowSimulator={() => document.getElementById("simulador")?.scrollIntoView({ behavior: "smooth" })}
+              onOpenFlowModal={(lockedFlow) => {
+                setSimulatorFlowLock(lockedFlow);
+                setFlowModalOpen(true);
+              }}
+            />
+          </SectionReveal>
+          <SectionReveal>
+            <HowItWorks onShowSimulator={() => document.getElementById("simulador")?.scrollIntoView({ behavior: "smooth" })} />
+          </SectionReveal>
+          <SectionReveal>
+            <Simulator showClose={false} />
+          </SectionReveal>
+          <SectionReveal>
+            <PaymentsSection onShowSimulator={() => document.getElementById("simulador")?.scrollIntoView({ behavior: "smooth" })} />
+          </SectionReveal>
+        </div>
+        <Footer />
+      </div>
+    );
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
-      <AdminNav onExit={onExit} />
-      <div className="flex flex-1">
-        <div className="hidden md:block shrink-0 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto">
-          <AdminSidebar onExit={onExit} />
-        </div>
-        <main className="flex-1 min-w-0 overflow-x-hidden">
-          {renderPage()}
-        </main>
-      </div>
-    </div>
-  );
-}
+    <>
+      {/* Unified header */}
+      {showHeader && (
+        <AppHeader
+          onToggleSidebar={isAdminPath && isAdmin ? () => setSidebarOpen(v => !v) : undefined}
+        />
+      )}
 
-// ─── Landing page ─────────────────────────────────────────────────────────────
-function LandingPage({ onOpenAdmin }: { onOpenAdmin: () => void }) {
-  const scrolled = useScrolled(40);
-  const [showXitiqueModal,  setShowXitiqueModal]  = useState(false);
-  const [showXitiqueRegs,   setShowXitiqueRegs]   = useState(false);
-  const [showAbout,         setShowAbout]          = useState(false);
-  const [flowModalOpen,     setFlowModalOpen]      = useState(false);
-  const [simulatorFlowLock, setSimulatorFlowLock]  = useState<SimulatorFlow | undefined>();
-
-  const scrollToSimulator = () =>
-    document.getElementById('simulador')?.scrollIntoView({ behavior: 'smooth' });
-
-  useEffect(() => {
-    const handleOpenXitique  = () => setShowXitiqueModal(true);
-    const handleOpenRegs     = () => setShowXitiqueRegs(true);
-    const openFlowHandler    = (event: Event) => {
-      setSimulatorFlowLock((event as CustomEvent<SimulatorFlow | undefined>).detail);
-      setFlowModalOpen(true);
-    };
-
-    window.addEventListener("rentcar:open-xitique-modal", handleOpenXitique);
-    window.addEventListener("rentcar:open-xitique-regs",  handleOpenRegs);
-    window.addEventListener("rentcar:open-flow-modal",    openFlowHandler as EventListener);
-
-    return () => {
-      window.removeEventListener("rentcar:open-xitique-modal", handleOpenXitique);
-      window.removeEventListener("rentcar:open-xitique-regs",  handleOpenRegs);
-      window.removeEventListener("rentcar:open-flow-modal",    openFlowHandler as EventListener);
-    };
-  }, []);
-
-  return (
-    <div className="min-h-screen bg-zinc-950 antialiased">
-      <Navbar
-        scrolled={scrolled}
-        onShowSimulator={scrollToSimulator}
-        onOpenAdmin={onOpenAdmin}
-        onOpenAbout={() => setShowAbout(true)}
-      />
-      <main>
-        <Hero />
-        <SectionReveal>
-          <CatalogSection
-            onShowSimulator={scrollToSimulator}
-            onOpenFlowModal={(lockedFlow) => {
-              setSimulatorFlowLock(lockedFlow);
-              setFlowModalOpen(true);
-            }}
+      {/* Admin sidebar — mobile drawer */}
+      {isAdminPath && isAdmin && sidebarOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/60 z-40 md:hidden"
+            onClick={() => setSidebarOpen(false)}
           />
-        </SectionReveal>
-        <SectionReveal>
-          <HowItWorks onShowSimulator={scrollToSimulator} />
-        </SectionReveal>
-        <SectionReveal>
-          <XitiqueSection onShowSimulator={scrollToSimulator} />
-        </SectionReveal>
-        <SectionReveal>
-          <Simulator showClose={false} />
-        </SectionReveal>
-        <SectionReveal>
-          <PaymentsSection onShowSimulator={scrollToSimulator} />
-        </SectionReveal>
-      </main>
-      <Footer />
+          <div className="fixed left-0 top-0 bottom-0 z-50 md:hidden">
+            <AdminSidebar onClose={() => setSidebarOpen(false)} onExit={goBack} />
+          </div>
+        </>
+      )}
 
-      {showAbout       && <AboutModal onClose={() => setShowAbout(false)} />}
+      {/* Page */}
+      {renderPage()}
+
+      {/* Global modals */}
+      {showAbout        && <AboutModal onClose={() => setShowAbout(false)} />}
       {showXitiqueModal && <XitiqueModal onClose={() => setShowXitiqueModal(false)} />}
       {showXitiqueRegs  && <XitiqueRegulationsModal onClose={() => setShowXitiqueRegs(false)} />}
 
@@ -204,32 +288,14 @@ function LandingPage({ onOpenAdmin }: { onOpenAdmin: () => void }) {
           </div>
         </div>
       )}
-    </div>
-  );
-}
 
-const SCROLL_KEY = "rentcar:returnScroll";
-function saveScroll()    { sessionStorage.setItem(SCROLL_KEY, String(window.scrollY)); }
-function restoreScroll() {
-  const y = Number(sessionStorage.getItem(SCROLL_KEY) || "0");
-  sessionStorage.removeItem(SCROLL_KEY);
-  if (y > 0) setTimeout(() => window.scrollTo({ top: y, behavior: "smooth" }), 60);
+      <ToastContainer />
+    </>
+  );
 }
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
 export default function App() {
-  const { path, navigate } = useRoute();
-  const isAdmin           = path.startsWith("/admin");
-  const isVehicleDetails  = path.startsWith("/veiculo/");
-  const isInvite          = path.startsWith("/convite/");
-  const isRecuperar       = path === "/recuperar-senha";
-  const isRedefinir       = path.startsWith("/recuperar-senha/") && path.length > "/recuperar-senha/".length;
-  const vehicleId         = isVehicleDetails ? (path.split("/veiculo/")[1] ?? "") : "";
-  const inviteToken       = isInvite ? path.split("/convite/")[1] ?? "" : "";
-  const resetToken        = isRedefinir ? path.split("/recuperar-senha/")[1] ?? "" : "";
-
-  const goBack = () => { navigate("/"); restoreScroll(); };
-
   return (
     <AuthProvider>
       <UsersProvider>
@@ -241,30 +307,7 @@ export default function App() {
                   <MotoristasProvider>
                     <XitiqueProvider>
                       <InvitesProvider>
-                        {isRecuperar ? (
-                          <RecuperarSenhaPage onVoltar={() => navigate("/admin")} />
-                        ) : isRedefinir ? (
-                          <RedefinirSenhaPage token={resetToken} onVoltar={() => navigate("/admin")} />
-                        ) : isInvite ? (
-                          <InvitePage token={inviteToken} onSuccess={() => navigate("/")} />
-                        ) : isAdmin ? (
-                          <AdminShell onExit={goBack} />
-                        ) : isVehicleDetails ? (
-                          <VehicleDetailsPage
-                            vehicleId={vehicleId}
-                            onExit={goBack}
-                            onOpenAdmin={() => { saveScroll(); navigate("/admin"); }}
-                            onOpenFlowModal={(lockedFlow) => {
-                              navigate("/");
-                              setTimeout(() => {
-                                window.dispatchEvent(new CustomEvent("rentcar:open-flow-modal", { detail: lockedFlow }));
-                              }, 100);
-                            }}
-                          />
-                        ) : (
-                          <LandingPage onOpenAdmin={() => { saveScroll(); navigate("/admin"); }} />
-                        )}
-                        <ToastContainer />
+                        <AppInner />
                       </InvitesProvider>
                     </XitiqueProvider>
                   </MotoristasProvider>
