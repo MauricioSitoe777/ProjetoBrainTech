@@ -29,7 +29,7 @@ interface ReservationsContextType {
   rules: BusinessRules;
   updateRules: (data: Partial<BusinessRules>) => void;
   checkAvailability: (vehicleId: number, start: string, end: string, excludeId?: string) => AvailabilityResult;
-  validateDates: (start: string, end: string) => DateValidationResult;
+  validateDates: (start: string, end: string, horaLevantamento?: string) => DateValidationResult;
   createReservation: (data: Omit<Reservation, 'id' | 'createdAt'>) => { ok: boolean; error?: string };
   updateReservation: (id: string, data: Partial<Reservation>) => void;
   cancelReservation: (id: string) => void;
@@ -76,15 +76,15 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
   const checkAvailability = (vehicleId: number, start: string, end: string, excludeId?: string) =>
     isVehicleAvailable(vehicleId, start, end, reservations, blocks, excludeId);
 
-  const validateDates = (start: string, end: string) =>
-    validateDateRange(start, end, rules);
+  const validateDates = (start: string, end: string, horaLevantamento?: string) =>
+    validateDateRange(start, end, rules, new Date(), horaLevantamento);
 
   const createReservation = (data: Omit<Reservation, 'id' | 'createdAt'>) => {
     const vehicle = VEHICLES.find(v => v.id === data.vehicleId);
     const isPurchase = vehicle?.mode === 'compra';
 
     if (!isPurchase) {
-      const dateCheck = validateDates(data.dataInicio, data.dataFim);
+      const dateCheck = validateDates(data.dataInicio, data.dataFim, data.horaLevantamento);
       if (!dateCheck.valid) return { ok: false, error: dateCheck.errors[0] };
 
       const avail = checkAvailability(data.vehicleId, data.dataInicio, data.dataFim);

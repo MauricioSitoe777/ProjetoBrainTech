@@ -58,6 +58,7 @@ export function validateDateRange(
   end: string,
   rules: BusinessRules,
   now = new Date(),
+  horaLevantamento?: string,
 ): DateValidationResult {
   const errors: string[] = [];
   if (!start || !end) {
@@ -79,10 +80,11 @@ export function validateDateRange(
     errors.push('Reservas ao fim de semana não estão permitidas pelas regras actuais.');
   }
 
+  const horaRef = horaLevantamento ?? rules.horaLevantamento;
   const startAt = parseDate(start);
   startAt.setHours(
-    Number(rules.horaLevantamento.split(':')[0]) || 8,
-    Number(rules.horaLevantamento.split(':')[1]) || 0,
+    Number(horaRef.split(':')[0]) || 8,
+    Number(horaRef.split(':')[1]) || 0,
     0,
     0,
   );

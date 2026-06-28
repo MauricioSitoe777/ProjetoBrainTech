@@ -133,7 +133,7 @@ export default function Footer() {
           <p className="text-white text-xs">
             © 2026 SOS Motors e Vendas Moçambique. Todos os direitos reservados.
           </p>
-          <img src="/braintech-logo.svg" alt="Braintech" className="h-10 w-auto shrink-0 opacity-80 hover:opacity-100 transition-opacity" />
+          <img src="/braintech-logo.png" alt="Braintech" className="h-10 w-auto shrink-0 opacity-80 hover:opacity-100 transition-opacity" />
         </div>
 
       </div>

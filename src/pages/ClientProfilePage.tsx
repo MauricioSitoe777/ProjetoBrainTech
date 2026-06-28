@@ -307,7 +307,8 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
       <main className="flex-1 min-w-0 overflow-y-auto outline-none">
 
         {/* Page title bar */}
-        <div className="sticky top-0 z-10 bg-zinc-950/90 backdrop-blur border-b border-zinc-800/60 px-6 py-3 flex items-center gap-3">
+        <div className="sticky top-0 z-10 bg-zinc-950/90 backdrop-blur border-b border-zinc-800/60 px-6 py-3">
+        <div className="max-w-4xl mx-auto flex items-center gap-3">
           <div className="text-amber-500">
             {section === 'dados_pessoais'    && <IcoUser />}
             {section === 'dados_estatisticos'&& <IcoBarChart />}
@@ -327,8 +328,9 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
             {section === 'historico'         && 'Histórico'}
           </h1>
         </div>
+        </div>
 
-        <div className="p-6 space-y-4 max-w-3xl">
+        <div className="p-6 space-y-4 max-w-4xl mx-auto">
 
           {/* ══ DADOS PESSOAIS ════════════════════════════════════════════════ */}
           {section === 'dados_pessoais' && (

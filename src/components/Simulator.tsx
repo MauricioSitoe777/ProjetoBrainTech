@@ -91,6 +91,26 @@ function pmtMonthly(principal: number, months: number, monthlyRate: number): num
   return (principal * r * pow) / (pow - 1);
 }
 
+const HOURS   = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+const MINUTES = ['00','05','10','15','20','25','30','35','40','45','50','55'];
+
+function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [h, m] = value.split(':');
+  const minute = MINUTES.includes(m) ? m : '00';
+  const cls = "bg-zinc-950 border border-zinc-700 text-white text-xs font-bold rounded-lg px-1.5 py-1.5 outline-none focus:border-amber-500 cursor-pointer";
+  return (
+    <div className="flex items-center gap-1">
+      <select value={h} onChange={e => onChange(`${e.target.value}:${minute}`)} className={`${cls} flex-1`}>
+        {HOURS.map(hh => <option key={hh} value={hh}>{hh}</option>)}
+      </select>
+      <span className="text-white font-black text-xs">:</span>
+      <select value={minute} onChange={e => onChange(`${h}:${e.target.value}`)} className={`${cls} flex-1`}>
+        {MINUTES.map(mm => <option key={mm} value={mm}>{mm}</option>)}
+      </select>
+    </div>
+  );
+}
+
 export default function Simulator({
   showClose = true,
   lockedFlow,
@@ -169,6 +189,7 @@ export default function Simulator({
   const [comMotorista, setComMotorista] = useState(false);
   const [motoristaId, setMotoristaId] = useState("");
   const [submitError, setSubmitError] = useState("");
+  const [eligibilityExpanded, setEligibilityExpanded] = useState(false);
 
   // Auto-preencher dados se o utilizador logado for alterado/carregado
   useEffect(() => {
@@ -280,52 +301,52 @@ export default function Simulator({
       if (purchasePMT > maxPmt) {
         return {
           ok: false,
-          title: "A prestação mensal é demasiado alta",
-          why: `Imagina o teu salário como uma pizza 🍕. A empresa só permite usar até 30% (3 fatias em 10) para pagar o carro por mês. O teu limite é ${fmt(maxPmt)} MT/mês, mas a prestação calculada é ${fmt(purchasePMT)} MT — ultrapassa esse limite.`,
-          fix: `Tens duas formas de resolver: (1) Coloca um valor de entrada para reduzir o que falta financiar. (2) Aumenta o número de meses para que cada prestação fique mais pequena.`,
+          title: "A prestação mensal excede o limite de comprometimento de rendimento",
+          why: `A política de financiamento limita o encargo mensal a 30% do rendimento declarado. Com base no salário indicado (${fmt(income)} MT), o limite máximo por mês é ${fmt(maxPmt)} MT. A prestação calculada de ${fmt(purchasePMT)} MT ultrapassa esse tecto.`,
+          fix: `Aumente o valor de entrada para reduzir o capital financiado, ou alargue o prazo do financiamento para reduzir o valor de cada prestação mensal.`,
         };
       }
-      return { ok: true, title: "Tudo certo!", why: "Não precisas de dar entrada. A prestação cabe no teu salário.", fix: "" };
+      return { ok: true, title: "Simulação dentro dos parâmetros", why: "A prestação mensal está dentro do limite de 30% do rendimento declarado.", fix: "" };
     }
 
     if (category === "func_privado") {
       if (pctEntry < 10) {
         return {
           ok: false,
-          title: "A entrada é muito pequena",
-          why: `Pensa assim: se o carro custa ${fmt(vehiclePrice)} MT, tens de pagar pelo menos 10% logo no início — isso é ${fmt(Math.round(vehiclePrice * 0.1))} MT. É como reservar um lugar: pagas um sinal primeiro para mostrar que és sério. Agora tens ${fmt(downPayment)} MT de entrada, o que é menos de 10%.`,
-          fix: `Aumenta a entrada para pelo menos ${fmt(Math.round(vehiclePrice * 0.1))} MT (10% do preço). Usa o botão "Mín 10%" para preencher automaticamente.`,
+          title: "Entrada insuficiente — mínimo de 10% exigido",
+          why: `Para esta categoria, é obrigatório um valor de entrada mínimo de 10% sobre o preço do veículo. Com base no valor indicado (${fmt(vehiclePrice)} MT), a entrada mínima exigida é ${fmt(Math.round(vehiclePrice * 0.1))} MT. O valor atual de ${fmt(downPayment)} MT não satisfaz este requisito.`,
+          fix: `Defina uma entrada de pelo menos ${fmt(Math.round(vehiclePrice * 0.1))} MT. Utilize o botão "Mín 10%" para aplicar o valor mínimo automaticamente.`,
         };
       }
       if (pctEntry > 50) {
         return {
           ok: false,
-          title: "A entrada é demasiado alta",
-          why: `Para funcionários privados, a entrada não pode ultrapassar 50% do valor do carro (${fmt(Math.round(vehiclePrice * 0.5))} MT). Estás a colocar mais do que isso. Parece estranho, mas as regras impedem que a entrada seja excessiva neste tipo de financiamento.`,
-          fix: `Reduz a entrada para no máximo ${fmt(Math.round(vehiclePrice * 0.5))} MT (50%). Usa o botão "Máx 50%" para ajustar.`,
+          title: "Entrada acima do limite máximo de 50%",
+          why: `Para funcionários do sector privado, a entrada não pode exceder 50% do valor do veículo (${fmt(Math.round(vehiclePrice * 0.5))} MT). O valor introduzido ultrapassa este limite máximo permitido.`,
+          fix: `Reduza a entrada para no máximo ${fmt(Math.round(vehiclePrice * 0.5))} MT. Utilize o botão "Máx 50%" para ajustar automaticamente.`,
         };
       }
       if (purchasePMT > maxPmt) {
         return {
           ok: false,
-          title: "A prestação mensal é demasiado alta",
-          why: `O teu salário é ${fmt(income)} MT. A regra diz que só podes gastar até 30% disso por mês no carro — ou seja, no máximo ${fmt(maxPmt)} MT/mês. A prestação calculada é ${fmt(purchasePMT)} MT, que é mais do que esse limite.`,
-          fix: `Podes resolver de duas formas: (1) Aumenta a entrada — quanto mais deres agora, menos precisas de pagar todos os meses. (2) Aumenta o número de meses para dividir melhor o valor.`,
+          title: "A prestação mensal excede o limite de comprometimento de rendimento",
+          why: `A política de financiamento limita o encargo mensal a 30% do rendimento declarado (${fmt(income)} MT), correspondendo a um máximo de ${fmt(maxPmt)} MT/mês. A prestação calculada de ${fmt(purchasePMT)} MT ultrapassa esse tecto.`,
+          fix: `Aumente o valor de entrada para reduzir o capital financiado, ou alargue o prazo para distribuir o encargo por mais meses.`,
         };
       }
-      return { ok: true, title: "Tudo certo!", why: "A entrada e a prestação mensal estão dentro das regras.", fix: "" };
+      return { ok: true, title: "Simulação dentro dos parâmetros", why: "A entrada e a prestação mensal cumprem os requisitos definidos para esta categoria.", fix: "" };
     }
 
     if (category === "empreendedor") {
       if (pctEntry < 75) {
         return {
           ok: false,
-          title: "A entrada mínima é de 75%",
-          why: `Para empresários, as regras são diferentes. Tens de pagar pelo menos 75% do valor do carro logo à partida. No caso deste carro (${fmt(vehiclePrice)} MT), isso significa ${fmt(Math.round(vehiclePrice * 0.75))} MT de entrada. Agora tens ${fmt(downPayment)} MT, que é menos do que o mínimo exigido.`,
-          fix: `Aumenta a entrada para pelo menos ${fmt(Math.round(vehiclePrice * 0.75))} MT. Clica em "Usar mínimo (75%)" para preencher automaticamente.`,
+          title: "Entrada insuficiente — mínimo de 75% exigido",
+          why: `Para a categoria de empreendedor, a política exige uma entrada mínima de 75% sobre o valor do veículo. Com base no preço indicado (${fmt(vehiclePrice)} MT), o valor mínimo requerido é ${fmt(Math.round(vehiclePrice * 0.75))} MT. A entrada atual de ${fmt(downPayment)} MT não cumpre este requisito.`,
+          fix: `Defina uma entrada de pelo menos ${fmt(Math.round(vehiclePrice * 0.75))} MT. Clique em "Usar mínimo (75%)" para aplicar o valor automaticamente.`,
         };
       }
-      return { ok: true, title: "Tudo certo!", why: "Entrada superior a 75% confirmada.", fix: "" };
+      return { ok: true, title: "Simulação dentro dos parâmetros", why: "Entrada superior a 75% confirmada. Os requisitos desta categoria estão satisfeitos.", fix: "" };
     }
 
     return { ok: true, title: "", why: "", fix: "" };
@@ -333,10 +354,16 @@ export default function Simulator({
 
   const eligivel = financingStatus.ok;
 
-  const rentalVehicleId = selectedVehicleId ?? 4;
+  const rentalVehicleId = (() => {
+    if (selectedVehicleId) {
+      const v = VEHICLES.find(v => v.id === selectedVehicleId);
+      if (v?.mode === 'aluguer') return selectedVehicleId;
+    }
+    return 4; // Toyota Hilux — aluguer por defeito
+  })();
   const dateValidation = useMemo(
-    () => (dataInicio && dataFim ? validateDates(dataInicio, dataFim) : null),
-    [dataInicio, dataFim, validateDates],
+    () => (dataInicio && dataFim ? validateDates(dataInicio, dataFim, horaLevantamento) : null),
+    [dataInicio, dataFim, horaLevantamento, validateDates],
   );
   const availability = useMemo(
     () =>
@@ -661,13 +688,15 @@ export default function Simulator({
             {/* ══ COMPRA ══ */}
             {flow === "compra" ? (
               <>
-                {/* Row 3: Preço + Salário + Como pagar — 3 colunas */}
-                <div className="grid grid-cols-3 gap-2">
+                {/* Row 3: Preço + (Salário se prestações) + Como pagar */}
+                <div className={`grid gap-2 ${paymentPlan === "prestacoes" ? "grid-cols-3" : "grid-cols-2"}`}>
                   <NumberField label="Preço do Veículo" value={vehiclePrice}
                     onChange={(v) => setVehiclePrice(Math.min(8_000_000, Math.max(0, v)))} min={0} suffix="MT"
                     disabled={!isAdmin} />
-                  <NumberField label="O Meu Salário" value={income}
-                    onChange={(v) => setIncome(Math.min(100_000_000, Math.max(0, v)))} min={0} suffix="MT/mês" />
+                  {paymentPlan === "prestacoes" && (
+                    <NumberField label="O Meu Salário" value={income}
+                      onChange={(v) => setIncome(Math.min(100_000_000, Math.max(0, v)))} min={0} suffix="MT/mês" />
+                  )}
                   <div>
                     <label className="text-white text-xs font-bold block mb-1">Como pagar?</label>
                     <select
@@ -763,12 +792,7 @@ export default function Simulator({
                   </div>
                   <div>
                     <label className="text-white text-xs font-bold block mb-1.5">Hora lev.</label>
-                    <input
-                      type="time"
-                      value={horaLevantamento}
-                      onChange={(e) => setHoraLevantamento(e.target.value)}
-                      className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-2 py-1.5 text-xs text-white font-bold outline-none focus:border-amber-500"
-                    />
+                    <TimeSelect value={horaLevantamento} onChange={setHoraLevantamento} />
                   </div>
                   <div>
                     <label className="text-white text-xs font-bold block mb-1.5">Data fim</label>
@@ -781,12 +805,7 @@ export default function Simulator({
                   </div>
                   <div>
                     <label className="text-white text-xs font-bold block mb-1.5">Hora dev.</label>
-                    <input
-                      type="time"
-                      value={horaDevolucao}
-                      onChange={(e) => setHoraDevolucao(e.target.value)}
-                      className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-2 py-1.5 text-xs text-white font-bold outline-none focus:border-amber-500"
-                    />
+                    <TimeSelect value={horaDevolucao} onChange={setHoraDevolucao} />
                   </div>
                 </div>
 
@@ -985,41 +1004,50 @@ export default function Simulator({
             {/* Elegibilidade */}
             {flow === "compra" && paymentPlan === "prestacoes" ? (
               <div className={`mt-3 rounded-xl border-2 shadow-md relative z-10 overflow-hidden ${eligivel ? "border-emerald-500/20" : "border-red-500/30"}`}>
-                {/* Cabeçalho */}
-                <div className={`flex items-center gap-2 px-3 py-2 ${eligivel ? "bg-emerald-500/10" : "bg-red-500/10"}`}>
+                {/* Cabeçalho — clicável para expandir/recolher */}
+                <button
+                  type="button"
+                  onClick={() => setEligibilityExpanded(v => !v)}
+                  className={`w-full flex items-center gap-2 px-3 py-2 ${eligivel ? "bg-emerald-500/10" : "bg-red-500/10"}`}
+                >
                   {eligivel ? (
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                   ) : (
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="3"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                   )}
-                  <span className={`text-xs font-black uppercase tracking-tight ${eligivel ? "text-emerald-400" : "text-red-400"}`}>
+                  <span className={`flex-1 text-left text-xs font-black uppercase tracking-tight ${eligivel ? "text-emerald-400" : "text-red-400"}`}>
                     {eligivel ? "Simulação Válida" : "Requisitos não atendidos"}
                   </span>
-                </div>
+                  <svg
+                    width="13" height="13" viewBox="0 0 24 24" fill="none"
+                    stroke={eligivel ? "#4ade80" : "#f87171"}
+                    strokeWidth="2.5" strokeLinecap="round"
+                    className={`shrink-0 transition-transform duration-200 ${eligibilityExpanded ? "rotate-180" : ""}`}
+                  >
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
 
-                {/* Corpo */}
-                <div className="px-3 py-2.5 space-y-2 bg-zinc-900/60">
-                  {/* Título do problema */}
-                  <p className={`text-xs font-black ${eligivel ? "text-emerald-300" : "text-red-300"}`}>
-                    {financingStatus.title}
-                  </p>
-
-                  {/* Porquê — explicação simples */}
-                  {financingStatus.why && (
-                    <div className="bg-zinc-800/70 rounded-lg px-2.5 py-2 border border-zinc-700/50">
-                      <p className="text-[10px] text-white font-bold mb-0.5 uppercase tracking-wide">O que acontece?</p>
-                      <p className="text-[10px] text-white leading-relaxed">{financingStatus.why}</p>
-                    </div>
-                  )}
-
-                  {/* Como resolver */}
-                  {!eligivel && financingStatus.fix && (
-                    <div className="bg-amber-500/8 rounded-lg px-2.5 py-2 border border-amber-500/20">
-                      <p className="text-[10px] text-amber-400 font-bold mb-0.5 uppercase tracking-wide">Como resolver?</p>
-                      <p className="text-[10px] text-white leading-relaxed">{financingStatus.fix}</p>
-                    </div>
-                  )}
-                </div>
+                {/* Corpo — colapsável */}
+                {eligibilityExpanded && (
+                  <div className="px-3 py-2.5 space-y-2 bg-zinc-900/60">
+                    <p className={`text-sm font-black ${eligivel ? "text-emerald-300" : "text-red-300"}`}>
+                      {financingStatus.title}
+                    </p>
+                    {financingStatus.why && (
+                      <div className="bg-zinc-800/70 rounded-lg px-2.5 py-2 border border-zinc-700/50">
+                        <p className="text-xs text-white font-bold mb-1 uppercase tracking-wide">O que acontece?</p>
+                        <p className="text-xs text-white leading-relaxed">{financingStatus.why}</p>
+                      </div>
+                    )}
+                    {!eligivel && financingStatus.fix && (
+                      <div className="bg-amber-500/8 rounded-lg px-2.5 py-2 border border-amber-500/20">
+                        <p className="text-xs text-amber-400 font-bold mb-1 uppercase tracking-wide">Como resolver?</p>
+                        <p className="text-xs text-white leading-relaxed">{financingStatus.fix}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ) : null}
 

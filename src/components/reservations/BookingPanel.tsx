@@ -77,8 +77,8 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
   };
 
   const dateValidation = useMemo(
-    () => (dataInicio && dataFim ? validateDates(dataInicio, dataFim) : null),
-    [dataInicio, dataFim, validateDates],
+    () => (dataInicio && dataFim ? validateDates(dataInicio, dataFim, horaLevantamento) : null),
+    [dataInicio, dataFim, horaLevantamento, validateDates],
   );
 
   const availability = useMemo(

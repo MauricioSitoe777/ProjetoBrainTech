@@ -1,10 +1,8 @@
 import { useRoute } from '../hooks/useRoute';
 import { useGuests } from '../context/GuestsContext';
-import { useAuth } from '../context/AuthContext';
 
 interface Props {
   onClose?: () => void;
-  onExit?: () => void;
 }
 
 function Icon({ d, d2, extra }: { d: string; d2?: string; extra?: string }) {
@@ -18,10 +16,9 @@ function Icon({ d, d2, extra }: { d: string; d2?: string; extra?: string }) {
   );
 }
 
-export function AdminSidebar({ onClose, onExit }: Props) {
+export function AdminSidebar({ onClose }: Props) {
   const { path, navigate } = useRoute();
   const { guests } = useGuests();
-  const { logout } = useAuth();
 
   const pendingCount = guests.filter(g => g.status !== 'aprovado' && g.status !== 'rejeitado').length;
 
@@ -102,31 +99,6 @@ export function AdminSidebar({ onClose, onExit }: Props) {
 
       </nav>
 
-      {/* ── Fundo: voltar ao site + logout ─────────────────── */}
-      <div className="border-t border-zinc-800 px-3 py-4 shrink-0 flex flex-col gap-2">
-        {onExit && (
-          <button
-            onClick={onExit}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors font-medium"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-              <path d="M19 12H5M12 5l-7 7 7 7"/>
-            </svg>
-            <span>Voltar ao Site</span>
-          </button>
-        )}
-        <button
-          onClick={logout}
-          className="w-full flex items-center justify-center gap-2.5 px-3 py-2.5 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 text-sm font-bold hover:bg-red-500/30 hover:text-red-300 active:scale-95 transition-all"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-            <polyline points="16 17 21 12 16 7"/>
-            <line x1="21" y1="12" x2="9" y2="12"/>
-          </svg>
-          <span>Logout</span>
-        </button>
-      </div>
 
     </aside>
   );

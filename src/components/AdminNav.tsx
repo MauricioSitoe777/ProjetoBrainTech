@@ -9,11 +9,7 @@ const roleConfig = {
   cliente: { label: 'Cliente',       className: 'bg-zinc-700 text-white border-zinc-600' },
 };
 
-interface AdminNavProps {
-  onExit?: () => void;
-}
-
-export function AdminNav({ onExit }: AdminNavProps) {
+export function AdminNav() {
   const { user: authUser, allUsers } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -81,7 +77,7 @@ export function AdminNav({ onExit }: AdminNavProps) {
             onClick={() => setDrawerOpen(false)}
           />
           <div className="fixed left-0 top-0 bottom-0 z-50 md:hidden">
-            <AdminSidebar onClose={() => setDrawerOpen(false)} onExit={onExit} />
+            <AdminSidebar onClose={() => setDrawerOpen(false)} />
           </div>
         </>
       )}

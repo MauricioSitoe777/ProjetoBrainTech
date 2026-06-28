@@ -196,18 +196,6 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
           <Avatar />
         </button>
         <div className="w-px h-4 bg-zinc-800" />
-        {/* Back to site */}
-        <button
-          onClick={() => navigate("/")}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-600 transition-all"
-          title="Voltar ao site"
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            <polyline points="9 22 9 12 15 12 15 22"/>
-          </svg>
-          Site
-        </button>
         {/* Logout */}
         <button
           onClick={handleLogout}
@@ -284,12 +272,6 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
             <button onClick={() => { navigate("/admin"); setMenuOpen(false); }}
               className="text-left text-sm font-medium py-2 text-zinc-300 hover:text-white transition-colors">
               Minha Conta
-            </button>
-          )}
-          {isAdmin && (
-            <button onClick={() => { navigate("/"); setMenuOpen(false); }}
-              className="text-left text-sm font-medium py-2 text-zinc-300 hover:text-white transition-colors">
-              Voltar ao Site
             </button>
           )}
           <button onClick={handleLogout}

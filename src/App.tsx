@@ -171,7 +171,7 @@ function AppInner() {
             <div className="flex flex-1">
               {/* Desktop sidebar */}
               <div className="hidden md:block shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
-                <AdminSidebar onExit={goBack} />
+                <AdminSidebar />
               </div>
               <main className="flex-1 min-w-0 overflow-x-hidden">
                 {adminPage()}
@@ -249,7 +249,7 @@ function AppInner() {
             onClick={() => setSidebarOpen(false)}
           />
           <div className="fixed left-0 top-0 bottom-0 z-50 md:hidden">
-            <AdminSidebar onClose={() => setSidebarOpen(false)} onExit={goBack} />
+            <AdminSidebar onClose={() => setSidebarOpen(false)} />
           </div>
         </>
       )}
