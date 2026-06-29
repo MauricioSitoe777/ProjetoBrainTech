@@ -182,7 +182,7 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
 
   return (
     <div className="bg-zinc-950">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      <div className="w-full px-5 sm:px-8 py-6">
         {/* Header */}
         <div className="flex items-center justify-between gap-4 mb-6">
           <div>

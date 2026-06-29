@@ -121,7 +121,7 @@ export function MotoristasPage({ onExit }: { onExit?: () => void }) {
         </div>
       )}
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+      <div className="w-full px-5 sm:px-8 py-8 space-y-6">
 
         {/* KPIs */}
         <div className="grid grid-cols-3 gap-3">
@@ -154,10 +154,10 @@ export function MotoristasPage({ onExit }: { onExit?: () => void }) {
           <table className="w-full">
             <thead>
               <tr className="border-b border-zinc-800 bg-zinc-800/40">
-                <th className="text-left px-4 py-3 text-xs text-white font-bold uppercase tracking-wider">Motorista</th>
-                <th className="text-left px-4 py-3 text-xs text-white font-bold uppercase tracking-wider hidden sm:table-cell">Documentos</th>
-                <th className="text-left px-4 py-3 text-xs text-white font-bold uppercase tracking-wider">Estado</th>
-                <th className="px-4 py-3 text-xs text-white font-bold uppercase tracking-wider text-right">Acções</th>
+                <th className="text-left px-5 py-4 text-xs text-white font-bold uppercase tracking-wider">Motorista</th>
+                <th className="text-left px-5 py-4 text-xs text-white font-bold uppercase tracking-wider hidden sm:table-cell">Documentos</th>
+                <th className="text-left px-5 py-4 text-xs text-white font-bold uppercase tracking-wider">Estado</th>
+                <th className="px-5 py-4 text-xs text-white font-bold uppercase tracking-wider text-right">Acções</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800">
@@ -170,22 +170,22 @@ export function MotoristasPage({ onExit }: { onExit?: () => void }) {
                 const st = STATUS_CFG[m.status];
                 return (
                   <tr key={m.id} className="hover:bg-zinc-800/30 transition-colors">
-                    <td className="px-4 py-3.5">
+                    <td className="px-5 py-4">
                       <p className="text-sm font-semibold text-white">{m.nome}</p>
                       <p className="text-xs text-zinc-500">{m.telefone}</p>
                       {m.observacoes && <p className="text-[10px] text-zinc-600 italic mt-0.5">{m.observacoes}</p>}
                     </td>
-                    <td className="px-4 py-3.5 hidden sm:table-cell">
+                    <td className="px-5 py-4 hidden sm:table-cell">
                       <div className="flex gap-2 flex-wrap">
                         {m.bi && <span className="text-[10px] bg-zinc-800 border border-zinc-700 text-zinc-400 px-2 py-0.5 rounded-md">BI: {m.bi}</span>}
                         {m.carta && <span className="text-[10px] bg-zinc-800 border border-zinc-700 text-zinc-400 px-2 py-0.5 rounded-md">Carta: {m.carta}</span>}
                         {!m.bi && !m.carta && <span className="text-[10px] text-zinc-600 italic">—</span>}
                       </div>
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-5 py-4">
                       <span className={`text-xs border rounded-md px-2 py-0.5 font-semibold ${st.className}`}>{st.label}</span>
                     </td>
-                    <td className="px-4 py-3.5 text-right">
+                    <td className="px-5 py-4 text-right">
                       <div className="flex items-center gap-2 justify-end">
                         <button onClick={() => setModal(m)}
                           className="text-xs px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-semibold transition-all">
@@ -203,7 +203,7 @@ export function MotoristasPage({ onExit }: { onExit?: () => void }) {
             </tbody>
           </table>
           {motoristas.length > 0 && (
-            <div className="px-4 py-3 border-t border-zinc-800 text-xs text-zinc-500">
+            <div className="px-5 py-4 border-t border-zinc-800 text-xs text-zinc-500">
               {motoristas.length} motorista(s) registado(s)
             </div>
           )}

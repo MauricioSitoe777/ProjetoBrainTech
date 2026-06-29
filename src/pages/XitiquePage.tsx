@@ -755,14 +755,14 @@ function CriarGrupoModal({ onClose, onCriar }: { onClose: () => void; onCriar: (
         <div>
           <label className="text-xs text-white font-bold uppercase tracking-wider block mb-1.5">Nome do Grupo</label>
           <input value={nome} onChange={e => setNome(e.target.value)} placeholder="Ex: Grupo B"
-            className="w-full rounded-xl bg-zinc-800 border border-zinc-700 px-4 py-3 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-amber-500 transition" />
+            className="w-full rounded-xl bg-zinc-800 border border-zinc-700 px-5 py-4 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-amber-500 transition" />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-white font-bold uppercase tracking-wider block mb-1.5">Nº Membros</label>
             <input type="number" min={2} max={50} value={max} onChange={e => { const v = Number(e.target.value); setMax(v); setQuota(q => q); }}
-              className="w-full rounded-xl bg-zinc-800 border border-zinc-700 px-4 py-3 text-sm text-white outline-none focus:border-amber-500 transition" />
+              className="w-full rounded-xl bg-zinc-800 border border-zinc-700 px-5 py-4 text-sm text-white outline-none focus:border-amber-500 transition" />
           </div>
           <div>
             <label className="text-xs text-white font-bold uppercase tracking-wider block mb-1.5">Quota (MT/mês)</label>
@@ -786,7 +786,7 @@ function CriarGrupoModal({ onClose, onCriar }: { onClose: () => void; onCriar: (
         <div>
           <label className="text-xs text-white font-bold uppercase tracking-wider block mb-1.5">Data de Início (opcional)</label>
           <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)}
-            className="w-full rounded-xl bg-zinc-800 border border-zinc-700 px-4 py-3 text-sm text-white outline-none focus:border-amber-500 transition [color-scheme:dark]" />
+            className="w-full rounded-xl bg-zinc-800 border border-zinc-700 px-5 py-4 text-sm text-white outline-none focus:border-amber-500 transition [color-scheme:dark]" />
         </div>
 
         <div className="flex gap-3 pt-1">
@@ -816,7 +816,7 @@ export function XitiquePage({ onExit }: { onExit?: () => void }) {
   if (grupoSel) {
     return (
       <div className="bg-zinc-950">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+        <div className="w-full px-5 sm:px-8 py-8 space-y-8">
           <GrupoPanel grupo={grupoSel} onBack={() => setGrupoSelId(null)} />
         </div>
       </div>
@@ -825,7 +825,7 @@ export function XitiquePage({ onExit }: { onExit?: () => void }) {
 
   return (
     <div className="bg-zinc-950">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+      <div className="w-full px-5 sm:px-8 py-8 space-y-6">
 
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-4">

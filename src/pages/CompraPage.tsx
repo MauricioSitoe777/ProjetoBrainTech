@@ -383,7 +383,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
         />
       )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+      <div className="w-full px-5 sm:px-8 py-8 space-y-6">
 
         {/* KPI cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -457,11 +457,11 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
           <table className="w-full">
             <thead>
               <tr className="border-b border-zinc-800 bg-zinc-800/40">
-                <th className="text-left px-4 py-3 text-xs text-white font-bold uppercase tracking-wider">Cliente</th>
-                <th className="text-left px-4 py-3 text-xs text-white font-bold uppercase tracking-wider hidden md:table-cell">Viatura</th>
-                <th className="text-left px-4 py-3 text-xs text-white font-bold uppercase tracking-wider hidden sm:table-cell">Valor Total</th>
-                <th className="text-left px-4 py-3 text-xs text-white font-bold uppercase tracking-wider">Data</th>
-                <th className="text-left px-4 py-3 text-xs text-white font-bold uppercase tracking-wider">Estado</th>
+                <th className="text-left px-5 py-4 text-xs text-white font-bold uppercase tracking-wider">Cliente</th>
+                <th className="text-left px-5 py-4 text-xs text-white font-bold uppercase tracking-wider hidden md:table-cell">Viatura</th>
+                <th className="text-left px-5 py-4 text-xs text-white font-bold uppercase tracking-wider hidden sm:table-cell">Valor Total</th>
+                <th className="text-left px-5 py-4 text-xs text-white font-bold uppercase tracking-wider">Data</th>
+                <th className="text-left px-5 py-4 text-xs text-white font-bold uppercase tracking-wider">Estado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800">
@@ -479,23 +479,23 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                 const total = prestacoes.length || (r.totalPrestacoes ?? 0);
                 return (
                   <tr key={r.id} className="hover:bg-zinc-800/30 transition-colors">
-                    <td className="px-4 py-3.5">
+                    <td className="px-5 py-4">
                       <p className="text-sm font-semibold text-white">{r.clientName}</p>
                       <p className="text-xs text-zinc-500">{r.clientPhone ?? r.clientEmail ?? '—'}</p>
                     </td>
-                    <td className="px-4 py-3.5 hidden md:table-cell text-sm text-zinc-300">
+                    <td className="px-5 py-4 hidden md:table-cell text-sm text-zinc-300">
                       {vehicleName(r.vehicleId)}
                     </td>
-                    <td className="px-4 py-3.5 hidden sm:table-cell">
+                    <td className="px-5 py-4 hidden sm:table-cell">
                       <p className="text-sm font-bold text-amber-400">{fmt(r.valorTotal)}</p>
                       {total > 0 && (
                         <p className="text-xs text-zinc-500">{pagas}/{total} prestações</p>
                       )}
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-5 py-4">
                       <p className="text-sm text-zinc-300 tabular-nums">{r.dataInicio}</p>
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-5 py-4">
                       <span className={`text-xs border rounded-md px-2 py-0.5 font-semibold ${st.className}`}>{st.label}</span>
                     </td>
                   </tr>
@@ -504,7 +504,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
             </tbody>
           </table>
           {historico.length > 0 && (
-            <div className="px-4 py-3 border-t border-zinc-800 text-xs text-zinc-500">
+            <div className="px-5 py-4 border-t border-zinc-800 text-xs text-zinc-500">
               {historico.length} contrato(s) no histórico
             </div>
           )}

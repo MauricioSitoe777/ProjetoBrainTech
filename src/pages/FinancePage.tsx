@@ -203,7 +203,7 @@ export function FinancePage() {
 
   return (
     <div className="bg-zinc-950 text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+      <div className="w-full px-5 sm:px-8 py-8 space-y-6">
 
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -434,16 +434,16 @@ export function FinancePage() {
                             <tr key={d.key}
                               onClick={() => setMesSel(mesSel === d.month ? null : d.month)}
                               className={`cursor-pointer transition-colors hover:bg-zinc-800/40 ${isCurrentMonth ? 'bg-amber-500/5' : ''}`}>
-                              <td className="px-4 py-3 text-sm font-black text-white whitespace-nowrap">
+                              <td className="px-5 py-4 text-sm font-black text-white whitespace-nowrap">
                                 {MESES_FULL[d.month]}
                                 {isCurrentMonth && <span className="ml-1.5 text-[9px] font-bold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded-full">Actual</span>}
                               </td>
-                              <td className="px-4 py-3 text-sm text-blue-400 font-bold">{d.aluguerQty}</td>
-                              <td className="px-4 py-3 text-sm text-blue-400 font-black whitespace-nowrap">{fmt(d.aluguerVal)}</td>
-                              <td className="px-4 py-3 text-sm text-purple-400 font-bold">{d.compraQty}</td>
-                              <td className="px-4 py-3 text-sm text-purple-400 font-black whitespace-nowrap">{fmt(d.compraVal)}</td>
-                              <td className="px-4 py-3 text-sm text-amber-400 font-black whitespace-nowrap">{fmt(d.total)}</td>
-                              <td className="px-4 py-3 text-xs font-bold whitespace-nowrap">
+                              <td className="px-5 py-4 text-sm text-blue-400 font-bold">{d.aluguerQty}</td>
+                              <td className="px-5 py-4 text-sm text-blue-400 font-black whitespace-nowrap">{fmt(d.aluguerVal)}</td>
+                              <td className="px-5 py-4 text-sm text-purple-400 font-bold">{d.compraQty}</td>
+                              <td className="px-5 py-4 text-sm text-purple-400 font-black whitespace-nowrap">{fmt(d.compraVal)}</td>
+                              <td className="px-5 py-4 text-sm text-amber-400 font-black whitespace-nowrap">{fmt(d.total)}</td>
+                              <td className="px-5 py-4 text-xs font-bold whitespace-nowrap">
                                 {var_ !== null ? (
                                   <span className={var_ >= 0 ? 'text-emerald-400' : 'text-red-400'}>
                                     {var_ >= 0 ? '▲' : '▼'} {Math.abs(var_)}%
@@ -457,12 +457,12 @@ export function FinancePage() {
                       {dadosAno.length > 1 && mesSel === null && (
                         <tfoot>
                           <tr className="bg-zinc-800/40 border-t border-zinc-700">
-                            <td className="px-4 py-3 text-xs font-black text-white uppercase">Total {anoSel}</td>
-                            <td className="px-4 py-3 text-sm font-black text-blue-400">{dadosAno.reduce((s, d) => s + d.aluguerQty, 0)}</td>
-                            <td className="px-4 py-3 text-sm font-black text-blue-400 whitespace-nowrap">{fmt(dadosAno.reduce((s, d) => s + d.aluguerVal, 0))}</td>
-                            <td className="px-4 py-3 text-sm font-black text-purple-400">{dadosAno.reduce((s, d) => s + d.compraQty, 0)}</td>
-                            <td className="px-4 py-3 text-sm font-black text-purple-400 whitespace-nowrap">{fmt(dadosAno.reduce((s, d) => s + d.compraVal, 0))}</td>
-                            <td className="px-4 py-3 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(dadosAno.reduce((s, d) => s + d.total, 0))}</td>
+                            <td className="px-5 py-4 text-xs font-black text-white uppercase">Total {anoSel}</td>
+                            <td className="px-5 py-4 text-sm font-black text-blue-400">{dadosAno.reduce((s, d) => s + d.aluguerQty, 0)}</td>
+                            <td className="px-5 py-4 text-sm font-black text-blue-400 whitespace-nowrap">{fmt(dadosAno.reduce((s, d) => s + d.aluguerVal, 0))}</td>
+                            <td className="px-5 py-4 text-sm font-black text-purple-400">{dadosAno.reduce((s, d) => s + d.compraQty, 0)}</td>
+                            <td className="px-5 py-4 text-sm font-black text-purple-400 whitespace-nowrap">{fmt(dadosAno.reduce((s, d) => s + d.compraVal, 0))}</td>
+                            <td className="px-5 py-4 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(dadosAno.reduce((s, d) => s + d.total, 0))}</td>
                             <td />
                           </tr>
                         </tfoot>
@@ -498,16 +498,16 @@ export function FinancePage() {
                               const isCompra = compraIds.has(r.vehicleId);
                               return (
                                 <tr key={r.id} className="hover:bg-zinc-800/30 transition-colors">
-                                  <td className="px-4 py-3 text-xs text-zinc-200 whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
-                                  <td className="px-4 py-3 text-sm font-semibold text-white truncate max-w-[140px]">{getVehicleName(r.vehicleId)}</td>
-                                  <td className="px-4 py-3 text-xs text-zinc-200 truncate max-w-[120px]">{r.clientName ?? '—'}</td>
-                                  <td className="px-4 py-3">
+                                  <td className="px-5 py-4 text-xs text-zinc-200 whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
+                                  <td className="px-5 py-4 text-sm font-semibold text-white truncate max-w-[140px]">{getVehicleName(r.vehicleId)}</td>
+                                  <td className="px-5 py-4 text-xs text-zinc-200 truncate max-w-[120px]">{r.clientName ?? '—'}</td>
+                                  <td className="px-5 py-4">
                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                                       isCompra ? 'bg-purple-400/10 text-purple-400 border-purple-400/20' : 'bg-blue-400/10 text-blue-400 border-blue-400/20'
                                     }`}>{isCompra ? 'Compra' : 'Aluguer'}</span>
                                   </td>
-                                  <td className="px-4 py-3 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(r.valorTotal)}</td>
-                                  <td className="px-4 py-3 text-xs text-zinc-200 capitalize">{r.status.replace(/_/g, ' ')}</td>
+                                  <td className="px-5 py-4 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(r.valorTotal)}</td>
+                                  <td className="px-5 py-4 text-xs text-zinc-200 capitalize">{r.status.replace(/_/g, ' ')}</td>
                                 </tr>
                               );
                             })}
@@ -553,10 +553,10 @@ export function FinancePage() {
                     <tbody className="divide-y divide-zinc-800/40">
                       {[...transacoes].sort((a, b) => b.data.localeCompare(a.data)).map(t => (
                         <tr key={t.id} className="hover:bg-zinc-800/20 transition-colors">
-                          <td className="px-4 py-3 text-xs text-zinc-200 whitespace-nowrap">{new Date(t.data).toLocaleDateString('pt-PT')}</td>
-                          <td className="px-4 py-3 text-sm text-white font-medium truncate max-w-[200px]">{t.descricao}</td>
-                          <td className="px-4 py-3 text-xs text-zinc-200">{CATEGORIA_LABEL[t.categoria] ?? t.categoria}</td>
-                          <td className="px-4 py-3">
+                          <td className="px-5 py-4 text-xs text-zinc-200 whitespace-nowrap">{new Date(t.data).toLocaleDateString('pt-PT')}</td>
+                          <td className="px-5 py-4 text-sm text-white font-medium truncate max-w-[200px]">{t.descricao}</td>
+                          <td className="px-5 py-4 text-xs text-zinc-200">{CATEGORIA_LABEL[t.categoria] ?? t.categoria}</td>
+                          <td className="px-5 py-4">
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                               t.tipo === 'entrada'
                                 ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20'
@@ -630,13 +630,13 @@ export function FinancePage() {
                         const s = STATUS_ALUGUER[r.status] ?? { label: r.status, color: 'text-zinc-400', bg: 'bg-zinc-800 border-zinc-700' };
                         return (
                           <tr key={r.id} className="hover:bg-zinc-800/30 transition-colors">
-                            <td className="px-4 py-3 text-xs text-zinc-200 whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
-                            <td className="px-4 py-3 text-xs text-zinc-200 whitespace-nowrap">{new Date(r.dataFim).toLocaleDateString('pt-PT')}</td>
-                            <td className="px-4 py-3 text-sm font-semibold text-white truncate max-w-[140px]">{getVehicleName(r.vehicleId)}</td>
-                            <td className="px-4 py-3 text-xs text-zinc-200 truncate max-w-[120px]">{r.clientName ?? '—'}</td>
-                            <td className="px-4 py-3 text-xs text-zinc-300 whitespace-nowrap">{dias} dia{dias !== 1 ? 's' : ''}</td>
-                            <td className="px-4 py-3 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(r.valorTotal)}</td>
-                            <td className="px-4 py-3">
+                            <td className="px-5 py-4 text-xs text-zinc-200 whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
+                            <td className="px-5 py-4 text-xs text-zinc-200 whitespace-nowrap">{new Date(r.dataFim).toLocaleDateString('pt-PT')}</td>
+                            <td className="px-5 py-4 text-sm font-semibold text-white truncate max-w-[140px]">{getVehicleName(r.vehicleId)}</td>
+                            <td className="px-5 py-4 text-xs text-zinc-200 truncate max-w-[120px]">{r.clientName ?? '—'}</td>
+                            <td className="px-5 py-4 text-xs text-zinc-300 whitespace-nowrap">{dias} dia{dias !== 1 ? 's' : ''}</td>
+                            <td className="px-5 py-4 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(r.valorTotal)}</td>
+                            <td className="px-5 py-4">
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${s.bg} ${s.color}`}>{s.label}</span>
                             </td>
                           </tr>
@@ -645,8 +645,8 @@ export function FinancePage() {
                     </tbody>
                     <tfoot>
                       <tr className="bg-zinc-800/40 border-t border-zinc-700">
-                        <td colSpan={5} className="px-4 py-3 text-xs font-black text-white uppercase">Total</td>
-                        <td className="px-4 py-3 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(receitaAluguer)}</td>
+                        <td colSpan={5} className="px-5 py-4 text-xs font-black text-white uppercase">Total</td>
+                        <td className="px-5 py-4 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(receitaAluguer)}</td>
                         <td />
                       </tr>
                     </tfoot>
@@ -759,12 +759,12 @@ export function FinancePage() {
                           : '—';
                         return (
                           <tr key={r.id} className="hover:bg-zinc-800/30 transition-colors">
-                            <td className="px-4 py-3 text-xs text-zinc-200 whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
-                            <td className="px-4 py-3 text-sm font-semibold text-white truncate max-w-[140px]">{getVehicleName(r.vehicleId)}</td>
-                            <td className="px-4 py-3 text-xs text-zinc-200 truncate max-w-[120px]">{r.clientName ?? '—'}</td>
-                            <td className="px-4 py-3 text-xs font-bold text-zinc-300 whitespace-nowrap">{prestStr}</td>
-                            <td className="px-4 py-3 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(r.valorTotal)}</td>
-                            <td className="px-4 py-3">
+                            <td className="px-5 py-4 text-xs text-zinc-200 whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
+                            <td className="px-5 py-4 text-sm font-semibold text-white truncate max-w-[140px]">{getVehicleName(r.vehicleId)}</td>
+                            <td className="px-5 py-4 text-xs text-zinc-200 truncate max-w-[120px]">{r.clientName ?? '—'}</td>
+                            <td className="px-5 py-4 text-xs font-bold text-zinc-300 whitespace-nowrap">{prestStr}</td>
+                            <td className="px-5 py-4 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(r.valorTotal)}</td>
+                            <td className="px-5 py-4">
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${s.bg} ${s.color}`}>{s.label}</span>
                             </td>
                           </tr>
@@ -773,8 +773,8 @@ export function FinancePage() {
                     </tbody>
                     <tfoot>
                       <tr className="bg-zinc-800/40 border-t border-zinc-700">
-                        <td colSpan={4} className="px-4 py-3 text-xs font-black text-white uppercase">Total</td>
-                        <td className="px-4 py-3 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(receitaCompra)}</td>
+                        <td colSpan={4} className="px-5 py-4 text-xs font-black text-white uppercase">Total</td>
+                        <td className="px-5 py-4 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(receitaCompra)}</td>
                         <td />
                       </tr>
                     </tfoot>

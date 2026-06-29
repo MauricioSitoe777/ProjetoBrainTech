@@ -69,7 +69,7 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+      <div className="w-full px-5 sm:px-8 py-8 space-y-6">
 
         <div className="flex flex-wrap gap-2">
           {tabs.map(t => (
@@ -144,11 +144,11 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-zinc-800">
-                    <th className="text-left px-4 py-3 text-xs text-white uppercase">Cliente</th>
-                    <th className="text-left px-4 py-3 text-xs text-white uppercase hidden md:table-cell">Viatura</th>
-                    <th className="text-left px-4 py-3 text-xs text-white uppercase">Período</th>
-                    <th className="text-left px-4 py-3 text-xs text-white uppercase">Estado</th>
-                    <th className="text-right px-4 py-3 text-xs text-white uppercase">Ações</th>
+                    <th className="text-left px-5 py-4 text-xs text-white uppercase">Cliente</th>
+                    <th className="text-left px-5 py-4 text-xs text-white uppercase hidden md:table-cell">Viatura</th>
+                    <th className="text-left px-5 py-4 text-xs text-white uppercase">Período</th>
+                    <th className="text-left px-5 py-4 text-xs text-white uppercase">Estado</th>
+                    <th className="text-right px-5 py-4 text-xs text-white uppercase">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800">
@@ -163,11 +163,11 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
                     const isPurchase = vehicle?.mode === 'compra';
                     return (
                       <tr key={r.id} className="hover:bg-zinc-800/40">
-                        <td className="px-4 py-3">
+                        <td className="px-5 py-4">
                           <p className="text-sm text-white">{r.clientName}</p>
                           <p className="text-xs text-white">{r.clientPhone ?? r.clientEmail ?? '—'}</p>
                         </td>
-                        <td className="px-4 py-3 hidden md:table-cell text-sm text-white">
+                        <td className="px-5 py-4 hidden md:table-cell text-sm text-white">
                           <div>
                             <p className="font-medium text-white">{vehicleName(r.vehicleId)}</p>
                             <span className={`text-[9px] px-1 py-0.2 rounded font-bold uppercase ${
@@ -179,7 +179,7 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
                             </span>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-5 py-4">
                           <p className="text-sm text-white">
                             {isPurchase 
                               ? `Compra efetuada em ${r.dataInicio}` 
@@ -212,10 +212,10 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
                             </div>
                           )}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-5 py-4">
                           <span className={`text-xs border rounded-md px-2 py-0.5 ${st.className}`}>{st.label}</span>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-5 py-4">
                           <div className="flex justify-end gap-1 flex-wrap">
                             {isPurchase ? (
                               // Se for COMPRA

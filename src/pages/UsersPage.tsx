@@ -242,7 +242,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
 
   return (
     <div className="bg-zinc-950 text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+      <div className="w-full px-5 sm:px-8 py-8 space-y-6">
 
         <AcoesNecessarias />
 
@@ -291,7 +291,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                     <div className="absolute right-0 mt-1 z-20 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden min-w-[160px]">
                       <button
                         onClick={() => { setNovoOpen(false); setEditingUser(null); setShowUserModal(true); }}
-                        className="w-full text-left px-4 py-3 text-sm text-white hover:bg-zinc-800 transition flex items-center gap-3"
+                        className="w-full text-left px-5 py-4 text-sm text-white hover:bg-zinc-800 transition flex items-center gap-3"
                       >
                         <div className="w-6 h-6 rounded-md bg-amber-400/15 border border-amber-400/30 flex items-center justify-center shrink-0">
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -301,7 +301,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                       <div className="h-px bg-zinc-800" />
                       <button
                         onClick={() => { setNovoOpen(false); setMotoristaModal('new'); }}
-                        className="w-full text-left px-4 py-3 text-sm text-white hover:bg-zinc-800 transition flex items-center gap-3"
+                        className="w-full text-left px-5 py-4 text-sm text-white hover:bg-zinc-800 transition flex items-center gap-3"
                       >
                         <div className="w-6 h-6 rounded-md bg-blue-400/15 border border-blue-400/30 flex items-center justify-center shrink-0">
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2.5"><circle cx="12" cy="7" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/><path d="M18 11l3 3-3 3"/></svg>
@@ -384,13 +384,13 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-zinc-700 bg-zinc-800/40">
-                  <th className="text-left px-4 py-3 text-xs font-bold text-white uppercase tracking-wider">Nome</th>
-                  <th className="text-left px-4 py-3 text-xs font-bold text-white uppercase tracking-wider hidden sm:table-cell">Tipo</th>
-                  <th className="text-left px-4 py-3 text-xs font-bold text-white uppercase tracking-wider hidden md:table-cell">Telefone</th>
-                  <th className="text-left px-4 py-3 text-xs font-bold text-white uppercase tracking-wider">Estado</th>
-                  <th className="text-left px-4 py-3 text-xs font-bold text-white uppercase tracking-wider hidden md:table-cell">Registo</th>
-                  <th className="text-left px-4 py-3 text-xs font-bold text-white uppercase tracking-wider hidden xl:table-cell">Restrição</th>
-                  <th className="text-right px-4 py-3 text-xs font-bold text-white uppercase tracking-wider">Ações</th>
+                  <th className="text-left px-5 py-4 text-xs font-bold text-white uppercase tracking-wider">Nome</th>
+                  <th className="text-left px-5 py-4 text-xs font-bold text-white uppercase tracking-wider hidden sm:table-cell">Tipo</th>
+                  <th className="text-left px-5 py-4 text-xs font-bold text-white uppercase tracking-wider hidden md:table-cell">Telefone</th>
+                  <th className="text-left px-5 py-4 text-xs font-bold text-white uppercase tracking-wider">Estado</th>
+                  <th className="text-left px-5 py-4 text-xs font-bold text-white uppercase tracking-wider hidden md:table-cell">Registo</th>
+                  <th className="text-left px-5 py-4 text-xs font-bold text-white uppercase tracking-wider hidden xl:table-cell">Restrição</th>
+                  <th className="text-right px-5 py-4 text-xs font-bold text-white uppercase tracking-wider">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800">
@@ -435,7 +435,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                     const status = userStatusConfig[u.status];
                     return (
                       <tr key={`u-${u.id}`} className="hover:bg-zinc-800/50 transition-colors group border-b border-zinc-800/60">
-                        <td className="px-4 py-3.5">
+                        <td className="px-5 py-4">
                           <button onClick={() => setDetailUser(u)} className="flex items-center gap-3 text-left">
                             <div className="w-9 h-9 rounded-lg bg-amber-400/15 border border-amber-400/30 flex items-center justify-center text-amber-400 text-xs font-black flex-shrink-0">
                               {initials(u.nome)}
@@ -446,17 +446,17 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                             </div>
                           </button>
                         </td>
-                        <td className="px-4 py-3.5 hidden sm:table-cell">
+                        <td className="px-5 py-4 hidden sm:table-cell">
                           <span className={`text-xs font-bold border rounded-md px-2 py-1 ${role.className}`}>{role.label}</span>
                         </td>
-                        <td className="px-4 py-3.5 hidden md:table-cell text-sm font-medium text-white">{u.telefone}</td>
-                        <td className="px-4 py-3.5">
+                        <td className="px-5 py-4 hidden md:table-cell text-sm font-medium text-white">{u.telefone}</td>
+                        <td className="px-5 py-4">
                           <div className="flex items-center gap-2">
                             <span className={`w-2 h-2 rounded-full ${status.dot}`} />
                             <span className="text-sm font-semibold text-white">{status.label}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3.5 hidden md:table-cell">
+                        <td className="px-5 py-4 hidden md:table-cell">
                           <div className="flex flex-col gap-0.5">
                             <span className="text-sm font-semibold text-white">
                               {u.dataCriacao ? new Date(u.dataCriacao).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
@@ -468,7 +468,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3.5 hidden xl:table-cell">
+                        <td className="px-5 py-4 hidden xl:table-cell">
                           <span className={`text-xs font-bold border rounded-md px-2 py-1 ${restrictionConfig[u.restriction || 'nenhuma'].className}`}>
                             {restrictionConfig[u.restriction || 'nenhuma'].label}
                           </span>
@@ -520,7 +520,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                   const st = motoristaStatusConfig[m.status];
                   return (
                     <tr key={`m-${m.id}`} className="hover:bg-zinc-800/50 transition-colors group border-b border-zinc-800/60">
-                      <td className="px-4 py-3.5">
+                      <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-lg bg-blue-400/15 border border-blue-400/30 flex items-center justify-center text-blue-400 text-xs font-black flex-shrink-0">
                             {initials(m.nome)}
@@ -531,17 +531,17 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3.5 hidden sm:table-cell">
+                      <td className="px-5 py-4 hidden sm:table-cell">
                         <span className="text-xs font-bold border rounded-md px-2 py-1 bg-blue-400/10 text-blue-400 border-blue-400/20">Motorista</span>
                       </td>
-                      <td className="px-4 py-3.5 hidden md:table-cell text-sm font-medium text-white">{m.telefone}</td>
-                      <td className="px-4 py-3.5">
+                      <td className="px-5 py-4 hidden md:table-cell text-sm font-medium text-white">{m.telefone}</td>
+                      <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
                           <span className={`w-2 h-2 rounded-full ${st.dot}`} />
                           <span className="text-sm font-semibold text-white">{st.label}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3.5 hidden md:table-cell">
+                      <td className="px-5 py-4 hidden md:table-cell">
                         <span className="text-sm font-semibold text-white">
                           {m.dataCriacao ? new Date(m.dataCriacao).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
                         </span>
@@ -550,7 +550,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                           {m.carta && <span className="text-[10px] bg-zinc-800 border border-zinc-700 text-zinc-400 px-1.5 py-0.5 rounded">Carta: {m.carta}</span>}
                         </div>
                       </td>
-                      <td className="px-4 py-3.5 hidden xl:table-cell">
+                      <td className="px-5 py-4 hidden xl:table-cell">
                         <span className="text-xs text-zinc-500">—</span>
                       </td>
                       <td className="px-4 py-3">
@@ -574,7 +574,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
             </table>
           </div>
           {rows.length > 0 && (
-            <div className="px-4 py-3 border-t border-zinc-800 text-xs font-semibold text-white">
+            <div className="px-5 py-4 border-t border-zinc-800 text-xs font-semibold text-white">
               {rows.length} resultado(s)
             </div>
           )}
@@ -738,7 +738,7 @@ function GuestRow({ g, guestStatusConfig, onReview, onAdvance }: {
 
   return (
     <tr className="hover:bg-zinc-800/50 transition-colors group border-b border-zinc-800/60 cursor-pointer" onClick={() => onReview(g)}>
-      <td className="px-4 py-3.5">
+      <td className="px-5 py-4">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xs font-black flex-shrink-0">
             {g.nome.split(' ').filter(Boolean).slice(0, 2).map(n => n[0]).join('').toUpperCase()}
@@ -752,13 +752,13 @@ function GuestRow({ g, guestStatusConfig, onReview, onAdvance }: {
           </div>
         </div>
       </td>
-      <td className="px-4 py-3.5 hidden sm:table-cell">
+      <td className="px-5 py-4 hidden sm:table-cell">
         <span className="text-xs font-bold border rounded-md px-2 py-1 bg-amber-500/10 text-amber-400 border-amber-500/20">
           Visitante · {g.intent === 'aluguer' ? 'Aluguer' : 'Compra'}
         </span>
       </td>
-      <td className="px-4 py-3.5 hidden md:table-cell text-sm font-medium text-white">{g.telefone}</td>
-      <td className="px-4 py-3.5">
+      <td className="px-5 py-4 hidden md:table-cell text-sm font-medium text-white">{g.telefone}</td>
+      <td className="px-5 py-4">
         <div className="flex items-center gap-1.5">
           <span className={`w-2 h-2 rounded-full shrink-0 ${gs.dot}`} />
           <span className="text-sm font-semibold text-white">{gs.label}</span>
@@ -773,10 +773,10 @@ function GuestRow({ g, guestStatusConfig, onReview, onAdvance }: {
           )}
         </div>
       </td>
-      <td className="px-4 py-3.5 hidden md:table-cell text-sm text-white">
+      <td className="px-5 py-4 hidden md:table-cell text-sm text-white">
         {new Date(g.dataCriacao).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
       </td>
-      <td className="px-4 py-3.5 hidden xl:table-cell">
+      <td className="px-5 py-4 hidden xl:table-cell">
         {g.vehicleName ? <span className="text-xs text-white">{g.vehicleName}</span> : <span className="text-xs text-zinc-600">—</span>}
       </td>
       <td className="px-4 py-3">
