@@ -9,7 +9,7 @@ export default function PaymentsSection({
   const scrollTo = useScrollTo();
 
   return (
-    <section id="pagamentos" className="py-10 md:py-14 bg-zinc-950">
+    <section id="pagamentos" className="min-h-screen bg-zinc-950 py-16 flex flex-col justify-center">
       <div className="max-w-7xl mx-auto px-5 md:px-8">
 
         {/* Header */}

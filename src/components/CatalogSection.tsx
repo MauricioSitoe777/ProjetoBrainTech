@@ -138,7 +138,7 @@ export default function CatalogSection({
   };
 
   return (
-    <section id="catalogo" className="py-10 md:py-14 bg-zinc-950">
+    <section id="catalogo" className="min-h-screen bg-zinc-950 py-16 flex flex-col justify-center">
       <div className="max-w-7xl mx-auto px-5 md:px-8">
 
         {/* ── Header ── */}
