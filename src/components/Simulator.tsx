@@ -66,7 +66,7 @@ function NumberField({
 
   return (
     <div>
-      <label className="text-white text-sm font-semibold block mb-1.5">{label}</label>
+      <label className="text-zinc-300 text-sm font-normal block mb-1.5">{label}</label>
       <div className={`flex items-center gap-2 rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2 ${disabled ? 'opacity-70 cursor-not-allowed' : 'focus-within:border-amber-500/50 focus-within:ring-1 focus-within:ring-amber-500/20'}`}>
         <input
           type="text"
@@ -77,7 +77,7 @@ function NumberField({
           disabled={disabled}
           className={`w-full bg-transparent text-sm text-white font-medium outline-none ${disabled ? 'cursor-not-allowed' : ''}`}
         />
-        {suffix ? <span className="text-white text-xs font-semibold">{suffix}</span> : null}
+        {suffix ? <span className="text-zinc-400 text-xs font-normal">{suffix}</span> : null}
       </div>
     </div>
   );
@@ -97,13 +97,13 @@ const MINUTES = ['00','05','10','15','20','25','30','35','40','45','50','55'];
 function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [h, m] = value.split(':');
   const minute = MINUTES.includes(m) ? m : '00';
-  const cls = "bg-zinc-950 border border-zinc-700 text-white text-sm font-semibold rounded-lg px-2 py-2 outline-none focus:border-amber-500 cursor-pointer";
+  const cls = "bg-zinc-950 border border-zinc-700 text-white text-sm font-normal rounded-lg px-2 py-2 outline-none focus:border-amber-500 cursor-pointer";
   return (
     <div className="flex items-center gap-1.5">
       <select value={h} onChange={e => onChange(`${e.target.value}:${minute}`)} className={`${cls} flex-1`}>
         {HOURS.map(hh => <option key={hh} value={hh}>{hh}</option>)}
       </select>
-      <span className="text-white font-black text-sm">:</span>
+      <span className="text-zinc-500 font-normal text-sm">:</span>
       <select value={minute} onChange={e => onChange(`${h}:${e.target.value}`)} className={`${cls} flex-1`}>
         {MINUTES.map(mm => <option key={mm} value={mm}>{mm}</option>)}
       </select>
@@ -560,11 +560,11 @@ export default function Simulator({
               {/* Serviço */}
               {!lockedFlow ? (
                 <div>
-                  <label className="text-white text-sm font-semibold block mb-1.5 uppercase tracking-tight">Tipo de Serviço</label>
+                  <label className="text-zinc-300 text-sm font-normal block mb-1.5 uppercase tracking-tight">Tipo de Serviço</label>
                   <select
                     value={flow}
                     onChange={(e) => setFlow(e.target.value as FlowType)}
-                    className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2.5 text-sm text-white font-semibold outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 cursor-pointer"
+                    className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2.5 text-sm text-white font-normal outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 cursor-pointer"
                   >
                     <option value="compra">🚗  Compra</option>
                     <option value="aluguer">🔑  Aluguer</option>
@@ -588,7 +588,7 @@ export default function Simulator({
                 return (
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-white text-sm font-semibold uppercase tracking-tight">Tipo de Funcionário</label>
+                      <label className="text-zinc-300 text-sm font-normal uppercase tracking-tight">Tipo de Funcionário</label>
                       {currentUser?.category && (
                         <span className="text-xs font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 rounded-full">Perfil</span>
                       )}
@@ -597,7 +597,7 @@ export default function Simulator({
                       value={category}
                       disabled={locked}
                       onChange={(e) => !locked && setCategory(e.target.value as Category)}
-                      className={`w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2.5 text-sm text-white font-semibold outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 ${locked ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
+                      className={`w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2.5 text-sm text-white font-normal outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 ${locked ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
                     >
                       {PROFILES.map(p => (
                         <option key={p.key} value={p.key}>{p.emoji}  {p.label}</option>
@@ -614,7 +614,7 @@ export default function Simulator({
             {/* Row 2: Cliente + Contacto * + Contacto alternativo — 3 colunas */}
             <div className="grid grid-cols-3 gap-3">
               <div className="relative">
-                <label className="text-white text-sm font-semibold block mb-1.5">Cliente</label>
+                <label className="text-zinc-300 text-sm font-normal block mb-1.5">Cliente</label>
                 <input
                   value={clientName}
                   onChange={(e) => {
@@ -640,10 +640,10 @@ export default function Simulator({
                         className="w-full text-left px-4 py-3 text-sm hover:bg-zinc-800/80 flex items-center justify-between transition-colors"
                       >
                         <div>
-                          <p className="font-bold text-white">{u.nome}</p>
-                          <p className="text-xs text-zinc-300 font-medium">{u.email}</p>
+                          <p className="font-medium text-white">{u.nome}</p>
+                          <p className="text-xs text-zinc-400 font-normal">{u.email}</p>
                         </div>
-                        <span className="text-xs text-amber-400 bg-amber-400/10 px-2 py-1 rounded-lg border border-amber-400/20 font-bold">
+                        <span className="text-xs text-amber-400 bg-amber-400/10 px-2 py-1 rounded-lg border border-amber-400/20 font-normal">
                           {u.telefone || 'Sem Telefone'}
                         </span>
                       </button>
@@ -654,11 +654,11 @@ export default function Simulator({
 
               {/* Contacto principal (obrigatório) */}
               <div>
-                <label className="text-white text-sm font-semibold block mb-1.5">
+                <label className="text-zinc-300 text-sm font-normal block mb-1.5">
                   Contacto <span className="text-amber-500">*</span>
                 </label>
                 <div className={`flex items-center w-full rounded-lg bg-zinc-950 border border-zinc-700 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500/20 overflow-hidden ${authUser ? 'opacity-70' : ''}`}>
-                  <div className="pl-3 pr-2 py-2 text-sm text-amber-500 font-bold bg-zinc-900 border-r border-zinc-700 shrink-0">
+                  <div className="pl-3 pr-2 py-2 text-sm text-amber-500 font-normal bg-zinc-900 border-r border-zinc-700 shrink-0">
                     +258
                   </div>
                   <input
@@ -675,11 +675,11 @@ export default function Simulator({
 
               {/* Contacto alternativo (opcional) */}
               <div>
-                <label className="text-white text-sm font-semibold block mb-1.5">
+                <label className="text-zinc-300 text-sm font-normal block mb-1.5">
                   Alt. <span className="text-zinc-400 font-normal text-xs">(opcional)</span>
                 </label>
                 <div className="flex items-center w-full rounded-lg bg-zinc-950 border border-zinc-700 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500/20 overflow-hidden">
-                  <div className="pl-3 pr-2 py-2 text-sm text-amber-500 font-bold bg-zinc-900 border-r border-zinc-700 shrink-0">
+                  <div className="pl-3 pr-2 py-2 text-sm text-amber-500 font-normal bg-zinc-900 border-r border-zinc-700 shrink-0">
                     +258
                   </div>
                   <input
@@ -706,11 +706,11 @@ export default function Simulator({
                       onChange={(v) => setIncome(Math.min(100_000_000, Math.max(0, v)))} min={0} suffix="MT/mês" />
                   )}
                   <div>
-                    <label className="text-white text-sm font-semibold block mb-1.5">Como pagar?</label>
+                    <label className="text-zinc-300 text-sm font-normal block mb-1.5">Como pagar?</label>
                     <select
                       value={paymentPlan}
                       onChange={(e) => setPaymentPlan(e.target.value as PaymentPlan)}
-                      className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2.5 text-sm text-white font-semibold outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 cursor-pointer"
+                      className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2.5 text-sm text-white font-normal outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 cursor-pointer"
                     >
                       <option value="pronto">💵  À Vista</option>
                       <option value="prestacoes">📅  Prestações ({maxMonthsForCategory}m)</option>
@@ -740,21 +740,21 @@ export default function Simulator({
                         <div className="flex gap-1.5 mt-2 flex-wrap">
                           {category === 'func_publico' && (
                             <button type="button" onClick={() => setDownPayment(0)}
-                              className="text-xs font-semibold px-2.5 py-1 rounded bg-zinc-800 text-white border border-zinc-700 transition-all">
+                              className="text-xs font-medium px-2.5 py-1 rounded bg-zinc-800 text-zinc-200 border border-zinc-700 transition-all">
                               Sem entrada (0 MT)
                             </button>
                           )}
                           {category === 'func_privado' && (<>
                             <button type="button" onClick={() => setDownPayment(Math.round(vehiclePrice * 0.10))}
-                              className="text-xs font-semibold px-2.5 py-1 rounded bg-zinc-800 text-white hover:text-amber-400 border border-zinc-700 hover:border-amber-500/40 transition-all">Mín 10%</button>
+                              className="text-xs font-medium px-2.5 py-1 rounded bg-zinc-800 text-zinc-200 hover:text-amber-400 border border-zinc-700 hover:border-amber-500/40 transition-all">Mín 10%</button>
                             <button type="button" onClick={() => setDownPayment(Math.round(vehiclePrice * 0.30))}
-                              className="text-xs font-semibold px-2.5 py-1 rounded bg-zinc-800 text-white hover:text-amber-400 border border-zinc-700 hover:border-amber-500/40 transition-all">30%</button>
+                              className="text-xs font-medium px-2.5 py-1 rounded bg-zinc-800 text-zinc-200 hover:text-amber-400 border border-zinc-700 hover:border-amber-500/40 transition-all">30%</button>
                             <button type="button" onClick={() => setDownPayment(Math.round(vehiclePrice * 0.50))}
-                              className="text-xs font-semibold px-2.5 py-1 rounded bg-zinc-800 text-white hover:text-amber-400 border border-zinc-700 hover:border-amber-500/40 transition-all">Máx 50%</button>
+                              className="text-xs font-medium px-2.5 py-1 rounded bg-zinc-800 text-zinc-200 hover:text-amber-400 border border-zinc-700 hover:border-amber-500/40 transition-all">Máx 50%</button>
                           </>)}
                           {category === 'empreendedor' && (
                             <button type="button" onClick={() => setDownPayment(Math.round(vehiclePrice * 0.75))}
-                              className="text-xs font-semibold px-2.5 py-1 rounded bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 border border-amber-500/30 transition-all">Usar mínimo (75%)</button>
+                              className="text-xs font-medium px-2.5 py-1 rounded bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 border border-amber-500/30 transition-all">Usar mínimo (75%)</button>
                           )}
                         </div>
                       </div>
@@ -762,10 +762,10 @@ export default function Simulator({
                       {/* Slider de meses */}
                       <div>
                         <div className="flex items-center justify-between mb-2">
-                          <label className="text-white text-sm font-semibold">Nº de Meses</label>
+                          <label className="text-zinc-300 text-sm font-normal">Nº de Meses</label>
                           <div className="flex items-baseline gap-1 bg-zinc-800 border border-zinc-700 rounded-md px-2.5 py-1">
                             <span className="text-lg font-black text-amber-400 leading-none">{mesesPrestacoes}</span>
-                            <span className="text-xs text-white font-bold">m</span>
+                            <span className="text-xs text-zinc-400 font-normal">m</span>
                           </div>
                         </div>
                         <input type="range" className="months-slider w-full"
@@ -777,7 +777,7 @@ export default function Simulator({
                           {(maxMonthsForCategory <= 12 ? [1, 6, 12] : [1, 12, 24, 48])
                             .filter(v => v <= maxMonthsForCategory).map(v => (
                             <button key={v} type="button" onClick={() => setMesesPrestacoes(v)}
-                              className={`text-xs font-bold px-1.5 py-0.5 rounded transition-all ${mesesPrestacoes === v ? 'text-amber-400 bg-amber-400/10 border border-amber-400/30' : 'text-zinc-300'}`}>{v}</button>
+                              className={`text-xs font-medium px-1.5 py-0.5 rounded transition-all ${mesesPrestacoes === v ? 'text-amber-400 bg-amber-400/10 border border-amber-400/30' : 'text-zinc-400'}`}>{v}</button>
                           ))}
                         </div>
                       </div>
@@ -790,7 +790,7 @@ export default function Simulator({
                 {/* Aluguer — datas e horas: 4 colunas numa linha */}
                 <div className="grid grid-cols-4 gap-3">
                   <div>
-                    <label className="text-white text-sm font-semibold block mb-1.5">Data início</label>
+                    <label className="text-zinc-300 text-sm font-normal block mb-1.5">Data início</label>
                     <input
                       type="date"
                       value={dataInicio}
@@ -799,11 +799,11 @@ export default function Simulator({
                     />
                   </div>
                   <div>
-                    <label className="text-white text-sm font-semibold block mb-1.5">Hora lev.</label>
+                    <label className="text-zinc-300 text-sm font-normal block mb-1.5">Hora lev.</label>
                     <TimeSelect value={horaLevantamento} onChange={setHoraLevantamento} />
                   </div>
                   <div>
-                    <label className="text-white text-sm font-semibold block mb-1.5">Data fim</label>
+                    <label className="text-zinc-300 text-sm font-normal block mb-1.5">Data fim</label>
                     <input
                       type="date"
                       value={dataFim}
@@ -812,13 +812,13 @@ export default function Simulator({
                     />
                   </div>
                   <div>
-                    <label className="text-white text-sm font-semibold block mb-1.5">Hora dev.</label>
+                    <label className="text-zinc-300 text-sm font-normal block mb-1.5">Hora dev.</label>
                     <TimeSelect value={horaDevolucao} onChange={setHoraDevolucao} />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-white text-sm font-semibold block mb-1.5">Motivo da viagem</label>
+                  <label className="text-zinc-300 text-sm font-normal block mb-1.5">Motivo da viagem</label>
                   <textarea
                     value={motivoViagem}
                     onChange={(e) => setMotivoViagem(e.target.value)}
@@ -835,8 +835,8 @@ export default function Simulator({
                     </svg>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-zinc-400 font-semibold uppercase tracking-wider mb-0.5">Local de levantamento e devolução</p>
-                    <p className="text-sm font-bold text-white truncate">Escritório Central</p>
+                    <p className="text-xs text-zinc-500 font-normal mb-0.5">Local de levantamento e devolução</p>
+                    <p className="text-sm font-medium text-white truncate">Escritório Central</p>
                     <p className="text-xs text-zinc-300">Av. Julius Nyerere, Maputo</p>
                   </div>
                   <span className="shrink-0 text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full px-2.5 py-0.5 font-bold">Fixo</span>
@@ -855,7 +855,7 @@ export default function Simulator({
                         <div className="flex items-center gap-3">
                           <span className="text-lg">🧑‍✈️</span>
                           <div className="text-left">
-                            <p className={`text-sm font-bold ${comMotorista ? 'text-amber-400' : 'text-white'}`}>Com ou sem motorista</p>
+                            <p className={`text-sm font-medium ${comMotorista ? 'text-amber-400' : 'text-white'}`}>Com ou sem motorista</p>
                             <p className="text-xs text-zinc-300 mt-0.5">Condutor profissional incluído na reserva</p>
                           </div>
                         </div>
@@ -886,13 +886,13 @@ export default function Simulator({
                 })()}
 
                 {flow === 'aluguer' && dateValidation && !dateValidation.valid ? (
-                  <div className="text-sm text-red-100 bg-red-600 border border-red-500 rounded-lg p-3 font-semibold">
+                  <div className="text-sm text-red-100 bg-red-600 border border-red-500 rounded-lg p-3">
                     {dateValidation.errors[0]}
                   </div>
                 ) : null}
 
                 {flow === 'aluguer' && availability && !availability.available && dateValidation?.valid ? (
-                  <div className="text-sm text-red-100 bg-red-600 border border-red-500 rounded-lg p-3 font-semibold">
+                  <div className="text-sm text-red-100 bg-red-600 border border-red-500 rounded-lg p-3">
                     {availability.conflicts[0]}
                   </div>
                 ) : null}
@@ -983,7 +983,7 @@ export default function Simulator({
             <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 blur-3xl -mr-12 -mt-12" />
             
             <div className="relative z-10">
-              <div className="text-zinc-400 text-xs mb-2 font-bold uppercase tracking-widest">
+              <div className="text-zinc-400 text-xs mb-2 font-normal uppercase tracking-widest">
                 {flow === "compra"
                   ? paymentPlan === "prestacoes"
                     ? "Prestação Mensal"
@@ -999,7 +999,7 @@ export default function Simulator({
                     : fmt(rentalTotal)}
                   <span className="text-lg text-amber-500 ml-1.5 font-black">MT</span>
                 </span>
-                <span className="text-white text-xs font-semibold bg-white/5 px-2.5 py-1 rounded-md border border-white/10">
+                <span className="text-zinc-400 text-xs font-normal bg-white/5 px-2.5 py-1 rounded-md border border-white/10">
                   {flow === "compra" && paymentPlan === "prestacoes"
                     ? `${(TAXA_MENSAL * 100).toFixed(1)}%/mês · ${Math.min(maxMonthsForCategory, Math.max(1, Math.round(mesesPrestacoes)))} meses`
                     : flow === "compra"
@@ -1023,7 +1023,7 @@ export default function Simulator({
                   ) : (
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="3"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                   )}
-                  <span className={`flex-1 text-left text-sm font-black uppercase tracking-tight ${eligivel ? "text-emerald-400" : "text-red-400"}`}>
+                  <span className={`flex-1 text-left text-sm font-semibold ${eligivel ? "text-emerald-400" : "text-red-400"}`}>
                     {eligivel ? "Simulação Válida" : "Requisitos não atendidos"}
                   </span>
                   <svg
@@ -1039,18 +1039,18 @@ export default function Simulator({
                 {/* Corpo — colapsável */}
                 {eligibilityExpanded && (
                   <div className="px-3 py-2.5 space-y-2 bg-zinc-900/60">
-                    <p className={`text-sm font-black ${eligivel ? "text-emerald-300" : "text-red-300"}`}>
+                    <p className={`text-sm font-medium ${eligivel ? "text-emerald-300" : "text-red-300"}`}>
                       {financingStatus.title}
                     </p>
                     {financingStatus.why && (
                       <div className="bg-zinc-800/70 rounded-lg px-2.5 py-2 border border-zinc-700/50">
-                        <p className="text-xs text-white font-bold mb-1 uppercase tracking-wide">O que acontece?</p>
+                        <p className="text-xs text-zinc-400 font-normal mb-1">O que acontece?</p>
                         <p className="text-xs text-white leading-relaxed">{financingStatus.why}</p>
                       </div>
                     )}
                     {!eligivel && financingStatus.fix && (
                       <div className="bg-amber-500/8 rounded-lg px-2.5 py-2 border border-amber-500/20">
-                        <p className="text-xs text-amber-400 font-bold mb-1 uppercase tracking-wide">Como resolver?</p>
+                        <p className="text-xs text-amber-400/80 font-normal mb-1">Como resolver?</p>
                         <p className="text-xs text-white leading-relaxed">{financingStatus.fix}</p>
                       </div>
                     )}
@@ -1075,21 +1075,21 @@ export default function Simulator({
                 : ([] as [string, string][])
               ).map(([label, val]) => (
                 <div key={label} className="bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-3">
-                  <div className="text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-1">{label}</div>
-                  <div className="text-white font-bold text-base truncate">{val}</div>
+                  <div className="text-zinc-500 text-xs font-normal uppercase tracking-wider mb-1">{label}</div>
+                  <div className="text-white font-medium text-base truncate">{val}</div>
                 </div>
               ))}
             </div>
 
             {submitError ? (
-              <div className="mt-4 p-3.5 rounded-lg bg-red-600/90 text-white text-sm font-semibold text-center shadow-lg">
+              <div className="mt-4 p-3.5 rounded-lg bg-red-600/90 text-white text-sm font-normal text-center shadow-lg">
                 {submitError}
               </div>
             ) : null}
 
             {isBlocked && !submitted && (
               <div className="mt-6 rounded-xl p-4 bg-red-600 border border-red-500 shadow-lg relative z-10 animate-pulse">
-                <div className="flex items-center gap-2 text-white font-bold text-sm uppercase mb-1.5">
+                <div className="flex items-center gap-2 text-white font-semibold text-sm mb-1.5">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                   Acesso Restrito
                 </div>
@@ -1125,7 +1125,7 @@ export default function Simulator({
                     ["Próximo passo", "Aguarde contacto da SOS Motors para instruções de pagamento."],
                   ].map(([label, val]) => (
                     <div key={label} className="flex gap-2 text-xs">
-                      <span className="text-white/40 font-bold w-28 shrink-0">{label}</span>
+                      <span className="text-white/40 font-normal w-28 shrink-0">{label}</span>
                       <span className="text-white">{val}</span>
                     </div>
                   ))}
@@ -1139,7 +1139,7 @@ export default function Simulator({
                       setClientContact("");
                       setClientContact2("");
                     }}
-                    className="w-full py-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-sm font-semibold transition-colors"
+                    className="w-full py-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-sm font-medium transition-colors"
                   >
                     Nova compra
                   </button>
