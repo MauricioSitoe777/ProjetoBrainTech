@@ -1,33 +1,34 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   TONGOGARA DESIGN SYSTEM — tokens globais
+   TONGOGARA DESIGN SYSTEM — tokens globais v2.0
+   Fonte: Tongogara Microcrédito — Design Specification (2026)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── 1. Fontes ──────────────────────────────────────────────────────────── */
+/* ── 1. Fontes & Paleta (@theme Tailwind) ────────────────────────────────── */
 @theme {
   /* Famílias */
   --font-sans:    'DM Sans', system-ui, sans-serif;
   --font-display: 'Cormorant Garamond', Georgia, serif;
   --font-mono:    'DM Mono', 'Courier New', monospace;
 
-  /* ── Família Dourada → amber (logo gold #D8A020) ───────────────────────── */
-  --color-amber-50:  #FFF8DF;
-  --color-amber-100: #FFF0B8;
-  --color-amber-200: #F9DF7A;
-  --color-amber-300: #F0C840;
-  --color-amber-400: #E8B830;   /* gold-light  */
-  --color-amber-500: #D8A020;   /* gold ★ logo */
-  --color-amber-600: #B87D13;   /* gold-dark   */
-  --color-amber-700: #8F5D0D;
-  --color-amber-800: #6E470D;
-  --color-amber-900: #56380E;
-  --color-amber-950: #2F1C05;
+  /* ── Família Dourada → amber (gold ★ extraído do logo SOS Motors) ───── */
+  --color-amber-50:  #FEFAE8;
+  --color-amber-100: #FDF3C2;
+  --color-amber-200: #FAE47A;
+  --color-amber-300: #F5D452;
+  --color-amber-400: #F0CD49;   /* gold-light  — highlight do logo  */
+  --color-amber-500: #E4B42E;   /* gold ★ logo — tom médio saturado */
+  --color-amber-600: #C28A18;   /* gold-dark   — sombra do logo     */
+  --color-amber-700: #9A6A10;
+  --color-amber-800: #74500C;
+  --color-amber-900: #4E3608;
+  --color-amber-950: #2A1C03;
 
   /* ── Fundos Escuros → zinc ─────────────────────────────────────────────── */
-  --color-zinc-950: #0D0D0D;   /* --black            */
-  --color-zinc-900: #1A1A1A;   /* --black-mid dash   */
-  --color-zinc-800: #252525;   /* --black-soft dash  */
+  --color-zinc-950: #0D0D0D;   /* --black                  */
+  --color-zinc-900: #1A1A1A;   /* --black-mid (dashboard)  */
+  --color-zinc-800: #252525;   /* --black-soft (dashboard) */
   --color-zinc-700: #333333;
   --color-zinc-600: #424242;
   --color-zinc-500: #5A5A5A;
@@ -42,27 +43,27 @@
   --color-emerald-100: #DCFCE7;
   --color-emerald-200: #BBF7D0;
   --color-emerald-300: #86EFAC;
-  --color-emerald-400: #4ADE80;   /* accent-green #4ADE80 */
+  --color-emerald-400: #4ADE80;   /* accent-green */
   --color-emerald-500: #22C55E;
   --color-emerald-600: #16A34A;
   --color-emerald-700: #15803D;
 
   /* ── Acento — Danger / accent-red ─────────────────────────────────────── */
   --color-red-300: #FCA5A5;
-  --color-red-400: #F87171;       /* accent-red #F87171 */
+  --color-red-400: #F87171;       /* accent-red */
   --color-red-500: #EF4444;
   --color-red-600: #DC2626;
 
   /* ── Acento — Info / accent-blue ──────────────────────────────────────── */
-  --color-blue-300: #93C5FD;      /* accent-blue-lt #93C5FD */
-  --color-blue-400: #60A5FA;      /* accent-blue    #60A5FA */
+  --color-blue-300: #93C5FD;      /* accent-blue-lt */
+  --color-blue-400: #60A5FA;      /* accent-blue    */
   --color-blue-500: #3B82F6;
   --color-sky-300:  #BAE6FD;
-  --color-sky-400:  #93C5FD;      /* accent-blue-lt */
+  --color-sky-400:  #93C5FD;
   --color-sky-500:  #60A5FA;
 
   /* ── Acento — Warning / accent-amber ──────────────────────────────────── */
-  --color-yellow-400: #FBBF24;    /* accent-amber #FBBF24 */
+  --color-yellow-400: #FBBF24;    /* accent-amber */
   --color-yellow-500: #F59E0B;
 
   /* ── Teal ─────────────────────────────────────────────────────────────── */
@@ -72,38 +73,48 @@
 
 /* ── 2. Variáveis CSS globais ────────────────────────────────────────────── */
 :root {
-  /* Família dourada — logo gold #D8A020 */
-  --gold:        #D8A020;
-  --gold-light:  #E8B830;
-  --gold-dark:   #B87D13;
-  --gold-muted:  rgba(216, 160, 32, 0.10);
-  --gold-border: rgba(216, 160, 32, 0.22);
+  /* Família dourada — extraída do logo SOS Motors */
+  --gold:        #E4B42E;
+  --gold-light:  #F0CD49;
+  --gold-dark:   #C28A18;
+  --gold-muted:  rgba(228, 180, 46, 0.10);
+  --gold-border: rgba(228, 180, 46, 0.22);
 
-  /* Fundos */
-  --black:       #0D0D0D;
-  --black-mid:   #1A1A1A;
-  --black-soft:  #252525;
+  /* Fundos escuros — dashboard */
+  --black:           #0D0D0D;
+  --black-mid:       #1A1A1A;
+  --black-soft:      #252525;
+
+  /* Fundos escuros — admin (tom quente) */
+  --black-mid-admin:  #141209;
+  --black-soft-admin: #1E1A0F;
+
+  /* Painel glass */
+  --black-panel: rgba(255, 255, 255, 0.04);
 
   /* Texto */
   --text-light:  rgba(255, 255, 255, 0.80);
   --text-faint:  rgba(255, 255, 255, 0.38);
+  --text-dark:   #1C1A14;
+  --text-mid:    #6B6350;
   --cream:       #FAFAF7;
   --cream-dark:  #F2F0EA;
 
   /* Estados */
-  --status-green-bg:  rgba(16, 185, 129, 0.15);
-  --status-green-txt: #0D9E6A;
-  --status-amber-bg:  rgba(201, 168, 76, 0.14);
-  --status-amber-txt: #8A6010;
-  --status-red-bg:    rgba(239, 68, 68, 0.15);
-  --status-red-txt:   #C0392B;
+  --status-green-bg:       rgba(16, 185, 129, 0.15);
+  --status-green-txt:      #0D9E6A;   /* admin */
+  --status-green-txt-dash: #1A7A3C;   /* dashboard */
+  --status-amber-bg:       rgba(228, 180, 46, 0.14);
+  --status-amber-txt:      #8A6010;
+  --status-red-bg:         rgba(239, 68, 68, 0.15);
+  --status-red-txt:        #C0392B;
 
   /* Transições */
-  --transition:       all 0.3s ease;
-  --transition-fast:  all 0.2s ease;
+  --transition:      all 0.3s ease;
+  --transition-fast: all 0.2s ease;
 
-  /* Borda glass */
-  --glass-border: 1px solid rgba(216, 160, 32, 0.22);
+  /* Efeitos */
+  --glass-border: 1px solid rgba(228, 180, 46, 0.22);
   --overlay:      rgba(0, 0, 0, 0.88);
 }
 
@@ -121,26 +132,76 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── 4. Utilities tipográficas ───────────────────────────────────────────── */
+/* ── 4. Famílias tipográficas ────────────────────────────────────────────── */
 .font-display {
   font-family: 'Cormorant Garamond', Georgia, serif;
 }
 .font-mono {
   font-family: 'DM Mono', 'Courier New', monospace;
 }
-
-/* Valores monetários — auto-mono */
 .tabular-nums {
   font-family: 'DM Mono', 'Courier New', monospace;
   font-variant-numeric: tabular-nums;
 }
 
-/* ── 5. Borda dourada glass-card ─────────────────────────────────────────── */
+/* ── 5. Escala tipográfica — Tongogara spec ──────────────────────────────── */
+/*
+  Referência:
+  ts-hero       2.4–2.8rem  38–45px  Números hero / display máximo
+  ts-value-lg   1.9–2.2rem  30–35px  Valores de card grandes
+  ts-heading    1.6rem      25px     Headings de secção / título admin
+  ts-subheading 1.3–1.45rem 21–23px  Sub-headings / títulos de card
+  ts-body       1rem        16px     Corpo padrão / botões
+  ts-input      0.92–0.95rem 15px   Inputs / botões primários
+  ts-table      0.85–0.88rem 14px   Corpo de tabela / sidebar links
+  ts-cell       0.78–0.82rem 13px   Células BI / datas / notas
+  ts-badge      0.7–0.75rem 11–12px Badges / chips / tooltips
+  ts-label      0.62–0.68rem 10–11px Labels de campos / headers de tabela
+  ts-micro      0.58rem     9px     Micro-labels / sub-notas
+*/
+.ts-hero       { font-size: clamp(2.4rem, 4vw, 2.8rem); line-height: 1.1; }
+.ts-value-lg   { font-size: clamp(1.9rem, 3vw, 2.2rem); line-height: 1.15; }
+.ts-heading    { font-size: 1.6rem;                      line-height: 1.2; }
+.ts-subheading { font-size: clamp(1.3rem, 2vw, 1.45rem); line-height: 1.25; }
+.ts-body       { font-size: 1rem;                         line-height: 1.5; }
+.ts-input      { font-size: clamp(0.92rem, 1.2vw, 0.95rem); line-height: 1.4; }
+.ts-table      { font-size: clamp(0.85rem, 1vw, 0.88rem);   line-height: 1.4; }
+.ts-cell       { font-size: clamp(0.78rem, 0.9vw, 0.82rem); line-height: 1.35; }
+.ts-badge      { font-size: clamp(0.7rem, 0.85vw, 0.75rem); line-height: 1.3; }
+.ts-label      {
+  font-size: clamp(0.62rem, 0.75vw, 0.68rem);
+  line-height: 1.2;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.ts-micro      {
+  font-size: 0.58rem;
+  line-height: 1.2;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+/* ── 6. Espaçamento de letras — Tongogara spec ───────────────────────────── */
+/*
+  Labels uppercase:   1.2px / 1.5px / 2px / 3px
+  Brand / logo:       1.5px
+  Display headings:   -0.3px (tight)
+*/
+.tracking-label-xs  { letter-spacing: 1.2px; }
+.tracking-label-sm  { letter-spacing: 1.5px; }
+.tracking-label     { letter-spacing: 2px; }
+.tracking-label-lg  { letter-spacing: 3px; }
+.tracking-brand     { letter-spacing: 1.5px; }
+.tracking-display   { letter-spacing: -0.3px; }
+
+/* ── 7. Borda dourada glass-card ─────────────────────────────────────────── */
 .border-gold {
   border: var(--glass-border);
 }
 
-/* ── 6. Range slider ─────────────────────────────────────────────────────── */
+/* ── 8. Range slider ─────────────────────────────────────────────────────── */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
@@ -157,7 +218,7 @@ input[type="range"]::-webkit-slider-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #D8A020;
+  background: #E4B42E;
   cursor: pointer;
   border: 2px solid #0D0D0D;
   transition: transform 0.15s ease;
@@ -171,7 +232,7 @@ input[type="range"]::-moz-range-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #D8A020;
+  background: #E4B42E;
   cursor: pointer;
   border: 2px solid #0D0D0D;
 }
@@ -184,27 +245,27 @@ input[type="range"].months-slider {
 input[type="range"].months-slider::-webkit-slider-thumb {
   width: 22px;
   height: 22px;
-  box-shadow: 0 0 0 4px rgba(216, 160, 32, 0.18);
+  box-shadow: 0 0 0 4px rgba(228, 180, 46, 0.18);
 }
 
 input[type="range"].months-slider::-webkit-slider-thumb:hover {
-  box-shadow: 0 0 0 7px rgba(216, 160, 32, 0.22);
+  box-shadow: 0 0 0 7px rgba(228, 180, 46, 0.22);
   transform: scale(1.1);
 }
 
 input[type="range"].months-slider::-moz-range-thumb {
   width: 22px;
   height: 22px;
-  box-shadow: 0 0 0 4px rgba(216, 160, 32, 0.18);
+  box-shadow: 0 0 0 4px rgba(228, 180, 46, 0.18);
 }
 
-/* ── 7. Scrollbar ────────────────────────────────────────────────────────── */
+/* ── 9. Scrollbar ────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar        { width: 5px; }
 ::-webkit-scrollbar-track  { background: #0D0D0D; border-radius: 3px; }
-::-webkit-scrollbar-thumb  { background: rgba(216,160,32,0.30); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(216,160,32,0.55); }
+::-webkit-scrollbar-thumb  { background: rgba(228, 180, 46, 0.30); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(228, 180, 46, 0.55); }
 
-/* ── 8. Animações ────────────────────────────────────────────────────────── */
+/* ── 10. Animações ───────────────────────────────────────────────────────── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -238,7 +299,41 @@ input[type="range"].months-slider::-moz-range-thumb {
 }
 .toast-progress { animation: toastProgress 4.5s linear forwards; }
 
-/* ── 9. Hover lift (cards / botões de ícone) ─────────────────────────────── */
+/* ── 11. Hover lift — cards e ícones de acção ────────────────────────────── */
+/* ── 12. Admin/Cliente UI — escala tipográfica responsiva ───────────────────
+   Todos os tamanhos aumentam progressivamente por breakpoint.
+   Os valores arbitrários sub-mínimos (text-[9px], text-[10px], text-[11px])
+   são forçados para text-xs como piso.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* Piso em mobile: valores arbitrários sub-mínimos → 12px */
+.app-ui .text-\[8px\]  { font-size: 0.75rem; }
+.app-ui .text-\[9px\]  { font-size: 0.75rem; }
+.app-ui .text-\[10px\] { font-size: 0.75rem; }
+.app-ui .text-\[11px\] { font-size: 0.75rem; }
+
+/* md (≥768px): +1px em cada nível */
+@media (min-width: 768px) {
+  .app-ui .text-\[9px\]  { font-size: 0.75rem;   }  /* 12px */
+  .app-ui .text-\[10px\] { font-size: 0.8125rem; }  /* 13px */
+  .app-ui .text-\[11px\] { font-size: 0.8125rem; }  /* 13px */
+  .app-ui .text-xs       { font-size: 0.8125rem; }  /* 13px  (era 12px) */
+  .app-ui .text-sm       { font-size: 0.9375rem; }  /* 15px  (era 14px) */
+  .app-ui .text-base     { font-size: 1.0625rem; }  /* 17px  (era 16px) */
+  .app-ui .text-lg       { font-size: 1.1875rem; }  /* 19px  (era 18px) */
+}
+
+/* lg (≥1024px): +1px adicional — máximo */
+@media (min-width: 1024px) {
+  .app-ui .text-\[10px\] { font-size: 0.8125rem; }  /* 13px */
+  .app-ui .text-\[11px\] { font-size: 0.875rem;  }  /* 14px */
+  .app-ui .text-xs       { font-size: 0.875rem;  }  /* 14px  (era 12px) */
+  .app-ui .text-sm       { font-size: 1rem;       }  /* 16px  (era 14px) */
+  .app-ui .text-base     { font-size: 1.125rem;  }  /* 18px  (era 16px) */
+  .app-ui .text-lg       { font-size: 1.25rem;   }  /* 20px  (era 18px) */
+}
+
+
 .hover-lift {
   transition: transform 0.2s ease;
 }

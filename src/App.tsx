@@ -149,7 +149,7 @@ function AppInner() {
           return <ChangePasswordModal onDone={() => setPasswordChanged(true)} />;
         }
         return (
-          <div className="pt-16 min-h-screen bg-zinc-950 text-white">
+          <div className="app-ui pt-16 min-h-screen bg-zinc-950 text-white">
             <ClientProfilePage onExit={goBack} />
           </div>
         );
@@ -167,7 +167,7 @@ function AppInner() {
           return <DashboardPage />;
         };
         return (
-          <div className="pt-16 min-h-screen bg-zinc-950 text-white flex flex-col">
+          <div className="app-ui pt-16 min-h-screen bg-zinc-950 text-white flex flex-col">
             <div className="flex flex-1">
               {/* Desktop sidebar */}
               <div className="hidden md:block shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">

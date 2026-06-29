@@ -297,10 +297,10 @@ function RotatingHeading() {
 // ─── ShufflingCards ────────────────────────────────────────────────────────────
 
 const CARDS = [
-  { id: "publico",      title: "Público",      subtitle: "Sem entrada obrigatória", tag: "Funcionário",  rotDeg: -3, glowColor: "rgba(216,160,32,0.25)", warranty: true  },
-  { id: "privado",      title: "Privado",      subtitle: "Entrada de 10% a 50%",   tag: "Funcionário",  rotDeg:  3, glowColor: "rgba(240,200,64,0.20)", warranty: true  },
-  { id: "empreendedor", title: "Empreendedor", subtitle: "Posse com 75% entrada",  tag: "Empresário",   rotDeg:  2, glowColor: "rgba(216,160,32,0.18)", warranty: true  },
-  { id: "aluguer",      title: "Aluguer",      subtitle: "Diário ou Mensal",        tag: "Flexibilidade",rotDeg: -2, glowColor: "rgba(240,200,64,0.22)", warranty: false },
+  { id: "publico",      title: "Público",      subtitle: "Sem entrada obrigatória", tag: "Funcionário",  rotDeg: -3, glowColor: "rgba(228,180,46,0.25)", warranty: true  },
+  { id: "privado",      title: "Privado",      subtitle: "Entrada de 10% a 50%",   tag: "Funcionário",  rotDeg:  3, glowColor: "rgba(226,196,122,0.20)", warranty: true  },
+  { id: "empreendedor", title: "Empreendedor", subtitle: "Posse com 75% entrada",  tag: "Empresário",   rotDeg:  2, glowColor: "rgba(228,180,46,0.18)", warranty: true  },
+  { id: "aluguer",      title: "Aluguer",      subtitle: "Diário ou Mensal",        tag: "Flexibilidade",rotDeg: -2, glowColor: "rgba(226,196,122,0.22)", warranty: false },
 ];
 
 const CARD_SIMULATOR_NAV: Record<string, { category?: string; flow?: "compra" | "aluguer" }> = {
@@ -407,9 +407,9 @@ function ShufflingCards() {
         style={{
           cursor: "pointer",
           background:
-            "linear-gradient(135deg, rgba(216,160,32,0.22) 0%, rgba(92,61,16,0.22) 44%, rgba(8,8,10,0.56) 100%)",
+            "linear-gradient(135deg, rgba(228,180,46,0.22) 0%, rgba(92,61,16,0.22) 44%, rgba(8,8,10,0.56) 100%)",
           boxShadow:
-            "0 18px 50px rgba(0,0,0,0.28), 0 8px 34px rgba(216,160,32,0.22), inset 0 1px 0 rgba(255,255,255,0.16)",
+            "0 18px 50px rgba(0,0,0,0.28), 0 8px 34px rgba(228,180,46,0.22), inset 0 1px 0 rgba(255,255,255,0.16)",
         }}
         className="group col-span-2 overflow-hidden flex items-center justify-between gap-3 rounded-2xl border border-amber-400/30 px-4 py-3 backdrop-blur-xl sm:gap-4 sm:rounded-[20px] sm:px-5"
       >
@@ -417,7 +417,7 @@ function ShufflingCards() {
         <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-amber-200/50 to-transparent" />
 
         {/* ícone */}
-        <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-amber-300/40 bg-amber-400/15 shadow-[0_0_24px_rgba(216,160,32,0.22)]">
+        <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-amber-300/40 bg-amber-400/15 shadow-[0_0_24px_rgba(228,180,46,0.22)]">
           <Clock className="h-[18px] w-[18px] text-amber-300" />
         </div>
 
@@ -469,7 +469,7 @@ function ShufflingCards() {
             <div className="text-[9px] text-white/40 uppercase font-bold">Prémio</div>
             <div className="text-sm font-black text-amber-400 leading-tight">300mil <span className="text-white/60 text-[10px]">MT</span></div>
           </div>
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/20 border border-amber-300/40 shadow-[0_0_22px_rgba(216,160,32,0.20)] transition-transform duration-300 group-hover:translate-x-0.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/20 border border-amber-300/40 shadow-[0_0_22px_rgba(228,180,46,0.20)] transition-transform duration-300 group-hover:translate-x-0.5">
             <ArrowRight className="h-3.5 w-3.5 text-amber-300" strokeWidth={2.5} />
           </div>
         </div>

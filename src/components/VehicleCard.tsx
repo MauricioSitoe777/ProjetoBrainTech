@@ -35,7 +35,7 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
         isUnavailable
           ? "border-red-500/30 opacity-75"
           : hovered
-            ? "border-amber-500/60 shadow-[0_20px_40px_rgba(0,0,0,0.5),0_0_24px_rgba(216,160,32,0.15)] -translate-y-2"
+            ? "border-amber-500/60 shadow-[0_20px_40px_rgba(0,0,0,0.5),0_0_24px_rgba(228,180,46,0.15)] -translate-y-2"
             : "border-zinc-800 shadow-xl"
       }`}
     >
