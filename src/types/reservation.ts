@@ -43,6 +43,7 @@ export interface Reservation {
   deposito: number;
   createdAt: string;
   notas?: string;
+  motivoCancelamento?: string;
   localLevantamento?: string;
   localDevolucao?: string;
   motoristaId?: string;

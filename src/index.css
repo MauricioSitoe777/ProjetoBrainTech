@@ -1,41 +1,152 @@
-@import url('https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap');
-
 @import "tailwindcss";
 
-html {
-  font-size: 17px;
-}
+/* ═══════════════════════════════════════════════════════════════════════════
+   TONGOGARA DESIGN SYSTEM — tokens globais
+   ═══════════════════════════════════════════════════════════════════════════ */
 
+/* ── 1. Fontes ──────────────────────────────────────────────────────────── */
 @theme {
-  --font-sans: 'Archivo', sans-serif;
-  --color-zinc-950: #353535;
-  --color-amber-50: #fff8df;
-  --color-amber-100: #fff0b8;
-  --color-amber-200: #f9df7a;
-  --color-amber-300: #f0c840;
-  --color-amber-400: #e8b830;
-  --color-amber-500: #d8a020;
-  --color-amber-600: #b87d13;
-  --color-amber-700: #8f5d0d;
-  --color-amber-800: #6e470d;
-  --color-amber-900: #56380e;
-  --color-amber-950: #2f1c05;
+  /* Famílias */
+  --font-sans:    'DM Sans', system-ui, sans-serif;
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-mono:    'DM Mono', 'Courier New', monospace;
+
+  /* ── Família Dourada → amber (logo gold #D8A020) ───────────────────────── */
+  --color-amber-50:  #FFF8DF;
+  --color-amber-100: #FFF0B8;
+  --color-amber-200: #F9DF7A;
+  --color-amber-300: #F0C840;
+  --color-amber-400: #E8B830;   /* gold-light  */
+  --color-amber-500: #D8A020;   /* gold ★ logo */
+  --color-amber-600: #B87D13;   /* gold-dark   */
+  --color-amber-700: #8F5D0D;
+  --color-amber-800: #6E470D;
+  --color-amber-900: #56380E;
+  --color-amber-950: #2F1C05;
+
+  /* ── Fundos Escuros → zinc ─────────────────────────────────────────────── */
+  --color-zinc-950: #0D0D0D;   /* --black            */
+  --color-zinc-900: #1A1A1A;   /* --black-mid dash   */
+  --color-zinc-800: #252525;   /* --black-soft dash  */
+  --color-zinc-700: #333333;
+  --color-zinc-600: #424242;
+  --color-zinc-500: #5A5A5A;
+  --color-zinc-400: #808080;
+  --color-zinc-300: #A0A0A0;
+  --color-zinc-200: #C4C4C4;
+  --color-zinc-100: #E8E8E8;
+  --color-zinc-50:  #F5F5F5;
+
+  /* ── Acento — Success / accent-green ──────────────────────────────────── */
+  --color-emerald-50:  #F0FDF4;
+  --color-emerald-100: #DCFCE7;
+  --color-emerald-200: #BBF7D0;
+  --color-emerald-300: #86EFAC;
+  --color-emerald-400: #4ADE80;   /* accent-green #4ADE80 */
+  --color-emerald-500: #22C55E;
+  --color-emerald-600: #16A34A;
+  --color-emerald-700: #15803D;
+
+  /* ── Acento — Danger / accent-red ─────────────────────────────────────── */
+  --color-red-300: #FCA5A5;
+  --color-red-400: #F87171;       /* accent-red #F87171 */
+  --color-red-500: #EF4444;
+  --color-red-600: #DC2626;
+
+  /* ── Acento — Info / accent-blue ──────────────────────────────────────── */
+  --color-blue-300: #93C5FD;      /* accent-blue-lt #93C5FD */
+  --color-blue-400: #60A5FA;      /* accent-blue    #60A5FA */
+  --color-blue-500: #3B82F6;
+  --color-sky-300:  #BAE6FD;
+  --color-sky-400:  #93C5FD;      /* accent-blue-lt */
+  --color-sky-500:  #60A5FA;
+
+  /* ── Acento — Warning / accent-amber ──────────────────────────────────── */
+  --color-yellow-400: #FBBF24;    /* accent-amber #FBBF24 */
+  --color-yellow-500: #F59E0B;
+
+  /* ── Teal ─────────────────────────────────────────────────────────────── */
+  --color-teal-400: #2DD4BF;
+  --color-teal-500: #14B8A6;
 }
 
-/* Smooth scrolling for anchor navigation */
+/* ── 2. Variáveis CSS globais ────────────────────────────────────────────── */
+:root {
+  /* Família dourada — logo gold #D8A020 */
+  --gold:        #D8A020;
+  --gold-light:  #E8B830;
+  --gold-dark:   #B87D13;
+  --gold-muted:  rgba(216, 160, 32, 0.10);
+  --gold-border: rgba(216, 160, 32, 0.22);
+
+  /* Fundos */
+  --black:       #0D0D0D;
+  --black-mid:   #1A1A1A;
+  --black-soft:  #252525;
+
+  /* Texto */
+  --text-light:  rgba(255, 255, 255, 0.80);
+  --text-faint:  rgba(255, 255, 255, 0.38);
+  --cream:       #FAFAF7;
+  --cream-dark:  #F2F0EA;
+
+  /* Estados */
+  --status-green-bg:  rgba(16, 185, 129, 0.15);
+  --status-green-txt: #0D9E6A;
+  --status-amber-bg:  rgba(201, 168, 76, 0.14);
+  --status-amber-txt: #8A6010;
+  --status-red-bg:    rgba(239, 68, 68, 0.15);
+  --status-red-txt:   #C0392B;
+
+  /* Transições */
+  --transition:       all 0.3s ease;
+  --transition-fast:  all 0.2s ease;
+
+  /* Borda glass */
+  --glass-border: 1px solid rgba(216, 160, 32, 0.22);
+  --overlay:      rgba(0, 0, 0, 0.88);
+}
+
+/* ── 3. Base ─────────────────────────────────────────────────────────────── */
+html {
+  font-size: 16px;
+}
+
 html, body {
   scroll-behavior: smooth;
-  background-color: #353535;
-  font-family: 'Archivo', sans-serif;
+  background-color: #0D0D0D;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  color: rgba(255, 255, 255, 0.80);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom range slider track */
+/* ── 4. Utilities tipográficas ───────────────────────────────────────────── */
+.font-display {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+}
+.font-mono {
+  font-family: 'DM Mono', 'Courier New', monospace;
+}
+
+/* Valores monetários — auto-mono */
+.tabular-nums {
+  font-family: 'DM Mono', 'Courier New', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 5. Borda dourada glass-card ─────────────────────────────────────────── */
+.border-gold {
+  border: var(--glass-border);
+}
+
+/* ── 6. Range slider ─────────────────────────────────────────────────────── */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   height: 4px;
   border-radius: 2px;
-  background: #3f3f46; /* zinc-700 */
+  background: #333333;
   outline: none;
   cursor: pointer;
 }
@@ -46,9 +157,9 @@ input[type="range"]::-webkit-slider-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #d8a020; /* logo gold */
+  background: #D8A020;
   cursor: pointer;
-  border: 2px solid #18181b;
+  border: 2px solid #0D0D0D;
   transition: transform 0.15s ease;
 }
 
@@ -60,12 +171,11 @@ input[type="range"]::-moz-range-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #d8a020;
+  background: #D8A020;
   cursor: pointer;
-  border: 2px solid #18181b;
+  border: 2px solid #0D0D0D;
 }
 
-/* Months slider — pista mais grossa + thumb com glow */
 input[type="range"].months-slider {
   height: 6px;
   border-radius: 9999px;
@@ -74,41 +184,35 @@ input[type="range"].months-slider {
 input[type="range"].months-slider::-webkit-slider-thumb {
   width: 22px;
   height: 22px;
-  box-shadow: 0 0 0 4px rgba(216,160,32,0.18);
+  box-shadow: 0 0 0 4px rgba(216, 160, 32, 0.18);
 }
 
 input[type="range"].months-slider::-webkit-slider-thumb:hover {
-  box-shadow: 0 0 0 7px rgba(216,160,32,0.22);
+  box-shadow: 0 0 0 7px rgba(216, 160, 32, 0.22);
   transform: scale(1.1);
 }
 
 input[type="range"].months-slider::-moz-range-thumb {
   width: 22px;
   height: 22px;
-  box-shadow: 0 0 0 4px rgba(216,160,32,0.18);
+  box-shadow: 0 0 0 4px rgba(216, 160, 32, 0.18);
 }
 
-/* Subtle scrollbar */
-::-webkit-scrollbar        { width: 6px; }
-::-webkit-scrollbar-track  { background: #09090b; }
-::-webkit-scrollbar-thumb  { background: #3f3f46; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #52525b; }
+/* ── 7. Scrollbar ────────────────────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 5px; }
+::-webkit-scrollbar-track  { background: #0D0D0D; border-radius: 3px; }
+::-webkit-scrollbar-thumb  { background: rgba(216,160,32,0.30); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(216,160,32,0.55); }
 
-/* Fade-in animation for category descriptions */
+/* ── 8. Animações ────────────────────────────────────────────────────────── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes dropdownFade {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(8px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .dropdown-animate {
@@ -133,3 +237,17 @@ input[type="range"].months-slider::-moz-range-thumb {
   to   { width: 0%; }
 }
 .toast-progress { animation: toastProgress 4.5s linear forwards; }
+
+/* ── 9. Hover lift (cards / botões de ícone) ─────────────────────────────── */
+.hover-lift {
+  transition: transform 0.2s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-3px);
+}
+.hover-lift-icon {
+  transition: transform 0.2s ease;
+}
+.hover-lift-icon:hover {
+  transform: scale(1.18);
+}

@@ -32,7 +32,7 @@ interface ReservationsContextType {
   validateDates: (start: string, end: string, horaLevantamento?: string) => DateValidationResult;
   createReservation: (data: Omit<Reservation, 'id' | 'createdAt'>) => { ok: boolean; error?: string };
   updateReservation: (id: string, data: Partial<Reservation>) => void;
-  cancelReservation: (id: string) => void;
+  cancelReservation: (id: string, motivo?: string) => void;
   deleteReservation: (id: string) => void;
   addBlock: (data: Omit<BlockedPeriod, 'id'>) => void;
   removeBlock: (id: string) => void;
@@ -157,11 +157,14 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
     setReservations(prev => prev.filter(r => r.id !== id));
   };
 
-  const cancelReservation = (id: string) => {
+  const cancelReservation = (id: string, motivo?: string) => {
     const existing = reservations.find(r => r.id === id);
 
     setReservations(prev =>
-      prev.map(r => r.id === id ? { ...r, status: 'cancelada' as ReservationStatus } : r)
+      prev.map(r => r.id === id
+        ? { ...r, status: 'cancelada' as ReservationStatus, ...(motivo ? { motivoCancelamento: motivo } : {}) }
+        : r
+      )
     );
 
     if (existing?.userId) {
@@ -169,14 +172,26 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
       const isPurchase = vehicle?.mode === 'compra';
       const operacaoLabel = isPurchase ? 'Compra' : 'Aluguer';
       const vehicleName = vehicle?.name || `Viatura #${existing.vehicleId}`;
+      const motivoTxt = motivo ? ` Motivo indicado: "${motivo}".` : '';
       addNotification(
         existing.userId,
-        'Estado do Pedido Atualizado',
-        `O seu pedido de ${operacaoLabel.toLowerCase()} ("${vehicleName}") foi CANCELADO pelo administrador António Silva.`,
+        'Pedido Cancelado',
+        `O seu pedido de ${operacaoLabel.toLowerCase()} ("${vehicleName}") foi cancelado.${motivoTxt}`,
         'alert',
         id,
-        '/admin'
+        '/profile'
       );
+      // Notificar admin com o motivo do cliente
+      if (motivo) {
+        addNotification(
+          'admin',
+          `Cancelamento de ${operacaoLabel} — ${vehicleName}`,
+          `O cliente cancelou o pedido de ${operacaoLabel.toLowerCase()} para "${vehicleName}". Motivo: "${motivo}".`,
+          'warning',
+          id,
+          isPurchase ? '/admin/compra?tab=acoes' : '/admin/aluguer?tab=acoes'
+        );
+      }
     }
   };
 

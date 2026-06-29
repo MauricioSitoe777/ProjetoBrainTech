@@ -150,6 +150,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
   const [showInativos,  setShowInativos]  = useState(false);
   const [detalheId,     setDetalheId]     = useState<string | null>(null);
   const [cancelConfirm, setCancelConfirm] = useState<string | null>(null);
+  const [cancelMotivo,  setCancelMotivo]  = useState('');
 
   const handleDownloadReserva = (r: Reservation) => {
     const veh = getVehicleName(r.vehicleId);
@@ -185,10 +186,18 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
   };
 
   const handleCancelReserva = (id: string) => {
-    cancelReservation(id);
+    cancelReservation(id, cancelMotivo.trim() || undefined);
     setCancelConfirm(null);
+    setCancelMotivo('');
     setDetalheId(null);
     showToast('Reserva cancelada', 'A sua reserva foi cancelada com sucesso.', 'success');
+  };
+
+  const handleCancelCompra = (id: string) => {
+    cancelReservation(id, cancelMotivo.trim() || undefined);
+    setCancelConfirm(null);
+    setCancelMotivo('');
+    showToast('Compra cancelada', 'A sua compra foi cancelada. A equipa SOS Motors irá contactá-lo.', 'success');
   };
 
   const getVehicleName = (id: number) => VEHICLES.find(v => v.id === id)?.name ?? `Viatura #${id}`;
@@ -824,18 +833,31 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
 
                   {/* ── Modal de confirmação de cancelamento ── */}
                   {cancelConfirm === r.id && (
-                    <div className="border-t border-red-500/20 bg-red-500/5 px-4 py-4">
-                      <p className="text-sm text-white font-bold mb-1">Cancelar reserva?</p>
-                      <p className="text-xs text-white/60 mb-3">Esta acção não pode ser desfeita. A sua reserva de <span className="text-white font-bold">{getVehicleName(r.vehicleId)}</span> será cancelada.</p>
+                    <div className="border-t border-red-500/20 bg-red-500/5 px-4 py-4 space-y-3">
+                      <div>
+                        <p className="text-sm text-white font-bold mb-0.5">Cancelar reserva?</p>
+                        <p className="text-xs text-white/70">Esta acção não pode ser desfeita. A sua reserva de <span className="text-white font-bold">{getVehicleName(r.vehicleId)}</span> será cancelada.</p>
+                      </div>
+                      <div>
+                        <label className="text-xs text-white font-bold block mb-1">Motivo do cancelamento <span className="text-red-400">*</span></label>
+                        <textarea
+                          value={cancelMotivo}
+                          onChange={e => setCancelMotivo(e.target.value)}
+                          placeholder="Descreva o motivo (ex: mudança de planos, viagem cancelada…)"
+                          rows={3}
+                          className="w-full bg-zinc-900 border border-zinc-700 focus:border-red-400 rounded-lg px-3 py-2 text-xs text-white placeholder-white/30 resize-none outline-none transition-colors"
+                        />
+                      </div>
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleCancelReserva(r.id)}
-                          className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-black transition-colors"
+                          disabled={!cancelMotivo.trim()}
+                          className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-black transition-colors"
                         >
                           Sim, cancelar
                         </button>
                         <button
-                          onClick={() => setCancelConfirm(null)}
+                          onClick={() => { setCancelConfirm(null); setCancelMotivo(''); }}
                           className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-xs font-bold transition-colors"
                         >
                           Não, manter
@@ -1182,6 +1204,52 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                               <div className="flex justify-between">
                                 <span className="text-white">Valor pago (pronto pagamento)</span>
                                 <span className="font-black text-emerald-400">{fmt(c.deposito)}</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Botão cancelar compra — só para estados canceláveis */}
+                          {(c.status === 'pendente' || c.status === 'compra_aprovada') && cancelConfirm !== c.id && (
+                            <button
+                              onClick={() => { setCancelConfirm(c.id); setCancelMotivo(''); }}
+                              className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold transition-colors"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                              Cancelar compra
+                            </button>
+                          )}
+
+                          {/* Painel de confirmação cancelamento compra */}
+                          {cancelConfirm === c.id && (
+                            <div className="border border-red-500/20 bg-red-500/5 rounded-xl px-4 py-4 space-y-3">
+                              <div>
+                                <p className="text-sm text-white font-bold mb-0.5">Cancelar compra?</p>
+                                <p className="text-xs text-white/70">Esta acção não pode ser desfeita. O pedido de compra de <span className="text-white font-bold">{veh?.name ?? getVehicleName(c.vehicleId)}</span> será cancelado.</p>
+                              </div>
+                              <div>
+                                <label className="text-xs text-white font-bold block mb-1">Motivo do cancelamento <span className="text-red-400">*</span></label>
+                                <textarea
+                                  value={cancelMotivo}
+                                  onChange={e => setCancelMotivo(e.target.value)}
+                                  placeholder="Descreva o motivo (ex: mudança de decisão, dificuldade financeira…)"
+                                  rows={3}
+                                  className="w-full bg-zinc-900 border border-zinc-700 focus:border-red-400 rounded-lg px-3 py-2 text-xs text-white placeholder-white/30 resize-none outline-none transition-colors"
+                                />
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleCancelCompra(c.id)}
+                                  disabled={!cancelMotivo.trim()}
+                                  className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-black transition-colors"
+                                >
+                                  Sim, cancelar
+                                </button>
+                                <button
+                                  onClick={() => { setCancelConfirm(null); setCancelMotivo(''); }}
+                                  className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-xs font-bold transition-colors"
+                                >
+                                  Não, manter
+                                </button>
                               </div>
                             </div>
                           )}
