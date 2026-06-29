@@ -39,7 +39,7 @@ interface ReservationsContextType {
   getVehicleReservations: (vehicleId: number) => Reservation[];
   getClientReservations: (userId: string) => Reservation[];
   quoteRental: (vehicleId: number, start: string, end: string) => ReturnType<typeof calculateRentalTotal> & { days: number; dailyRate: number } | null;
-  gerarPrestacoes: (id: string, semEntrada?: boolean) => void;
+  gerarPrestacoes: (id: string, semEntrada?: boolean, dataInicioCustom?: string, numPrestacoesCustom?: number) => void;
   marcarPrestacao: (reservationId: string, numero: number, paga: boolean, valorPago?: number) => void;
 }
 
@@ -195,19 +195,26 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
     setRules(prev => ({ ...prev, ...data }));
   };
 
-  const gerarPrestacoes = (id: string, semEntrada = false) => {
+  const gerarPrestacoes = (id: string, semEntrada = false, dataInicioCustom?: string, numPrestacoesCustom?: number) => {
     if (authUser?.role !== 'admin') return;
+
+    const existing = reservations.find(r => r.id === id);
+    const n = (numPrestacoesCustom && numPrestacoesCustom > 0)
+      ? numPrestacoesCustom
+      : (existing?.totalPrestacoes && existing.totalPrestacoes > 0 ? existing.totalPrestacoes : 12);
+
+    const startDate = dataInicioCustom
+      ? new Date(dataInicioCustom + 'T00:00:00')
+      : (() => { const d = new Date(); d.setMonth(d.getMonth() + 1); d.setDate(1); return d; })();
+
     setReservations(prev =>
       prev.map(r => {
         if (r.id !== id) return r;
-        const n = r.totalPrestacoes && r.totalPrestacoes > 0 ? r.totalPrestacoes : 12;
         const entradaPaga = semEntrada ? 0 : (r.deposito ?? 0);
         const restante = Math.max(0, r.valorTotal - entradaPaga);
         const valorPrestacao = Math.round(restante / n);
-        const hoje = new Date();
         const plano: Prestacao[] = Array.from({ length: n }, (_, i) => {
-          const due = new Date(hoje);
-          due.setMonth(due.getMonth() + i + 1);
+          const due = new Date(startDate.getFullYear(), startDate.getMonth() + i, startDate.getDate());
           return {
             numero: i + 1,
             dataVencimento: due.toISOString().split('T')[0],
@@ -224,6 +231,21 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
         };
       })
     );
+
+    // Notificar o cliente com o calendário de pagamentos
+    if (existing?.userId) {
+      const vehicle = VEHICLES.find(v => v.id === existing.vehicleId);
+      const vehicleName = vehicle?.name || `Viatura #${existing.vehicleId}`;
+      const primeiraData = startDate.toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' });
+      addNotification(
+        existing.userId,
+        'Plano de Pagamentos Definido',
+        `O seu plano de prestações para "${vehicleName}" foi criado: ${n} prestação${n !== 1 ? 'ões' : ''}, com a primeira a vencer a ${primeiraData}. Consulte "Pagamentos" para ver o calendário completo.`,
+        'info',
+        id,
+        '/profile'
+      );
+    }
   };
 
   const marcarPrestacao = (reservationId: string, numero: number, paga: boolean, valorPago?: number) => {
@@ -294,7 +316,8 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
         getVehicleReservations: vehicleId => reservations.filter(r => r.vehicleId === vehicleId),
         getClientReservations: userId => reservations.filter(r => r.userId === userId),
         quoteRental,
-        gerarPrestacoes,
+        gerarPrestacoes: (id, semEntrada, dataInicioCustom, numPrestacoesCustom) =>
+          gerarPrestacoes(id, semEntrada, dataInicioCustom, numPrestacoesCustom),
         marcarPrestacao,
       }}
     >

@@ -330,8 +330,8 @@ function ShufflingCards() {
 
   const xitiqueTexts = useMemo(() => [
     "Poupança comunitária · Prémio mensal",
-    "Grupo de 10 membros · 30K MT/mês",
-    "Sorteio mensal · 300K MT",
+    "Grupo de 10 membros · 30mil MT/mês",
+    "Sorteio mensal · 300mil MT",
     "Entre no grupo · Receba as chaves"
   ], []);
 
@@ -462,12 +462,12 @@ function ShufflingCards() {
         <div className="relative flex items-center gap-3 shrink-0">
           <div className="text-right hidden sm:block">
             <div className="text-[9px] text-white/40 uppercase font-bold">Quota</div>
-            <div className="text-sm font-black text-white leading-tight">30K <span className="text-amber-400 text-[10px]">MT</span></div>
+            <div className="text-sm font-black text-white leading-tight">30mil <span className="text-amber-400 text-[10px]">MT</span></div>
           </div>
           <div className="w-px h-6 bg-white/10 hidden sm:block" />
           <div className="text-right">
             <div className="text-[9px] text-white/40 uppercase font-bold">Prémio</div>
-            <div className="text-sm font-black text-amber-400 leading-tight">300K <span className="text-white/60 text-[10px]">MT</span></div>
+            <div className="text-sm font-black text-amber-400 leading-tight">300mil <span className="text-white/60 text-[10px]">MT</span></div>
           </div>
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/20 border border-amber-300/40 shadow-[0_0_22px_rgba(216,160,32,0.20)] transition-transform duration-300 group-hover:translate-x-0.5">
             <ArrowRight className="h-3.5 w-3.5 text-amber-300" strokeWidth={2.5} />

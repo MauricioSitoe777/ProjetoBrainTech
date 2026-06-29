@@ -200,12 +200,14 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
           if (userSub === 'clientes') return u.role === 'cliente';
           return true;
         })
+        .sort((a, b) => (b.dataCriacao ?? '').localeCompare(a.dataCriacao ?? ''))
         .map(u => ({ kind: 'user', data: u } as Row));
     }
 
     if (mainTab === 'motoristas') {
       return motoristas
         .filter(m => !q || m.nome.toLowerCase().includes(q) || m.telefone.includes(q))
+        .sort((a, b) => (b.dataCriacao ?? '').localeCompare(a.dataCriacao ?? ''))
         .map(m => ({ kind: 'motorista', data: m } as Row));
     }
 
@@ -218,7 +220,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
         if (guestSub !== 'todos')     return g.status === guestSub;
         return true;
       })
-      .sort((a, b) => (a.intent === b.intent ? 0 : a.intent === 'aluguer' ? -1 : 1))
+      .sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao))
       .map(g => ({ kind: 'guest', data: g } as Row));
   }, [activePool, motoristas, guests, search, mainTab, userSub, guestSub]);
 

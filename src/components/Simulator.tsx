@@ -189,6 +189,7 @@ export default function Simulator({
   const [comMotorista, setComMotorista] = useState(false);
   const [motoristaId, setMotoristaId] = useState("");
   const [submitError, setSubmitError] = useState("");
+  const [submitted,   setSubmitted]   = useState(false);
   const [eligibilityExpanded, setEligibilityExpanded] = useState(false);
 
   // Auto-preencher dados se o utilizador logado for alterado/carregado
@@ -361,6 +362,14 @@ export default function Simulator({
     }
     return 4; // Toyota Hilux — aluguer por defeito
   })();
+
+  const purchaseVehicleId = (() => {
+    if (selectedVehicleId) {
+      const v = VEHICLES.find(v => v.id === selectedVehicleId);
+      if (v?.mode === 'compra') return selectedVehicleId;
+    }
+    return 2; // BMW X5 — compra por defeito
+  })();
   const dateValidation = useMemo(
     () => (dataInicio && dataFim ? validateDates(dataInicio, dataFim, horaLevantamento) : null),
     [dataInicio, dataFim, horaLevantamento, validateDates],
@@ -428,22 +437,15 @@ export default function Simulator({
     setSubmitError("");
     if (!canSubmit) return;
 
-    // Resolve which user record to link the reservation to
-    const normalizedPhone = clientContact.trim() ? `+258 ${clientContact.trim()}` : "";
+    const normalizedPhone  = clientContact.trim()  ? `+258 ${clientContact.trim()}`  : "";
     const normalizedPhone2 = clientContact2.trim() ? `+258 ${clientContact2.trim()}` : "";
     let transactionUserId: string;
 
     if (authUser) {
       transactionUserId = authUser.id;
-      updateUser(authUser.id, {
-        category,
-        telefone: normalizedPhone || undefined,
-      });
+      updateUser(authUser.id, { category, telefone: normalizedPhone || undefined });
     } else {
-      // Guest: reuse existing account if email/phone matches, otherwise create pending
-      const existing = allUsers.find(
-        (u) => normalizedPhone && u.telefone === normalizedPhone,
-      );
+      const existing = allUsers.find(u => normalizedPhone && u.telefone === normalizedPhone);
       if (existing) {
         transactionUserId = existing.id;
       } else {
@@ -484,10 +486,11 @@ export default function Simulator({
         setSubmitError(result.error ?? "Não foi possível criar a reserva.");
         return;
       }
+      setSubmitted(true);
     } else if (flow === "compra") {
       const start = new Date();
-      createReservation({
-        vehicleId: selectedVehicleId ?? 2,
+      const result = createReservation({
+        vehicleId: purchaseVehicleId,
         userId: transactionUserId,
         clientName: clientName.trim(),
         clientEmail: authUser?.email ?? '',
@@ -504,6 +507,11 @@ export default function Simulator({
         totalPrestacoes: paymentPlan === "prestacoes" ? mesesPrestacoes : undefined,
         prestacoesPagas: paymentPlan === "prestacoes" ? 0 : undefined,
       });
+      if (!result.ok) {
+        setSubmitError(result.error ?? "Não foi possível submeter o pedido de compra.");
+        return;
+      }
+      setSubmitted(true);
     }
   };
 
@@ -877,13 +885,13 @@ export default function Simulator({
                   );
                 })()}
 
-                {dateValidation && !dateValidation.valid ? (
+                {flow === 'aluguer' && dateValidation && !dateValidation.valid ? (
                   <div className="text-xs text-red-100 bg-red-600 border border-red-500 rounded-lg p-2 font-bold">
                     {dateValidation.errors[0]}
                   </div>
                 ) : null}
 
-                {availability && !availability.available && dateValidation?.valid ? (
+                {flow === 'aluguer' && availability && !availability.available && dateValidation?.valid ? (
                   <div className="text-xs text-red-100 bg-red-600 border border-red-500 rounded-lg p-2 font-bold">
                     {availability.conflicts[0]}
                   </div>
@@ -1074,36 +1082,82 @@ export default function Simulator({
             </div>
 
             {submitError ? (
-              <div className="mt-4 p-3 rounded-lg bg-red-600/90 text-white text-[11px] font-bold text-center shadow-lg animate-bounce">
+              <div className="mt-4 p-3 rounded-lg bg-red-600/90 text-white text-[11px] font-bold text-center shadow-lg">
                 {submitError}
               </div>
             ) : null}
 
-            {isBlocked && (
+            {isBlocked && !submitted && (
               <div className="mt-6 rounded-xl p-4 bg-red-600 border border-red-500 shadow-lg relative z-10 animate-pulse">
                 <div className="flex items-center gap-2 text-white font-bold text-xs uppercase mb-1">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                   Acesso Restrito
                 </div>
                 <p className="text-white text-[11px] leading-tight font-medium opacity-95">
-                  {isRestricted 
-                    ? "Esta conta foi suspensa permanentemente por violação das políticas de segurança (Blacklisted)." 
+                  {isRestricted
+                    ? "Esta conta foi suspensa permanentemente por violação das políticas de segurança (Blacklisted)."
                     : "Operação bloqueada devido a pendências financeiras ou irregularidades cadastrais. Por favor, contacte a administração."}
                 </p>
               </div>
             )}
 
-            <button
-              onClick={!authUser ? () => setShowGuestModal(true) : handleSubmit}
-              disabled={!authUser ? clientName.trim().length < 2 : !canSubmit}
-              className={`mt-5 w-full py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all duration-300 shadow-lg relative z-10 ${
-                (!authUser ? clientName.trim().length >= 2 : canSubmit)
-                  ? "bg-amber-500 text-zinc-950 hover:bg-amber-400 hover:scale-[1.01] active:scale-[0.99]"
-                  : "bg-zinc-800 text-white cursor-not-allowed border border-zinc-700"
-              }`}
-            >
-              {!authUser ? "Registar Interesse" : isBlocked ? "Bloqueado" : "Confirmar Operação"}
-            </button>
+            {submitted ? (
+              /* ── Painel de sucesso ── */
+              <div className="mt-5 rounded-xl border border-emerald-500/30 bg-emerald-500/8 overflow-hidden relative z-10">
+                <div className="flex items-center gap-3 px-4 py-4 border-b border-emerald-500/20">
+                  <div className="w-9 h-9 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <div>
+                    <p className="text-emerald-400 font-black text-sm">
+                      {flow === "compra" ? "Pedido de compra enviado!" : "Reserva submetida!"}
+                    </p>
+                    <p className="text-white/60 text-[10px] mt-0.5">O administrador foi notificado e entrará em contacto.</p>
+                  </div>
+                </div>
+                <div className="px-4 py-3 space-y-1.5">
+                  {[
+                    ["Viatura", flow === "compra"
+                      ? (VEHICLES.find(v => v.id === purchaseVehicleId)?.name ?? "Viatura seleccionada")
+                      : (VEHICLES.find(v => v.id === rentalVehicleId)?.name ?? "Viatura seleccionada")],
+                    ["Cliente", clientName.trim() || authUser?.nome || "—"],
+                    ["Estado", "Aguarda confirmação de pagamento"],
+                    ["Próximo passo", "Aguarde contacto da SOS Motors para instruções de pagamento."],
+                  ].map(([label, val]) => (
+                    <div key={label} className="flex gap-2 text-[11px]">
+                      <span className="text-white/40 font-bold w-24 shrink-0">{label}</span>
+                      <span className="text-white">{val}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="px-4 pb-4">
+                  <button
+                    onClick={() => {
+                      setSubmitted(false);
+                      setSubmitError("");
+                      setClientName(authUser?.nome ?? "");
+                      setClientContact("");
+                      setClientContact2("");
+                    }}
+                    className="w-full py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-xs font-bold transition-colors"
+                  >
+                    Nova compra
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={!authUser ? () => setShowGuestModal(true) : handleSubmit}
+                disabled={!authUser ? clientName.trim().length < 2 : !canSubmit}
+                className={`mt-5 w-full py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all duration-300 shadow-lg relative z-10 ${
+                  (!authUser ? clientName.trim().length >= 2 : canSubmit)
+                    ? "bg-amber-500 text-zinc-950 hover:bg-amber-400 hover:scale-[1.01] active:scale-[0.99]"
+                    : "bg-zinc-800 text-white cursor-not-allowed border border-zinc-700"
+                }`}
+              >
+                {!authUser ? "Registar Interesse" : isBlocked ? "Bloqueado" : "Confirmar Operação"}
+              </button>
+            )}
 
           </div>
 

@@ -82,7 +82,9 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
   }, [tab, highlightStatus]);
 
   const aluguerReservations = useMemo(() =>
-    reservations.filter(r => aluguerIds.has(r.vehicleId)),
+    reservations
+      .filter(r => aluguerIds.has(r.vehicleId))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     [reservations]
   );
 

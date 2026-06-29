@@ -4,10 +4,15 @@ import { useAuth } from '../context/AuthContext';
 import { useReservations } from '../context/ReservationsContext';
 import { useXitique } from '../context/XitiqueContext';
 import { useFinance } from '../context/FinanceContext';
+import { useNotifications } from '../context/NotificationsContext';
 import { VEHICLES } from '../data/constants';
 import { ReservationTracker } from '../components/ReservationTracker';
 import XitiqueModal from '../components/XitiqueModal';
-import type { ReservationStatus } from '../types/reservation';
+import type { Reservation, ReservationStatus } from '../types/reservation';
+
+const ACTIVE_STATUSES: ReservationStatus[] = [
+  'pendente', 'confirmada', 'pronta_levantamento', 'ativa', 'devolucao_pendente',
+];
 
 type Section =
   | 'dados_pessoais'
@@ -62,9 +67,10 @@ const IcoBarChart  = () => <svg width="14" height="14" viewBox="0 0 24 24" fill=
 
 export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) {
   const { user: authUser, allUsers } = useAuth();
-  const { reservations } = useReservations();
+  const { reservations, cancelReservation } = useReservations();
   const { grupos, inscricoes } = useXitique();
   const { dividas } = useFinance();
+  const { showToast } = useNotifications();
 
   // ── Dados derivados ────────────────────────────────────────────────────────
   const userRes = reservations.filter(r => r.userId === authUser?.id);
@@ -139,6 +145,51 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
   const [secOpen, setSecOpen]             = useState<Set<string>>(new Set());
   const [showXitiqueModal, setShowXitiqueModal] = useState(false);
   const toggleSec = (k: string) => setSecOpen(prev => { const s = new Set(prev); s.has(k) ? s.delete(k) : s.add(k); return s; });
+
+  // ── Reservas ───────────────────────────────────────────────────────────────
+  const [showInativos,  setShowInativos]  = useState(false);
+  const [detalheId,     setDetalheId]     = useState<string | null>(null);
+  const [cancelConfirm, setCancelConfirm] = useState<string | null>(null);
+
+  const handleDownloadReserva = (r: Reservation) => {
+    const veh = getVehicleName(r.vehicleId);
+    const st  = RES_STATUS[r.status]?.label ?? r.status;
+    const lines = [
+      '========================================',
+      '       SOS MOTORS — Comprovativo',
+      '========================================',
+      `Reserva Nº : ${r.id}`,
+      `Viatura    : ${veh}`,
+      `Estado     : ${st}`,
+      `Início     : ${fmtData(r.dataInicio)} ${r.horaLevantamento ? 'às ' + r.horaLevantamento : ''}`,
+      `Fim        : ${fmtData(r.dataFim)} ${r.horaDevolucao ? 'às ' + r.horaDevolucao : ''}`,
+      `Valor Total: ${fmt(r.valorTotal)} MT`,
+      r.deposito > 0 ? `Depositado : ${fmt(r.deposito)} MT` : '',
+      r.notas ? `Observações: ${r.notas}` : '',
+      '========================================',
+      'Gerado pela plataforma SOS Motors',
+    ].filter(Boolean).join('\n');
+    const blob = new Blob([lines], { type: 'text/plain;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = `reserva_${r.id}.txt`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExtensao = (r: Reservation) => {
+    showToast(
+      'Pedido enviado',
+      `Extensão para "${getVehicleName(r.vehicleId)}" solicitada. O administrador entrará em contacto.`,
+      'info',
+    );
+  };
+
+  const handleCancelReserva = (id: string) => {
+    cancelReservation(id);
+    setCancelConfirm(null);
+    setDetalheId(null);
+    showToast('Reserva cancelada', 'A sua reserva foi cancelada com sucesso.', 'success');
+  };
 
   const getVehicleName = (id: number) => VEHICLES.find(v => v.id === id)?.name ?? `Viatura #${id}`;
   const getVehicle     = (id: number) => VEHICLES.find(v => v.id === id);
@@ -507,24 +558,24 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
               {/* KPI grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-center">
-                  <div className="text-[9px] text-zinc-400 uppercase font-bold tracking-wider mb-1">Reservas</div>
+                  <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Reservas</div>
                   <div className="text-3xl font-black text-white">{alugueres.length}</div>
-                  <div className="text-[10px] text-zinc-500 mt-0.5">{alugueres.filter(a => a.status === 'concluida').length} concluída{alugueres.filter(a => a.status === 'concluida').length !== 1 ? 's' : ''}</div>
+                  <div className="text-[10px] text-white mt-0.5">{alugueres.filter(a => a.status === 'concluida').length} concluída{alugueres.filter(a => a.status === 'concluida').length !== 1 ? 's' : ''}</div>
                 </div>
                 <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-center">
-                  <div className="text-[9px] text-zinc-400 uppercase font-bold tracking-wider mb-1">Compras</div>
+                  <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Compras</div>
                   <div className="text-3xl font-black text-white">{compras.length}</div>
-                  <div className="text-[10px] text-zinc-500 mt-0.5">{compras.filter(c => c.status === 'liquidada').length} liquidada{compras.filter(c => c.status === 'liquidada').length !== 1 ? 's' : ''}</div>
+                  <div className="text-[10px] text-white mt-0.5">{compras.filter(c => c.status === 'liquidada').length} liquidada{compras.filter(c => c.status === 'liquidada').length !== 1 ? 's' : ''}</div>
                 </div>
                 <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4 text-center">
-                  <div className="text-[9px] text-zinc-400 uppercase font-bold tracking-wider mb-1">Total Investido</div>
+                  <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Total Investido</div>
                   <div className="text-sm font-black text-amber-400 leading-tight mt-1">{totalInvestido > 0 ? fmt(totalInvestido) : '—'}</div>
                 </div>
                 <div className={`rounded-2xl p-4 text-center border ${
                   membro?.estado === 'Sorteado' ? 'bg-emerald-400/10 border-emerald-400/20' :
                   membro?.estado === 'Aceite'   ? 'bg-amber-400/10 border-amber-400/20' : 'bg-zinc-900 border-zinc-800'
                 }`}>
-                  <div className="text-[9px] text-zinc-400 uppercase font-bold tracking-wider mb-1">Xitique</div>
+                  <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Xitique</div>
                   <div className={`text-sm font-black leading-tight mt-1 ${
                     membro?.estado === 'Sorteado' ? 'text-emerald-400' :
                     membro?.estado === 'Aceite'   ? 'text-amber-400' : 'text-white'
@@ -545,16 +596,16 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                 </div>
                 <div className="divide-y divide-zinc-800/50">
                   <div className="flex items-center justify-between px-4 py-3">
-                    <span className="text-xs text-zinc-300">Gasto em alugueres</span>
+                    <span className="text-xs text-white">Gasto em alugueres</span>
                     <span className="text-xs font-black text-white">{totalAlugueresGasto > 0 ? fmt(totalAlugueresGasto) : '—'}</span>
                   </div>
                   <div className="flex items-center justify-between px-4 py-3">
-                    <span className="text-xs text-zinc-300">Total em compras</span>
+                    <span className="text-xs text-white">Total em compras</span>
                     <span className="text-xs font-black text-white">{totalComprasGasto > 0 ? fmt(totalComprasGasto) : '—'}</span>
                   </div>
                   {membro && (
                     <div className="flex items-center justify-between px-4 py-3">
-                      <span className="text-xs text-zinc-300">Pago em Xitique</span>
+                      <span className="text-xs text-white">Pago em Xitique</span>
                       <span className="text-xs font-black text-amber-400">{fmt(membro.mesesPagos.length * quotaMT)}</span>
                     </div>
                   )}
@@ -612,350 +663,903 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
           )}
 
           {/* ══ RESERVAS ══════════════════════════════════════════════════════ */}
-          {section === 'reservas' && (
-            <div className="space-y-3">
-              {alugueres.length === 0 ? (
-                <div className="text-center text-white text-sm py-10 bg-zinc-900 rounded-2xl border border-zinc-800">
-                  Nenhuma reserva registada.
-                </div>
-              ) : alugueres.map(r => {
-                const st = RES_STATUS[r.status];
-                const dias = diffDias(r.dataInicio, r.dataFim);
-                const valorRestante = r.valorTotal - r.deposito;
-                return (
-                  <div key={r.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-base font-black text-white">{getVehicleName(r.vehicleId)}</p>
-                        <span className={`inline-block mt-1 text-[10px] border rounded-full px-2 py-0.5 font-bold ${st.cls}`}>{st.label}</span>
+          {section === 'reservas' && (() => {
+            const ativos   = alugueres.filter(r =>  ACTIVE_STATUSES.includes(r.status));
+            const inativos = alugueres.filter(r => !ACTIVE_STATUSES.includes(r.status));
+            const lista    = showInativos ? inativos : ativos;
+
+            const ReservaRow = ({ r }: { r: Reservation }) => {
+              const st        = RES_STATUS[r.status];
+              const expanded  = detalheId === r.id;
+              const isAtivo   = ACTIVE_STATUSES.includes(r.status);
+              const podeCancelar = isAtivo && r.status !== 'ativa' && r.status !== 'devolucao_pendente';
+              const podeEstender = r.status === 'ativa';
+              const valorRestante = r.valorTotal - r.deposito;
+
+              return (
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                  {/* ── Linha principal ── */}
+                  <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-0 items-center">
+
+                    {/* Carro + datas + estado + obs */}
+                    <div className="px-4 py-3 min-w-0">
+                      <p className="text-sm font-black text-white truncate">{getVehicleName(r.vehicleId)}</p>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
+                        <span className="text-[10px] text-white/60">Início: <span className="text-white font-bold">{fmtData(r.dataInicio)}</span></span>
+                        <span className="text-[10px] text-white/60">Fim: <span className="text-white font-bold">{fmtData(r.dataFim)}</span></span>
+                        {r.horaDevolucao && <span className="text-[10px] text-white/60">Dev: <span className="text-white font-bold">{r.horaDevolucao}</span></span>}
                       </div>
+                      {r.notas && <p className="text-[10px] text-white/50 mt-0.5 truncate">{r.notas}</p>}
                     </div>
-                    <div className="bg-zinc-800/60 rounded-xl px-4 py-3 space-y-2">
-                      <p className="text-[10px] text-amber-400 font-black uppercase tracking-widest">Período do Aluguer</p>
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="text-center">
-                          <p className="text-[10px] text-white uppercase font-bold mb-0.5">Levantamento</p>
-                          <p className="font-black text-white">{fmtData(r.dataInicio)}</p>
-                          {r.horaLevantamento && <p className="text-xs text-white">às {r.horaLevantamento}</p>}
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs text-white font-black bg-zinc-700 rounded-full px-2 py-0.5">{dias} dia{dias > 1 ? 's' : ''}</div>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-[10px] text-white uppercase font-bold mb-0.5">Devolução</p>
-                          <p className="font-black text-white">{fmtData(r.dataFim)}</p>
-                          {r.horaDevolucao && <p className="text-xs text-white">às {r.horaDevolucao}</p>}
-                        </div>
-                      </div>
-                      {(r.localLevantamento || r.localDevolucao) && (
-                        <div className="pt-2 border-t border-zinc-700 space-y-1 text-xs">
-                          {r.localLevantamento && <div className="flex gap-2"><span className="text-white shrink-0">📍 Onde levanta:</span><span className="text-white font-bold">{r.localLevantamento}</span></div>}
-                          {r.localDevolucao    && <div className="flex gap-2"><span className="text-white shrink-0">🏁 Onde devolve:</span><span className="text-white font-bold">{r.localDevolucao}</span></div>}
-                        </div>
+
+                    {/* Estado */}
+                    <div className="px-3 py-3 shrink-0">
+                      <span className={`text-[10px] border rounded-full px-2 py-0.5 font-bold whitespace-nowrap ${st.cls}`}>{st.label}</span>
+                    </div>
+
+                    {/* Btn: Detalhes */}
+                    <button
+                      onClick={() => setDetalheId(expanded ? null : r.id)}
+                      title="Ver detalhes"
+                      className={`px-3 py-3 h-full border-l border-zinc-800 transition-colors ${expanded ? 'text-amber-400 bg-amber-500/10' : 'text-white/50 hover:text-white hover:bg-zinc-800/60'}`}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+
+                    {/* Btn: Download */}
+                    <button
+                      onClick={() => handleDownloadReserva(r)}
+                      title="Baixar comprovativo"
+                      className="px-3 py-3 h-full border-l border-zinc-800 text-white/50 hover:text-white hover:bg-zinc-800/60 transition-colors"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    </button>
+
+                    {/* Btn: Extensão / Cancelar */}
+                    <div className="flex border-l border-zinc-800 h-full">
+                      {podeEstender && (
+                        <button
+                          onClick={() => handleExtensao(r)}
+                          title="Solicitar extensão"
+                          className="px-3 py-3 text-sky-400/70 hover:text-sky-400 hover:bg-sky-500/10 transition-colors"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="17" y1="14" x2="17" y2="20"/><line x1="14" y1="17" x2="20" y2="17"/></svg>
+                        </button>
                       )}
+                      {podeCancelar && (
+                        <button
+                          onClick={() => setCancelConfirm(r.id)}
+                          title="Cancelar reserva"
+                          className="px-3 py-3 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                        </button>
+                      )}
+                      {!podeEstender && !podeCancelar && <div className="px-3 py-3 w-10" />}
                     </div>
-                    <div className="space-y-2">
-                      <p className="text-[10px] text-amber-400 font-black uppercase tracking-widest">Estado do Processo</p>
-                      <ReservationTracker status={r.status} readonly />
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-[10px] text-amber-400 font-black uppercase tracking-widest">Valores</p>
-                      <div className="bg-zinc-800/60 rounded-xl overflow-hidden text-sm">
-                        <div className="flex justify-between items-center px-4 py-3">
-                          <span className="text-zinc-300">💰 Valor total</span>
+                  </div>
+
+                  {/* ── Painel de detalhes expandido ── */}
+                  {expanded && (
+                    <div className="border-t border-zinc-800 bg-zinc-950/40 px-4 py-4 space-y-4">
+                      {/* Tracker */}
+                      <div>
+                        <p className="text-[10px] text-amber-400 font-black uppercase tracking-widest mb-2">Estado do Processo</p>
+                        <ReservationTracker status={r.status} readonly />
+                      </div>
+                      {/* Período */}
+                      <div className="bg-zinc-800/50 rounded-xl px-4 py-3 space-y-2">
+                        <p className="text-[10px] text-amber-400 font-black uppercase tracking-widest">Período</p>
+                        <div className="grid grid-cols-3 gap-3 text-center text-xs">
+                          <div>
+                            <p className="text-white/50 uppercase text-[9px] font-bold mb-0.5">Levantamento</p>
+                            <p className="font-black text-white">{fmtData(r.dataInicio)}</p>
+                            {r.horaLevantamento && <p className="text-white/70">às {r.horaLevantamento}</p>}
+                          </div>
+                          <div className="flex items-center justify-center">
+                            <span className="text-white font-black bg-zinc-700 rounded-full px-2 py-0.5 text-[10px]">{diffDias(r.dataInicio, r.dataFim)} dias</span>
+                          </div>
+                          <div>
+                            <p className="text-white/50 uppercase text-[9px] font-bold mb-0.5">Devolução</p>
+                            <p className="font-black text-white">{fmtData(r.dataFim)}</p>
+                            {r.horaDevolucao && <p className="text-white/70">às {r.horaDevolucao}</p>}
+                          </div>
+                        </div>
+                        {(r.localLevantamento || r.localDevolucao) && (
+                          <div className="pt-2 border-t border-zinc-700 space-y-1 text-xs">
+                            {r.localLevantamento && <div className="flex gap-2"><span className="text-white/60 shrink-0">📍</span><span className="text-white">{r.localLevantamento}</span></div>}
+                            {r.localDevolucao    && <div className="flex gap-2"><span className="text-white/60 shrink-0">🏁</span><span className="text-white">{r.localDevolucao}</span></div>}
+                          </div>
+                        )}
+                      </div>
+                      {/* Valores */}
+                      <div className="bg-zinc-800/50 rounded-xl overflow-hidden text-sm">
+                        <div className="flex justify-between items-center px-4 py-2.5">
+                          <span className="text-white/70">Valor total</span>
                           <span className="font-black text-amber-400">{fmt(r.valorTotal)}</span>
                         </div>
                         {r.deposito > 0 && (
-                          <>
-                            <div className="flex justify-between items-center px-4 py-3 border-t border-zinc-700/60">
-                              <span className="text-zinc-300">✅ Pago (caução/reserva)</span>
-                              <span className="font-bold text-emerald-400">{fmt(r.deposito)}</span>
-                            </div>
-                            {valorRestante > 0 && r.status !== 'concluida' && (
-                              <div className="flex justify-between items-center px-4 py-3 border-t border-zinc-700/60 bg-zinc-700/30">
-                                <span className="text-white font-bold">📌 Valor restante</span>
-                                <span className="font-black text-white">{fmt(valorRestante)}</span>
-                              </div>
-                            )}
-                          </>
+                          <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-700/60">
+                            <span className="text-white/70">Pago (caução/reserva)</span>
+                            <span className="font-bold text-emerald-400">{fmt(r.deposito)}</span>
+                          </div>
+                        )}
+                        {valorRestante > 0 && r.status !== 'concluida' && (
+                          <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-700/60 bg-zinc-700/30">
+                            <span className="text-white font-bold">Valor restante</span>
+                            <span className="font-black text-white">{fmt(valorRestante)}</span>
+                          </div>
+                        )}
+                      </div>
+                      {/* Acções de detalhe */}
+                      <div className="flex gap-2 flex-wrap">
+                        <button
+                          onClick={() => handleDownloadReserva(r)}
+                          className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-xs font-bold transition-colors"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                          Baixar comprovativo
+                        </button>
+                        {podeEstender && (
+                          <button
+                            onClick={() => handleExtensao(r)}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 text-xs font-bold transition-colors"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="17" y1="14" x2="17" y2="20"/><line x1="14" y1="17" x2="20" y2="17"/></svg>
+                            Solicitar extensão
+                          </button>
+                        )}
+                        {podeCancelar && (
+                          <button
+                            onClick={() => setCancelConfirm(r.id)}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold transition-colors"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                            Cancelar reserva
+                          </button>
                         )}
                       </div>
                     </div>
+                  )}
+
+                  {/* ── Modal de confirmação de cancelamento ── */}
+                  {cancelConfirm === r.id && (
+                    <div className="border-t border-red-500/20 bg-red-500/5 px-4 py-4">
+                      <p className="text-sm text-white font-bold mb-1">Cancelar reserva?</p>
+                      <p className="text-xs text-white/60 mb-3">Esta acção não pode ser desfeita. A sua reserva de <span className="text-white font-bold">{getVehicleName(r.vehicleId)}</span> será cancelada.</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleCancelReserva(r.id)}
+                          className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-black transition-colors"
+                        >
+                          Sim, cancelar
+                        </button>
+                        <button
+                          onClick={() => setCancelConfirm(null)}
+                          className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-xs font-bold transition-colors"
+                        >
+                          Não, manter
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            };
+
+            return (
+              <div className="space-y-3">
+                {/* Header com contadores e toggle */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Activos</span>
+                    <span className="text-[10px] font-black bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-full px-2 py-0.5">{ativos.length}</span>
+                    {inativos.length > 0 && <>
+                      <span className="text-white/20">·</span>
+                      <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Concluídos/Cancelados</span>
+                      <span className="text-[10px] font-black bg-zinc-800 text-white/50 border border-zinc-700 rounded-full px-2 py-0.5">{inativos.length}</span>
+                    </>}
                   </div>
-                );
-              })}
-            </div>
-          )}
+                  {inativos.length > 0 && (
+                    <button
+                      onClick={() => { setShowInativos(v => !v); setDetalheId(null); }}
+                      className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors ${
+                        showInativos
+                          ? 'bg-zinc-700 border-zinc-600 text-white'
+                          : 'bg-zinc-900 border-zinc-800 text-white/60 hover:text-white hover:border-zinc-700'
+                      }`}
+                    >
+                      {showInativos ? 'Ver activos' : 'Ver histórico'}
+                    </button>
+                  )}
+                </div>
+
+                {/* Lista */}
+                {lista.length === 0 ? (
+                  <div className="text-center text-white/50 text-sm py-10 bg-zinc-900 rounded-xl border border-zinc-800">
+                    {showInativos ? 'Nenhum aluguer concluído ou cancelado.' : 'Não tem alugueres activos de momento.'}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {lista.map(r => <ReservaRow key={r.id} r={r} />)}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* ══ COMPRAS ═══════════════════════════════════════════════════════ */}
-          {section === 'compras' && (
-            <div className="space-y-3">
-              {compras.length === 0 ? (
-                <div className="text-center text-white text-sm py-10 bg-zinc-900 rounded-2xl border border-zinc-800">
-                  Nenhuma compra registada.
+          {section === 'compras' && (() => {
+            const CAT_LABEL: Record<string, string> = {
+              suv: 'SUV', pickup: 'Pick-up', sedan: 'Sedan',
+              hatchback: 'Hatchback', van: 'Van', outro: 'Outro',
+            };
+
+            const garantiaInfo = (dataCompra: string, vehYear?: number) => {
+              const anos = 2;
+              const compra = new Date(dataCompra);
+              const expira = new Date(compra);
+              expira.setFullYear(expira.getFullYear() + anos);
+              const hoje = new Date();
+              const ativa = hoje < expira;
+              const mesesRestantes = ativa
+                ? Math.max(0, Math.round((expira.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24 * 30)))
+                : 0;
+              return {
+                ativa,
+                expira: expira.toISOString().split('T')[0],
+                mesesRestantes,
+                vehYear,
+              };
+            };
+
+            const downloadComprovativo = (c: Reservation, veh: ReturnType<typeof getVehicle>) => {
+              const st  = RES_STATUS[c.status]?.label ?? c.status;
+              const gar = garantiaInfo(c.dataInicio, veh?.year);
+              const lines = [
+                '==========================================',
+                '  SOS MOTORS — Comprovativo de Compra',
+                '==========================================',
+                `ID Operação : ${c.id}`,
+                `Viatura     : ${veh?.name ?? `#${c.vehicleId}`}`,
+                `Marca       : ${veh?.brand ?? '—'}`,
+                `Tipo        : ${CAT_LABEL[veh?.cat ?? ''] ?? '—'}`,
+                `Matrícula   : ${veh?.matricula ?? '—'}`,
+                `Ano         : ${veh?.year ?? '—'}`,
+                `Data compra : ${fmtData(c.dataInicio)}`,
+                `Estado      : ${st}`,
+                `Valor       : ${veh?.price ?? fmt(c.valorTotal)}`,
+                `Garantia    : ${gar.ativa ? `Activa até ${fmtData(gar.expira)}` : 'Expirada'}`,
+                '==========================================',
+                'Gerado pela plataforma SOS Motors',
+              ].join('\n');
+              const blob = new Blob([lines], { type: 'text/plain;charset=utf-8' });
+              const url  = URL.createObjectURL(blob);
+              const a    = document.createElement('a');
+              a.href = url; a.download = `compra_${c.id}.txt`; a.click();
+              URL.revokeObjectURL(url);
+            };
+
+            return (
+              <div className="space-y-3">
+                {/* Contagem */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Histórico de Compras</span>
+                  <span className="text-[10px] font-black bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-full px-2 py-0.5">{compras.length}</span>
                 </div>
-              ) : compras.map(c => {
-                const st = RES_STATUS[c.status];
-                const veh = getVehicle(c.vehicleId);
-                const isParcelada      = (c.totalPrestacoes ?? 0) > 0;
-                const prestacoesPagas  = c.prestacoesPagas ?? 0;
-                const totalPrestacoes  = c.totalPrestacoes ?? 0;
-                const prestRestantes   = totalPrestacoes - prestacoesPagas;
-                const progressPct      = totalPrestacoes > 0 ? (prestacoesPagas / totalPrestacoes) * 100 : 0;
-                const prestacoes       = c.prestacoes ?? [];
-                const totalPago        = prestacoes.length > 0
-                  ? prestacoes.filter(p => p.paga).reduce((s, p) => s + (p.valorPago ?? p.valor), 0)
-                  : prestacoesPagas * c.deposito;
-                const totalEmFalta     = prestacoes.length > 0
-                  ? prestacoes.filter(p => !p.paga).reduce((s, p) => s + p.valor, 0)
-                  : prestRestantes * c.deposito;
-                const proximaNumero    = prestacoes.find(p => !p.paga)?.numero ?? null;
 
-                return (
-                  <div key={c.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-base font-black text-white">{getVehicleName(c.vehicleId)}</p>
-                        <p className="text-xs text-white mt-0.5">Comprado em {fmtData(c.dataInicio)}</p>
-                      </div>
-                      <span className={`text-[10px] border rounded-full px-2 py-0.5 font-bold shrink-0 ${st.cls}`}>{st.label}</span>
-                    </div>
+                {compras.length === 0 ? (
+                  <div className="text-center text-white/50 text-sm py-10 bg-zinc-900 rounded-xl border border-zinc-800">
+                    Nenhuma compra registada.
+                  </div>
+                ) : compras.map(c => {
+                  const st            = RES_STATUS[c.status];
+                  const veh           = getVehicle(c.vehicleId);
+                  const gar           = garantiaInfo(c.dataInicio, veh?.year);
+                  const isParcelada   = (c.totalPrestacoes ?? 0) > 0;
+                  const prestacoesPagas = c.prestacoesPagas ?? 0;
+                  const totalPrestacoes = c.totalPrestacoes ?? 0;
+                  const prestRestantes  = totalPrestacoes - prestacoesPagas;
+                  const progressPct     = totalPrestacoes > 0 ? (prestacoesPagas / totalPrestacoes) * 100 : 0;
+                  const prestacoes      = c.prestacoes ?? [];
+                  const totalPago       = prestacoes.length > 0
+                    ? prestacoes.filter(p => p.paga).reduce((s, p) => s + (p.valorPago ?? p.valor), 0)
+                    : prestacoesPagas * c.deposito;
+                  const totalEmFalta    = prestacoes.length > 0
+                    ? prestacoes.filter(p => !p.paga).reduce((s, p) => s + p.valor, 0)
+                    : prestRestantes * c.deposito;
+                  const proximaNumero   = prestacoes.find(p => !p.paga)?.numero ?? null;
+                  const expanded        = secOpen.has(c.id);
 
-                    {veh?.price && (
-                      <div className="bg-zinc-800/60 rounded-xl px-4 py-3">
-                        <p className="text-[10px] text-amber-400 font-black uppercase tracking-widest mb-1">Preço da Viatura</p>
-                        <p className="text-xl font-black text-white">{veh.price}</p>
-                      </div>
-                    )}
+                  const docs = [
+                    { label: 'Certificado de Matrícula', valor: veh?.matricula ?? '—', ok: !!veh?.matricula },
+                    { label: 'Livrete / Doc. Único',     valor: 'Disponível',           ok: true },
+                    { label: 'Seguro Obrigatório',        valor: c.status === 'liquidada' ? 'Disponível' : 'Aguarda liquidação', ok: c.status === 'liquidada' },
+                    { label: 'Inspeção Técnica',          valor: (veh?.year ?? 0) >= 2022 ? 'Válida' : 'Verificar renovação', ok: (veh?.year ?? 0) >= 2022 },
+                  ];
 
-                    {isParcelada && (
-                      <div className="space-y-3">
-                        <p className="text-[10px] text-amber-400 font-black uppercase tracking-widest">Como está a pagar</p>
-                        <div className="grid grid-cols-3 gap-2 text-center">
-                          <div className="bg-emerald-400/10 border border-emerald-400/20 rounded-xl px-2 py-3">
-                            <p className="text-[9px] text-white uppercase font-bold mb-1">Já pagou</p>
-                            <p className="text-sm font-black text-emerald-400">{prestacoesPagas}</p>
-                            <p className="text-[9px] text-white">prestação{prestacoesPagas !== 1 ? 'ões' : ''}</p>
-                          </div>
-                          <div className={`${prestRestantes > 0 ? 'bg-amber-400/10 border-amber-400/20' : 'bg-zinc-800 border-zinc-700'} border rounded-xl px-2 py-3`}>
-                            <p className="text-[9px] text-white uppercase font-bold mb-1">Faltam</p>
-                            <p className={`text-sm font-black ${prestRestantes > 0 ? 'text-amber-400' : 'text-white'}`}>{prestRestantes}</p>
-                            <p className="text-[9px] text-white">prestação{prestRestantes !== 1 ? 'ões' : ''}</p>
-                          </div>
-                          <div className="bg-zinc-800 border border-zinc-700 rounded-xl px-2 py-3">
-                            <p className="text-[9px] text-white uppercase font-bold mb-1">Total</p>
-                            <p className="text-sm font-black text-white">{totalPrestacoes}</p>
-                            <p className="text-[9px] text-white">meses</p>
-                          </div>
-                        </div>
+                  return (
+                    <div key={c.id} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
 
-                        <div>
-                          <div className="flex justify-between text-xs mb-1.5">
-                            <span className="text-white font-bold">{Math.round(progressPct)}% pago</span>
-                            <span className="text-white">{fmt(prestacoes.find(p => !p.paga)?.valor ?? c.deposito)}/mês</span>
-                          </div>
-                          <div className="w-full h-3 bg-zinc-800 rounded-full overflow-hidden">
-                            <div className={`h-3 rounded-full transition-all ${prestRestantes === 0 ? 'bg-emerald-400' : 'bg-amber-500'}`} style={{ width: `${progressPct}%` }} />
-                          </div>
-                          <div className="flex gap-1 mt-2">
-                            {Array.from({ length: totalPrestacoes }).map((_, i) => (
-                              <div key={i} className={`flex-1 h-1 rounded-full ${i < prestacoesPagas ? 'bg-amber-500' : 'bg-zinc-700'}`} />
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="bg-zinc-800/60 rounded-xl overflow-hidden text-sm">
-                          <div className="flex justify-between items-center px-4 py-2.5">
-                            <span className="text-zinc-300">✅ Total já pago</span>
-                            <span className="font-black text-emerald-400">{fmt(totalPago)}</span>
-                          </div>
-                          {totalEmFalta > 0 && (
-                            <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-700/60 bg-zinc-700/20">
-                              <span className="text-white font-bold">📌 Valor ainda em falta</span>
-                              <span className="font-black text-amber-400">{fmt(totalEmFalta)}</span>
-                            </div>
-                          )}
-                          {prestRestantes === 0 && (
-                            <div className="text-center py-2 border-t border-zinc-700/60">
-                              <span className="text-emerald-400 font-black text-xs">🎉 Viatura totalmente liquidada!</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {prestacoes.length > 0 && (
-                          <div className="space-y-1">
-                            <button
-                              type="button"
-                              onClick={() => setPrestOpen(prev => { const n = new Set(prev); n.has(c.id) ? n.delete(c.id) : n.add(c.id); return n; })}
-                              className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 border border-zinc-700/50 transition-all"
-                            >
-                              <span className="flex items-center gap-2 text-xs font-black text-white">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                                Minhas Prestações
-                                <span className="text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/20 rounded-full px-2 py-0.5 font-bold">{prestacoesPagas}/{totalPrestacoes}</span>
+                      {/* ── Linha de tabela ── */}
+                      <div className="grid grid-cols-[1fr_auto_auto] items-center gap-0">
+                        <div className="px-4 py-3 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-black text-white">{veh?.name ?? getVehicleName(c.vehicleId)}</p>
+                            {veh?.cat && (
+                              <span className="text-[9px] font-bold bg-zinc-800 border border-zinc-700 text-white/60 rounded-full px-2 py-0.5 uppercase">
+                                {CAT_LABEL[veh.cat] ?? veh.cat}
                               </span>
-                              <IcoChevron open={prestOpen.has(c.id)} />
-                            </button>
-
-                            {prestOpen.has(c.id) && (
-                              <div className="bg-zinc-800/40 rounded-xl overflow-hidden divide-y divide-zinc-700/40">
-                                {prestacoes.map(p => {
-                                  const isProxima = p.numero === proximaNumero;
-                                  const hoje = new Date().toISOString().split('T')[0];
-                                  const emAtraso = !p.paga && p.dataVencimento < hoje;
-                                  return (
-                                    <div key={p.numero} className={`flex items-center gap-3 px-4 py-2.5 ${p.paga ? 'bg-emerald-500/5' : isProxima ? 'bg-amber-500/8' : ''}`}>
-                                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 border ${
-                                        p.paga ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-                                        isProxima ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
-                                        emAtraso  ? 'bg-red-500/20 text-red-400 border-red-500/30' :
-                                                    'bg-zinc-800 text-zinc-500 border-zinc-700'
-                                      }`}>
-                                        {p.paga ? '✓' : p.numero}
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <p className={`text-xs font-bold ${p.paga ? 'text-emerald-300' : isProxima ? 'text-amber-300' : 'text-zinc-500'}`}>
-                                          Prestação {p.numero}
-                                          {isProxima && <span className="ml-1.5 text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-full font-black">Próxima</span>}
-                                          {emAtraso  && <span className="ml-1.5 text-[9px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full font-black">Em atraso</span>}
-                                        </p>
-                                        <p className="text-[10px] text-zinc-500 tabular-nums">
-                                          {p.paga && p.dataPagamento ? `Pago a ${fmtData(p.dataPagamento)}` : `Vence a ${fmtData(p.dataVencimento)}`}
-                                        </p>
-                                      </div>
-                                      <div className="text-right shrink-0">
-                                        {p.paga ? (
-                                          <>
-                                            <p className="text-xs font-black text-emerald-400">{fmt(p.valorPago ?? p.valor)}</p>
-                                            {p.valorPago && p.valorPago !== p.valor && <p className="text-[9px] text-zinc-500 line-through tabular-nums">{fmt(p.valor)}</p>}
-                                          </>
-                                        ) : (
-                                          <p className={`text-xs font-bold tabular-nums ${isProxima ? 'text-amber-400' : 'text-zinc-500'}`}>{fmt(p.valor)}</p>
-                                        )}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
                             )}
                           </div>
-                        )}
-                      </div>
-                    )}
-
-                    {c.deposito > 0 && !isParcelada && (
-                      <div className="bg-zinc-800/60 rounded-xl px-4 py-3 text-sm">
-                        <p className="text-[10px] text-amber-400 font-black uppercase tracking-widest mb-1">Pagamento</p>
-                        <div className="flex justify-between">
-                          <span className="text-white">💰 Valor pago (pronto pagamento)</span>
-                          <span className="font-black text-emerald-400">{fmt(c.deposito)}</span>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
+                            <span className="text-xs text-white">Compra: <span className="text-white font-bold">{fmtData(c.dataInicio)}</span></span>
+                            <span className="text-xs text-white">Valor: <span className="text-amber-400 font-bold">{veh?.price ?? fmt(c.valorTotal)}</span></span>
+                            <span className={`text-xs font-bold ${gar.ativa ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {gar.ativa ? `Garantia: ${gar.mesesRestantes}m restantes` : 'Garantia expirada'}
+                            </span>
+                          </div>
                         </div>
+
+                        <div className="px-3 py-3 shrink-0">
+                          <span className={`text-[10px] border rounded-full px-2 py-0.5 font-bold whitespace-nowrap ${st.cls}`}>{st.label}</span>
+                        </div>
+
+                        <button
+                          onClick={() => toggleSec(c.id)}
+                          title="Ver detalhes"
+                          className={`px-4 py-3 h-full border-l border-zinc-800 transition-colors ${expanded ? 'text-amber-400 bg-amber-500/10' : 'text-white/40 hover:text-white hover:bg-zinc-800/60'}`}
+                        >
+                          <IcoChevron open={expanded} />
+                        </button>
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+
+                      {/* ── Painel expandido ── */}
+                      {expanded && (
+                        <div className="border-t border-zinc-800 bg-zinc-950/40 px-4 py-4 space-y-4">
+
+                          {/* Garantia */}
+                          <div>
+                            <p className="text-xs text-amber-400 font-black uppercase tracking-widest mb-2">Garantia</p>
+                            <div className="bg-zinc-800/50 rounded-xl overflow-hidden">
+                              <div className={`flex items-center gap-3 px-4 py-3 border-b border-zinc-700/50 ${gar.ativa ? 'bg-emerald-500/5' : 'bg-red-500/5'}`}>
+                                <div className={`w-2 h-2 rounded-full shrink-0 ${gar.ativa ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
+                                <div className="flex-1">
+                                  <p className={`text-sm font-black ${gar.ativa ? 'text-emerald-400' : 'text-red-400'}`}>
+                                    {gar.ativa ? `Garantia activa — ${gar.mesesRestantes} meses restantes` : 'Garantia expirada'}
+                                  </p>
+                                  <p className="text-xs text-white mt-0.5">Validade: {fmtData(gar.expira)}</p>
+                                </div>
+                              </div>
+                              {[
+                                { label: 'Duração',   val: '2 anos a partir da data de compra' },
+                                { label: 'Cobertura', val: 'Motor, transmissão e componentes estruturais' },
+                                { label: 'Excluído',  val: 'Desgaste normal, acidentes e modificações' },
+                                { label: 'Suporte',   val: '+258 86 884 4283 · info@rentcar.co.mz' },
+                              ].map(row => (
+                                <div key={row.label} className="flex gap-3 px-4 py-2.5 border-b border-zinc-700/30 last:border-0">
+                                  <span className="text-xs text-white font-bold w-24 shrink-0">{row.label}</span>
+                                  <span className="text-xs text-white">{row.val}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Documentos */}
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-xs text-amber-400 font-black uppercase tracking-widest">Documentos do Carro</p>
+                              <button
+                                onClick={() => downloadComprovativo(c, veh)}
+                                className="flex items-center gap-1 text-xs font-bold text-white hover:text-amber-400 transition-colors"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                Baixar comprovativo
+                              </button>
+                            </div>
+                            <div className="bg-zinc-800/50 rounded-xl overflow-hidden divide-y divide-zinc-700/40">
+                              {docs.map(doc => (
+                                <div key={doc.label} className="flex items-center gap-3 px-4 py-3">
+                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black border ${doc.ok ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-amber-500/15 border-amber-500/30 text-amber-400'}`}>
+                                    {doc.ok ? '✓' : '!'}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-bold text-white">{doc.label}</p>
+                                    <p className={`text-xs ${doc.ok ? 'text-white' : 'text-amber-400'}`}>{doc.valor}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Prestações */}
+                          {isParcelada && (
+                            <div className="space-y-3">
+                              <p className="text-xs text-amber-400 font-black uppercase tracking-widest">Plano de Pagamento</p>
+                              <div className="grid grid-cols-3 gap-2 text-center">
+                                <div className="bg-emerald-400/10 border border-emerald-400/20 rounded-xl px-2 py-3">
+                                  <p className="text-[10px] text-white uppercase font-bold mb-1">Pagas</p>
+                                  <p className="text-base font-black text-emerald-400">{prestacoesPagas}</p>
+                                </div>
+                                <div className={`${prestRestantes > 0 ? 'bg-amber-400/10 border-amber-400/20' : 'bg-zinc-800 border-zinc-700'} border rounded-xl px-2 py-3`}>
+                                  <p className="text-[10px] text-white uppercase font-bold mb-1">Faltam</p>
+                                  <p className={`text-base font-black ${prestRestantes > 0 ? 'text-amber-400' : 'text-white'}`}>{prestRestantes}</p>
+                                </div>
+                                <div className="bg-zinc-800 border border-zinc-700 rounded-xl px-2 py-3">
+                                  <p className="text-[10px] text-white uppercase font-bold mb-1">Total</p>
+                                  <p className="text-base font-black text-white">{totalPrestacoes}</p>
+                                </div>
+                              </div>
+                              <div>
+                                <div className="flex justify-between text-xs mb-1.5">
+                                  <span className="text-white font-bold">{Math.round(progressPct)}% pago</span>
+                                  <span className="text-white">{fmt(prestacoes.find(p => !p.paga)?.valor ?? c.deposito)}/mês</span>
+                                </div>
+                                <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                                  <div className={`h-2 rounded-full ${prestRestantes === 0 ? 'bg-emerald-400' : 'bg-amber-500'}`} style={{ width: `${progressPct}%` }} />
+                                </div>
+                              </div>
+                              <div className="bg-zinc-800/60 rounded-xl overflow-hidden text-sm">
+                                <div className="flex justify-between items-center px-4 py-2.5">
+                                  <span className="text-white">Total já pago</span>
+                                  <span className="font-black text-emerald-400">{fmt(totalPago)}</span>
+                                </div>
+                                {totalEmFalta > 0 && (
+                                  <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-700/60">
+                                    <span className="text-white">Ainda em falta</span>
+                                    <span className="font-black text-amber-400">{fmt(totalEmFalta)}</span>
+                                  </div>
+                                )}
+                                {prestRestantes === 0 && (
+                                  <div className="text-center py-2 border-t border-zinc-700/60">
+                                    <span className="text-emerald-400 font-black text-xs">Viatura totalmente liquidada!</span>
+                                  </div>
+                                )}
+                              </div>
+                              {prestacoes.length > 0 && (
+                                <div className="space-y-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => setPrestOpen(prev => { const n = new Set(prev); n.has(c.id) ? n.delete(c.id) : n.add(c.id); return n; })}
+                                    className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 border border-zinc-700/50 transition-all"
+                                  >
+                                    <span className="flex items-center gap-2 text-xs font-black text-white">
+                                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                      Minhas Prestações
+                                      <span className="text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/20 rounded-full px-2 py-0.5">{prestacoesPagas}/{totalPrestacoes}</span>
+                                    </span>
+                                    <IcoChevron open={prestOpen.has(c.id)} />
+                                  </button>
+                                  {prestOpen.has(c.id) && (
+                                    <div className="bg-zinc-800/40 rounded-xl overflow-hidden divide-y divide-zinc-700/40">
+                                      {prestacoes.map(p => {
+                                        const isProxima = p.numero === proximaNumero;
+                                        const hoje2 = new Date().toISOString().split('T')[0];
+                                        const emAtraso = !p.paga && p.dataVencimento < hoje2;
+                                        return (
+                                          <div key={p.numero} className={`flex items-center gap-3 px-4 py-3 ${p.paga ? 'bg-emerald-500/5' : isProxima ? 'bg-amber-500/8' : ''}`}>
+                                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 border ${
+                                              p.paga    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                                              isProxima ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                                              emAtraso  ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                                          'bg-zinc-800 text-white border-zinc-700'
+                                            }`}>
+                                              {p.paga ? '✓' : p.numero}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                              <p className={`text-xs font-bold ${p.paga ? 'text-emerald-300' : isProxima ? 'text-amber-300' : 'text-white'}`}>
+                                                Prestação {p.numero}
+                                                {isProxima && <span className="ml-1.5 text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-full">Próxima</span>}
+                                                {emAtraso  && <span className="ml-1.5 text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full">Em atraso</span>}
+                                              </p>
+                                              <p className="text-xs text-white tabular-nums mt-0.5">
+                                                {p.paga && p.dataPagamento ? `Pago a ${fmtData(p.dataPagamento)}` : `Vence a ${fmtData(p.dataVencimento)}`}
+                                              </p>
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                              {p.paga ? (
+                                                <>
+                                                  <p className="text-xs font-black text-emerald-400">{fmt(p.valorPago ?? p.valor)}</p>
+                                                  {p.valorPago && p.valorPago !== p.valor && <p className="text-xs text-white line-through">{fmt(p.valor)}</p>}
+                                                </>
+                                              ) : (
+                                                <p className={`text-xs font-bold tabular-nums ${isProxima ? 'text-amber-400' : 'text-white'}`}>{fmt(p.valor)}</p>
+                                              )}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {c.deposito > 0 && !isParcelada && (
+                            <div className="bg-zinc-800/60 rounded-xl px-4 py-3 text-sm">
+                              <p className="text-xs text-amber-400 font-black uppercase tracking-widest mb-1">Pagamento</p>
+                              <div className="flex justify-between">
+                                <span className="text-white">Valor pago (pronto pagamento)</span>
+                                <span className="font-black text-emerald-400">{fmt(c.deposito)}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           {/* ══ PAGAMENTOS ════════════════════════════════════════════════════ */}
-          {section === 'pagamentos' && (
-            <div className="space-y-4">
+          {section === 'pagamentos' && (() => {
+            // ── Totais ──────────────────────────────────────────────────────
+            const totalPagoAlugueres = alugueres
+              .filter(a => a.status === 'concluida')
+              .reduce((s, a) => s + a.valorTotal, 0);
 
-              {/* Cards de resumo */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-center">
-                  <div className="text-[9px] text-zinc-400 uppercase font-bold tracking-wider mb-1">Pago em Alugueres</div>
-                  <div className="text-sm font-black text-white leading-tight mt-1">{totalAlugueresGasto > 0 ? fmt(totalAlugueresGasto) : '—'}</div>
-                </div>
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-center">
-                  <div className="text-[9px] text-zinc-400 uppercase font-bold tracking-wider mb-1">Investido em Compras</div>
-                  <div className="text-sm font-black text-white leading-tight mt-1">{totalComprasGasto > 0 ? fmt(totalComprasGasto) : '—'}</div>
-                </div>
-                <div className={`rounded-2xl p-4 text-center border ${minhasDividas.length > 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-zinc-900 border-zinc-800'}`}>
-                  <div className="text-[9px] text-zinc-400 uppercase font-bold tracking-wider mb-1">Dívidas Abertas</div>
-                  <div className={`text-sm font-black leading-tight mt-1 ${minhasDividas.length > 0 ? 'text-red-400' : 'text-white'}`}>
-                    {minhasDividas.length > 0 ? fmt(minhasDividas.reduce((s, d) => s + (d.valorTotal - d.valorPago), 0)) : '—'}
-                  </div>
-                </div>
-              </div>
+            const totalPagoCompras = compras.reduce((s, c) => {
+              const prest = c.prestacoes ?? [];
+              if (prest.length > 0)
+                return s + prest.filter(p => p.paga).reduce((ps, p) => ps + (p.valorPago ?? p.valor), 0);
+              return s + (c.prestacoesPagas ?? 0) * c.deposito;
+            }, 0);
 
-              {/* Dívidas */}
-              {minhasDividas.length > 0 && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
-                    <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" />
-                    <span className="text-[10px] font-black text-red-400 uppercase tracking-widest">Dívidas em Aberto</span>
-                    <span className="text-[10px] text-zinc-500 font-bold ml-auto">{minhasDividas.length}</span>
+            const totalPagoXitique = membro ? membro.mesesPagos.length * quotaMT : 0;
+            const totalPago = totalPagoAlugueres + totalPagoCompras + totalPagoXitique;
+
+            const totalDividaCompras = compras.reduce((s, c) => {
+              const prest = c.prestacoes ?? [];
+              if (prest.length > 0)
+                return s + prest.filter(p => !p.paga).reduce((ps, p) => ps + p.valor, 0);
+              const restam = (c.totalPrestacoes ?? 0) - (c.prestacoesPagas ?? 0);
+              return s + restam * c.deposito;
+            }, 0);
+            const totalDividaOutras = minhasDividas.reduce((s, d) => s + (d.valorTotal - d.valorPago), 0);
+            const totalDivida = totalDividaCompras + totalDividaOutras;
+
+            // ── Próxima prestação ────────────────────────────────────────────
+            const proximaPrestacao = compras
+              .flatMap(c => {
+                const prox = (c.prestacoes ?? []).find(p => !p.paga);
+                if (!prox) return [];
+                return [{ valor: prox.valor, data: prox.dataVencimento, veiculo: getVehicleName(c.vehicleId) }];
+              })
+              .sort((a, b) => a.data.localeCompare(b.data))[0] ?? null;
+
+            const totalPrestacoesPagas   = compras.reduce((s, c) => s + (c.prestacoesPagas ?? 0), 0);
+            const totalPrestacoesTotais  = compras.reduce((s, c) => s + (c.totalPrestacoes ?? 0), 0);
+            const viaturasLiquidadas     = compras.filter(c => c.status === 'liquidada').length;
+
+            // ── Evolução mensal (12 meses) ───────────────────────────────────
+            const hojeD = new Date();
+            const mesesEvol = Array.from({ length: 12 }, (_, idx) => {
+              const d = new Date(hojeD.getFullYear(), hojeD.getMonth() - (11 - idx), 1);
+              const mesKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+              let valor = 0;
+              alugueres.filter(a => a.status === 'concluida' && a.dataFim.startsWith(mesKey))
+                .forEach(a => { valor += a.valorTotal; });
+              compras.forEach(c => {
+                (c.prestacoes ?? [])
+                  .filter(p => p.paga && p.dataPagamento?.startsWith(mesKey))
+                  .forEach(p => { valor += p.valorPago ?? p.valor; });
+              });
+              return { label: MESES[d.getMonth()], valor, isNow: idx === 11 };
+            });
+            const maxEvol = Math.max(...mesesEvol.map(m => m.valor), 1);
+
+            // ── Prestação mensal por viatura ────────────────────────────────
+            const prestMensais = compras
+              .filter(c => (c.totalPrestacoes ?? 0) > 0 && (c.totalPrestacoes ?? 0) > (c.prestacoesPagas ?? 0))
+              .map(c => {
+                const prox = (c.prestacoes ?? []).find(p => !p.paga);
+                return {
+                  nome:   getVehicleName(c.vehicleId),
+                  valor:  prox?.valor ?? c.deposito,
+                  data:   prox?.dataVencimento ?? '',
+                  pagas:  c.prestacoesPagas ?? 0,
+                  total:  c.totalPrestacoes ?? 0,
+                };
+              });
+
+            // ── Histórico de pagamentos (todos os eventos pagos) ─────────────
+            type PagEvt = { label: string; sub: string; valor: number; data: string; tipo: 'aluguer' | 'compra' | 'xitique' | 'divida' };
+            const historico: PagEvt[] = [];
+            alugueres.filter(a => a.status === 'concluida').forEach(a => {
+              historico.push({ label: getVehicleName(a.vehicleId), sub: 'Aluguer concluído', valor: a.valorTotal, data: a.dataFim, tipo: 'aluguer' });
+            });
+            compras.forEach(c => {
+              (c.prestacoes ?? []).filter(p => p.paga && p.dataPagamento).forEach(p => {
+                historico.push({ label: getVehicleName(c.vehicleId), sub: `Prestação ${p.numero}`, valor: p.valorPago ?? p.valor, data: p.dataPagamento!, tipo: 'compra' });
+              });
+            });
+            if (membro) {
+              (membro.mesesPagos as number[]).forEach(mes => {
+                const reg = (membro.pagamentos as Record<number, { data: string; metodo?: string }>)?.[mes];
+                historico.push({ label: grupoDoUser?.nome ?? 'Xitique', sub: `Quota mês ${mes}`, valor: quotaMT, data: reg?.data ?? '', tipo: 'xitique' });
+              });
+            }
+            historico.sort((a, b) => b.data.localeCompare(a.data));
+
+            const tipoCls: Record<PagEvt['tipo'], string> = {
+              aluguer: 'bg-blue-400/10 text-blue-400 border-blue-400/20',
+              compra:  'bg-purple-400/10 text-purple-400 border-purple-400/20',
+              xitique: 'bg-amber-400/10 text-amber-400 border-amber-400/20',
+              divida:  'bg-red-400/10 text-red-400 border-red-400/20',
+            };
+            const tipoLabel: Record<PagEvt['tipo'], string> = {
+              aluguer: 'Aluguer', compra: 'Compra', xitique: 'Xitique', divida: 'Dívida',
+            };
+
+            return (
+              <div className="space-y-4">
+
+                {/* ── KPI cards ─────────────────────────────────────────────── */}
+                <div className="grid grid-cols-2 gap-3">
+
+                  {/* Total Pago */}
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+                    <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Total Pago</div>
+                    <div className="text-lg font-black text-emerald-400">{totalPago > 0 ? fmt(totalPago) : '—'}</div>
+                    <div className="mt-1.5 space-y-0.5">
+                      {totalPagoAlugueres > 0 && <div className="flex items-center justify-between"><span className="text-[10px] text-white/60">Alugueres</span><span className="text-[10px] text-white font-bold">{fmt(totalPagoAlugueres)}</span></div>}
+                      {totalPagoCompras   > 0 && <div className="flex items-center justify-between"><span className="text-[10px] text-white/60">Compras</span><span className="text-[10px] text-white font-bold">{fmt(totalPagoCompras)}</span></div>}
+                      {totalPagoXitique   > 0 && <div className="flex items-center justify-between"><span className="text-[10px] text-white/60">Xitique</span><span className="text-[10px] text-white font-bold">{fmt(totalPagoXitique)}</span></div>}
+                    </div>
                   </div>
-                  <div className="divide-y divide-zinc-800">
-                    {minhasDividas.map(d => (
-                      <div key={d.id} className="flex items-center justify-between gap-3 px-4 py-3.5">
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-white truncate">{d.descricao}</p>
-                          <p className="text-xs text-zinc-400 mt-0.5">
-                            Em aberto: <span className="text-red-400 font-black">{fmt(d.valorTotal - d.valorPago)}</span>
-                            {d.dataVencimento ? ` · Vence ${d.dataVencimento}` : ''}
-                          </p>
-                        </div>
-                        <span className="text-[10px] font-bold border rounded-full px-2 py-0.5 shrink-0 bg-red-400/10 text-red-400 border-red-400/20">
-                          Em aberto
-                        </span>
+
+                  {/* Total em Dívida */}
+                  <div className={`rounded-2xl p-4 border ${totalDivida > 0 ? 'bg-red-500/8 border-red-500/20' : 'bg-zinc-900 border-zinc-800'}`}>
+                    <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Total em Dívida</div>
+                    <div className={`text-lg font-black ${totalDivida > 0 ? 'text-red-400' : 'text-white'}`}>{totalDivida > 0 ? fmt(totalDivida) : '—'}</div>
+                    {totalDivida > 0 && (
+                      <div className="mt-1.5 space-y-0.5">
+                        {totalDividaCompras > 0 && <div className="flex items-center justify-between"><span className="text-[10px] text-white/60">Prestações</span><span className="text-[10px] text-white font-bold">{fmt(totalDividaCompras)}</span></div>}
+                        {totalDividaOutras  > 0 && <div className="flex items-center justify-between"><span className="text-[10px] text-white/60">Outras</span><span className="text-[10px] text-white font-bold">{fmt(totalDividaOutras)}</span></div>}
                       </div>
-                    ))}
+                    )}
+                    {totalDivida === 0 && <div className="text-[10px] text-emerald-400 mt-1">Sem dívidas em aberto</div>}
+                  </div>
+
+                  {/* Próxima Prestação */}
+                  <div className={`rounded-2xl p-4 border ${proximaPrestacao ? 'bg-amber-500/8 border-amber-500/20' : 'bg-zinc-900 border-zinc-800'}`}>
+                    <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Próxima Prestação</div>
+                    {proximaPrestacao ? (
+                      <>
+                        <div className="text-lg font-black text-amber-400">{fmt(proximaPrestacao.valor)}</div>
+                        <div className="text-[10px] text-white mt-0.5 truncate">{proximaPrestacao.veiculo}</div>
+                        <div className="text-[10px] text-white">Vence: {fmtData(proximaPrestacao.data)}</div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-lg font-black text-white">—</div>
+                        <div className="text-[10px] text-white mt-0.5">Sem prestações pendentes</div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Prestações Pagas */}
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+                    <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Prestações Pagas</div>
+                    <div className="text-lg font-black text-white">
+                      {totalPrestacoesPagas}
+                      {totalPrestacoesTotais > 0 && <span className="text-sm text-white/60 font-bold"> / {totalPrestacoesTotais}</span>}
+                    </div>
+                    {viaturasLiquidadas > 0 && (
+                      <div className="text-[10px] text-emerald-400 mt-1">{viaturasLiquidadas} viatura{viaturasLiquidadas > 1 ? 's' : ''} liquidada{viaturasLiquidadas > 1 ? 's' : ''}</div>
+                    )}
+                    {totalPrestacoesTotais === 0 && <div className="text-[10px] text-white mt-1">Sem planos de prestação</div>}
                   </div>
                 </div>
-              )}
 
-              {/* Prestações pendentes */}
-              {prestacoesPendentes.length > 0 && (
+                {/* ── Gráfico: Evolução de pagamentos ───────────────────────── */}
                 <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
                   <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
-                    <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
-                    <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Prestações Pendentes</span>
-                    <span className="text-[10px] text-zinc-500 font-bold ml-auto">{prestacoesPendentes.length}</span>
+                    <span className="text-amber-400"><IcoBarChart /></span>
+                    <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Evolução de Pagamentos</span>
+                    <span className="text-[10px] text-white ml-auto">Últimos 12 meses</span>
                   </div>
-                  <div className="divide-y divide-zinc-800">
-                    {prestacoesPendentes.map(c => {
-                      const restam = (c.totalPrestacoes ?? 0) - (c.prestacoesPagas ?? 0);
-                      const proximaPrest = c.prestacoes?.find(p => !p.paga);
-                      return (
-                        <div key={c.id} className="px-4 py-3.5">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="text-sm font-bold text-white truncate">{getVehicleName(c.vehicleId)}</p>
-                              <p className="text-xs text-zinc-400 mt-0.5">
-                                {restam} prestação{restam > 1 ? 'ões' : ''} em falta
-                                {proximaPrest?.dataVencimento ? ` · Próxima: ${fmtData(proximaPrest.dataVencimento)}` : ''}
-                              </p>
+                  <div className="px-4 pt-4 pb-3">
+                    {mesesEvol.every(m => m.valor === 0) ? (
+                      <div className="flex flex-col items-center justify-center h-24 gap-1">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="9" width="4" height="12"/><rect x="10" y="5" width="4" height="16"/><rect x="17" y="1" width="4" height="20"/></svg>
+                        <span className="text-xs text-white">Sem dados de pagamento nos últimos 12 meses</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-end gap-1 h-24">
+                          {mesesEvol.map((m, i) => {
+                            const pct = maxEvol > 0 ? (m.valor / maxEvol) * 100 : 0;
+                            return (
+                              <div key={i} className="flex-1 flex flex-col items-center gap-0.5 group relative">
+                                {m.valor > 0 && (
+                                  <div className="absolute bottom-0 left-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                                    <div className="bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5 text-[9px] text-white font-bold whitespace-nowrap -translate-y-6 mx-auto w-fit">
+                                      {fmt(m.valor)}
+                                    </div>
+                                  </div>
+                                )}
+                                <div className="w-full flex flex-col justify-end" style={{ height: '76px' }}>
+                                  {m.valor > 0 ? (
+                                    <div
+                                      className={`w-full rounded-t transition-all ${m.isNow ? 'bg-amber-500' : 'bg-zinc-700 group-hover:bg-zinc-600'}`}
+                                      style={{ height: `${Math.max(pct, 6)}%` }}
+                                    />
+                                  ) : (
+                                    <div className="w-full h-0.5 bg-zinc-800/60 rounded mt-auto" />
+                                  )}
+                                </div>
+                                <span className={`text-[8px] font-bold leading-none ${m.isNow ? 'text-amber-400' : 'text-white/50'}`}>{m.label}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="flex items-center gap-3 mt-3 pt-3 border-t border-zinc-800/60">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-sm bg-amber-500" />
+                            <span className="text-[10px] text-white">Mês actual</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-sm bg-zinc-700" />
+                            <span className="text-[10px] text-white">Meses anteriores</span>
+                          </div>
+                          <span className="ml-auto text-[10px] text-white">Total 12m: <span className="text-white font-black">{fmt(mesesEvol.reduce((s, m) => s + m.valor, 0))}</span></span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── Gráfico: Prestação mensal por viatura ─────────────────── */}
+                {prestMensais.length > 0 && (
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
+                      <span className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />
+                      <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Prestação Mensal</span>
+                      <span className="text-[10px] text-white ml-auto">Por viatura</span>
+                    </div>
+                    <div className="divide-y divide-zinc-800/50">
+                      {prestMensais.map((p, i) => {
+                        const progPct = p.total > 0 ? (p.pagas / p.total) * 100 : 0;
+                        return (
+                          <div key={i} className="px-4 py-3.5">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="min-w-0">
+                                <p className="text-xs font-black text-white truncate">{p.nome}</p>
+                                <p className="text-[10px] text-white mt-0.5">
+                                  {p.pagas}/{p.total} prestações
+                                  {p.data && ` · Próxima: ${fmtData(p.data)}`}
+                                </p>
+                              </div>
+                              <span className="text-sm font-black text-amber-400 shrink-0 ml-3">
+                                {fmt(p.valor)}<span className="text-[10px] text-white font-bold">/mês</span>
+                              </span>
                             </div>
-                            <div className="text-right shrink-0">
-                              <p className="text-sm font-black text-amber-400">{fmt(proximaPrest?.valor ?? c.deposito)}</p>
-                              <p className="text-[10px] text-zinc-500">por mês</p>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                                <div className="h-full bg-amber-500 rounded-full transition-all" style={{ width: `${progPct}%` }} />
+                              </div>
+                              <span className="text-[10px] text-white font-bold shrink-0 tabular-nums">{Math.round(progPct)}%</span>
                             </div>
                           </div>
-                          <div className="mt-2 flex gap-1">
-                            {Array.from({ length: c.totalPrestacoes ?? 0 }).map((_, i) => (
-                              <div key={i} className={`flex-1 h-1 rounded-full ${i < (c.prestacoesPagas ?? 0) ? 'bg-amber-500' : 'bg-zinc-700'}`} />
-                            ))}
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Dívidas em aberto ─────────────────────────────────────── */}
+                {minhasDividas.length > 0 && (
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
+                      <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" />
+                      <span className="text-[10px] font-black text-red-400 uppercase tracking-widest">Dívidas em Aberto</span>
+                      <span className="text-[10px] text-white font-bold ml-auto">{minhasDividas.length}</span>
+                    </div>
+                    <div className="divide-y divide-zinc-800">
+                      {minhasDividas.map(d => (
+                        <div key={d.id} className="flex items-center justify-between gap-3 px-4 py-3.5">
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-white truncate">{d.descricao}</p>
+                            <p className="text-xs text-white mt-0.5">
+                              Em aberto: <span className="text-red-400 font-black">{fmt(d.valorTotal - d.valorPago)}</span>
+                              {d.dataVencimento ? ` · Vence ${d.dataVencimento}` : ''}
+                            </p>
+                          </div>
+                          <span className="text-[10px] font-bold border rounded-full px-2 py-0.5 shrink-0 bg-red-400/10 text-red-400 border-red-400/20">
+                            Em aberto
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Prestações pendentes ───────────────────────────────────── */}
+                {prestacoesPendentes.length > 0 && (
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                      <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Prestações Pendentes</span>
+                      <span className="text-[10px] text-white font-bold ml-auto">{prestacoesPendentes.length}</span>
+                    </div>
+                    <div className="divide-y divide-zinc-800">
+                      {prestacoesPendentes.map(c => {
+                        const restam = (c.totalPrestacoes ?? 0) - (c.prestacoesPagas ?? 0);
+                        const proximaPrest = c.prestacoes?.find(p => !p.paga);
+                        return (
+                          <div key={c.id} className="px-4 py-3.5">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-bold text-white truncate">{getVehicleName(c.vehicleId)}</p>
+                                <p className="text-xs text-white mt-0.5">
+                                  {restam} prestação{restam > 1 ? 'ões' : ''} em falta
+                                  {proximaPrest?.dataVencimento ? ` · Próxima: ${fmtData(proximaPrest.dataVencimento)}` : ''}
+                                </p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-sm font-black text-amber-400">{fmt(proximaPrest?.valor ?? c.deposito)}</p>
+                                <p className="text-[10px] text-white">por mês</p>
+                              </div>
+                            </div>
+                            <div className="mt-2 flex gap-1">
+                              {Array.from({ length: c.totalPrestacoes ?? 0 }).map((_, i) => (
+                                <div key={i} className={`flex-1 h-1 rounded-full ${i < (c.prestacoesPagas ?? 0) ? 'bg-amber-500' : 'bg-zinc-700'}`} />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Histórico de pagamentos ────────────────────────────────── */}
+                {historico.length > 0 && (
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
+                      <IcoHistory />
+                      <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Histórico de Pagamentos</span>
+                      <span className="text-[10px] text-white font-bold ml-auto">{historico.length}</span>
+                    </div>
+                    <div className="divide-y divide-zinc-800/50 max-h-72 overflow-y-auto">
+                      {historico.map((ev, i) => (
+                        <div key={i} className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/30 transition-colors">
+                          <div className="flex flex-col items-center shrink-0">
+                            <div className={`w-1.5 h-1.5 rounded-full ${ev.tipo === 'aluguer' ? 'bg-blue-400' : ev.tipo === 'compra' ? 'bg-purple-400' : ev.tipo === 'xitique' ? 'bg-amber-400' : 'bg-red-400'}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-white truncate">{ev.label}</p>
+                            <p className="text-[10px] text-white">{ev.sub}{ev.data ? ` · ${ev.data.length === 10 ? fmtData(ev.data) : ev.data}` : ''}</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-xs font-black text-emerald-400">{fmt(ev.valor)}</p>
+                            <span className={`text-[9px] font-bold border rounded-full px-1.5 py-0.5 ${tipoCls[ev.tipo]}`}>{tipoLabel[ev.tipo]}</span>
                           </div>
                         </div>
-                      );
-                    })}
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-between px-4 py-2.5 border-t border-zinc-800 bg-zinc-800/30">
+                      <span className="text-[10px] text-white font-bold">Total do histórico</span>
+                      <span className="text-xs font-black text-emerald-400">{fmt(historico.reduce((s, e) => s + e.valor, 0))}</span>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Estado vazio */}
-              {minhasDividas.length === 0 && prestacoesPendentes.length === 0 && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center">
-                  <div className="text-emerald-400 text-2xl mb-2">✅</div>
-                  <p className="text-white text-sm font-bold">Sem pendências financeiras</p>
-                  <p className="text-zinc-400 text-xs mt-1">Todos os pagamentos estão em dia.</p>
-                </div>
-              )}
-            </div>
-          )}
+                {/* ── Estado vazio ───────────────────────────────────────────── */}
+                {totalPago === 0 && totalDivida === 0 && historico.length === 0 && (
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center">
+                    <div className="text-emerald-400 text-2xl mb-2">✅</div>
+                    <p className="text-white text-sm font-bold">Sem movimentos financeiros</p>
+                    <p className="text-white text-xs mt-1">As suas reservas e compras aparecem aqui após registo.</p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* ══ XITIQUE ═══════════════════════════════════════════════════════ */}
           {section === 'xitique' && (

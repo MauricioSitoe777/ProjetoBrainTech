@@ -277,6 +277,9 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
   const [updating,        setUpdating]        = useState<string | null>(null);
   const [modalAberto,     setModalAberto]     = useState<string | null>(null);
+  const [gerarConfig,     setGerarConfig]     = useState<{ id: string; semEntrada: boolean } | null>(null);
+  const [gerarData,       setGerarData]       = useState('');
+  const [gerarNum,        setGerarNum]        = useState(12);
 
   // Sync tab + status with URL on navigation
   React.useEffect(() => {
@@ -309,13 +312,26 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
     setTimeout(() => setUpdating(null), 800);
   };
 
-  const iniciarPrestacoes = (id: string, semEntrada = false) => {
-    if (updating === id) return;
+  const openGerarConfig = (id: string, semEntrada: boolean) => {
+    const r = reservations.find(res => res.id === id);
+    const n = r?.totalPrestacoes && r.totalPrestacoes > 0 ? r.totalPrestacoes : 12;
+    const nextMonth = new Date();
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    nextMonth.setDate(1);
+    setGerarData(nextMonth.toISOString().split('T')[0]);
+    setGerarNum(n);
+    setGerarConfig({ id, semEntrada });
+  };
+
+  const confirmarGerar = () => {
+    if (!gerarConfig || updating === gerarConfig.id) return;
+    const { id, semEntrada } = gerarConfig;
     setUpdating(id);
-    gerarPrestacoes(id, semEntrada);
+    gerarPrestacoes(id, semEntrada, gerarData || undefined, gerarNum);
+    setGerarConfig(null);
     setTimeout(() => {
       setUpdating(null);
-      setModalAberto(id); // abre o modal logo após gerar
+      setModalAberto(id);
     }, 600);
   };
 
@@ -327,7 +343,10 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
   };
 
   const compraReservations = useMemo(() =>
-    reservations.filter(r => compraIds.has(r.vehicleId)), [reservations]);
+    reservations
+      .filter(r => compraIds.has(r.vehicleId))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [reservations]);
 
   const kpis = useMemo(() => {
     const volume = compraReservations.filter(r => r.status !== 'cancelada').reduce((s, r) => s + r.valorTotal, 0);
@@ -529,85 +548,181 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                   <div
                     key={r.id}
                     id={isFirstOfStatus ? `compra-status-${r.status}` : undefined}
-                    className={`bg-zinc-900 border rounded-xl px-5 py-4 flex flex-wrap items-center justify-between gap-3 transition-all ${
+                    className={`bg-zinc-900 border rounded-xl px-5 py-4 space-y-3 transition-all ${
                       isAtraso      ? 'border-red-500/30 bg-red-500/5' :
                       isHighlighted ? 'border-amber-400/50 ring-1 ring-amber-400/20' :
+                      gerarConfig?.id === r.id ? 'border-blue-500/30' :
                       'border-zinc-800'
                     }`}
                   >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-white font-black text-sm">{r.clientName}</p>
-                        <span className={`text-xs border rounded-md px-2 py-0.5 font-semibold ${st.className}`}>{st.label}</span>
-                        {isAtraso && (
-                          <span className="text-[10px] font-black text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-md animate-pulse">
-                            ⚠ ATRASO
-                          </span>
-                        )}
+                    {/* ── Linha de info + botões ── */}
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-white font-black text-sm">{r.clientName}</p>
+                          <span className={`text-xs border rounded-md px-2 py-0.5 font-semibold ${st.className}`}>{st.label}</span>
+                          {isAtraso && (
+                            <span className="text-[10px] font-black text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-md animate-pulse">
+                              ⚠ ATRASO
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-zinc-400 mt-0.5">
+                          {vehicleName(r.vehicleId)} · {fmt(r.valorTotal)}
+                          {total > 0 && ` · Prestações ${pagas}/${total}`}
+                        </p>
                       </div>
-                      <p className="text-xs text-zinc-400 mt-0.5">
-                        {vehicleName(r.vehicleId)} · {fmt(r.valorTotal)}
-                        {total > 0 && ` · Prestações ${pagas}/${total}`}
-                      </p>
+
+                      <div className="flex flex-wrap gap-2 shrink-0">
+                        {r.status === 'pendente' && (
+                          <button disabled={isBlocked} onClick={() => advance(r.id, 'compra_aprovada')}
+                            className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-emerald-400/10 text-emerald-400 border border-emerald-400/20 hover:bg-emerald-400/20 disabled:opacity-50 transition-all">
+                            Aprovar Compra
+                          </button>
+                        )}
+                        {r.status === 'compra_aprovada' && (<>
+                          <button disabled={isBlocked} onClick={() => advance(r.id, 'entrada_paga')}
+                            className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-teal-400/10 text-teal-400 border border-teal-400/20 hover:bg-teal-400/20 disabled:opacity-50 transition-all">
+                            Entrada Recebida
+                          </button>
+                          <button disabled={isBlocked} onClick={() => openGerarConfig(r.id, true)}
+                            className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-zinc-700 text-zinc-300 border border-zinc-600 hover:bg-zinc-600 disabled:opacity-50 transition-all"
+                            title="Funcionário público — sem entrada">
+                            Sem Entrada
+                          </button>
+                        </>)}
+                        {r.status === 'entrada_paga' && (
+                          gerarConfig?.id !== r.id
+                            ? <button disabled={isBlocked} onClick={() => openGerarConfig(r.id, false)}
+                                className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-blue-400/10 text-blue-400 border border-blue-400/20 hover:bg-blue-400/20 disabled:opacity-50 transition-all">
+                                Definir Plano de Prestações
+                              </button>
+                            : <button onClick={() => setGerarConfig(null)}
+                                className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-zinc-800 text-zinc-400 border border-zinc-700 hover:bg-zinc-700 transition-all">
+                                Cancelar
+                              </button>
+                        )}
+                        {(r.status === 'em_prestacao' || r.status === 'prestacao_atraso') && (<>
+                          {allPaid && (
+                            <button disabled={isBlocked} onClick={() => advance(r.id, 'liquidada')}
+                              className="text-xs px-3 py-1.5 rounded-lg font-black bg-emerald-500 text-white hover:bg-emerald-400 disabled:opacity-50 transition-all">
+                              ✓ Liquidar Contrato
+                            </button>
+                          )}
+                          <button onClick={() => setModalAberto(r.id)}
+                            className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${
+                              isAtraso
+                                ? 'bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/25'
+                                : 'bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20'
+                            }`}>
+                            Gerir Prestações
+                          </button>
+                          {isAtraso && (
+                            <button disabled={isBlocked} onClick={() => advance(r.id, 'em_prestacao')}
+                              className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-blue-400/10 text-blue-400 border border-blue-400/20 hover:bg-blue-400/20 disabled:opacity-50 transition-all">
+                              Regularizar
+                            </button>
+                          )}
+                          {!isAtraso && hasOverdue && (
+                            <button disabled={isBlocked} onClick={() => advance(r.id, 'prestacao_atraso')}
+                              className="text-xs px-3 py-1.5 rounded-lg font-semibold border border-red-500/30 text-red-400 hover:bg-red-500/10 disabled:opacity-50 transition-all">
+                              ⚠ Marcar Atraso
+                            </button>
+                          )}
+                        </>)}
+                        <button disabled={isBlocked} onClick={() => cancelReservation(r.id)}
+                          className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-zinc-800 text-zinc-400 border border-zinc-700 hover:bg-zinc-700 disabled:opacity-50 transition-all">
+                          Cancelar
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-2 shrink-0">
-                      {r.status === 'pendente' && (
-                        <button disabled={isBlocked} onClick={() => advance(r.id, 'compra_aprovada')}
-                          className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-emerald-400/10 text-emerald-400 border border-emerald-400/20 hover:bg-emerald-400/20 disabled:opacity-50 transition-all">
-                          Aprovar Compra
-                        </button>
-                      )}
-                      {r.status === 'compra_aprovada' && (<>
-                        <button disabled={isBlocked} onClick={() => advance(r.id, 'entrada_paga')}
-                          className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-teal-400/10 text-teal-400 border border-teal-400/20 hover:bg-teal-400/20 disabled:opacity-50 transition-all">
-                          Entrada Recebida
-                        </button>
-                        <button disabled={isBlocked} onClick={() => iniciarPrestacoes(r.id, true)}
-                          className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-zinc-700 text-zinc-300 border border-zinc-600 hover:bg-zinc-600 disabled:opacity-50 transition-all"
-                          title="Funcionário público — sem entrada">
-                          Sem Entrada
-                        </button>
-                      </>)}
-                      {r.status === 'entrada_paga' && (
-                        <button disabled={isBlocked} onClick={() => iniciarPrestacoes(r.id, false)}
-                          className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-blue-400/10 text-blue-400 border border-blue-400/20 hover:bg-blue-400/20 disabled:opacity-50 transition-all">
-                          Gerar Plano de Prestações
-                        </button>
-                      )}
-                      {(r.status === 'em_prestacao' || r.status === 'prestacao_atraso') && (<>
-                        {allPaid && (
-                          <button disabled={isBlocked} onClick={() => advance(r.id, 'liquidada')}
-                            className="text-xs px-3 py-1.5 rounded-lg font-black bg-emerald-500 text-white hover:bg-emerald-400 disabled:opacity-50 transition-all">
-                            ✓ Liquidar Contrato
-                          </button>
-                        )}
-                        <button onClick={() => setModalAberto(r.id)}
-                          className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                            isAtraso
-                              ? 'bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/25'
-                              : 'bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20'
-                          }`}>
-                          Gerir Prestações
-                        </button>
-                        {isAtraso && (
-                          <button disabled={isBlocked} onClick={() => advance(r.id, 'em_prestacao')}
-                            className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-blue-400/10 text-blue-400 border border-blue-400/20 hover:bg-blue-400/20 disabled:opacity-50 transition-all">
-                            Regularizar
-                          </button>
-                        )}
-                        {!isAtraso && hasOverdue && (
-                          <button disabled={isBlocked} onClick={() => advance(r.id, 'prestacao_atraso')}
-                            className="text-xs px-3 py-1.5 rounded-lg font-semibold border border-red-500/30 text-red-400 hover:bg-red-500/10 disabled:opacity-50 transition-all">
-                            ⚠ Marcar Atraso
-                          </button>
-                        )}
-                      </>)}
-                      <button disabled={isBlocked} onClick={() => cancelReservation(r.id)}
-                        className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-zinc-800 text-zinc-400 border border-zinc-700 hover:bg-zinc-700 disabled:opacity-50 transition-all">
-                        Cancelar
-                      </button>
-                    </div>
+                    {/* ── Painel de configuração do plano ── */}
+                    {gerarConfig?.id === r.id && (() => {
+                      const startD = gerarData ? new Date(gerarData + 'T00:00:00') : null;
+                      const preview = startD
+                        ? Array.from({ length: Math.min(3, gerarNum) }, (_, i) => {
+                            const d = new Date(startD.getFullYear(), startD.getMonth() + i, startD.getDate());
+                            return d.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' });
+                          })
+                        : [];
+                      const entradaPaga = gerarConfig.semEntrada ? 0 : (r.deposito ?? 0);
+                      const restante = Math.max(0, r.valorTotal - entradaPaga);
+                      const valorPrest = gerarNum > 0 ? Math.round(restante / gerarNum) : 0;
+
+                      return (
+                        <div className="border-t border-blue-500/20 pt-3 space-y-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Configurar Plano de Prestações</span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-[10px] text-white font-bold block mb-1">Data da 1ª Prestação</label>
+                              <input
+                                type="date"
+                                value={gerarData}
+                                min={today}
+                                onChange={e => setGerarData(e.target.value)}
+                                className="w-full bg-zinc-800 border border-zinc-700 focus:border-blue-500 text-white rounded-lg px-3 py-2 text-xs outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-white font-bold block mb-1">Nº de Prestações</label>
+                              <input
+                                type="number"
+                                min={1} max={60}
+                                value={gerarNum}
+                                onChange={e => setGerarNum(Math.max(1, parseInt(e.target.value) || 1))}
+                                className="w-full bg-zinc-800 border border-zinc-700 focus:border-blue-500 text-white rounded-lg px-3 py-2 text-xs outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Resumo financeiro */}
+                          <div className="bg-zinc-800/50 rounded-xl px-4 py-3 flex flex-wrap gap-4 text-xs">
+                            <span className="text-white/60">Valor por prestação: <span className="text-amber-400 font-black">{fmt(valorPrest)}</span></span>
+                            {gerarConfig.semEntrada && <span className="text-blue-400 font-bold">· Sem entrada</span>}
+                            {!gerarConfig.semEntrada && r.deposito > 0 && <span className="text-white/60">Entrada: <span className="text-teal-400 font-black">{fmt(r.deposito)}</span></span>}
+                            <span className="text-white/60">Total: <span className="text-white font-black">{fmt(r.valorTotal)}</span></span>
+                          </div>
+
+                          {/* Preview das primeiras datas */}
+                          {preview.length > 0 && (
+                            <div>
+                              <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider mb-1.5">Primeiras datas</p>
+                              <div className="flex flex-wrap gap-2">
+                                {preview.map((d, i) => (
+                                  <span key={i} className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg px-2.5 py-1 text-xs">
+                                    <span className="w-4 h-4 rounded-full bg-blue-500/20 text-blue-400 text-[9px] font-black flex items-center justify-center shrink-0">{i + 1}</span>
+                                    <span className="text-white font-bold">{d}</span>
+                                    <span className="text-white/50 tabular-nums">{fmt(valorPrest)}</span>
+                                  </span>
+                                ))}
+                                {gerarNum > 3 && (
+                                  <span className="text-[10px] text-white/40 flex items-center px-2">+{gerarNum - 3} mais</span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex gap-2">
+                            <button
+                              disabled={!gerarData || gerarNum < 1 || isBlocked}
+                              onClick={confirmarGerar}
+                              className="text-xs px-4 py-2 rounded-lg font-black bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                            >
+                              Gerar Plano e Notificar Cliente
+                            </button>
+                            <button onClick={() => setGerarConfig(null)}
+                              className="text-xs px-3 py-2 rounded-lg font-semibold bg-zinc-800 text-zinc-400 border border-zinc-700 hover:bg-zinc-700 transition-all">
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
