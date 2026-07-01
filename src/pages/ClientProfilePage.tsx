@@ -1870,7 +1870,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                   </div>
                   <div class="info-box">
                     <div class="info-label">Destinatário</div>
-                    <div class="info-value">${fullUser?.name ?? authUser?.name ?? '—'}</div>
+                    <div class="info-value">${fullUser?.nome ?? authUser?.nome ?? '—'}</div>
                     <div class="info-sub">${fullUser?.email ?? authUser?.email ?? '—'}</div>
                   </div>
                 </div>

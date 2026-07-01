@@ -82,7 +82,7 @@ export function DashboardPage() {
     const totalUsers    = users.length;
     const activeUsers   = users.filter(u => u.status === 'ativo').length;
     const adminUsers    = users.filter(u => u.role === 'admin').length;
-    const clientUsers   = users.filter(u => u.role === 'client').length;
+    const clientUsers   = users.filter(u => u.role === 'cliente').length;
     const pendentUsers  = users.filter(u => u.status === 'pendente').length;
 
     // ── Alugueres ──
@@ -112,8 +112,8 @@ export function DashboardPage() {
     // ── Motoristas ──
     const totalMotoristas = motoristas.length;
     const motorDisp       = motoristas.filter(m => m.status === 'disponivel').length;
-    const motorOcupado    = motoristas.filter(m => m.status === 'em_viagem' || m.status === 'ocupado').length;
-    const motorIndisp     = motoristas.filter(m => m.status === 'indisponivel').length;
+    const motorOcupado    = motoristas.filter(m => m.status === 'em_servico').length;
+    const motorIndisp     = motoristas.filter(m => m.status === 'inativo').length;
 
     // ── Visitantes ──
     const totalGuests   = guests.length;
