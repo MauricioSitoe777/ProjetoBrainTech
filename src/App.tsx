@@ -33,6 +33,7 @@ import { AluguerPage } from "./pages/AluguerPage";
 import { CompraPage } from "./pages/CompraPage";
 import { MotoristasProvider } from "./context/MotoristasContext";
 import { MotoristasPage } from "./pages/MotoristasPage";
+import { NotificacoesAdminPage } from "./pages/NotificacoesAdminPage";
 import { AdminSidebar } from "./components/AdminSidebar";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ChangePasswordModal } from "./components/ChangePasswordModal";
@@ -163,7 +164,8 @@ function AppInner() {
           if (path.startsWith("/admin/veiculos"))   return <VehiclesPage />;
           if (path.startsWith("/admin/xitique"))    return <XitiquePage />;
           if (path.startsWith("/admin/financas"))   return <FinancePage />;
-          if (path.startsWith("/admin/motoristas")) return <MotoristasPage />;
+          if (path.startsWith("/admin/motoristas"))     return <MotoristasPage />;
+          if (path.startsWith("/admin/notificacoes"))   return <NotificacoesAdminPage />;
           return <DashboardPage />;
         };
         return (

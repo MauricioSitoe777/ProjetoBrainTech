@@ -121,7 +121,7 @@ export function GuestReviewModal({ guest, onClose }: Props) {
             </div>
             <div>
               <p className="text-white font-black text-sm">{guest.nome}</p>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${STATUS_STYLE[guest.status]}`}>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${STATUS_STYLE[guest.status]}`}>
                 {STATUS_LABEL[guest.status]}
               </span>
             </div>

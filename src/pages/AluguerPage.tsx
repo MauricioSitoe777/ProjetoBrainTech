@@ -194,7 +194,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                 </thead>
                 <tbody className="divide-y divide-zinc-800">
                   {historico.length === 0 && (
-                    <tr><td colSpan={5} className="text-center py-12 text-zinc-500 text-sm">Sem histórico de alugueres ainda</td></tr>
+                    <tr><td colSpan={5} className="text-center py-12 text-white text-sm">Sem histórico de alugueres ainda</td></tr>
                   )}
                   {historico.map(r => {
                     const st = STATUS_CFG[r.status];
@@ -202,16 +202,16 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                       <tr key={r.id} className="hover:bg-zinc-800/30 transition-colors">
                         <td className="px-5 py-4">
                           <p className="text-sm font-semibold text-white">{r.clientName}</p>
-                          <p className="text-xs text-zinc-500">{r.clientPhone ?? r.clientEmail ?? '—'}</p>
+                          <p className="text-xs text-white">{r.clientPhone ?? r.clientEmail ?? '—'}</p>
                         </td>
                         <td className="px-5 py-4 hidden md:table-cell text-sm text-white">{vehicleName(r.vehicleId)}</td>
                         <td className="px-5 py-4">
                           <p className="text-xs text-white tabular-nums">{r.dataInicio} → {r.dataFim}</p>
-                          {r.motivoViagem && <p className="text-[10px] text-zinc-400 mt-0.5 italic">{r.motivoViagem}</p>}
+                          {r.motivoViagem && <p className="text-[10px] text-white mt-0.5 italic">{r.motivoViagem}</p>}
                         </td>
                         <td className="px-5 py-4 hidden sm:table-cell">
                           <p className="text-sm text-white tabular-nums">{r.dataFim}</p>
-                          <p className="text-xs text-zinc-400">{r.horaDevolucao}</p>
+                          <p className="text-xs text-white">{r.horaDevolucao}</p>
                         </td>
                         <td className="px-5 py-4">
                           <span className={`text-xs border rounded-md px-2 py-0.5 font-semibold ${st.className}`}>{st.label}</span>
@@ -222,7 +222,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                 </tbody>
               </table>
               {historico.length > 0 && (
-                <div className="px-5 py-4 border-t border-zinc-800 text-xs text-zinc-500">
+                <div className="px-5 py-4 border-t border-zinc-800 text-xs text-white">
                   {historico.length} registo(s) no histórico
                 </div>
               )}
@@ -236,7 +236,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
           return (
             <div className="space-y-8">
               {totalAcionaveis === 0 && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl py-12 text-center text-zinc-500 text-sm">
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl py-12 text-center text-white text-sm">
                   Sem reservas com acções pendentes
                 </div>
               )}
@@ -256,7 +256,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                       <h3 className={`text-xs font-black uppercase tracking-widest ${grupo.textColor}`}>
                         {grupo.title}
                       </h3>
-                      <span className={`text-[10px] font-black border rounded-full px-2 py-0.5 ${grupo.badge}`}>
+                      <span className={`text-[10px] font-black border rounded-md px-2 py-0.5 ${grupo.badge}`}>
                         {lista.length}
                       </span>
                       <div className="flex-1 h-px bg-zinc-800" />
@@ -279,7 +279,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                               {r.motoristaId && (() => {
                                 const mot = motoristas.find(m => m.id === r.motoristaId);
                                 return mot ? (
-                                  <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-full px-2 py-0.5">
+                                  <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-md px-2 py-0.5">
                                     🧑‍✈️ {mot.nome}
                                   </span>
                                 ) : null;
@@ -303,7 +303,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                                 </div>
                                 <div className="grid grid-cols-3 gap-2 text-[10px]">
                                   <div>
-                                    <p className="text-zinc-500 font-semibold">Total</p>
+                                    <p className="text-white font-semibold">Total</p>
                                     <p className="text-white font-black">{fmt(r.valorTotal)}</p>
                                   </div>
                                   <div>
@@ -342,7 +342,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
           <div className="grid lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1 space-y-4">
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <label className="block text-xs text-zinc-400 mb-2">Viatura</label>
+                <label className="block text-xs text-white mb-2">Viatura</label>
                 <select
                   value={selectedVehicle ?? ''}
                   onChange={e => setSelectedVehicle(e.target.value ? Number(e.target.value) : null)}
@@ -372,7 +372,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
             </div>
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden divide-y divide-zinc-800">
               {blocks.length === 0 && (
-                <p className="text-center py-12 text-zinc-500 text-sm">Sem bloqueios activos</p>
+                <p className="text-center py-12 text-white text-sm">Sem bloqueios activos</p>
               )}
               {blocks.map(b => (
                 <div key={b.id} className="flex items-center justify-between px-4 py-3.5 gap-4">
@@ -381,7 +381,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                     <p className="text-xs text-white">
                       {b.vehicleId === null ? 'Toda a frota' : vehicleName(b.vehicleId)} · {b.dataInicio} → {b.dataFim}
                     </p>
-                    {b.descricao && <p className="text-xs text-zinc-400 mt-0.5 italic">{b.descricao}</p>}
+                    {b.descricao && <p className="text-xs text-white mt-0.5 italic">{b.descricao}</p>}
                   </div>
                   <button
                     onClick={() => removeBlock(b.id)}
@@ -393,7 +393,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
               ))}
             </div>
             {blocks.length > 0 && (
-              <p className="text-xs text-zinc-500">{blocks.length} bloqueio(s) activo(s)</p>
+              <p className="text-xs text-white">{blocks.length} bloqueio(s) activo(s)</p>
             )}
           </div>
         )}

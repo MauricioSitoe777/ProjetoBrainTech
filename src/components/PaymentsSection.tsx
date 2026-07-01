@@ -30,7 +30,7 @@ export default function PaymentsSection({
               <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
           </div>
-          <p className="text-zinc-300 text-[13px] font-medium leading-relaxed">
+          <p className="text-white text-[13px] font-medium leading-relaxed">
             <span className="text-amber-500 font-bold uppercase text-[10px] block mb-0.5">Processo de Pagamento</span>
             O pagamento <span className="text-white font-semibold">não é processado nesta aplicação</span>. Após simular ou reservar, o administrador entrará em contacto para negociar e fornecer as instruções de pagamento seguro.
           </p>

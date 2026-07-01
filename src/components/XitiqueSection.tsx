@@ -165,7 +165,7 @@ export default function XitiqueSection({
                     <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black border bg-amber-500 border-amber-400 text-zinc-950 shrink-0">
                       {s.step}
                     </div>
-                    <p className="text-[13px] font-medium text-zinc-300 leading-snug">{s.text}</p>
+                    <p className="text-[13px] font-medium text-white leading-snug">{s.text}</p>
                   </div>
                 ))}
               </div>
@@ -173,11 +173,11 @@ export default function XitiqueSection({
               {/* Stats */}
               <div className="mt-6 pt-5 border-t border-zinc-800 grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-widest mb-1">Quota Mensal</p>
+                  <p className="text-[10px] font-semibold text-white uppercase tracking-widest mb-1">Quota Mensal</p>
                   <p className="text-xl font-black text-white tabular-nums">{quotaDisplay}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-widest mb-1">Fundo do Grupo</p>
+                  <p className="text-[10px] font-semibold text-white uppercase tracking-widest mb-1">Fundo do Grupo</p>
                   <p className="text-xl font-black text-amber-500 tabular-nums">{premioDisplay}</p>
                 </div>
               </div>

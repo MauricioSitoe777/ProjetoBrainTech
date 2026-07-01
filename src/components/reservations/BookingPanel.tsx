@@ -242,7 +242,7 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
               <p className="text-sm font-bold text-white truncate">Escritório Central</p>
               <p className="text-xs text-zinc-400">Av. Julius Nyerere, Maputo</p>
             </div>
-            <span className="shrink-0 text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full px-2 py-0.5 font-bold">Fixo</span>
+            <span className="shrink-0 text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-md px-2 py-0.5 font-bold">Fixo</span>
           </div>
 
           {dateValidation && !dateValidation.valid && (

@@ -5,7 +5,7 @@ import type { Motorista, MotoristaSatus } from '../types/motorista';
 const STATUS_CFG: Record<MotoristaSatus, { label: string; className: string }> = {
   disponivel:  { label: 'Disponível',   className: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
   em_servico:  { label: 'Em Serviço',   className: 'bg-blue-400/10 text-blue-400 border-blue-400/20' },
-  inativo:     { label: 'Inativo',      className: 'bg-zinc-700 text-zinc-400 border-zinc-600' },
+  inativo:     { label: 'Inativo',      className: 'bg-zinc-700 text-white border-zinc-600' },
 };
 
 const EMPTY = { nome: '', telefone: '', bi: '', carta: '', status: 'disponivel' as MotoristaSatus, observacoes: '' };
@@ -40,20 +40,20 @@ function Modal({ initial, onSave, onClose }: {
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl">
         <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
           <h2 className="text-base font-black text-white">{initial?.id ? 'Editar Motorista' : 'Novo Motorista'}</h2>
-          <button type="button" onClick={onClose} className="text-zinc-400 hover:text-white text-xl leading-none">×</button>
+          <button type="button" onClick={onClose} className="text-white hover:text-white text-xl leading-none">×</button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-xs text-zinc-400 mb-1">Nome completo *</label>
+            <label className="block text-xs text-white mb-1">Nome completo *</label>
             <input value={form.nome} onChange={set('nome')} required placeholder="António Cossa" className={field} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Telefone *</label>
+              <label className="block text-xs text-white mb-1">Telefone *</label>
               <input value={form.telefone} onChange={set('telefone')} required placeholder="+258 84 000 0000" className={field} />
             </div>
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Estado</label>
+              <label className="block text-xs text-white mb-1">Estado</label>
               <select value={form.status} onChange={set('status')} className={field}>
                 <option value="disponivel">Disponível</option>
                 <option value="em_servico">Em Serviço</option>
@@ -63,16 +63,16 @@ function Modal({ initial, onSave, onClose }: {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Nº BI</label>
+              <label className="block text-xs text-white mb-1">Nº BI</label>
               <input value={form.bi} onChange={set('bi')} placeholder="000000000A" className={field} />
             </div>
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Carta de condução</label>
+              <label className="block text-xs text-white mb-1">Carta de condução</label>
               <input value={form.carta} onChange={set('carta')} placeholder="Nº da carta" className={field} />
             </div>
           </div>
           <div>
-            <label className="block text-xs text-zinc-400 mb-1">Observações</label>
+            <label className="block text-xs text-white mb-1">Observações</label>
             <textarea value={form.observacoes} onChange={set('observacoes')} rows={2} placeholder="Notas internas..." className={`${field} resize-none`} />
           </div>
           <div className="flex gap-3 pt-2">
@@ -111,7 +111,7 @@ export function MotoristasPage({ onExit }: { onExit?: () => void }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}>
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-sm w-full text-center space-y-4">
             <p className="text-white font-bold text-sm">Remover motorista?</p>
-            <p className="text-zinc-500 text-xs">Esta acção não pode ser desfeita.</p>
+            <p className="text-white text-xs">Esta acção não pode ser desfeita.</p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmDelete(null)} className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg py-2 text-sm font-semibold">Cancelar</button>
               <button onClick={() => { deleteMotorista(confirmDelete); setConfirmDelete(null); }}
@@ -133,7 +133,7 @@ export function MotoristasPage({ onExit }: { onExit?: () => void }) {
             <div key={k.label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${k.dot}`} />
-                <span className="text-xs text-zinc-400 uppercase font-bold tracking-wide">{k.label}</span>
+                <span className="text-xs text-white uppercase font-bold tracking-wide">{k.label}</span>
               </div>
               <p className={`text-3xl font-black ${k.color}`}>{k.value}</p>
             </div>
@@ -163,7 +163,7 @@ export function MotoristasPage({ onExit }: { onExit?: () => void }) {
             <tbody className="divide-y divide-zinc-800">
               {motoristas.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="text-center py-12 text-zinc-500 text-sm">Sem motoristas registados</td>
+                  <td colSpan={4} className="text-center py-12 text-white text-sm">Sem motoristas registados</td>
                 </tr>
               )}
               {motoristas.map(m => {
@@ -172,14 +172,14 @@ export function MotoristasPage({ onExit }: { onExit?: () => void }) {
                   <tr key={m.id} className="hover:bg-zinc-800/30 transition-colors">
                     <td className="px-5 py-4">
                       <p className="text-sm font-semibold text-white">{m.nome}</p>
-                      <p className="text-xs text-zinc-500">{m.telefone}</p>
-                      {m.observacoes && <p className="text-[10px] text-zinc-600 italic mt-0.5">{m.observacoes}</p>}
+                      <p className="text-xs text-white">{m.telefone}</p>
+                      {m.observacoes && <p className="text-[10px] text-white italic mt-0.5">{m.observacoes}</p>}
                     </td>
                     <td className="px-5 py-4 hidden sm:table-cell">
                       <div className="flex gap-2 flex-wrap">
-                        {m.bi && <span className="text-[10px] bg-zinc-800 border border-zinc-700 text-zinc-400 px-2 py-0.5 rounded-md">BI: {m.bi}</span>}
-                        {m.carta && <span className="text-[10px] bg-zinc-800 border border-zinc-700 text-zinc-400 px-2 py-0.5 rounded-md">Carta: {m.carta}</span>}
-                        {!m.bi && !m.carta && <span className="text-[10px] text-zinc-600 italic">—</span>}
+                        {m.bi && <span className="text-[10px] bg-zinc-800 border border-zinc-700 text-white px-2 py-0.5 rounded-md">BI: {m.bi}</span>}
+                        {m.carta && <span className="text-[10px] bg-zinc-800 border border-zinc-700 text-white px-2 py-0.5 rounded-md">Carta: {m.carta}</span>}
+                        {!m.bi && !m.carta && <span className="text-[10px] text-white italic">—</span>}
                       </div>
                     </td>
                     <td className="px-5 py-4">
@@ -203,7 +203,7 @@ export function MotoristasPage({ onExit }: { onExit?: () => void }) {
             </tbody>
           </table>
           {motoristas.length > 0 && (
-            <div className="px-5 py-4 border-t border-zinc-800 text-xs text-zinc-500">
+            <div className="px-5 py-4 border-t border-zinc-800 text-xs text-white">
               {motoristas.length} motorista(s) registado(s)
             </div>
           )}

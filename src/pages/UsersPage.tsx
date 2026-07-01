@@ -31,7 +31,7 @@ const userStatusConfig = {
 const motoristaStatusConfig: Record<MotoristaSatus, { label: string; dot: string; badge: string }> = {
   disponivel: { label: 'Disponível',  dot: 'bg-emerald-400', badge: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
   em_servico: { label: 'Em Serviço',  dot: 'bg-blue-400',    badge: 'bg-blue-400/10 text-blue-400 border-blue-400/20' },
-  inativo:    { label: 'Inativo',     dot: 'bg-zinc-500',    badge: 'bg-zinc-700 text-zinc-400 border-zinc-600' },
+  inativo:    { label: 'Inativo',     dot: 'bg-zinc-500',    badge: 'bg-zinc-700 text-white border-zinc-600' },
 };
 
 const restrictionConfig = {
@@ -77,7 +77,7 @@ function MotoristaModal({ initial, onSave, onClose }: {
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl">
         <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
           <h2 className="text-base font-black text-white">{initial?.id ? 'Editar Motorista' : 'Novo Motorista'}</h2>
-          <button type="button" onClick={onClose} className="text-zinc-400 hover:text-white text-xl leading-none">×</button>
+          <button type="button" onClick={onClose} className="text-white hover:text-white text-xl leading-none">×</button>
         </div>
         <form onSubmit={e => {
           e.preventDefault();
@@ -85,16 +85,16 @@ function MotoristaModal({ initial, onSave, onClose }: {
           onSave({ nome: form.nome.trim(), telefone: form.telefone.trim(), bi: form.bi.trim() || undefined, carta: form.carta.trim() || undefined, status: form.status, observacoes: form.observacoes.trim() || undefined });
         }} className="p-6 space-y-4">
           <div>
-            <label className="block text-xs text-zinc-400 mb-1">Nome completo *</label>
+            <label className="block text-xs text-white mb-1">Nome completo *</label>
             <input value={form.nome} onChange={set('nome')} required placeholder="António Cossa" className={field} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Telefone *</label>
+              <label className="block text-xs text-white mb-1">Telefone *</label>
               <input value={form.telefone} onChange={set('telefone')} required placeholder="+258 84 000 0000" className={field} />
             </div>
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Estado</label>
+              <label className="block text-xs text-white mb-1">Estado</label>
               <select value={form.status} onChange={set('status')} className={field}>
                 <option value="disponivel">Disponível</option>
                 <option value="em_servico">Em Serviço</option>
@@ -104,16 +104,16 @@ function MotoristaModal({ initial, onSave, onClose }: {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Nº BI</label>
+              <label className="block text-xs text-white mb-1">Nº BI</label>
               <input value={form.bi} onChange={set('bi')} placeholder="000000000A" className={field} />
             </div>
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Carta de condução</label>
+              <label className="block text-xs text-white mb-1">Carta de condução</label>
               <input value={form.carta} onChange={set('carta')} placeholder="Nº da carta" className={field} />
             </div>
           </div>
           <div>
-            <label className="block text-xs text-zinc-400 mb-1">Observações</label>
+            <label className="block text-xs text-white mb-1">Observações</label>
             <textarea value={form.observacoes} onChange={set('observacoes')} rows={2} placeholder="Notas internas..." className={`${field} resize-none`} />
           </div>
           <div className="flex gap-3 pt-2">
@@ -335,7 +335,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                         ? 'bg-amber-500 text-zinc-950 border-amber-500'
                         : isUrgent
                         ? 'bg-zinc-900 text-red-400 border-red-500/40 animate-pulse hover:border-red-500/70 hover:text-red-300'
-                        : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-white'
+                        : 'bg-zinc-900 text-white border-zinc-700 hover:border-zinc-500 hover:text-white'
                     }`}>
                     {sf.label}
                     {sf.badge !== undefined && (
@@ -368,7 +368,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
                     userSub === sf.value
                       ? 'bg-amber-500 text-zinc-950 border-amber-500'
-                      : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-white'
+                      : 'bg-zinc-900 text-white border-zinc-700 hover:border-zinc-500 hover:text-white'
                   }`}>
                   {sf.label}
                 </button>
@@ -381,16 +381,16 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
         {/* Table */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[700px]">
               <thead>
-                <tr className="border-b border-zinc-700 bg-zinc-800/40">
-                  <th className="text-left px-5 py-4 text-xs font-bold text-white uppercase tracking-wider">Nome</th>
-                  <th className="text-left px-5 py-4 text-xs font-bold text-white uppercase tracking-wider hidden sm:table-cell">Tipo</th>
-                  <th className="text-left px-5 py-4 text-xs font-bold text-white uppercase tracking-wider hidden md:table-cell">Telefone</th>
-                  <th className="text-left px-5 py-4 text-xs font-bold text-white uppercase tracking-wider">Estado</th>
-                  <th className="text-left px-5 py-4 text-xs font-bold text-white uppercase tracking-wider hidden md:table-cell">Registo</th>
-                  <th className="text-left px-5 py-4 text-xs font-bold text-white uppercase tracking-wider hidden xl:table-cell">Restrição</th>
-                  <th className="text-right px-5 py-4 text-xs font-bold text-white uppercase tracking-wider">Ações</th>
+                <tr className="border-b border-zinc-700 bg-zinc-800/50">
+                  <th className="text-left px-4 py-3 text-[10px] font-black text-white/50 uppercase tracking-widest whitespace-nowrap">Nome</th>
+                  <th className="text-left px-4 py-3 text-[10px] font-black text-white/50 uppercase tracking-widest whitespace-nowrap hidden sm:table-cell w-[110px]">Tipo</th>
+                  <th className="text-left px-4 py-3 text-[10px] font-black text-white/50 uppercase tracking-widest whitespace-nowrap hidden md:table-cell w-[130px]">Telefone</th>
+                  <th className="text-left px-4 py-3 text-[10px] font-black text-white/50 uppercase tracking-widest whitespace-nowrap w-[110px]">Estado</th>
+                  <th className="text-left px-4 py-3 text-[10px] font-black text-white/50 uppercase tracking-widest whitespace-nowrap hidden md:table-cell w-[145px]">Registo</th>
+                  <th className="text-left px-4 py-3 text-[10px] font-black text-white/50 uppercase tracking-widest whitespace-nowrap hidden lg:table-cell w-[105px]">Restrição</th>
+                  <th className="text-right px-4 py-3 text-[10px] font-black text-white/50 uppercase tracking-widest whitespace-nowrap w-[110px]">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800">
@@ -435,46 +435,46 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                     const status = userStatusConfig[u.status];
                     return (
                       <tr key={`u-${u.id}`} className="hover:bg-zinc-800/50 transition-colors group border-b border-zinc-800/60">
-                        <td className="px-5 py-4">
-                          <button onClick={() => setDetailUser(u)} className="flex items-center gap-3 text-left">
-                            <div className="w-9 h-9 rounded-lg bg-amber-400/15 border border-amber-400/30 flex items-center justify-center text-amber-400 text-xs font-black flex-shrink-0">
+                        <td className="px-4 py-3 max-w-0">
+                          <button onClick={() => setDetailUser(u)} className="flex items-center gap-2.5 text-left w-full min-w-0">
+                            <div className="w-8 h-8 rounded-lg bg-amber-400/15 border border-amber-400/30 flex items-center justify-center text-amber-400 text-[11px] font-black flex-shrink-0">
                               {initials(u.nome)}
                             </div>
-                            <div>
-                              <p className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors">{u.nome}</p>
-                              <p className="text-xs text-white mt-0.5">{u.email}</p>
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors truncate">{u.nome}</p>
+                              <p className="text-[11px] text-white/50 mt-0.5 truncate">{u.email}</p>
                             </div>
                           </button>
                         </td>
-                        <td className="px-5 py-4 hidden sm:table-cell">
-                          <span className={`text-xs font-bold border rounded-md px-2 py-1 ${role.className}`}>{role.label}</span>
+                        <td className="px-4 py-3 hidden sm:table-cell">
+                          <span className={`text-[11px] font-bold border rounded-md px-2 py-0.5 ${role.className}`}>{role.label}</span>
                         </td>
-                        <td className="px-5 py-4 hidden md:table-cell text-sm font-medium text-white">{u.telefone}</td>
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-2">
-                            <span className={`w-2 h-2 rounded-full ${status.dot}`} />
-                            <span className="text-sm font-semibold text-white">{status.label}</span>
+                        <td className="px-4 py-3 hidden md:table-cell text-sm font-medium text-white whitespace-nowrap">{u.telefone}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${status.dot}`} />
+                            <span className="text-sm font-semibold text-white whitespace-nowrap">{status.label}</span>
                           </div>
                         </td>
-                        <td className="px-5 py-4 hidden md:table-cell">
+                        <td className="px-4 py-3 hidden md:table-cell">
                           <div className="flex flex-col gap-0.5">
-                            <span className="text-sm font-semibold text-white">
+                            <span className="text-sm font-semibold text-white whitespace-nowrap">
                               {u.dataCriacao ? new Date(u.dataCriacao).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
                             </span>
                             {u.ultimoAcesso && u.ultimoAcesso !== u.dataCriacao && (
-                              <span className="text-xs text-white">
+                              <span className="text-[11px] text-white/50 whitespace-nowrap">
                                 Acesso: {new Date(u.ultimoAcesso).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                               </span>
                             )}
                           </div>
                         </td>
-                        <td className="px-5 py-4 hidden xl:table-cell">
-                          <span className={`text-xs font-bold border rounded-md px-2 py-1 ${restrictionConfig[u.restriction || 'nenhuma'].className}`}>
+                        <td className="px-4 py-3 hidden lg:table-cell">
+                          <span className={`text-[11px] font-bold border rounded-md px-2 py-0.5 ${restrictionConfig[u.restriction || 'nenhuma'].className}`}>
                             {restrictionConfig[u.restriction || 'nenhuma'].label}
                           </span>
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-end gap-1">
+                        <td className="px-3 py-3">
+                          <div className="flex items-center justify-end gap-0.5">
                             <button onClick={() => setDetailUser(u)} className="p-1.5 text-white hover:text-white transition-colors rounded-lg hover:bg-zinc-700" title="Ver detalhes">
                               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                             </button>
@@ -520,41 +520,41 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                   const st = motoristaStatusConfig[m.status];
                   return (
                     <tr key={`m-${m.id}`} className="hover:bg-zinc-800/50 transition-colors group border-b border-zinc-800/60">
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-lg bg-blue-400/15 border border-blue-400/30 flex items-center justify-center text-blue-400 text-xs font-black flex-shrink-0">
+                      <td className="px-4 py-3 max-w-0">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-blue-400/15 border border-blue-400/30 flex items-center justify-center text-blue-400 text-[11px] font-black flex-shrink-0">
                             {initials(m.nome)}
                           </div>
-                          <div>
-                            <p className="text-sm font-bold text-white">{m.nome}</p>
-                            {m.observacoes && <p className="text-xs text-zinc-500 italic mt-0.5">{m.observacoes}</p>}
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-white truncate">{m.nome}</p>
+                            {m.observacoes && <p className="text-[11px] text-white/50 italic mt-0.5 truncate">{m.observacoes}</p>}
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-4 hidden sm:table-cell">
-                        <span className="text-xs font-bold border rounded-md px-2 py-1 bg-blue-400/10 text-blue-400 border-blue-400/20">Motorista</span>
+                      <td className="px-4 py-3 hidden sm:table-cell">
+                        <span className="text-[11px] font-bold border rounded-md px-2 py-0.5 bg-blue-400/10 text-blue-400 border-blue-400/20">Motorista</span>
                       </td>
-                      <td className="px-5 py-4 hidden md:table-cell text-sm font-medium text-white">{m.telefone}</td>
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${st.dot}`} />
-                          <span className="text-sm font-semibold text-white">{st.label}</span>
+                      <td className="px-4 py-3 hidden md:table-cell text-sm font-medium text-white whitespace-nowrap">{m.telefone}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${st.dot}`} />
+                          <span className="text-sm font-semibold text-white whitespace-nowrap">{st.label}</span>
                         </div>
                       </td>
-                      <td className="px-5 py-4 hidden md:table-cell">
-                        <span className="text-sm font-semibold text-white">
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        <span className="text-sm font-semibold text-white whitespace-nowrap">
                           {m.dataCriacao ? new Date(m.dataCriacao).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
                         </span>
-                        <div className="flex gap-2 mt-1 flex-wrap">
-                          {m.bi    && <span className="text-[10px] bg-zinc-800 border border-zinc-700 text-zinc-400 px-1.5 py-0.5 rounded">BI: {m.bi}</span>}
-                          {m.carta && <span className="text-[10px] bg-zinc-800 border border-zinc-700 text-zinc-400 px-1.5 py-0.5 rounded">Carta: {m.carta}</span>}
+                        <div className="flex gap-1.5 mt-1 flex-wrap">
+                          {m.bi    && <span className="text-[10px] bg-zinc-800 border border-zinc-700 text-white px-1.5 py-0.5 rounded">BI: {m.bi}</span>}
+                          {m.carta && <span className="text-[10px] bg-zinc-800 border border-zinc-700 text-white px-1.5 py-0.5 rounded">Carta: {m.carta}</span>}
                         </div>
                       </td>
-                      <td className="px-5 py-4 hidden xl:table-cell">
-                        <span className="text-xs text-zinc-500">—</span>
+                      <td className="px-4 py-3 hidden lg:table-cell">
+                        <span className="text-[11px] text-white/50">—</span>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="px-3 py-3">
+                        <div className="flex items-center justify-end gap-0.5">
                           {canManage && (
                             <>
                               <button onClick={() => setMotoristaModal(m)} className="p-1.5 text-white hover:text-white transition-colors rounded-lg hover:bg-zinc-700" title="Editar">
@@ -664,7 +664,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-black text-white">Suspender conta</p>
-                <p className="text-xs text-zinc-400 truncate">{suspendTarget.nome}</p>
+                <p className="text-xs text-white truncate">{suspendTarget.nome}</p>
               </div>
             </div>
             <div className="p-5 space-y-3">
@@ -688,7 +688,7 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                     {suspendError}
                   </p>
                 )}
-                <p className="text-[11px] text-zinc-500 mt-2">
+                <p className="text-[11px] text-white mt-2">
                   Este motivo será visível ao utilizador no seu perfil.
                 </p>
               </div>
@@ -738,48 +738,48 @@ function GuestRow({ g, guestStatusConfig, onReview, onAdvance }: {
 
   return (
     <tr className="hover:bg-zinc-800/50 transition-colors group border-b border-zinc-800/60 cursor-pointer" onClick={() => onReview(g)}>
-      <td className="px-5 py-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xs font-black flex-shrink-0">
+      <td className="px-4 py-3 max-w-0">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 text-[11px] font-black flex-shrink-0">
             {g.nome.split(' ').filter(Boolean).slice(0, 2).map(n => n[0]).join('').toUpperCase()}
           </div>
-          <div>
-            <p className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors">{g.nome}</p>
-            <p className="text-xs text-white mt-0.5">{g.email}</p>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors truncate">{g.nome}</p>
+            <p className="text-[11px] text-white/50 mt-0.5 truncate">{g.email}</p>
             {g.status === 'rejeitado' && g.notaAdmin && (
-              <p className="text-[10px] text-red-400 mt-1 font-semibold leading-tight max-w-[220px]">✕ {g.notaAdmin}</p>
+              <p className="text-[10px] text-red-400 mt-1 font-semibold leading-tight truncate">✕ {g.notaAdmin}</p>
             )}
           </div>
         </div>
       </td>
-      <td className="px-5 py-4 hidden sm:table-cell">
-        <span className="text-xs font-bold border rounded-md px-2 py-1 bg-amber-500/10 text-amber-400 border-amber-500/20">
+      <td className="px-4 py-3 hidden sm:table-cell">
+        <span className="text-[11px] font-bold border rounded-md px-2 py-0.5 bg-amber-500/10 text-amber-400 border-amber-500/20 whitespace-nowrap">
           Visitante · {g.intent === 'aluguer' ? 'Aluguer' : 'Compra'}
         </span>
       </td>
-      <td className="px-5 py-4 hidden md:table-cell text-sm font-medium text-white">{g.telefone}</td>
-      <td className="px-5 py-4">
+      <td className="px-4 py-3 hidden md:table-cell text-sm font-medium text-white whitespace-nowrap">{g.telefone}</td>
+      <td className="px-4 py-3">
         <div className="flex items-center gap-1.5">
           <span className={`w-2 h-2 rounded-full shrink-0 ${gs.dot}`} />
-          <span className="text-sm font-semibold text-white">{gs.label}</span>
+          <span className="text-sm font-semibold text-white whitespace-nowrap">{gs.label}</span>
           {canAdvance && (
             <button
               onClick={e => { e.stopPropagation(); onAdvance(g, nextStatus ?? null); }}
               title={nextStatus ? `→ ${guestStatusConfig[nextStatus]?.label ?? nextStatus}` : '→ Aprovar / Rejeitar'}
-              className="p-0.5 text-amber-500 hover:text-amber-400 transition-colors"
+              className="p-0.5 text-amber-500 hover:text-amber-400 transition-colors shrink-0"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
           )}
         </div>
       </td>
-      <td className="px-5 py-4 hidden md:table-cell text-sm text-white">
+      <td className="px-4 py-3 hidden md:table-cell text-sm font-semibold text-white whitespace-nowrap">
         {new Date(g.dataCriacao).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
       </td>
-      <td className="px-5 py-4 hidden xl:table-cell">
-        {g.vehicleName ? <span className="text-xs text-white">{g.vehicleName}</span> : <span className="text-xs text-zinc-600">—</span>}
+      <td className="px-4 py-3 hidden lg:table-cell">
+        {g.vehicleName ? <span className="text-[11px] text-white truncate block max-w-[90px]">{g.vehicleName}</span> : <span className="text-[11px] text-white/50">—</span>}
       </td>
-      <td className="px-4 py-3">
+      <td className="px-3 py-3">
         <div className="flex items-center justify-end">
           <button onClick={e => { e.stopPropagation(); onReview(g); }}
             className="p-1.5 text-white hover:text-amber-400 transition-colors rounded-lg hover:bg-amber-400/10" title="Analisar">

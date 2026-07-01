@@ -38,7 +38,7 @@ interface DetailCardProps {
   onClick?: () => void;
 }
 
-function DetailCard({ icon, iconColor = 'text-zinc-400', label, value, valueColor = 'text-white', accent = 'border-zinc-800', bar, onClick }: DetailCardProps) {
+function DetailCard({ icon, iconColor = 'text-white', label, value, valueColor = 'text-white', accent = 'border-zinc-800', bar, onClick }: DetailCardProps) {
   const Tag = onClick ? 'button' : 'div';
   return (
     <Tag
@@ -53,7 +53,7 @@ function DetailCard({ icon, iconColor = 'text-zinc-400', label, value, valueColo
           <span className={`shrink-0 ${iconColor}`}>{icon}</span>
           <p className="text-xs font-bold text-zinc-200 uppercase tracking-wider leading-tight">{label}</p>
         </div>
-        {onClick && <IconChevronRight size={16} className="text-zinc-600 group-hover:text-zinc-400 transition-colors shrink-0 mt-0.5" />}
+        {onClick && <IconChevronRight size={16} className="text-white group-hover:text-white transition-colors shrink-0 mt-0.5" />}
       </div>
 
       {/* Main value */}
@@ -149,7 +149,7 @@ export function DashboardPage() {
           {/* Utilizadores */}
           <DetailCard
             icon={<IconUsers size={18} />}
-            iconColor="text-zinc-400"
+            iconColor="text-white"
             label="Pessoas com conta activa"
             value={s.activeUsers}
             valueColor="text-white"

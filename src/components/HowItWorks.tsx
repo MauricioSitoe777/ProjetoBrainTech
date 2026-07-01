@@ -30,10 +30,10 @@ export default function HowItWorks({
               Funciona
             </span>
           </h2>
-          <p className="text-zinc-400 text-sm mt-3 max-w-xl mx-auto leading-relaxed">
+          <p className="text-white text-sm mt-3 max-w-xl mx-auto leading-relaxed">
             Do catálogo às chaves na mão — o processo é{" "}
-            <span className="text-zinc-300 font-semibold">100% digital</span>,{" "}
-            <span className="text-zinc-300 font-semibold">transparente</span> e
+            <span className="text-white font-semibold">100% digital</span>,{" "}
+            <span className="text-white font-semibold">transparente</span> e
             pensado para Moçambique.
           </p>
         </div>
@@ -77,7 +77,7 @@ export default function HowItWorks({
                   <h3 className="relative z-10 text-white font-bold text-sm mb-1.5 group-hover:text-amber-50 transition-colors duration-300">
                     {step.title}
                   </h3>
-                  <p className="relative z-10 text-zinc-400 text-[13px] leading-relaxed">
+                  <p className="relative z-10 text-white text-[13px] leading-relaxed">
                     {step.desc}
                   </p>
 

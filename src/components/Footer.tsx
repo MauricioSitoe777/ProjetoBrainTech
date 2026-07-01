@@ -91,7 +91,7 @@ export default function Footer() {
               <button
                 key={label}
                 onClick={() => handleService(section)}
-                className="block text-white/70 hover:text-amber-400 text-sm mb-2.5 transition-colors text-left"
+                className="block text-white hover:text-amber-400 text-sm mb-2.5 transition-colors text-left"
               >
                 {label}
               </button>

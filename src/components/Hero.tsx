@@ -357,7 +357,7 @@ function ShufflingCards() {
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-amber-400/30 bg-amber-400/15 sm:h-8 sm:w-8">
               <Gauge className="h-3.5 w-3.5 text-amber-400 sm:h-4 sm:w-4" />
             </div>
-            <span className="rounded-full border border-white/15 bg-white/8 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/70 sm:text-[10px]">
+            <span className="rounded-full border border-white/15 bg-white/8 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white sm:text-[10px]">
               {card.tag}
             </span>
           </div>
@@ -380,7 +380,7 @@ function ShufflingCards() {
                 />
               </div>
             ) : (
-              <p className="mt-0.5 text-[11px] font-medium text-white/55 sm:text-xs">
+              <p className="mt-0.5 text-[11px] font-medium text-white sm:text-xs">
                 {card.subtitle}
               </p>
             )}
@@ -441,7 +441,7 @@ function ShufflingCards() {
               animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
               exit={{ y: "-110%", opacity: 0, filter: "blur(4px)" }}
               onNext={setXitiqueTextIndex}
-              mainClassName="text-[11px] font-semibold text-white/70 sm:text-xs"
+              mainClassName="text-[11px] font-semibold text-white sm:text-xs"
               splitBy="words"
             />
           </div>
@@ -461,13 +461,13 @@ function ShufflingCards() {
         {/* stats */}
         <div className="relative flex items-center gap-3 shrink-0">
           <div className="text-right hidden sm:block">
-            <div className="text-[9px] text-white/40 uppercase font-bold">Quota</div>
+            <div className="text-[9px] text-white uppercase font-bold">Quota</div>
             <div className="text-sm font-black text-white leading-tight">30mil <span className="text-amber-400 text-[10px]">MT</span></div>
           </div>
           <div className="w-px h-6 bg-white/10 hidden sm:block" />
           <div className="text-right">
-            <div className="text-[9px] text-white/40 uppercase font-bold">Prémio</div>
-            <div className="text-sm font-black text-amber-400 leading-tight">300mil <span className="text-white/60 text-[10px]">MT</span></div>
+            <div className="text-[9px] text-white uppercase font-bold">Prémio</div>
+            <div className="text-sm font-black text-amber-400 leading-tight">300mil <span className="text-white text-[10px]">MT</span></div>
           </div>
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/20 border border-amber-300/40 shadow-[0_0_22px_rgba(228,180,46,0.20)] transition-transform duration-300 group-hover:translate-x-0.5">
             <ArrowRight className="h-3.5 w-3.5 text-amber-300" strokeWidth={2.5} />
@@ -484,7 +484,7 @@ export default function Hero({ onShowSimulator }: { onShowSimulator?: () => void
   const scrollTo = useScrollTo();
 
   return (
-    <section className="relative min-h-screen overflow-hidden">
+    <section id="hero" className="relative min-h-screen overflow-hidden">
       {/* Vídeo */}
       <video
         autoPlay
@@ -519,7 +519,7 @@ export default function Hero({ onShowSimulator }: { onShowSimulator?: () => void
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="max-w-md text-center text-sm font-medium leading-relaxed text-white/60 md:text-left md:text-base"
+            className="max-w-md text-center text-sm font-medium leading-relaxed text-white md:text-left md:text-base"
           >
             Descubra o veículo certo para si — para comprar ou alugar.
             Catálogo completo, preços transparentes e entrega rápida em Moçambique.

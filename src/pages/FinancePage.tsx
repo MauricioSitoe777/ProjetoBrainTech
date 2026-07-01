@@ -21,7 +21,7 @@ const STATUS_ALUGUER: Record<string, { label: string; color: string; bg: string 
   pronta_levantamento: { label: 'P/ Levantamento',   color: 'text-cyan-400',    bg: 'bg-cyan-400/10 border-cyan-400/20' },
   ativa:               { label: 'Activa',            color: 'text-emerald-400', bg: 'bg-emerald-400/10 border-emerald-400/20' },
   devolucao_pendente:  { label: 'Dev. Pendente',     color: 'text-orange-400',  bg: 'bg-orange-400/10 border-orange-400/20' },
-  concluida:           { label: 'Concluída',         color: 'text-zinc-400',    bg: 'bg-zinc-700/40 border-zinc-700' },
+  concluida:           { label: 'Concluída',         color: 'text-white',    bg: 'bg-zinc-700/40 border-zinc-700' },
   cancelada:           { label: 'Cancelada',         color: 'text-red-400',     bg: 'bg-red-400/10 border-red-400/20' },
 };
 
@@ -46,9 +46,9 @@ function Bar({ pct, color = 'bg-amber-500', thin }: { pct: number; color?: strin
 function KpiCard({ label, value, sub, color = 'text-white', accent }: { label: string; value: string; sub?: string; color?: string; accent?: string }) {
   return (
     <div className={`bg-zinc-900 border rounded-2xl p-4 space-y-1 ${accent ?? 'border-zinc-800'}`}>
-      <p className="text-[10px] text-zinc-400 uppercase font-bold tracking-wider">{label}</p>
+      <p className="text-[10px] text-white uppercase font-bold tracking-wider">{label}</p>
       <p className={`text-xl font-black leading-tight ${color}`}>{value}</p>
-      {sub && <p className="text-[10px] text-zinc-300">{sub}</p>}
+      {sub && <p className="text-[10px] text-white">{sub}</p>}
     </div>
   );
 }
@@ -209,7 +209,7 @@ export function FinancePage() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-black text-white">Relatórios & Estatísticas</h1>
-            <p className="text-zinc-500 text-sm mt-1">Análise financeira e performance das viaturas</p>
+            <p className="text-white text-sm mt-1">Análise financeira e performance das viaturas</p>
           </div>
         </div>
 
@@ -224,7 +224,7 @@ export function FinancePage() {
           ] as { key: Tab; label: string }[]).map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`px-4 py-2.5 text-xs font-bold rounded-t-lg border-b-2 transition ${
-                tab === t.key ? 'border-amber-500 text-amber-400' : 'border-transparent text-zinc-400 hover:text-white'
+                tab === t.key ? 'border-amber-500 text-amber-400' : 'border-transparent text-white hover:text-white'
               }`}>
               {t.label}
             </button>
@@ -262,10 +262,10 @@ export function FinancePage() {
                         <div className="flex items-center gap-2">
                           <span className={`w-2 h-2 rounded-full ${item.color}`} />
                           <span className="text-white font-semibold">{item.label}</span>
-                          <span className="text-zinc-500 text-xs">{item.qty} {item.unit}</span>
+                          <span className="text-white text-xs">{item.qty} {item.unit}</span>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="text-zinc-500 text-xs">{Math.round(pct)}%</span>
+                          <span className="text-white text-xs">{Math.round(pct)}%</span>
                           <span className={`font-black text-sm ${item.text}`}>{fmt(item.value)}</span>
                         </div>
                       </div>
@@ -279,7 +279,7 @@ export function FinancePage() {
             {/* Mês actual vs anterior */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
-                <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider mb-1">Este Mês ({MESES_ABR[mesAtual]})</p>
+                <p className="text-[10px] text-white uppercase font-bold tracking-wider mb-1">Este Mês ({MESES_ABR[mesAtual]})</p>
                 <p className="text-2xl font-black text-white">{fmt(dadosMesAtual?.total ?? 0)}</p>
                 {variacaoMes !== null && (
                   <div className={`flex items-center gap-1 mt-1.5 text-xs font-bold ${variacaoMes >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -290,31 +290,31 @@ export function FinancePage() {
                   </div>
                 )}
                 <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                  <div><span className="text-zinc-500">Alugueres: </span><span className="text-blue-400 font-bold">{dadosMesAtual?.aluguerQty ?? 0}</span></div>
-                  <div><span className="text-zinc-500">Vendas: </span><span className="text-purple-400 font-bold">{dadosMesAtual?.compraQty ?? 0}</span></div>
+                  <div><span className="text-white">Alugueres: </span><span className="text-blue-400 font-bold">{dadosMesAtual?.aluguerQty ?? 0}</span></div>
+                  <div><span className="text-white">Vendas: </span><span className="text-purple-400 font-bold">{dadosMesAtual?.compraQty ?? 0}</span></div>
                 </div>
               </div>
               <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
-                <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider mb-1">Mês Anterior ({MESES_ABR[(mesAtual + 11) % 12]})</p>
+                <p className="text-[10px] text-white uppercase font-bold tracking-wider mb-1">Mês Anterior ({MESES_ABR[(mesAtual + 11) % 12]})</p>
                 <p className="text-2xl font-black text-white">{fmt(dadosMesAnterior?.total ?? 0)}</p>
                 <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                  <div><span className="text-zinc-500">Alugueres: </span><span className="text-blue-400 font-bold">{dadosMesAnterior?.aluguerQty ?? 0}</span></div>
-                  <div><span className="text-zinc-500">Vendas: </span><span className="text-purple-400 font-bold">{dadosMesAnterior?.compraQty ?? 0}</span></div>
+                  <div><span className="text-white">Alugueres: </span><span className="text-blue-400 font-bold">{dadosMesAnterior?.aluguerQty ?? 0}</span></div>
+                  <div><span className="text-white">Vendas: </span><span className="text-purple-400 font-bold">{dadosMesAnterior?.compraQty ?? 0}</span></div>
                 </div>
               </div>
               <div className={`rounded-2xl p-5 border ${melhorMes ? 'bg-amber-500/5 border-amber-500/20' : 'bg-zinc-900 border-zinc-800'}`}>
-                <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider mb-1">Melhor Mês</p>
+                <p className="text-[10px] text-white uppercase font-bold tracking-wider mb-1">Melhor Mês</p>
                 {melhorMes ? (
                   <>
                     <p className="text-2xl font-black text-amber-400">{fmt(melhorMes.total)}</p>
-                    <p className="text-xs text-zinc-400 mt-1">{MESES_FULL[melhorMes.month]} {melhorMes.year}</p>
+                    <p className="text-xs text-white mt-1">{MESES_FULL[melhorMes.month]} {melhorMes.year}</p>
                     <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                      <div><span className="text-zinc-500">Alugueres: </span><span className="text-blue-400 font-bold">{melhorMes.aluguerQty}</span></div>
-                      <div><span className="text-zinc-500">Vendas: </span><span className="text-purple-400 font-bold">{melhorMes.compraQty}</span></div>
+                      <div><span className="text-white">Alugueres: </span><span className="text-blue-400 font-bold">{melhorMes.aluguerQty}</span></div>
+                      <div><span className="text-white">Vendas: </span><span className="text-purple-400 font-bold">{melhorMes.compraQty}</span></div>
                     </div>
                   </>
                 ) : (
-                  <p className="text-zinc-500 text-sm">Sem dados ainda</p>
+                  <p className="text-white text-sm">Sem dados ainda</p>
                 )}
               </div>
             </div>
@@ -324,13 +324,13 @@ export function FinancePage() {
               <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
                 <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
                   <h2 className="text-white font-black text-sm uppercase tracking-wider">Lucratividade por Categoria</h2>
-                  <span className="text-[10px] text-zinc-300">Transações manuais</span>
+                  <span className="text-[10px] text-white">Transações manuais</span>
                 </div>
                 <div className="divide-y divide-zinc-800/50">
                   {porCategoria.map((c, i) => (
                     <div key={c.cat} className="px-5 py-4 flex items-center gap-4">
                       <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
-                        i === 0 ? 'bg-amber-500 text-zinc-950' : 'bg-zinc-800 text-zinc-400'
+                        i === 0 ? 'bg-amber-500 text-zinc-950' : 'bg-zinc-800 text-white'
                       }`}>{i + 1}</span>
                       <div className="flex-1 min-w-0 space-y-1.5">
                         <div className="flex items-center justify-between">
@@ -360,19 +360,19 @@ export function FinancePage() {
 
             {/* Selector de ano */}
             <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Ano:</span>
+              <span className="text-xs text-white font-bold uppercase tracking-wider">Ano:</span>
               <div className="flex gap-1.5">
                 {anos.map(a => (
                   <button key={a} onClick={() => { setAnoSel(a); setMesSel(null); }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition ${
-                      anoSel === a ? 'bg-amber-500 text-zinc-950 border-amber-500' : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:text-white'
+                      anoSel === a ? 'bg-amber-500 text-zinc-950 border-amber-500' : 'bg-zinc-900 text-white border-zinc-700 hover:text-white'
                     }`}>{a}</button>
                 ))}
               </div>
             </div>
 
             {dadosAno.length === 0 ? (
-              <div className="text-center text-zinc-400 text-sm py-16 bg-zinc-900 rounded-2xl border border-zinc-800 border-dashed">
+              <div className="text-center text-white text-sm py-16 bg-zinc-900 rounded-2xl border border-zinc-800 border-dashed">
                 Sem dados para {anoSel}
               </div>
             ) : (
@@ -389,7 +389,7 @@ export function FinancePage() {
                       return (
                         <button key={i} onClick={() => setMesSel(isSelected ? null : i)}
                           className="flex-1 flex flex-col items-center gap-1 group" title={`${MESES_FULL[i]}: ${fmt(d?.total ?? 0)}`}>
-                          <span className={`text-[9px] font-bold transition-opacity ${isSelected || (isCurrentMonth && mesSel === null) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} ${isCurrentMonth ? 'text-amber-400' : 'text-zinc-400'}`}>
+                          <span className={`text-[9px] font-bold transition-opacity ${isSelected || (isCurrentMonth && mesSel === null) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} ${isCurrentMonth ? 'text-amber-400' : 'text-white'}`}>
                             {fmtK(d?.total ?? 0)}
                           </span>
                           <div className="w-full flex flex-col justify-end" style={{ height: '96px' }}>
@@ -397,7 +397,7 @@ export function FinancePage() {
                               isSelected ? 'bg-amber-400' : isCurrentMonth ? 'bg-amber-500' : d ? 'bg-zinc-600 group-hover:bg-zinc-500' : 'bg-zinc-800/50'
                             }`} style={{ height: pct > 0 ? `${pct}%` : '2px' }} />
                           </div>
-                          <span className={`text-[9px] font-bold ${isCurrentMonth ? 'text-amber-400' : 'text-zinc-600'}`}>{MESES_ABR[i]}</span>
+                          <span className={`text-[9px] font-bold ${isCurrentMonth ? 'text-amber-400' : 'text-white'}`}>{MESES_ABR[i]}</span>
                         </button>
                       );
                     })}
@@ -411,7 +411,7 @@ export function FinancePage() {
                       {mesSel !== null ? `Detalhe — ${MESES_FULL[mesSel]} ${anoSel}` : `Todos os Meses — ${anoSel}`}
                     </h2>
                     {mesSel !== null && (
-                      <button onClick={() => setMesSel(null)} className="text-[10px] text-zinc-400 hover:text-white font-bold transition">
+                      <button onClick={() => setMesSel(null)} className="text-[10px] text-white hover:text-white font-bold transition">
                         ← Ver todos
                       </button>
                     )}
@@ -421,7 +421,7 @@ export function FinancePage() {
                       <thead>
                         <tr className="border-b border-zinc-800/50 bg-zinc-800/20">
                           {['Mês', 'Alugueres', 'Rec. Aluguer', 'Vendas', 'Rec. Venda', 'Total', 'Var.'].map(h => (
-                            <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-zinc-300 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                            <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-white uppercase tracking-wider whitespace-nowrap">{h}</th>
                           ))}
                         </tr>
                       </thead>
@@ -448,7 +448,7 @@ export function FinancePage() {
                                   <span className={var_ >= 0 ? 'text-emerald-400' : 'text-red-400'}>
                                     {var_ >= 0 ? '▲' : '▼'} {Math.abs(var_)}%
                                   </span>
-                                ) : <span className="text-zinc-600">—</span>}
+                                ) : <span className="text-white">—</span>}
                               </td>
                             </tr>
                           );
@@ -489,7 +489,7 @@ export function FinancePage() {
                           <thead>
                             <tr className="border-b border-zinc-800/50">
                               {['Data','Viatura','Cliente','Tipo','Valor','Estado'].map(h => (
-                                <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-zinc-300 uppercase tracking-wider">{h}</th>
+                                <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-white uppercase tracking-wider">{h}</th>
                               ))}
                             </tr>
                           </thead>
@@ -536,17 +536,17 @@ export function FinancePage() {
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
               <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
                 <h2 className="text-white font-black text-sm uppercase tracking-wider">Transações Manuais</h2>
-                <span className="text-[10px] text-zinc-300">{transacoes.length} registos</span>
+                <span className="text-[10px] text-white">{transacoes.length} registos</span>
               </div>
               {transacoes.length === 0 ? (
-                <p className="text-center text-zinc-400 text-sm py-12">Sem transações manuais registadas.</p>
+                <p className="text-center text-white text-sm py-12">Sem transações manuais registadas.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-zinc-800/50">
                         {['Data','Descrição','Categoria','Tipo','Valor'].map(h => (
-                          <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-zinc-300 uppercase tracking-wider">{h}</th>
+                          <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-white uppercase tracking-wider">{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -585,7 +585,7 @@ export function FinancePage() {
               <KpiCard label="Total Contratos"  value={String(aluguerRes.length)}  color="text-blue-400"    accent="border-blue-500/20" />
               <KpiCard label="Receita Total"    value={fmt(receitaAluguer)}         color="text-amber-400"   accent="border-amber-500/20" />
               <KpiCard label="Valor Médio"     value={fmt(aluguerRes.length > 0 ? receitaAluguer / aluguerRes.length : 0)} color="text-white" />
-              <KpiCard label="Duração Média"    value={`${avgDiasAluguer} dias`}    color="text-zinc-300" />
+              <KpiCard label="Duração Média"    value={`${avgDiasAluguer} dias`}    color="text-white" />
             </div>
 
             {/* Distribuição por estado */}
@@ -594,7 +594,7 @@ export function FinancePage() {
                 <h2 className="text-white font-black text-sm uppercase tracking-wider">Estado dos Contratos</h2>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(aluguerByStatus).sort((a, b) => b[1] - a[1]).map(([status, qty]) => {
-                    const s = STATUS_ALUGUER[status] ?? { label: status, color: 'text-zinc-400', bg: 'bg-zinc-800 border-zinc-700' };
+                    const s = STATUS_ALUGUER[status] ?? { label: status, color: 'text-white', bg: 'bg-zinc-800 border-zinc-700' };
                     return (
                       <div key={status} className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold ${s.bg}`}>
                         <span className={s.color}>{s.label}</span>
@@ -610,31 +610,31 @@ export function FinancePage() {
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
               <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
                 <h2 className="text-white font-black text-sm uppercase tracking-wider">Contratos de Aluguer</h2>
-                <span className="text-[10px] text-zinc-300">{aluguerRes.length} contrato{aluguerRes.length !== 1 ? 's' : ''}</span>
+                <span className="text-[10px] text-white">{aluguerRes.length} contrato{aluguerRes.length !== 1 ? 's' : ''}</span>
               </div>
               {aluguerRes.length === 0 ? (
-                <p className="text-center text-zinc-400 text-sm py-12">Sem contratos de aluguer registados.</p>
+                <p className="text-center text-white text-sm py-12">Sem contratos de aluguer registados.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-zinc-800/50 bg-zinc-800/20">
                         {['Data Início','Data Fim','Viatura','Cliente','Duração','Valor','Estado'].map(h => (
-                          <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-zinc-300 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                          <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-white uppercase tracking-wider whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-800/40">
                       {aluguerSorted.map(r => {
                         const dias = Math.max(1, Math.round((new Date(r.dataFim).getTime() - new Date(r.dataInicio).getTime()) / 86_400_000));
-                        const s = STATUS_ALUGUER[r.status] ?? { label: r.status, color: 'text-zinc-400', bg: 'bg-zinc-800 border-zinc-700' };
+                        const s = STATUS_ALUGUER[r.status] ?? { label: r.status, color: 'text-white', bg: 'bg-zinc-800 border-zinc-700' };
                         return (
                           <tr key={r.id} className="hover:bg-zinc-800/30 transition-colors">
                             <td className="px-5 py-4 text-xs text-zinc-200 whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
                             <td className="px-5 py-4 text-xs text-zinc-200 whitespace-nowrap">{new Date(r.dataFim).toLocaleDateString('pt-PT')}</td>
                             <td className="px-5 py-4 text-sm font-semibold text-white truncate max-w-[140px]">{getVehicleName(r.vehicleId)}</td>
                             <td className="px-5 py-4 text-xs text-zinc-200 truncate max-w-[120px]">{r.clientName ?? '—'}</td>
-                            <td className="px-5 py-4 text-xs text-zinc-300 whitespace-nowrap">{dias} dia{dias !== 1 ? 's' : ''}</td>
+                            <td className="px-5 py-4 text-xs text-white whitespace-nowrap">{dias} dia{dias !== 1 ? 's' : ''}</td>
                             <td className="px-5 py-4 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(r.valorTotal)}</td>
                             <td className="px-5 py-4">
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${s.bg} ${s.color}`}>{s.label}</span>
@@ -660,7 +660,7 @@ export function FinancePage() {
               <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
                 <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
                   <h2 className="text-white font-black text-sm uppercase tracking-wider">Viaturas com Mais Saída</h2>
-                  <span className="text-[10px] text-zinc-300">{rankingAluguer.length} viatura{rankingAluguer.length !== 1 ? 's' : ''}</span>
+                  <span className="text-[10px] text-white">{rankingAluguer.length} viatura{rankingAluguer.length !== 1 ? 's' : ''}</span>
                 </div>
                 <div className="divide-y divide-zinc-800/40">
                   {rankingAluguer.map((v, i) => {
@@ -669,7 +669,7 @@ export function FinancePage() {
                       <div key={v.nome + i} className="px-5 py-4 space-y-2">
                         <div className="flex items-center gap-3">
                           <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
-                            i === 0 ? 'bg-amber-500 text-zinc-950' : i === 1 ? 'bg-zinc-400 text-zinc-950' : i === 2 ? 'bg-amber-800 text-white' : 'bg-zinc-800 text-zinc-400'
+                            i === 0 ? 'bg-amber-500 text-zinc-950' : i === 1 ? 'bg-zinc-400 text-zinc-950' : i === 2 ? 'bg-amber-800 text-white' : 'bg-zinc-800 text-white'
                           }`}>{i + 1}</span>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -679,7 +679,7 @@ export function FinancePage() {
                             <Bar pct={pct} color={i === 0 ? 'bg-amber-500' : 'bg-zinc-600'} />
                           </div>
                         </div>
-                        <div className="ml-10 flex gap-5 text-xs text-zinc-500">
+                        <div className="ml-10 flex gap-5 text-xs text-white">
                           <span>Contratos: <strong className="text-white">{v.qty}</strong></span>
                           <span>Média/contrato: <strong className="text-amber-400">{fmt(v.mediaValor)}</strong></span>
                         </div>
@@ -688,7 +688,7 @@ export function FinancePage() {
                   })}
                 </div>
                 <div className="px-5 py-3 border-t border-zinc-800 bg-zinc-800/20 flex justify-between text-sm">
-                  <span className="text-zinc-500 font-semibold">Total alugueres</span>
+                  <span className="text-white font-semibold">Total alugueres</span>
                   <div className="flex gap-6">
                     <span className="text-white font-bold">{rankingAluguer.reduce((s, v) => s + v.qty, 0)} contratos</span>
                     <span className="text-amber-400 font-black">{fmt(rankingAluguer.reduce((s, v) => s + v.receita, 0))}</span>
@@ -721,7 +721,7 @@ export function FinancePage() {
                 <h2 className="text-white font-black text-sm uppercase tracking-wider">Estado dos Contratos</h2>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(compraByStatus).sort((a, b) => b[1] - a[1]).map(([status, qty]) => {
-                    const s = STATUS_COMPRA[status] ?? { label: status, color: 'text-zinc-400', bg: 'bg-zinc-800 border-zinc-700' };
+                    const s = STATUS_COMPRA[status] ?? { label: status, color: 'text-white', bg: 'bg-zinc-800 border-zinc-700' };
                     return (
                       <div key={status} className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold ${s.bg}`}>
                         <span className={s.color}>{s.label}</span>
@@ -737,23 +737,23 @@ export function FinancePage() {
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
               <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
                 <h2 className="text-white font-black text-sm uppercase tracking-wider">Contratos de Compra & Venda</h2>
-                <span className="text-[10px] text-zinc-300">{compraRes.length} contrato{compraRes.length !== 1 ? 's' : ''}</span>
+                <span className="text-[10px] text-white">{compraRes.length} contrato{compraRes.length !== 1 ? 's' : ''}</span>
               </div>
               {compraRes.length === 0 ? (
-                <p className="text-center text-zinc-400 text-sm py-12">Sem contratos de compra registados.</p>
+                <p className="text-center text-white text-sm py-12">Sem contratos de compra registados.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-zinc-800/50 bg-zinc-800/20">
                         {['Data','Viatura','Cliente','Prestações','Valor Total','Estado'].map(h => (
-                          <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-zinc-300 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                          <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-white uppercase tracking-wider whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-800/40">
                       {compraSorted.map(r => {
-                        const s = STATUS_COMPRA[r.status] ?? { label: r.status, color: 'text-zinc-400', bg: 'bg-zinc-800 border-zinc-700' };
+                        const s = STATUS_COMPRA[r.status] ?? { label: r.status, color: 'text-white', bg: 'bg-zinc-800 border-zinc-700' };
                         const prestStr = r.totalPrestacoes
                           ? `${r.prestacoesPagas ?? 0}/${r.totalPrestacoes}`
                           : '—';
@@ -762,7 +762,7 @@ export function FinancePage() {
                             <td className="px-5 py-4 text-xs text-zinc-200 whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
                             <td className="px-5 py-4 text-sm font-semibold text-white truncate max-w-[140px]">{getVehicleName(r.vehicleId)}</td>
                             <td className="px-5 py-4 text-xs text-zinc-200 truncate max-w-[120px]">{r.clientName ?? '—'}</td>
-                            <td className="px-5 py-4 text-xs font-bold text-zinc-300 whitespace-nowrap">{prestStr}</td>
+                            <td className="px-5 py-4 text-xs font-bold text-white whitespace-nowrap">{prestStr}</td>
                             <td className="px-5 py-4 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(r.valorTotal)}</td>
                             <td className="px-5 py-4">
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${s.bg} ${s.color}`}>{s.label}</span>
@@ -788,7 +788,7 @@ export function FinancePage() {
               <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
                 <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
                   <h2 className="text-white font-black text-sm uppercase tracking-wider">Viaturas Mais Vendidas</h2>
-                  <span className="text-[10px] text-zinc-300">{rankingCompra.length} viatura{rankingCompra.length !== 1 ? 's' : ''}</span>
+                  <span className="text-[10px] text-white">{rankingCompra.length} viatura{rankingCompra.length !== 1 ? 's' : ''}</span>
                 </div>
                 <div className="divide-y divide-zinc-800/40">
                   {rankingCompra.map((v, i) => {
@@ -797,7 +797,7 @@ export function FinancePage() {
                       <div key={v.nome + i} className="px-5 py-4 space-y-2">
                         <div className="flex items-center gap-3">
                           <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
-                            i === 0 ? 'bg-amber-500 text-zinc-950' : i === 1 ? 'bg-zinc-400 text-zinc-950' : i === 2 ? 'bg-amber-800 text-white' : 'bg-zinc-800 text-zinc-400'
+                            i === 0 ? 'bg-amber-500 text-zinc-950' : i === 1 ? 'bg-zinc-400 text-zinc-950' : i === 2 ? 'bg-amber-800 text-white' : 'bg-zinc-800 text-white'
                           }`}>{i + 1}</span>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -807,7 +807,7 @@ export function FinancePage() {
                             <Bar pct={pct} color={i === 0 ? 'bg-purple-500' : 'bg-zinc-600'} />
                           </div>
                         </div>
-                        <div className="ml-10 flex gap-5 text-xs text-zinc-500">
+                        <div className="ml-10 flex gap-5 text-xs text-white">
                           <span>Contratos: <strong className="text-white">{v.qty}</strong></span>
                           <span>Média/contrato: <strong className="text-amber-400">{fmt(v.mediaValor)}</strong></span>
                         </div>
@@ -816,7 +816,7 @@ export function FinancePage() {
                   })}
                 </div>
                 <div className="px-5 py-3 border-t border-zinc-800 bg-zinc-800/20 flex justify-between text-sm">
-                  <span className="text-zinc-500 font-semibold">Total vendas</span>
+                  <span className="text-white font-semibold">Total vendas</span>
                   <div className="flex gap-6">
                     <span className="text-white font-bold">{rankingCompra.reduce((s, v) => s + v.qty, 0)} contratos</span>
                     <span className="text-amber-400 font-black">{fmt(rankingCompra.reduce((s, v) => s + v.receita, 0))}</span>

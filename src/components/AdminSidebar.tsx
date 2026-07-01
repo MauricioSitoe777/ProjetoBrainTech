@@ -1,5 +1,6 @@
 import { useRoute } from '../hooks/useRoute';
 import { useGuests } from '../context/GuestsContext';
+import { useNotifications } from '../context/NotificationsContext';
 
 interface Props {
   onClose?: () => void;
@@ -19,6 +20,7 @@ function Icon({ d, d2, extra }: { d: string; d2?: string; extra?: string }) {
 export function AdminSidebar({ onClose }: Props) {
   const { path, navigate } = useRoute();
   const { guests } = useGuests();
+  const { unreadCount } = useNotifications();
 
   const pendingCount = guests.filter(g => g.status !== 'aprovado' && g.status !== 'rejeitado').length;
 
@@ -97,6 +99,16 @@ export function AdminSidebar({ onClose }: Props) {
           icon={<Icon d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3" d2="M14 17h1a2 2 0 0 0 0-4h-1v4zM9 17v-5.34A5 5 0 0 1 14 17" extra="M17 17m-2 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0" />}
         />
 
+        <div className="my-1.5 h-px bg-zinc-800/80" />
+
+        <NavLink
+          active={isSectionActive('/admin/notificacoes')}
+          onClick={() => go('/admin/notificacoes')}
+          label="Notificações"
+          icon={<Icon d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />}
+          badge={unreadCount > 0 ? unreadCount : undefined}
+        />
+
       </nav>
 
 
@@ -125,7 +137,7 @@ function NavLink({ active, onClick, label, icon, badge }: {
       <span className={active ? 'text-amber-400' : 'text-white'}>{icon}</span>
       <span className="flex-1 text-left">{label}</span>
       {badge !== undefined && (
-        <span className="text-[10px] min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-purple-500/20 text-purple-400 font-black px-1">
+        <span className="text-[10px] min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-amber-500/20 text-amber-400 font-black px-1">
           {badge}
         </span>
       )}

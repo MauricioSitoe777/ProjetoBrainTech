@@ -132,7 +132,7 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
       {/* Header do grupo */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="flex items-center gap-1.5 text-zinc-400 hover:text-white text-xs font-bold transition">
+          <button onClick={onBack} className="flex items-center gap-1.5 text-white hover:text-white text-xs font-bold transition">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
             Grupos
           </button>
@@ -165,7 +165,7 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
                 onClick={() => { if (dataTemp) definirDataInicio(grupo.id, dataTemp); setEditandoData(false); }}
                 className="text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-500 text-zinc-950 hover:bg-amber-400 transition"
               >Guardar</button>
-              <button onClick={() => setEditandoData(false)} className="text-xs text-zinc-400 hover:text-white transition">✕</button>
+              <button onClick={() => setEditandoData(false)} className="text-xs text-white hover:text-white transition">✕</button>
             </div>
           )}
           {estadoGrupo === 'Concluido' && (
@@ -298,7 +298,7 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
                 <input type="text" value={novoNome} onChange={e => setNovoNome(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddMembro()}
                   placeholder={membros.length >= maxMembros ? 'Grupo completo' : 'Nome do membro…'}
                   disabled={membros.length >= maxMembros}
-                  className="flex-1 rounded-xl bg-zinc-900 border border-zinc-700 px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-amber-500 transition disabled:opacity-40 disabled:cursor-not-allowed" />
+                  className="flex-1 rounded-xl bg-zinc-900 border border-zinc-700 px-4 py-2.5 text-sm text-white placeholder:text-white outline-none focus:border-amber-500 transition disabled:opacity-40 disabled:cursor-not-allowed" />
                 <button onClick={handleAddMembro} disabled={!novoNome.trim() || membros.length >= maxMembros}
                   className="px-4 py-2.5 rounded-xl bg-amber-500 text-zinc-950 font-black text-sm hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed transition">
                   Adicionar
@@ -344,7 +344,7 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
                               Pago
                             </span>
                             {registoPago && (
-                              <span className="text-[10px] text-zinc-400 block mt-0.5">{registoPago.metodo}</span>
+                              <span className="text-[10px] text-white block mt-0.5">{registoPago.metodo}</span>
                             )}
                           </div>
                         )}
@@ -372,13 +372,13 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
                         </div>
                         <div>
                           <p className="text-[10px] text-white uppercase font-black tracking-widest mb-1.5">
-                            Referência <span className="text-zinc-500 font-medium normal-case">(opcional)</span>
+                            Referência <span className="text-white font-medium normal-case">(opcional)</span>
                           </p>
                           <input
                             value={refTemp}
                             onChange={e => setRefTemp(e.target.value)}
                             placeholder="N.º transação, ref. bancária…"
-                            className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-amber-500 transition"
+                            className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white outline-none focus:border-amber-500 transition"
                           />
                         </div>
                         <button
@@ -398,9 +398,9 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
                     {/* ── Detalhe do pagamento já registado ── */}
                     {registoPago && m.pagamentoMes && (
                       <div className="px-4 pb-3 border-t border-zinc-800/40 pt-2 flex flex-wrap gap-x-4 gap-y-0.5">
-                        <span className="text-[10px] text-zinc-400">Método: <span className="text-white font-bold">{registoPago.metodo}</span></span>
-                        {registoPago.referencia && <span className="text-[10px] text-zinc-400">Ref: <span className="text-white font-mono">{registoPago.referencia}</span></span>}
-                        <span className="text-[10px] text-zinc-400">Data: <span className="text-white">{registoPago.data}</span></span>
+                        <span className="text-[10px] text-white">Método: <span className="text-white font-bold">{registoPago.metodo}</span></span>
+                        {registoPago.referencia && <span className="text-[10px] text-white">Ref: <span className="text-white font-mono">{registoPago.referencia}</span></span>}
+                        <span className="text-[10px] text-white">Data: <span className="text-white">{registoPago.data}</span></span>
                       </div>
                     )}
                   </div>
@@ -508,7 +508,7 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
                           className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black border transition ${
                             ganhou ? 'bg-emerald-400 text-zinc-950 border-emerald-400' :
                             pagou  ? 'bg-amber-500/20 text-amber-400 border-amber-400/30' :
-                            mes <= mesAtual ? 'bg-red-400/10 text-red-400 border-red-400/20' : 'bg-zinc-800 text-zinc-600 border-zinc-700'
+                            mes <= mesAtual ? 'bg-red-400/10 text-red-400 border-red-400/20' : 'bg-zinc-800 text-white border-zinc-700'
                           }`}>{mes}</span>
                       );
                     })}
@@ -755,7 +755,7 @@ function CriarGrupoModal({ onClose, onCriar }: { onClose: () => void; onCriar: (
         <div>
           <label className="text-xs text-white font-bold uppercase tracking-wider block mb-1.5">Nome do Grupo</label>
           <input value={nome} onChange={e => setNome(e.target.value)} placeholder="Ex: Grupo B"
-            className="w-full rounded-xl bg-zinc-800 border border-zinc-700 px-5 py-4 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-amber-500 transition" />
+            className="w-full rounded-xl bg-zinc-800 border border-zinc-700 px-5 py-4 text-sm text-white placeholder:text-white outline-none focus:border-amber-500 transition" />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -772,14 +772,14 @@ function CriarGrupoModal({ onClose, onCriar }: { onClose: () => void; onCriar: (
                 value={quotaStr}
                 onChange={handleQuotaChange}
                 placeholder="Ex: 30.000"
-                className="w-full rounded-xl bg-zinc-800 border border-zinc-700 pl-4 pr-10 py-3 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-amber-500 transition"
+                className="w-full rounded-xl bg-zinc-800 border border-zinc-700 pl-4 pr-10 py-3 text-sm text-white placeholder:text-white outline-none focus:border-amber-500 transition"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-amber-400 pointer-events-none">MT</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-zinc-800/60 rounded-xl px-4 py-3 text-xs text-zinc-400">
+        <div className="bg-zinc-800/60 rounded-xl px-4 py-3 text-xs text-white">
           Prémio mensal: <span className="text-amber-400 font-black">{Math.round(max * quota).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')} MT</span>
         </div>
 
@@ -877,7 +877,7 @@ export function XitiquePage({ onExit }: { onExit?: () => void }) {
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-zinc-400">Membros</span>
+                      <span className="text-white">Membros</span>
                       <span className="text-white font-bold">{g.membros.length} / {g.maxMembros}</span>
                     </div>
                     <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
@@ -887,16 +887,16 @@ export function XitiquePage({ onExit }: { onExit?: () => void }) {
 
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="bg-zinc-800/60 rounded-xl px-3 py-2">
-                      <p className="text-zinc-500 mb-0.5">Quota</p>
+                      <p className="text-white mb-0.5">Quota</p>
                       <p className="text-amber-400 font-black">{fmt(g.quotaMT)}</p>
                     </div>
                     <div className="bg-zinc-800/60 rounded-xl px-3 py-2">
-                      <p className="text-zinc-500 mb-0.5">Prémio</p>
+                      <p className="text-white mb-0.5">Prémio</p>
                       <p className="text-white font-black">{fmt(g.premioMT)}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs text-zinc-500 pt-1 border-t border-zinc-800">
+                  <div className="flex items-center justify-between text-xs text-white pt-1 border-t border-zinc-800">
                     <span>{g.sorteios.length} sorteio{g.sorteios.length !== 1 ? 's' : ''} realizados</span>
                     <span className="group-hover:text-amber-400 font-bold transition-colors">Gerir →</span>
                   </div>

@@ -1,5 +1,10 @@
-import { useState } from 'react';
-import { Mail, Phone, MapPin, Briefcase, Calendar } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import {
+  Mail, Phone, MapPin, Briefcase, Calendar,
+  Home, KeyRound, ShoppingCart, CreditCard,
+  Trophy, History, User, BarChart3, Bell,
+  AlertTriangle, Clock, FileText, Smartphone,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useReservations } from '../context/ReservationsContext';
 import { useXitique } from '../context/XitiqueContext';
@@ -8,6 +13,7 @@ import { useNotifications } from '../context/NotificationsContext';
 import { VEHICLES } from '../data/constants';
 import { ReservationTracker } from '../components/ReservationTracker';
 import XitiqueModal from '../components/XitiqueModal';
+import { NotificacoesPanel } from '../components/NotificacoesPanel';
 import type { Reservation, ReservationStatus } from '../types/reservation';
 
 const ACTIVE_STATUSES: ReservationStatus[] = [
@@ -15,27 +21,29 @@ const ACTIVE_STATUSES: ReservationStatus[] = [
 ];
 
 type Section =
+  | 'resumo'
   | 'dados_pessoais'
   | 'dados_estatisticos'
   | 'reservas'
   | 'compras'
   | 'pagamentos'
   | 'xitique'
-  | 'historico';
+  | 'historico'
+  | 'notificacoes';
 
 const fmt = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' MT';
 
 const RES_STATUS: Record<ReservationStatus, { label: string; cls: string }> = {
   pendente:            { label: 'Aguarda Pagamento',      cls: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
   confirmada:          { label: 'Reserva Confirmada',     cls: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
-  pronta_levantamento: { label: 'Pronta p/ Levantamento', cls: 'bg-sky-400/10 text-sky-400 border-sky-400/20' },
-  ativa:               { label: 'Aluguer Ativo',          cls: 'bg-blue-400/10 text-blue-400 border-blue-400/20' },
-  devolucao_pendente:  { label: 'Devolução Pendente',     cls: 'bg-orange-400/10 text-orange-400 border-orange-400/20' },
+  pronta_levantamento: { label: 'Pronta p/ Levantamento', cls: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
+  ativa:               { label: 'Aluguer Ativo',          cls: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
+  devolucao_pendente:  { label: 'Devolução Pendente',     cls: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
   concluida:           { label: 'Concluído',              cls: 'bg-zinc-700 text-white border-zinc-600' },
   cancelada:           { label: 'Cancelado',              cls: 'bg-red-400/10 text-red-400 border-red-400/20' },
   compra_aprovada:     { label: 'Compra Aprovada',        cls: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
-  entrada_paga:        { label: 'Entrada Paga',           cls: 'bg-teal-400/10 text-teal-400 border-teal-400/20' },
-  em_prestacao:        { label: 'Em Prestação',           cls: 'bg-blue-400/10 text-blue-400 border-blue-400/20' },
+  entrada_paga:        { label: 'Entrada Paga',           cls: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
+  em_prestacao:        { label: 'Em Prestação',           cls: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
   prestacao_atraso:    { label: 'Prestação em Atraso',    cls: 'bg-red-400/10 text-red-400 border-red-400/20' },
   liquidada:           { label: 'Liquidada',              cls: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
 };
@@ -54,6 +62,67 @@ function diffDias(inicio: string, fim: string) {
   return Math.max(1, Math.round(ms / 86_400_000));
 }
 
+// ── Geração de PDF (impressão de HTML estilizado) ───────────────────────────
+function printAsPDF(bodyHtml: string, docTitle: string) {
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>${docTitle}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #18181b; background: #fff; padding: 36px; }
+  .doc-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #f59e0b; padding-bottom: 14px; margin-bottom: 22px; }
+  .doc-logo { font-size: 22px; font-weight: 900; color: #f59e0b; letter-spacing: -0.5px; }
+  .doc-logo span { color: #18181b; }
+  .doc-meta { text-align: right; font-size: 11px; color: #71717a; }
+  .doc-title { font-size: 18px; font-weight: 900; color: #18181b; margin-bottom: 2px; }
+  .doc-sub { font-size: 12px; color: #71717a; }
+  .section-title { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.3px; color: #b45309; margin: 20px 0 8px; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 6px; }
+  .info-box { border: 1px solid #e4e4e7; border-radius: 8px; padding: 10px 12px; }
+  .info-label { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #a1a1aa; margin-bottom: 3px; letter-spacing: 0.5px; }
+  .info-value { font-size: 13px; font-weight: 700; color: #18181b; }
+  .info-sub { font-size: 11px; color: #71717a; margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: #fafafa; }
+  th { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #71717a; padding: 8px 10px; text-align: left; border-bottom: 2px solid #e4e4e7; }
+  td { font-size: 12px; padding: 9px 10px; border-bottom: 1px solid #f4f4f5; color: #18181b; vertical-align: top; }
+  .val-green { font-weight: 800; color: #059669; }
+  .val-red   { font-weight: 800; color: #dc2626; }
+  .val-amber { font-weight: 800; color: #b45309; }
+  .badge { display: inline-block; font-size: 9px; font-weight: 800; padding: 2px 9px; border-radius: 10px; white-space: nowrap; }
+  .badge-aluguer { background: #fef3c7; color: #92400e; }
+  .badge-compra  { background: #d1fae5; color: #065f46; }
+  .badge-xitique { background: #fef3c7; color: #78350f; }
+  .badge-divida  { background: #fee2e2; color: #991b1b; }
+  .summary-box { border: 1px solid #e4e4e7; border-radius: 8px; overflow: hidden; margin-bottom: 6px; }
+  .summary-row { display: flex; justify-content: space-between; padding: 9px 14px; border-bottom: 1px solid #f4f4f5; font-size: 12px; }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-row.total { font-weight: 800; background: #fafafa; }
+  .total-row td { font-weight: 900; background: #fafafa; border-top: 2px solid #e4e4e7; }
+  .doc-footer { margin-top: 32px; text-align: center; font-size: 10px; color: #a1a1aa; border-top: 1px solid #e4e4e7; padding-top: 14px; }
+  @media print { body { padding: 18px; } }
+</style>
+</head>
+<body>
+  <div class="doc-header">
+    <div class="doc-logo">SOS<span>motors</span></div>
+    <div class="doc-meta">Documento gerado pela plataforma<br>SOS Motors</div>
+  </div>
+  ${bodyHtml}
+  <div class="doc-footer">SOS Motors &middot; Este documento foi gerado automaticamente</div>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => { try { win.print(); } catch { /* noop */ } }, 300);
+}
+
 // ── Ícones SVG inline ──────────────────────────────────────────────────────
 const IcoUser      = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
 const IcoKey       = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>;
@@ -65,12 +134,23 @@ const IcoChevron   = ({ open }: { open: boolean }) => <svg width="12" height="12
 const IcoShield    = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
 const IcoBarChart  = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="9" width="4" height="12"/><rect x="10" y="5" width="4" height="16"/><rect x="17" y="1" width="4" height="20"/></svg>;
 
+type PagEvt = { label: string; sub: string; valor: number; data: string; tipo: 'aluguer' | 'compra' | 'xitique' | 'divida' };
+const TIPO_CLS: Record<PagEvt['tipo'], string> = {
+  aluguer: 'bg-amber-400/10 text-amber-400 border-amber-400/20',
+  compra:  'bg-emerald-400/10 text-emerald-400 border-emerald-400/20',
+  xitique: 'bg-amber-400/10 text-amber-400 border-amber-400/20',
+  divida:  'bg-red-400/10 text-red-400 border-red-400/20',
+};
+const TIPO_LABEL: Record<PagEvt['tipo'], string> = {
+  aluguer: 'Aluguer', compra: 'Compra', xitique: 'Xitique', divida: 'Dívida',
+};
+
 export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) {
   const { user: authUser, allUsers } = useAuth();
   const { reservations, cancelReservation } = useReservations();
   const { grupos, inscricoes } = useXitique();
   const { dividas } = useFinance();
-  const { showToast } = useNotifications();
+  const { showToast, unreadCount } = useNotifications();
 
   // ── Dados derivados ────────────────────────────────────────────────────────
   const userRes = reservations.filter(r => r.userId === authUser?.id);
@@ -139,42 +219,44 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
 
   const fullUser = allUsers.find(u => u.id === authUser?.id) ?? null;
 
-  const [section, setSection] = useState<Section>('dados_pessoais');
-  const [perfilOpen, setPerfilOpen]       = useState(true);
+  const [section, setSection] = useState<Section>('resumo');
+
   const [prestOpen, setPrestOpen]         = useState<Set<string>>(new Set());
   const [secOpen, setSecOpen]             = useState<Set<string>>(new Set());
+  const [closedSecs, setClosedSecs]       = useState<Set<string>>(new Set());
   const [showXitiqueModal, setShowXitiqueModal] = useState(false);
-  const toggleSec = (k: string) => setSecOpen(prev => { const s = new Set(prev); s.has(k) ? s.delete(k) : s.add(k); return s; });
+  const toggleSec    = (k: string) => setSecOpen(prev => { const s = new Set(prev); s.has(k) ? s.delete(k) : s.add(k); return s; });
+  const toggleClosed = (k: string) => setClosedSecs(prev => { const s = new Set(prev); s.has(k) ? s.delete(k) : s.add(k); return s; });
 
   // ── Reservas ───────────────────────────────────────────────────────────────
   const [showInativos,  setShowInativos]  = useState(false);
   const [detalheId,     setDetalheId]     = useState<string | null>(null);
   const [cancelConfirm, setCancelConfirm] = useState<string | null>(null);
   const [cancelMotivo,  setCancelMotivo]  = useState('');
+  const [histSearch, setHistSearch] = useState('');
+  const [histFiltro, setHistFiltro] = useState<'todos' | PagEvt['tipo']>('todos');
+  const [faturaSearch, setFaturaSearch] = useState('');
+  const [faturaStatusFiltro, setFaturaStatusFiltro] = useState<'todos' | 'pago' | 'vencendo' | 'pendente' | 'atrasado' | 'cancelado'>('todos');
+  const [showDividaDetail, setShowDividaDetail] = useState(false);
 
   const handleDownloadReserva = (r: Reservation) => {
     const veh = getVehicleName(r.vehicleId);
     const st  = RES_STATUS[r.status]?.label ?? r.status;
-    const lines = [
-      '========================================',
-      '       SOS MOTORS — Comprovativo',
-      '========================================',
-      `Reserva Nº : ${r.id}`,
-      `Viatura    : ${veh}`,
-      `Estado     : ${st}`,
-      `Início     : ${fmtData(r.dataInicio)} ${r.horaLevantamento ? 'às ' + r.horaLevantamento : ''}`,
-      `Fim        : ${fmtData(r.dataFim)} ${r.horaDevolucao ? 'às ' + r.horaDevolucao : ''}`,
-      `Valor Total: ${fmt(r.valorTotal)} MT`,
-      r.deposito > 0 ? `Depositado : ${fmt(r.deposito)} MT` : '',
-      r.notas ? `Observações: ${r.notas}` : '',
-      '========================================',
-      'Gerado pela plataforma SOS Motors',
-    ].filter(Boolean).join('\n');
-    const blob = new Blob([lines], { type: 'text/plain;charset=utf-8' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url; a.download = `reserva_${r.id}.txt`; a.click();
-    URL.revokeObjectURL(url);
+    const body = `
+      <div class="doc-title">Comprovativo de Reserva</div>
+      <div class="doc-sub">Reserva Nº ${r.id}</div>
+      <div class="section-title">Detalhes</div>
+      <div class="summary-box">
+        <div class="summary-row"><span>Viatura</span><span><b>${veh}</b></span></div>
+        <div class="summary-row"><span>Estado</span><span><b>${st}</b></span></div>
+        <div class="summary-row"><span>Início</span><span>${fmtData(r.dataInicio)}${r.horaLevantamento ? ' às ' + r.horaLevantamento : ''}</span></div>
+        <div class="summary-row"><span>Fim</span><span>${fmtData(r.dataFim)}${r.horaDevolucao ? ' às ' + r.horaDevolucao : ''}</span></div>
+        ${r.deposito > 0 ? `<div class="summary-row"><span>Depositado</span><span class="val-green">${fmt(r.deposito)}</span></div>` : ''}
+        <div class="summary-row total"><span>Valor Total</span><span class="val-amber">${fmt(r.valorTotal)}</span></div>
+      </div>
+      ${r.notas ? `<div class="section-title">Observações</div><div class="summary-box"><div class="summary-row"><span>${r.notas}</span></div></div>` : ''}
+    `;
+    printAsPDF(body, `Reserva ${r.id}`);
   };
 
   const handleExtensao = (r: Reservation) => {
@@ -206,268 +288,562 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
   const pagamentosBadge = minhasDividas.length + prestacoesPendentes.length;
   const xitiqueBadge   = (membro?.estado === 'Pendente' && grupoDoUser?.estadoGrupo === 'EmAndamento') ? 1 : 0;
 
+  // ── Histórico de pagamentos partilhado (Pagamentos + Histórico) ───────────
+  const historicoPag: PagEvt[] = [];
+  alugueres.filter(a => a.status === 'concluida').forEach(a => {
+    historicoPag.push({ label: getVehicleName(a.vehicleId), sub: 'Aluguer concluído', valor: a.valorTotal, data: a.dataFim, tipo: 'aluguer' });
+  });
+  compras.forEach(c => {
+    (c.prestacoes ?? []).filter(p => p.paga && p.dataPagamento).forEach(p => {
+      historicoPag.push({ label: getVehicleName(c.vehicleId), sub: `Prestação ${p.numero}`, valor: p.valorPago ?? p.valor, data: p.dataPagamento!, tipo: 'compra' });
+    });
+  });
+  if (membro) {
+    (membro.mesesPagos as number[]).forEach(mes => {
+      const reg = (membro!.pagamentos as Record<number, { data: string; metodo?: string }>)?.[mes];
+      historicoPag.push({ label: grupoDoUser?.nome ?? 'Xitique', sub: `Quota mês ${mes}`, valor: quotaMT, data: reg?.data ?? '', tipo: 'xitique' });
+    });
+  }
+  historicoPag.sort((a, b) => b.data.localeCompare(a.data));
+
   // ── helpers de navegação ──────────────────────────────────────────────────
   const goto = (s: Section) => {
     setSection(s);
-    if (s === 'dados_pessoais' || s === 'dados_estatisticos') setPerfilOpen(true);
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const navBtn = (key: Section, label: string) => (
-    <button
-      key={key}
-      onClick={() => goto(key)}
-      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-        section === key
-          ? 'bg-amber-500/15 text-amber-400'
-          : 'text-white hover:bg-zinc-800/60'
-      }`}
-    >
-      {label}
-    </button>
-  );
+  const hora = new Date().getHours();
+  const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
+  const firstName = authUser?.nome.split(' ')[0] ?? '';
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex">
 
       {/* ══ ASIDE SIDEBAR ════════════════════════════════════════════════════ */}
-      <aside className="w-52 shrink-0 bg-zinc-900 border-r border-zinc-800 flex flex-col sticky top-0 h-screen overflow-y-auto outline-none">
-
-        {/* User card */}
-        <div className="p-4 border-b border-zinc-800 space-y-2">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center text-zinc-950 font-black text-sm shrink-0">
-              {fullUser?.avatar
-                ? <img src={fullUser.avatar} alt={authUser?.nome} className="w-full h-full object-cover rounded-xl" />
-                : <span>{authUser ? initials(authUser.nome) : '?'}</span>
-              }
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-black text-white truncate">{authUser?.nome.split(' ')[0]}</p>
-              <p className="text-[10px] text-white/70 truncate">{authUser?.email}</p>
-            </div>
-          </div>
-          {totalAlertas > 0 && (
-            <div className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 rounded-lg px-2 py-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse shrink-0" />
-              <span className="text-[10px] text-red-400 font-bold">{totalAlertas} pendente{totalAlertas > 1 ? 's' : ''}</span>
-            </div>
-          )}
-        </div>
+      <aside className="w-56 shrink-0 bg-zinc-900 border-r border-zinc-800 flex flex-col sticky top-0 h-screen overflow-hidden">
 
         {/* Navigation */}
-        <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto outline-none">
+        <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto outline-none">
 
-          {/* ── Perfil (grupo expansível) ── */}
-          <div>
-            <button
-              onClick={() => setPerfilOpen(v => !v)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors ${
-                (section === 'dados_pessoais' || section === 'dados_estatisticos')
-                  ? 'bg-amber-500/10 text-amber-400'
-                  : 'text-white hover:bg-zinc-800/60'
-              }`}
-            >
-              <IcoUser />
-              <span className="flex-1 text-left">Perfil</span>
-              <IcoChevron open={perfilOpen} />
-            </button>
-            {perfilOpen && (
-              <div className="ml-5 mt-0.5 space-y-0.5 border-l border-zinc-700/60 pl-2">
-                {navBtn('dados_pessoais',    'Dados Pessoais')}
-                {navBtn('dados_estatisticos','Dados Estatísticos')}
-              </div>
-            )}
-          </div>
+          {/* ── Início ── */}
+          {(() => {
+            const active = section === 'resumo';
+            return (
+              <button onClick={() => goto('resumo')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
+                <Home size={15} className="shrink-0" />
+                <span className="flex-1 text-left text-xs">Início</span>
+              </button>
+            );
+          })()}
 
           {/* ── Reservas ── */}
-          <button
-            onClick={() => goto('reservas')}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors ${
-              section === 'reservas' ? 'bg-amber-500/10 text-amber-400' : 'text-white hover:bg-zinc-800/60'
-            }`}
-          >
-            <IcoKey />
-            <span className="flex-1 text-left">Reservas</span>
-            {alugueres.length > 0 && (
-              <span className={`text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center ${section === 'reservas' ? 'bg-amber-500 text-zinc-950' : 'bg-zinc-700 text-white'}`}>
-                {alugueres.length}
-              </span>
-            )}
-          </button>
+          {(() => {
+            const active = section === 'reservas';
+            return (
+              <button onClick={() => goto('reservas')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
+                <KeyRound size={15} className="shrink-0" />
+                <span className="flex-1 text-left text-xs">Reservas</span>
+                {alugueres.length > 0 && <span className={`text-[10px] font-black min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center ${active ? 'bg-amber-500 text-zinc-950' : 'bg-zinc-700 text-white'}`}>{alugueres.length}</span>}
+              </button>
+            );
+          })()}
 
           {/* ── Compras ── */}
-          <button
-            onClick={() => goto('compras')}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors ${
-              section === 'compras' ? 'bg-amber-500/10 text-amber-400' : 'text-white hover:bg-zinc-800/60'
-            }`}
-          >
-            <IcoCar />
-            <span className="flex-1 text-left">Compras</span>
-            {compras.length > 0 && (
-              <span className={`text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center ${section === 'compras' ? 'bg-amber-500 text-zinc-950' : 'bg-zinc-700 text-white'}`}>
-                {compras.length}
-              </span>
-            )}
-          </button>
+          {(() => {
+            const active = section === 'compras';
+            return (
+              <button onClick={() => goto('compras')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
+                <ShoppingCart size={15} className="shrink-0" />
+                <span className="flex-1 text-left text-xs">Compras</span>
+                {compras.length > 0 && <span className={`text-[10px] font-black min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center ${active ? 'bg-amber-500 text-zinc-950' : 'bg-zinc-700 text-white'}`}>{compras.length}</span>}
+              </button>
+            );
+          })()}
 
           {/* ── Pagamentos ── */}
-          <button
-            onClick={() => goto('pagamentos')}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors ${
-              section === 'pagamentos' ? 'bg-amber-500/10 text-amber-400' : 'text-white hover:bg-zinc-800/60'
-            }`}
-          >
-            <IcoWallet />
-            <span className="flex-1 text-left">Pagamentos</span>
-            {pagamentosBadge > 0 && (
-              <span className="text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center bg-red-500 text-white">
-                {pagamentosBadge}
-              </span>
-            )}
-          </button>
+          {(() => {
+            const active = section === 'pagamentos';
+            return (
+              <button onClick={() => goto('pagamentos')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
+                <CreditCard size={15} className="shrink-0" />
+                <span className="flex-1 text-left text-xs">Pagamentos</span>
+                {pagamentosBadge > 0 && <span className="text-[10px] font-black min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center bg-red-500 text-white">{pagamentosBadge}</span>}
+              </button>
+            );
+          })()}
 
           {/* ── Xitique ── */}
-          <button
-            onClick={() => goto('xitique')}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors ${
-              section === 'xitique' ? 'bg-amber-500/10 text-amber-400' : 'text-white hover:bg-zinc-800/60'
-            }`}
-          >
-            <IcoTrophy />
-            <span className="flex-1 text-left">Xitique</span>
-            {xitiqueBadge > 0 && (
-              <span className="text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center bg-amber-500 text-zinc-950">
-                !
-              </span>
-            )}
-          </button>
+          {(() => {
+            const active = section === 'xitique';
+            return (
+              <button onClick={() => goto('xitique')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
+                <Trophy size={15} className="shrink-0" />
+                <span className="flex-1 text-left text-xs">Xitique</span>
+                {xitiqueBadge > 0 && <span className="text-[10px] font-black min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center bg-amber-500 text-zinc-950">!</span>}
+              </button>
+            );
+          })()}
 
           {/* ── Histórico ── */}
-          <button
-            onClick={() => goto('historico')}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors ${
-              section === 'historico' ? 'bg-amber-500/10 text-amber-400' : 'text-white hover:bg-zinc-800/60'
-            }`}
-          >
-            <IcoHistory />
-            <span className="flex-1 text-left">Histórico</span>
-          </button>
+          {(() => {
+            const active = section === 'historico';
+            return (
+              <button onClick={() => goto('historico')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
+                <History size={15} className="shrink-0" />
+                <span className="flex-1 text-left text-xs">Histórico</span>
+              </button>
+            );
+          })()}
+
+          {/* ── Notificações ── */}
+          {(() => {
+            const active = section === 'notificacoes';
+            return (
+              <button onClick={() => goto('notificacoes')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
+                <Bell size={15} className="shrink-0" />
+                <span className="flex-1 text-left text-xs">Notificações</span>
+                {unreadCount > 0 && <span className={`text-[10px] font-black min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center ${active ? 'bg-amber-500 text-zinc-950' : 'bg-red-500 text-white'}`}>{unreadCount}</span>}
+              </button>
+            );
+          })()}
+
+          {/* ── Dados Pessoais ── */}
+          {(() => {
+            const active = section === 'dados_pessoais';
+            return (
+              <button onClick={() => goto('dados_pessoais')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
+                <User size={15} className="shrink-0" />
+                <span className="flex-1 text-left text-xs">Dados Pessoais</span>
+              </button>
+            );
+          })()}
 
         </nav>
 
-        {/* Footer */}
-        <div className="p-3 border-t border-zinc-800">
-          <p className="text-[10px] text-white/40 text-center">SOS Motors · A minha conta</p>
-        </div>
       </aside>
 
       {/* ══ CONTENT AREA ═════════════════════════════════════════════════════ */}
       <main className="flex-1 min-w-0 overflow-y-auto outline-none">
 
-        {/* Page title bar */}
-        <div className="sticky top-0 z-10 bg-zinc-950/90 backdrop-blur border-b border-zinc-800/60 px-6 py-3">
-        <div className="flex items-center gap-3">
-          <div className="text-amber-500">
-            {section === 'dados_pessoais'    && <IcoUser />}
-            {section === 'dados_estatisticos'&& <IcoBarChart />}
-            {section === 'reservas'          && <IcoKey />}
-            {section === 'compras'           && <IcoCar />}
-            {section === 'pagamentos'        && <IcoWallet />}
-            {section === 'xitique'           && <IcoTrophy />}
-            {section === 'historico'         && <IcoHistory />}
+        {/* ── Topbar ── */}
+        <div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur border-b border-zinc-800/60 px-6 py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="text-amber-500">
+              {section === 'resumo'            && <Home size={15} />}
+              {section === 'dados_pessoais'    && <User size={15} />}
+              {section === 'dados_estatisticos'&& <BarChart3 size={15} />}
+              {section === 'reservas'          && <KeyRound size={15} />}
+              {section === 'compras'           && <ShoppingCart size={15} />}
+              {section === 'pagamentos'        && <CreditCard size={15} />}
+              {section === 'xitique'           && <Trophy size={15} />}
+              {section === 'historico'         && <History size={15} />}
+            {section === 'notificacoes'      && <Bell size={15} />}
+            </div>
+            <h1 className="text-xs font-black text-white uppercase tracking-widest">
+              {section === 'resumo'            && saudacao + ', ' + firstName}
+              {section === 'dados_pessoais'    && 'Dados Pessoais'}
+              {section === 'dados_estatisticos'&& 'Dados Estatísticos'}
+              {section === 'reservas'          && 'Reservas'}
+              {section === 'compras'           && 'Compras'}
+              {section === 'pagamentos'        && 'Pagamentos'}
+              {section === 'xitique'           && 'Xitique'}
+              {section === 'historico'         && 'Histórico'}
+              {section === 'notificacoes'      && 'Notificações'}
+            </h1>
           </div>
-          <h1 className="text-sm font-black text-white uppercase tracking-widest">
-            {section === 'dados_pessoais'    && 'Dados Pessoais'}
-            {section === 'dados_estatisticos'&& 'Dados Estatísticos'}
-            {section === 'reservas'          && 'Reservas'}
-            {section === 'compras'           && 'Compras'}
-            {section === 'pagamentos'        && 'Pagamentos'}
-            {section === 'xitique'           && 'Xitique'}
-            {section === 'historico'         && 'Histórico'}
-          </h1>
-        </div>
+          <div />
         </div>
 
         <div className="p-6 space-y-4 w-full">
 
+          {/* ══ RESUMO / HOME DASHBOARD ══════════════════════════════════════ */}
+          {section === 'resumo' && (() => {
+            // ── actividade recente ──────────────────────────────────────────
+            type ActEvt = { id: string; icon: React.ReactNode; iconBg: string; title: string; sub: string; status: string; statusCls: string };
+            const actFeed: ActEvt[] = [];
+            [...alugueres].sort((a,b) => b.createdAt.localeCompare(a.createdAt)).slice(0,3).forEach(r => {
+              const st = RES_STATUS[r.status];
+              actFeed.push({ id: r.id, icon: <KeyRound size={15} />, iconBg: 'bg-amber-500/12', title: `Reserva — ${getVehicleName(r.vehicleId)}`, sub: `${fmtData(r.dataInicio)} · ${fmt(r.valorTotal)}`, status: st.label, statusCls: st.cls });
+            });
+            [...compras].sort((a,b) => b.createdAt.localeCompare(a.createdAt)).slice(0,2).forEach(r => {
+              const st = RES_STATUS[r.status];
+              const paga = (r.prestacoesPagas ?? 0);
+              const total = (r.totalPrestacoes ?? 0);
+              actFeed.push({ id: r.id, icon: <ShoppingCart size={15} />, iconBg: 'bg-emerald-400/10', title: `Compra — ${getVehicleName(r.vehicleId)}`, sub: paga > 0 ? `${paga}/${total} prestações · ${fmt(r.valorTotal)}` : fmt(r.valorTotal), status: st.label, statusCls: st.cls });
+            });
+            actFeed.sort((a,b) => b.id.localeCompare(a.id));
+            const feedDisplay = actFeed.slice(0, 5);
+
+            // ── xitique progress ────────────────────────────────────────────
+            const totalQuotas = grupoDoUser ? grupoDoUser.maxMembros * (grupoDoUser.quotaMT ?? 0) : 0;
+            const pagosQuotas = membro ? membro.mesesPagos.length * quotaMT : 0;
+            const xitiquePct  = totalQuotas > 0 ? Math.round((pagosQuotas / totalQuotas) * 100) : 0;
+            const nextXitique = membro && grupoDoUser ? { valor: quotaMT, mes: grupoDoUser.mesAtual } : null;
+
+            // ── stat cards ──────────────────────────────────────────────────
+            const stats = [
+              {
+                icon: <KeyRound size={18} />,
+                label: 'Reservas',
+                value: alugueres.length,
+                sub: `${alugueres.filter(a => a.status === 'concluida').length} concluída${alugueres.filter(a => a.status === 'concluida').length !== 1 ? 's' : ''}`,
+                accentLine: 'bg-amber-500',
+                valueColor: 'text-amber-400',
+                onClick: () => goto('reservas'),
+              },
+              {
+                icon: <ShoppingCart size={18} />,
+                label: 'Compras',
+                value: compras.length,
+                sub: `${compras.filter(c => c.status === 'liquidada').length} liquidada${compras.filter(c => c.status === 'liquidada').length !== 1 ? 's' : ''}`,
+                accentLine: 'bg-emerald-400',
+                valueColor: 'text-emerald-400',
+                onClick: () => goto('compras'),
+              },
+              {
+                icon: <CreditCard size={18} />,
+                label: 'Pagamentos',
+                value: pagamentosBadge,
+                sub: pagamentosBadge > 0 ? 'pendente(s)' : 'Em dia',
+                accentLine: pagamentosBadge > 0 ? 'bg-red-400' : 'bg-emerald-400',
+                valueColor: pagamentosBadge > 0 ? 'text-red-400' : 'text-emerald-400',
+                onClick: () => goto('pagamentos'),
+              },
+              {
+                icon: <Trophy size={18} />,
+                label: 'Xitique',
+                value: membro ? `${xitiquePct}%` : '—',
+                sub: membro ? `${fmt(pagosQuotas)} acumulados` : 'Não inscrito',
+                accentLine: 'bg-amber-500',
+                valueColor: 'text-amber-400',
+                onClick: () => goto('xitique'),
+              },
+            ];
+
+            return (
+              <div className="space-y-5">
+
+                {/* ── Alert bar: pagamentos urgentes ── */}
+                {pagamentosBadge > 0 && (
+                  <div className="flex items-center gap-3 bg-red-500/8 border border-red-500/25 rounded-xl px-4 py-3">
+                    <AlertTriangle size={15} className="text-red-400 shrink-0" />
+                    <p className="text-sm text-white flex-1">
+                      Tem <span className="text-red-400 font-bold">{pagamentosBadge} pagamento{pagamentosBadge > 1 ? 's' : ''} pendente{pagamentosBadge > 1 ? 's' : ''}</span> por regularizar.
+                    </p>
+                    <button onClick={() => goto('pagamentos')} className="shrink-0 px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-bold transition-colors">
+                      Ver
+                    </button>
+                  </div>
+                )}
+
+                {/* ── Welcome banner ── */}
+                <div className="relative bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 border border-zinc-800 rounded-2xl px-5 py-5 overflow-hidden">
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(228,180,46,0.07),transparent_60%)]" />
+                  <div className="relative">
+                    <h2 className="text-lg font-black text-white mb-0.5">
+                      {saudacao}, <span className="text-amber-400">{firstName}</span> 👋
+                    </h2>
+                    {fullUser?.dataCriacao && (
+                      <p className="text-xs text-white mb-3">Membro desde {fmtData(fullUser.dataCriacao.slice(0,10))}</p>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[11px] font-bold border ${fullUser?.status === 'ativo' ? 'bg-emerald-400/10 border-emerald-400/20 text-emerald-400' : 'bg-red-400/10 border-red-400/20 text-red-400'}`}>
+                        {fullUser?.status === 'ativo' ? 'Conta Activa' : 'Conta ' + (fullUser?.status ?? 'Pendente')}
+                      </span>
+                      <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[11px] font-bold border ${fullUser?.regularity === 'regular' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-red-400/10 border-red-400/20 text-red-400'}`}>
+                        {fullUser?.regularity === 'regular' ? 'Regular' : 'Pagamento em Falta'}
+                      </span>
+                      {membro && (
+                        <span className="inline-flex items-center px-3 py-1 rounded-lg text-[11px] font-bold border bg-amber-500/10 border-amber-500/20 text-amber-400">
+                          Xitique Activo
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── 4 KPI cards ── */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {stats.map(s => (
+                    <button key={s.label} onClick={s.onClick} className="group bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-2xl overflow-hidden text-left transition-all hover:-translate-y-0.5">
+                      <div className={`h-0.5 w-full ${s.accentLine}`} />
+                      <div className="p-4">
+                        <div className={`mb-3 ${s.valueColor}`}>{s.icon}</div>
+                        <p className="text-[10px] text-white uppercase font-bold tracking-widest mb-1">{s.label}</p>
+                        <p className={`text-3xl font-black ${s.valueColor} leading-none mb-1`}>{s.value}</p>
+                        <p className="text-[11px] text-white">{s.sub}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* ── Dois painéis ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+                  {/* Actividade recente */}
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-800/30">
+                      <div className="flex items-center gap-2">
+                        <Clock size={13} className="text-amber-400" />
+                        <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Actividade Recente</span>
+                      </div>
+                      <button onClick={() => goto('historico')} className="text-[11px] text-amber-400/70 hover:text-amber-400 transition-colors">Ver tudo →</button>
+                    </div>
+                    {feedDisplay.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-xs text-white/70">Sem actividade registada.</div>
+                    ) : (
+                      <div className="divide-y divide-zinc-800/60">
+                        {feedDisplay.map(evt => (
+                          <div key={evt.id} className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/30 transition-colors">
+                            <div className={`w-8 h-8 rounded-xl ${evt.iconBg} flex items-center justify-center text-white/70 shrink-0`}>
+                              {evt.icon}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-white truncate">{evt.title}</p>
+                              <p className="text-[10px] text-white mt-0.5">{evt.sub}</p>
+                            </div>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${evt.statusCls}`}>{evt.status}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Xitique card */}
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-800/30">
+                      <div className="flex items-center gap-2">
+                        <Trophy size={13} className="text-amber-400" />
+                        <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">O Meu Xitique</span>
+                      </div>
+                      <button onClick={() => goto('xitique')} className="text-[11px] text-amber-400/70 hover:text-amber-400 transition-colors">Detalhes →</button>
+                    </div>
+                    {!membro ? (
+                      <div className="px-4 py-8 text-center space-y-2">
+                        <Trophy size={28} className="mx-auto text-white" />
+                        <p className="text-xs text-white">Não está inscrito num grupo de Xitique.</p>
+                        <button onClick={() => goto('xitique')} className="mt-2 px-4 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold hover:bg-amber-500/20 transition-colors">
+                          Saber mais
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="px-4 py-4 space-y-4">
+                        {/* Valor acumulado */}
+                        <div className="flex items-end justify-between">
+                          <span className="text-[11px] text-white">Poupança acumulada</span>
+                          <span className="text-2xl font-black text-amber-400">{fmt(pagosQuotas)}</span>
+                        </div>
+                        {/* Barra de progresso */}
+                        <div>
+                          <div className="flex justify-between text-[10px] text-white mb-1.5">
+                            <span>Meta: {fmt(totalQuotas)}</span>
+                            <span className="text-amber-400 font-bold">{xitiquePct}%</span>
+                          </div>
+                          <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                            <div className="h-2 rounded-full bg-gradient-to-r from-amber-600 to-amber-400 transition-all" style={{ width: `${xitiquePct}%` }} />
+                          </div>
+                        </div>
+                        {/* Membros do grupo */}
+                        {grupoDoUser && (
+                          <div>
+                            <p className="text-[10px] text-white/70 uppercase font-bold tracking-widest mb-2">Membros</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {grupoDoUser.membros.slice(0,4).map(m => (
+                                <span key={m.nome} className="inline-flex items-center gap-1.5 bg-zinc-800 border border-zinc-700 rounded-full px-2.5 py-1 text-[10px] text-white/70">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                                  {m.nome.split(' ')[0]}
+                                </span>
+                              ))}
+                              {grupoDoUser.membros.length > 4 && (
+                                <span className="inline-flex items-center bg-zinc-800 border border-zinc-700 rounded-full px-2.5 py-1 text-[10px] text-white">
+                                  +{grupoDoUser.membros.length - 4}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {/* Próxima contribuição */}
+                        {nextXitique && (
+                          <div className="flex items-center justify-between pt-2 border-t border-zinc-800">
+                            <div>
+                              <p className="text-[10px] text-white/70 uppercase font-bold tracking-widest">Próxima contribuição</p>
+                              <p className="text-sm font-bold text-white mt-0.5">{fmt(nextXitique.valor)} <span className="text-white font-normal">· Mês {nextXitique.mes}</span></p>
+                            </div>
+                            <button onClick={() => goto('xitique')} className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-xs font-bold transition-colors">
+                              Ver Xitique
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+              </div>
+            );
+          })()}
+
           {/* ══ DADOS PESSOAIS ════════════════════════════════════════════════ */}
           {section === 'dados_pessoais' && (
-            <div className="space-y-3">
+            <div className="space-y-4">
 
-              {/* Profile Card */}
+              {/* Profile Hero */}
               <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                <div className="px-5 pt-5 pb-4">
-                  <div className="w-20 h-20 rounded-full overflow-hidden bg-amber-500 flex items-center justify-center text-zinc-950 font-black text-xl shrink-0 shadow-lg mb-4">
-                    {fullUser?.avatar
-                      ? <img src={fullUser.avatar} alt={authUser?.nome} className="w-full h-full object-cover" />
-                      : <span>{authUser ? initials(authUser.nome) : '?'}</span>
-                    }
-                  </div>
-                  <h2 className="text-white font-black text-xl leading-tight">
-                    {fullUser?.nome ?? authUser?.nome}
-                  </h2>
-                  {fullUser?.category && (
-                    <p className="text-zinc-400 text-sm mt-0.5">
-                      {fullUser.category === 'func_publico' ? 'Funcionário Público' :
-                       fullUser.category === 'func_privado' ? 'Funcionário Privado' :
-                       fullUser.category === 'empreendedor' ? 'Empreendedor' : ''}
-                    </p>
-                  )}
-                </div>
-                <div className="border-t border-zinc-800 mx-5" />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5 px-5 py-5">
-                  {[
-                    { icon: <Mail size={14} />,      value: fullUser?.email ?? authUser?.email },
-                    { icon: <Phone size={14} />,     value: fullUser?.telefone },
-                    { icon: <MapPin size={14} />,    value: fullUser?.endereco },
-                    { icon: <Briefcase size={14} />, value: fullUser?.category === 'func_publico' ? 'Funcionário Público' : fullUser?.category === 'func_privado' ? 'Funcionário Privado' : fullUser?.category === 'empreendedor' ? 'Empreendedor' : undefined },
-                    { icon: <Calendar size={14} />,  value: fullUser?.dataCriacao ? `Membro desde ${fmtData(fullUser.dataCriacao.slice(0, 10))}` : undefined },
-                  ].filter(f => !!f.value).map((f, i) => (
-                    <div key={i} className="flex items-center gap-2.5 min-w-0">
-                      <span className="text-zinc-500 shrink-0">{f.icon}</span>
-                      <span className="text-sm text-white truncate">{f.value}</span>
+                <div className="h-0.5 w-full bg-gradient-to-r from-amber-600 via-amber-400 to-amber-600" />
+                <div className="px-5 pt-5 pb-5">
+                  <div className="flex items-start gap-4">
+                    <div className="w-20 h-20 rounded-full overflow-hidden bg-amber-500 flex items-center justify-center text-zinc-950 font-black text-xl shrink-0 shadow-lg ring-2 ring-amber-500/30">
+                      {fullUser?.avatar
+                        ? <img src={fullUser.avatar} alt={authUser?.nome} className="w-full h-full object-cover" />
+                        : <span>{authUser ? initials(authUser.nome) : '?'}</span>
+                      }
                     </div>
-                  ))}
+                    <div className="flex-1 min-w-0">
+                      <h2 className="text-white font-black text-xl leading-tight">
+                        {fullUser?.nome ?? authUser?.nome}
+                      </h2>
+                      <p className="text-white text-sm mt-0.5">{authUser?.email}</p>
+                      {fullUser?.dataCriacao && (
+                        <p className="text-white text-xs mt-0.5">
+                          Membro desde {fmtData(fullUser.dataCriacao.slice(0, 10))}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Estado da Conta */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
-                  <span className="text-amber-400"><IcoShield /></span>
-                  <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Estado da Conta</span>
+              {/* 3 Mini Stat Cards */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-center relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-amber-500" />
+                  <div className="text-xl font-black text-amber-400">{alugueres.length}</div>
+                  <div className="text-[10px] text-white mt-0.5 font-medium">Reservas</div>
                 </div>
-                <div className="divide-y divide-zinc-800/50">
-                  {[
-                    {
-                      label: 'Estado',
-                      badge: fullUser?.status === 'ativo'    ? { text: 'Activo',    cls: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' } :
-                             fullUser?.status === 'suspenso' ? { text: 'Suspenso',  cls: 'bg-red-400/10 text-red-400 border-red-400/20' } :
-                             fullUser?.status === 'inativo'  ? { text: 'Inactivo',  cls: 'bg-zinc-700 text-white border-zinc-600' } :
-                                                               { text: 'Pendente',  cls: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
-                    },
-                    {
-                      label: 'Regularidade',
-                      badge: fullUser?.regularity === 'regular'      ? { text: 'Regular',      cls: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' } :
-                             fullUser?.regularity === 'inadimplente' ? { text: 'Inadimplente', cls: 'bg-red-400/10 text-red-400 border-red-400/20' } :
-                                                                       { text: 'Pendente',      cls: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
-                    },
-                    {
-                      label: 'Xitique',
-                      badge: fullUser?.xitique
-                        ? { text: 'Inscrito',     cls: 'bg-amber-400/10 text-amber-400 border-amber-400/20' }
-                        : { text: 'Não inscrito', cls: 'bg-zinc-700 text-zinc-400 border-zinc-600' },
-                    },
-                  ].map(row => (
-                    <div key={row.label} className="flex items-center justify-between gap-3 px-4 py-3">
-                      <span className="text-xs text-white">{row.label}</span>
-                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${row.badge.cls}`}>
-                        {row.badge.text}
-                      </span>
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-center relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-emerald-500" />
+                  <div className="text-xl font-black text-emerald-400">{compras.length}</div>
+                  <div className="text-[10px] text-white mt-0.5 font-medium">Compras</div>
+                </div>
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-center relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-red-500" />
+                  <div className="text-xl font-black text-red-400">{minhasDividas.length + prestacoesPendentes.length}</div>
+                  <div className="text-[10px] text-white mt-0.5 font-medium">Pagamentos</div>
+                </div>
+              </div>
+
+              {/* Two-column layout */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                {/* Left: Dados Pessoais info rows */}
+                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
+                    <span className="text-amber-400"><User size={12} /></span>
+                    <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Dados Pessoais</span>
+                  </div>
+                  <div className="divide-y divide-zinc-800/50">
+                    {([
+                      { icon: <Mail size={13} />,      label: 'Email',        value: fullUser?.email ?? authUser?.email },
+                      { icon: <Phone size={13} />,     label: 'Telefone',     value: fullUser?.telefone },
+                      { icon: <MapPin size={13} />,    label: 'Localização',  value: fullUser?.endereco },
+                      { icon: <Briefcase size={13} />, label: 'Profissão',    value:
+                          fullUser?.category === 'func_publico' ? 'Funcionário Público' :
+                          fullUser?.category === 'func_privado' ? 'Funcionário Privado' :
+                          fullUser?.category === 'empreendedor' ? 'Empreendedor' : undefined },
+                      { icon: <Calendar size={13} />,  label: 'Membro desde', value: fullUser?.dataCriacao ? fmtData(fullUser.dataCriacao.slice(0, 10)) : undefined },
+                    ] as { icon: ReactNode; label: string; value?: string }[]).filter(f => !!f.value).map((f, i) => (
+                      <div key={i} className="flex items-center gap-3 px-4 py-3">
+                        <div className="w-7 h-7 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0 text-amber-400">
+                          {f.icon}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[10px] text-white font-medium">{f.label}</div>
+                          <div className="text-xs text-white truncate mt-0.5">{f.value}</div>
+                        </div>
+                      </div>
+                    ))}
+                    {!fullUser?.email && !authUser?.email && !fullUser?.telefone && !fullUser?.endereco && (
+                      <div className="px-4 py-5 text-center text-xs text-white">
+                        Sem dados de contacto registados.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right: Estado da Conta + Segurança */}
+                <div className="space-y-3">
+                  {/* Estado da Conta 2×2 grid */}
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
+                      <span className="text-amber-400"><IcoShield /></span>
+                      <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Estado da Conta</span>
                     </div>
-                  ))}
+                    <div className="grid grid-cols-2 gap-px bg-zinc-800">
+                      {[
+                        {
+                          label: 'Estado',
+                          value: fullUser?.status === 'ativo'    ? 'Activo'    :
+                                 fullUser?.status === 'suspenso' ? 'Suspenso'  :
+                                 fullUser?.status === 'inativo'  ? 'Inactivo'  : 'Pendente',
+                          cls: fullUser?.status === 'ativo'    ? 'text-emerald-400' :
+                               fullUser?.status === 'suspenso' ? 'text-red-400'     :
+                               fullUser?.status === 'inativo'  ? 'text-white'    : 'text-amber-400',
+                        },
+                        {
+                          label: 'Regularidade',
+                          value: fullUser?.regularity === 'regular'      ? 'Regular'      :
+                                 fullUser?.regularity === 'inadimplente' ? 'Inadimplente' : 'Pendente',
+                          cls: fullUser?.regularity === 'regular'      ? 'text-emerald-400' :
+                               fullUser?.regularity === 'inadimplente' ? 'text-red-400'     : 'text-amber-400',
+                        },
+                        {
+                          label: 'Xitique',
+                          value: fullUser?.xitique ? 'Inscrito' : 'Não inscrito',
+                          cls:   fullUser?.xitique ? 'text-amber-400' : 'text-white',
+                        },
+                        {
+                          label: 'Perfil',
+                          value: 'Cliente',
+                          cls:   'text-white',
+                        },
+                      ].map(row => (
+                        <div key={row.label} className="bg-zinc-900 px-3 py-3">
+                          <div className="text-[10px] text-white font-medium mb-1">{row.label}</div>
+                          <div className={`text-xs font-bold ${row.cls}`}>{row.value}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Segurança */}
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
+                      <span className="text-amber-400"><KeyRound size={12} /></span>
+                      <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Segurança</span>
+                    </div>
+                    <div className="divide-y divide-zinc-800/50">
+                      {[
+                        { icon: <KeyRound size={13} />,   label: 'Palavra-passe',     value: '••••••••',      note: 'Contacte o admin para alterar' },
+                        { icon: <Smartphone size={13} />, label: 'Autenticação 2FA',  value: 'Indisponível',  note: 'Não configurado nesta versão' },
+                        { icon: <Mail size={13} />,       label: 'Email verificado',  value: authUser?.email ? 'Verificado' : 'Pendente', note: authUser?.email ?? '' },
+                      ].map((item, i) => (
+                        <div key={i} className="flex items-center gap-3 px-4 py-3">
+                          <div className="w-7 h-7 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0 text-white">
+                            {item.icon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs text-white font-medium">{item.label}</div>
+                            <div className="text-[10px] text-white mt-0.5 truncate">{item.note}</div>
+                          </div>
+                          <span className={`text-[10px] font-bold shrink-0 ${
+                            item.value === 'Verificado' ? 'text-emerald-400' : 'text-white'
+                          }`}>{item.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -495,15 +871,13 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                     >
                       <div className="flex items-center gap-2">
                         <span className="text-emerald-400">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-                          </svg>
+                          <FileText size={12} />
                         </span>
                         <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Documentos</span>
                         {hasAnyDoc && (
                           <div className="flex items-center gap-1">
-                            {entregues > 0 && <span className="text-[10px] bg-emerald-400/15 text-emerald-400 border border-emerald-400/20 rounded-full px-1.5 py-0.5 font-black">{entregues} ok</span>}
-                            {emFalta > 0   && <span className="text-[10px] bg-red-400/15 text-red-400 border border-red-400/20 rounded-full px-1.5 py-0.5 font-black">{emFalta} em falta</span>}
+                            {entregues > 0 && <span className="text-[10px] bg-emerald-400/15 text-emerald-400 border border-emerald-400/20 rounded-md px-1.5 py-0.5 font-black">{entregues} ok</span>}
+                            {emFalta > 0   && <span className="text-[10px] bg-red-400/15 text-red-400 border border-red-400/20 rounded-md px-1.5 py-0.5 font-black">{emFalta} em falta</span>}
                           </div>
                         )}
                       </div>
@@ -512,7 +886,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
 
                     {secOpen.has('docs') && (
                       !hasAnyDoc ? (
-                        <div className="px-4 py-5 text-center text-xs text-zinc-500 border-t border-zinc-800">
+                        <div className="px-4 py-5 text-center text-xs text-white border-t border-zinc-800">
                           Nenhum documento registado. Contacte o administrador.
                         </div>
                       ) : (
@@ -530,7 +904,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                   </div>
                                   <span className="text-xs text-white truncate">{d.label}</span>
                                 </div>
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${presente ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' : 'bg-red-400/10 text-red-400 border-red-400/20'}`}>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${presente ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' : 'bg-red-400/10 text-red-400 border-red-400/20'}`}>
                                   {presente ? 'Entregue' : 'Em falta'}
                                 </span>
                               </div>
@@ -538,7 +912,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                           })}
                           {conhecidos.length > 0 && (
                             <div className="flex items-center justify-between px-4 py-2.5 bg-zinc-800/30">
-                              <span className="text-[10px] text-zinc-400 font-bold">Total registados</span>
+                              <span className="text-[10px] text-white font-bold">Total registados</span>
                               <span className="text-[10px] text-white font-black">{entregues} / {conhecidos.length}</span>
                             </div>
                           )}
@@ -549,14 +923,6 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                 );
               })()}
 
-              <div className="flex items-start gap-3 bg-zinc-900/60 border border-zinc-800 rounded-2xl px-4 py-3">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" className="mt-0.5 shrink-0">
-                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.8" fill="#6b7280"/>
-                </svg>
-                <p className="text-xs text-white leading-relaxed">
-                  Para alterar os seus dados ou credenciais, contacte o administrador da SOS Motors.
-                </p>
-              </div>
             </div>
           )}
 
@@ -629,8 +995,8 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
               {alugueres.length > 0 && (
                 <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
                   <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
-                    <span className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />
-                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Reservas por Estado</span>
+                    <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                    <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Reservas por Estado</span>
                   </div>
                   <div className="divide-y divide-zinc-800/50">
                     {Object.entries(
@@ -642,7 +1008,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                       const st = RES_STATUS[status as ReservationStatus];
                       return (
                         <div key={status} className="flex items-center justify-between px-4 py-2.5">
-                          <span className={`text-[10px] border rounded-full px-2 py-0.5 font-bold ${st.cls}`}>{st.label}</span>
+                          <span className={`text-[10px] border rounded-md px-2 py-0.5 font-bold ${st.cls}`}>{st.label}</span>
                           <span className="text-xs font-black text-white">{count}</span>
                         </div>
                       );
@@ -684,6 +1050,9 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
               const podeCancelar = isAtivo && r.status !== 'ativa' && r.status !== 'devolucao_pendente';
               const podeEstender = r.status === 'ativa';
               const valorRestante = r.valorTotal - r.deposito;
+              const pct = r.deposito > 0 && r.valorTotal > 0
+                ? Math.min(100, Math.round((r.deposito / r.valorTotal) * 100))
+                : 0;
 
               return (
                 <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
@@ -692,25 +1061,25 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
 
                     {/* Carro + datas + estado + obs */}
                     <div className="px-4 py-3 min-w-0">
-                      <p className="text-sm font-black text-white truncate">{getVehicleName(r.vehicleId)}</p>
+                      <p className="text-base font-black text-white truncate">{getVehicleName(r.vehicleId)}</p>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
-                        <span className="text-[10px] text-white/60">Início: <span className="text-white font-bold">{fmtData(r.dataInicio)}</span></span>
-                        <span className="text-[10px] text-white/60">Fim: <span className="text-white font-bold">{fmtData(r.dataFim)}</span></span>
-                        {r.horaDevolucao && <span className="text-[10px] text-white/60">Dev: <span className="text-white font-bold">{r.horaDevolucao}</span></span>}
+                        <span className="text-xs text-white">Início: <span className="text-white font-bold">{fmtData(r.dataInicio)}</span></span>
+                        <span className="text-xs text-white">Fim: <span className="text-white font-bold">{fmtData(r.dataFim)}</span></span>
+                        {r.horaDevolucao && <span className="text-xs text-white">Dev: <span className="text-white font-bold">{r.horaDevolucao}</span></span>}
                       </div>
-                      {r.notas && <p className="text-[10px] text-white/50 mt-0.5 truncate">{r.notas}</p>}
+                      {r.notas && <p className="text-xs text-white mt-0.5 truncate">{r.notas}</p>}
                     </div>
 
                     {/* Estado */}
                     <div className="px-3 py-3 shrink-0">
-                      <span className={`text-[10px] border rounded-full px-2 py-0.5 font-bold whitespace-nowrap ${st.cls}`}>{st.label}</span>
+                      <span className={`text-[10px] border rounded-md px-2 py-0.5 font-bold whitespace-nowrap ${st.cls}`}>{st.label}</span>
                     </div>
 
                     {/* Btn: Detalhes */}
                     <button
                       onClick={() => setDetalheId(expanded ? null : r.id)}
                       title="Ver detalhes"
-                      className={`px-3 py-3 h-full border-l border-zinc-800 transition-colors ${expanded ? 'text-amber-400 bg-amber-500/10' : 'text-white/50 hover:text-white hover:bg-zinc-800/60'}`}
+                      className={`px-3 py-3 h-full border-l border-zinc-800 transition-colors ${expanded ? 'text-amber-400 bg-amber-500/10' : 'text-white hover:text-white hover:bg-zinc-800/60'}`}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                     </button>
@@ -719,117 +1088,168 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                     <button
                       onClick={() => handleDownloadReserva(r)}
                       title="Baixar comprovativo"
-                      className="px-3 py-3 h-full border-l border-zinc-800 text-white/50 hover:text-white hover:bg-zinc-800/60 transition-colors"
+                      className="px-3 py-3 h-full border-l border-zinc-800 text-white hover:text-white hover:bg-zinc-800/60 transition-colors"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     </button>
 
-                    {/* Btn: Extensão / Cancelar */}
+                    {/* Btn: Extensão */}
                     <div className="flex border-l border-zinc-800 h-full">
                       {podeEstender && (
                         <button
                           onClick={() => handleExtensao(r)}
                           title="Solicitar extensão"
-                          className="px-3 py-3 text-sky-400/70 hover:text-sky-400 hover:bg-sky-500/10 transition-colors"
+                          className="px-3 py-3 text-amber-400/70 hover:text-amber-400 hover:bg-amber-500/10 transition-colors"
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="17" y1="14" x2="17" y2="20"/><line x1="14" y1="17" x2="20" y2="17"/></svg>
                         </button>
                       )}
-                      {podeCancelar && (
-                        <button
-                          onClick={() => setCancelConfirm(r.id)}
-                          title="Cancelar reserva"
-                          className="px-3 py-3 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                        </button>
-                      )}
-                      {!podeEstender && !podeCancelar && <div className="px-3 py-3 w-10" />}
+                      {!podeEstender && <div className="px-3 py-3 w-10" />}
                     </div>
                   </div>
 
                   {/* ── Painel de detalhes expandido ── */}
-                  {expanded && (
-                    <div className="border-t border-zinc-800 bg-zinc-950/40 px-4 py-4 space-y-4">
-                      {/* Tracker */}
-                      <div>
-                        <p className="text-[10px] text-amber-400 font-black uppercase tracking-widest mb-2">Estado do Processo</p>
-                        <ReservationTracker status={r.status} readonly />
-                      </div>
-                      {/* Período */}
-                      <div className="bg-zinc-800/50 rounded-xl px-4 py-3 space-y-2">
-                        <p className="text-[10px] text-amber-400 font-black uppercase tracking-widest">Período</p>
-                        <div className="grid grid-cols-3 gap-3 text-center text-xs">
-                          <div>
-                            <p className="text-white/50 uppercase text-[9px] font-bold mb-0.5">Levantamento</p>
-                            <p className="font-black text-white">{fmtData(r.dataInicio)}</p>
-                            {r.horaLevantamento && <p className="text-white/70">às {r.horaLevantamento}</p>}
+                  {expanded && (() => {
+                    const vehicle = getVehicle(r.vehicleId);
+                    const d = (iso: string) => fmtData(iso).split(' ').slice(0, 2).join(' ');
+                    const R = 28;
+                    const circ = 2 * Math.PI * R;
+                    const dash = circ - (pct / 100) * circ;
+                    return (
+                      <div className="border-t border-zinc-800 bg-zinc-950/50 divide-y divide-zinc-800">
+
+                        {/* ── 1. Header: imagem + nome + datas + estado ── */}
+                        <div className="flex items-center gap-4 px-4 py-3">
+                          {vehicle?.img && (
+                            <div className="w-28 h-[72px] shrink-0 rounded-xl overflow-hidden border border-zinc-700">
+                              <img src={vehicle.img} alt={vehicle.name} className="w-full h-full object-cover" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-base font-black text-white truncate">{vehicle?.name ?? getVehicleName(r.vehicleId)}</p>
+                            <p className="text-xs text-white mt-1">
+                              Início: <span className="font-bold">{fmtData(r.dataInicio)}</span>
+                              {' · '}
+                              Fon: <span className="font-bold">{fmtData(r.dataFim)}</span>
+                              {r.horaDevolucao && <> · Dev: <span className="font-bold">{r.horaDevolucao}</span></>}
+                            </p>
                           </div>
-                          <div className="flex items-center justify-center">
-                            <span className="text-white font-black bg-zinc-700 rounded-full px-2 py-0.5 text-[10px]">{diffDias(r.dataInicio, r.dataFim)} dias</span>
-                          </div>
-                          <div>
-                            <p className="text-white/50 uppercase text-[9px] font-bold mb-0.5">Devolução</p>
-                            <p className="font-black text-white">{fmtData(r.dataFim)}</p>
-                            {r.horaDevolucao && <p className="text-white/70">às {r.horaDevolucao}</p>}
-                          </div>
+                          <span className={`text-xs border rounded-lg px-3 py-1.5 font-bold shrink-0 whitespace-nowrap ${st.cls}`}>{st.label}</span>
                         </div>
-                        {(r.localLevantamento || r.localDevolucao) && (
-                          <div className="pt-2 border-t border-zinc-700 space-y-1 text-xs">
-                            {r.localLevantamento && <div className="flex gap-2"><span className="text-white/60 shrink-0">📍</span><span className="text-white">{r.localLevantamento}</span></div>}
-                            {r.localDevolucao    && <div className="flex gap-2"><span className="text-white/60 shrink-0">🏁</span><span className="text-white">{r.localDevolucao}</span></div>}
-                          </div>
-                        )}
-                      </div>
-                      {/* Valores */}
-                      <div className="bg-zinc-800/50 rounded-xl overflow-hidden text-sm">
-                        <div className="flex justify-between items-center px-4 py-2.5">
-                          <span className="text-white/70">Valor total</span>
-                          <span className="font-black text-amber-400">{fmt(r.valorTotal)}</span>
+
+                        {/* ── 2. Estado do Processo ── */}
+                        <div className="px-5 py-5">
+                          <p className="text-[11px] font-black text-amber-400 uppercase tracking-widest mb-4">Estado do Processo</p>
+                          <ReservationTracker status={r.status} readonly />
                         </div>
-                        {r.deposito > 0 && (
-                          <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-700/60">
-                            <span className="text-white/70">Pago (caução/reserva)</span>
-                            <span className="font-bold text-emerald-400">{fmt(r.deposito)}</span>
+
+                        {/* ── 3. Grid: Período | Locais | Financeiro ── */}
+                        <div className="grid grid-cols-3 divide-x divide-zinc-800">
+
+                          {/* PERÍODO */}
+                          <div className="px-5 py-5 space-y-4">
+                            <p className="text-[11px] font-black text-amber-400 uppercase tracking-widest">Período</p>
+                            <div className="space-y-4">
+                              <div>
+                                <p className="text-[11px] font-bold uppercase tracking-widest text-white">Pick-up</p>
+                                <p className="text-3xl font-black text-white leading-none mt-1">{d(r.dataInicio)}</p>
+                                {r.horaLevantamento && <p className="text-sm text-white mt-1.5">{r.horaLevantamento}</p>}
+                              </div>
+                              <div>
+                                <p className="text-[11px] font-bold uppercase tracking-widest text-amber-400">Return</p>
+                                <p className="text-3xl font-black text-amber-400 leading-none mt-1">{d(r.dataFim)}</p>
+                                {r.horaDevolucao && <p className="text-sm text-amber-400 mt-1.5">{r.horaDevolucao}</p>}
+                              </div>
+                            </div>
                           </div>
-                        )}
-                        {valorRestante > 0 && r.status !== 'concluida' && (
-                          <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-700/60 bg-zinc-700/30">
-                            <span className="text-white font-bold">Valor restante</span>
-                            <span className="font-black text-white">{fmt(valorRestante)}</span>
+
+                          {/* LOCAIS */}
+                          <div className="px-5 py-5 space-y-4">
+                            <p className="text-[11px] font-black text-amber-400 uppercase tracking-widest">Locais</p>
+                            <div className="space-y-4">
+                              {r.localLevantamento && (
+                                <div>
+                                  <p className="text-[11px] font-bold uppercase tracking-widest text-white mb-1">Levantamento</p>
+                                  <p className="text-sm font-semibold text-white leading-snug">{r.localLevantamento}</p>
+                                </div>
+                              )}
+                              {r.localDevolucao && (
+                                <div>
+                                  <p className="text-[11px] font-bold uppercase tracking-widest text-white mb-1">Devolução</p>
+                                  <p className="text-sm font-semibold text-white leading-snug">{r.localDevolucao}</p>
+                                </div>
+                              )}
+                              {!r.localLevantamento && !r.localDevolucao && (
+                                <p className="text-sm text-white italic">Não definido</p>
+                              )}
+                            </div>
                           </div>
-                        )}
-                      </div>
-                      {/* Acções de detalhe */}
-                      <div className="flex gap-2 flex-wrap">
-                        <button
-                          onClick={() => handleDownloadReserva(r)}
-                          className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-xs font-bold transition-colors"
-                        >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                          Baixar comprovativo
-                        </button>
-                        {podeEstender && (
+
+                          {/* FINANCEIRO */}
+                          <div className="px-5 py-5 space-y-4">
+                            <p className="text-[11px] font-black text-amber-400 uppercase tracking-widest">Financeiro</p>
+                            <div className="flex items-center gap-4">
+                              <div className="relative shrink-0 w-[72px] h-[72px]">
+                                <svg viewBox="0 0 76 76" className="w-full h-full">
+                                  <circle cx="38" cy="38" r={R} fill="none" stroke="#27272a" strokeWidth="10" />
+                                  <circle
+                                    cx="38" cy="38" r={R}
+                                    fill="none" stroke="#10b981" strokeWidth="10"
+                                    strokeLinecap="round"
+                                    strokeDasharray={circ}
+                                    strokeDashoffset={dash}
+                                    transform="rotate(-90 38 38)"
+                                  />
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <span className="text-[11px] font-black text-white">{pct}%</span>
+                                </div>
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs text-white mb-1">Pago vs Restante</p>
+                                <p className="text-xl font-black text-white leading-none">{fmt(r.valorTotal)}</p>
+                                <p className="text-xs text-white mt-1">valor total da reserva</p>
+                                {valorRestante > 0 && r.status !== 'concluida' && (
+                                  <p className="text-sm font-bold text-red-400 mt-1.5">−{fmt(valorRestante)} restante</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                        </div>
+
+                        {/* ── 4. Acções ── */}
+                        <div className="flex gap-2 flex-wrap px-4 py-3">
                           <button
-                            onClick={() => handleExtensao(r)}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 text-xs font-bold transition-colors"
+                            onClick={() => handleDownloadReserva(r)}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-xs font-bold transition-colors"
                           >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="17" y1="14" x2="17" y2="20"/><line x1="14" y1="17" x2="20" y2="17"/></svg>
-                            Solicitar extensão
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Comprovativo
                           </button>
-                        )}
-                        {podeCancelar && (
-                          <button
-                            onClick={() => setCancelConfirm(r.id)}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold transition-colors"
-                          >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                            Cancelar reserva
-                          </button>
-                        )}
+                          {podeEstender && (
+                            <button
+                              onClick={() => handleExtensao(r)}
+                              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-bold transition-colors"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="17" y1="14" x2="17" y2="20"/><line x1="14" y1="17" x2="20" y2="17"/></svg>
+                              Solicitar extensão
+                            </button>
+                          )}
+                          {podeCancelar && (
+                            <button
+                              onClick={() => setCancelConfirm(r.id)}
+                              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold transition-colors"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                              Cancelar reserva
+                            </button>
+                          )}
+                        </div>
+
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* ── Modal de confirmação de cancelamento ── */}
                   {cancelConfirm === r.id && (
@@ -875,11 +1295,11 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Activos</span>
-                    <span className="text-[10px] font-black bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-full px-2 py-0.5">{ativos.length}</span>
+                    <span className="text-[10px] font-black bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-md px-2 py-0.5">{ativos.length}</span>
                     {inativos.length > 0 && <>
-                      <span className="text-white/20">·</span>
-                      <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Concluídos/Cancelados</span>
-                      <span className="text-[10px] font-black bg-zinc-800 text-white/50 border border-zinc-700 rounded-full px-2 py-0.5">{inativos.length}</span>
+                      <span className="text-white">·</span>
+                      <span className="text-[10px] font-black text-white uppercase tracking-widest">Concluídos/Cancelados</span>
+                      <span className="text-[10px] font-black bg-zinc-800 text-white border border-zinc-700 rounded-md px-2 py-0.5">{inativos.length}</span>
                     </>}
                   </div>
                   {inativos.length > 0 && (
@@ -888,7 +1308,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                       className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors ${
                         showInativos
                           ? 'bg-zinc-700 border-zinc-600 text-white'
-                          : 'bg-zinc-900 border-zinc-800 text-white/60 hover:text-white hover:border-zinc-700'
+                          : 'bg-zinc-900 border-zinc-800 text-white hover:text-white hover:border-zinc-700'
                       }`}
                     >
                       {showInativos ? 'Ver activos' : 'Ver histórico'}
@@ -898,7 +1318,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
 
                 {/* Lista */}
                 {lista.length === 0 ? (
-                  <div className="text-center text-white/50 text-sm py-10 bg-zinc-900 rounded-xl border border-zinc-800">
+                  <div className="text-center text-white text-sm py-10 bg-zinc-900 rounded-xl border border-zinc-800">
                     {showInativos ? 'Nenhum aluguer concluído ou cancelado.' : 'Não tem alugueres activos de momento.'}
                   </div>
                 ) : (
@@ -938,28 +1358,26 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
             const downloadComprovativo = (c: Reservation, veh: ReturnType<typeof getVehicle>) => {
               const st  = RES_STATUS[c.status]?.label ?? c.status;
               const gar = garantiaInfo(c.dataInicio, veh?.year);
-              const lines = [
-                '==========================================',
-                '  SOS MOTORS — Comprovativo de Compra',
-                '==========================================',
-                `ID Operação : ${c.id}`,
-                `Viatura     : ${veh?.name ?? `#${c.vehicleId}`}`,
-                `Marca       : ${veh?.brand ?? '—'}`,
-                `Tipo        : ${CAT_LABEL[veh?.cat ?? ''] ?? '—'}`,
-                `Matrícula   : ${veh?.matricula ?? '—'}`,
-                `Ano         : ${veh?.year ?? '—'}`,
-                `Data compra : ${fmtData(c.dataInicio)}`,
-                `Estado      : ${st}`,
-                `Valor       : ${veh?.price ?? fmt(c.valorTotal)}`,
-                `Garantia    : ${gar.ativa ? `Activa até ${fmtData(gar.expira)}` : 'Expirada'}`,
-                '==========================================',
-                'Gerado pela plataforma SOS Motors',
-              ].join('\n');
-              const blob = new Blob([lines], { type: 'text/plain;charset=utf-8' });
-              const url  = URL.createObjectURL(blob);
-              const a    = document.createElement('a');
-              a.href = url; a.download = `compra_${c.id}.txt`; a.click();
-              URL.revokeObjectURL(url);
+              const body = `
+                <div class="doc-title">Comprovativo de Compra</div>
+                <div class="doc-sub">ID Operação ${c.id}</div>
+                <div class="section-title">Viatura</div>
+                <div class="summary-box">
+                  <div class="summary-row"><span>Viatura</span><span><b>${veh?.name ?? `#${c.vehicleId}`}</b></span></div>
+                  <div class="summary-row"><span>Marca</span><span>${veh?.brand ?? '—'}</span></div>
+                  <div class="summary-row"><span>Tipo</span><span>${CAT_LABEL[veh?.cat ?? ''] ?? '—'}</span></div>
+                  <div class="summary-row"><span>Matrícula</span><span>${veh?.matricula ?? '—'}</span></div>
+                  <div class="summary-row"><span>Ano</span><span>${veh?.year ?? '—'}</span></div>
+                </div>
+                <div class="section-title">Compra</div>
+                <div class="summary-box">
+                  <div class="summary-row"><span>Data da compra</span><span>${fmtData(c.dataInicio)}</span></div>
+                  <div class="summary-row"><span>Estado</span><span><b>${st}</b></span></div>
+                  <div class="summary-row"><span>Garantia</span><span class="${gar.ativa ? 'val-green' : 'val-red'}">${gar.ativa ? `Activa até ${fmtData(gar.expira)}` : 'Expirada'}</span></div>
+                  <div class="summary-row total"><span>Valor</span><span class="val-amber">${veh?.price ?? fmt(c.valorTotal)}</span></div>
+                </div>
+              `;
+              printAsPDF(body, `Compra ${c.id}`);
             };
 
             return (
@@ -967,11 +1385,11 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                 {/* Contagem */}
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Histórico de Compras</span>
-                  <span className="text-[10px] font-black bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-full px-2 py-0.5">{compras.length}</span>
+                  <span className="text-[10px] font-black bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-md px-2 py-0.5">{compras.length}</span>
                 </div>
 
                 {compras.length === 0 ? (
-                  <div className="text-center text-white/50 text-sm py-10 bg-zinc-900 rounded-xl border border-zinc-800">
+                  <div className="text-center text-white text-sm py-10 bg-zinc-900 rounded-xl border border-zinc-800">
                     Nenhuma compra registada.
                   </div>
                 ) : compras.map(c => {
@@ -1009,7 +1427,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-sm font-black text-white">{veh?.name ?? getVehicleName(c.vehicleId)}</p>
                             {veh?.cat && (
-                              <span className="text-[9px] font-bold bg-zinc-800 border border-zinc-700 text-white/60 rounded-full px-2 py-0.5 uppercase">
+                              <span className="text-[9px] font-bold bg-zinc-800 border border-zinc-700 text-white rounded-md px-2 py-0.5 uppercase">
                                 {CAT_LABEL[veh.cat] ?? veh.cat}
                               </span>
                             )}
@@ -1024,237 +1442,337 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                         </div>
 
                         <div className="px-3 py-3 shrink-0">
-                          <span className={`text-[10px] border rounded-full px-2 py-0.5 font-bold whitespace-nowrap ${st.cls}`}>{st.label}</span>
+                          <span className={`text-[10px] border rounded-md px-2 py-0.5 font-bold whitespace-nowrap ${st.cls}`}>{st.label}</span>
                         </div>
 
                         <button
                           onClick={() => toggleSec(c.id)}
                           title="Ver detalhes"
-                          className={`px-4 py-3 h-full border-l border-zinc-800 transition-colors ${expanded ? 'text-amber-400 bg-amber-500/10' : 'text-white/40 hover:text-white hover:bg-zinc-800/60'}`}
+                          className={`px-4 py-3 h-full border-l border-zinc-800 transition-colors ${expanded ? 'text-amber-400 bg-amber-500/10' : 'text-white hover:text-white hover:bg-zinc-800/60'}`}
                         >
                           <IcoChevron open={expanded} />
                         </button>
                       </div>
 
                       {/* ── Painel expandido ── */}
-                      {expanded && (
-                        <div className="border-t border-zinc-800 bg-zinc-950/40 px-4 py-4 space-y-4">
+                      {expanded && (() => {
+                        const sk = (s: string) => `${c.id}:${s}`;
+                        const isOpen = (s: string) => !closedSecs.has(sk(s));
+                        const SecHeader = ({ id, label }: { id: string; label: string }) => (
+                          <button
+                            type="button"
+                            onClick={() => toggleClosed(sk(id))}
+                            className="w-full flex items-center justify-between px-4 py-3 hover:bg-zinc-800/40 transition-colors"
+                          >
+                            <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">{label}</span>
+                            <svg
+                              width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b"
+                              strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                              className={`shrink-0 transition-transform duration-200 ${isOpen(id) ? 'rotate-90' : ''}`}
+                            >
+                              <polyline points="9 18 15 12 9 6" />
+                            </svg>
+                          </button>
+                        );
+                        return (
+                          <div className="border-t border-zinc-800">
 
-                          {/* Garantia */}
-                          <div>
-                            <p className="text-xs text-amber-400 font-black uppercase tracking-widest mb-2">Garantia</p>
-                            <div className="bg-zinc-800/50 rounded-xl overflow-hidden">
-                              <div className={`flex items-center gap-3 px-4 py-3 border-b border-zinc-700/50 ${gar.ativa ? 'bg-emerald-500/5' : 'bg-red-500/5'}`}>
-                                <div className={`w-2 h-2 rounded-full shrink-0 ${gar.ativa ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
-                                <div className="flex-1">
-                                  <p className={`text-sm font-black ${gar.ativa ? 'text-emerald-400' : 'text-red-400'}`}>
-                                    {gar.ativa ? `Garantia activa — ${gar.mesesRestantes} meses restantes` : 'Garantia expirada'}
-                                  </p>
-                                  <p className="text-xs text-white mt-0.5">Validade: {fmtData(gar.expira)}</p>
+                            {/* Header: small image left + car info */}
+                            <div className="flex items-center gap-3 px-4 py-3">
+                              {veh?.img && (
+                                <div className="w-20 h-[52px] shrink-0 rounded-lg overflow-hidden border border-zinc-700">
+                                  <img src={veh.img} alt={veh.name ?? ''} className="w-full h-full object-cover" />
                                 </div>
-                              </div>
-                              {[
-                                { label: 'Duração',   val: '2 anos a partir da data de compra' },
-                                { label: 'Cobertura', val: 'Motor, transmissão e componentes estruturais' },
-                                { label: 'Excluído',  val: 'Desgaste normal, acidentes e modificações' },
-                                { label: 'Suporte',   val: '+258 86 884 4283 · info@rentcar.co.mz' },
-                              ].map(row => (
-                                <div key={row.label} className="flex gap-3 px-4 py-2.5 border-b border-zinc-700/30 last:border-0">
-                                  <span className="text-xs text-white font-bold w-24 shrink-0">{row.label}</span>
-                                  <span className="text-xs text-white">{row.val}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Documentos */}
-                          <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <p className="text-xs text-amber-400 font-black uppercase tracking-widest">Documentos do Carro</p>
-                              <button
-                                onClick={() => downloadComprovativo(c, veh)}
-                                className="flex items-center gap-1 text-xs font-bold text-white hover:text-amber-400 transition-colors"
-                              >
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                Baixar comprovativo
-                              </button>
-                            </div>
-                            <div className="bg-zinc-800/50 rounded-xl overflow-hidden divide-y divide-zinc-700/40">
-                              {docs.map(doc => (
-                                <div key={doc.label} className="flex items-center gap-3 px-4 py-3">
-                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black border ${doc.ok ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-amber-500/15 border-amber-500/30 text-amber-400'}`}>
-                                    {doc.ok ? '✓' : '!'}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-bold text-white">{doc.label}</p>
-                                    <p className={`text-xs ${doc.ok ? 'text-white' : 'text-amber-400'}`}>{doc.valor}</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Prestações */}
-                          {isParcelada && (
-                            <div className="space-y-3">
-                              <p className="text-xs text-amber-400 font-black uppercase tracking-widest">Plano de Pagamento</p>
-                              <div className="grid grid-cols-3 gap-2 text-center">
-                                <div className="bg-emerald-400/10 border border-emerald-400/20 rounded-xl px-2 py-3">
-                                  <p className="text-[10px] text-white uppercase font-bold mb-1">Pagas</p>
-                                  <p className="text-base font-black text-emerald-400">{prestacoesPagas}</p>
-                                </div>
-                                <div className={`${prestRestantes > 0 ? 'bg-amber-400/10 border-amber-400/20' : 'bg-zinc-800 border-zinc-700'} border rounded-xl px-2 py-3`}>
-                                  <p className="text-[10px] text-white uppercase font-bold mb-1">Faltam</p>
-                                  <p className={`text-base font-black ${prestRestantes > 0 ? 'text-amber-400' : 'text-white'}`}>{prestRestantes}</p>
-                                </div>
-                                <div className="bg-zinc-800 border border-zinc-700 rounded-xl px-2 py-3">
-                                  <p className="text-[10px] text-white uppercase font-bold mb-1">Total</p>
-                                  <p className="text-base font-black text-white">{totalPrestacoes}</p>
-                                </div>
-                              </div>
-                              <div>
-                                <div className="flex justify-between text-xs mb-1.5">
-                                  <span className="text-white font-bold">{Math.round(progressPct)}% pago</span>
-                                  <span className="text-white">{fmt(prestacoes.find(p => !p.paga)?.valor ?? c.deposito)}/mês</span>
-                                </div>
-                                <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
-                                  <div className={`h-2 rounded-full ${prestRestantes === 0 ? 'bg-emerald-400' : 'bg-amber-500'}`} style={{ width: `${progressPct}%` }} />
-                                </div>
-                              </div>
-                              <div className="bg-zinc-800/60 rounded-xl overflow-hidden text-sm">
-                                <div className="flex justify-between items-center px-4 py-2.5">
-                                  <span className="text-white">Total já pago</span>
-                                  <span className="font-black text-emerald-400">{fmt(totalPago)}</span>
-                                </div>
-                                {totalEmFalta > 0 && (
-                                  <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-700/60">
-                                    <span className="text-white">Ainda em falta</span>
-                                    <span className="font-black text-amber-400">{fmt(totalEmFalta)}</span>
-                                  </div>
-                                )}
-                                {prestRestantes === 0 && (
-                                  <div className="text-center py-2 border-t border-zinc-700/60">
-                                    <span className="text-emerald-400 font-black text-xs">Viatura totalmente liquidada!</span>
-                                  </div>
-                                )}
-                              </div>
-                              {prestacoes.length > 0 && (
-                                <div className="space-y-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => setPrestOpen(prev => { const n = new Set(prev); n.has(c.id) ? n.delete(c.id) : n.add(c.id); return n; })}
-                                    className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 border border-zinc-700/50 transition-all"
-                                  >
-                                    <span className="flex items-center gap-2 text-xs font-black text-white">
-                                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                                      Minhas Prestações
-                                      <span className="text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/20 rounded-full px-2 py-0.5">{prestacoesPagas}/{totalPrestacoes}</span>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-black text-white truncate">{veh?.name ?? getVehicleName(c.vehicleId)}</p>
+                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                  {veh?.cat && (
+                                    <span className="text-[9px] font-bold bg-zinc-800 border border-zinc-700 text-white rounded-md px-2 py-0.5 uppercase">
+                                      {CAT_LABEL[veh.cat] ?? veh.cat}
                                     </span>
-                                    <IcoChevron open={prestOpen.has(c.id)} />
-                                  </button>
-                                  {prestOpen.has(c.id) && (
-                                    <div className="bg-zinc-800/40 rounded-xl overflow-hidden divide-y divide-zinc-700/40">
-                                      {prestacoes.map(p => {
-                                        const isProxima = p.numero === proximaNumero;
-                                        const hoje2 = new Date().toISOString().split('T')[0];
-                                        const emAtraso = !p.paga && p.dataVencimento < hoje2;
-                                        return (
-                                          <div key={p.numero} className={`flex items-center gap-3 px-4 py-3 ${p.paga ? 'bg-emerald-500/5' : isProxima ? 'bg-amber-500/8' : ''}`}>
-                                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 border ${
-                                              p.paga    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-                                              isProxima ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
-                                              emAtraso  ? 'bg-red-500/20 text-red-400 border-red-500/30' :
-                                                          'bg-zinc-800 text-white border-zinc-700'
-                                            }`}>
-                                              {p.paga ? '✓' : p.numero}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                              <p className={`text-xs font-bold ${p.paga ? 'text-emerald-300' : isProxima ? 'text-amber-300' : 'text-white'}`}>
-                                                Prestação {p.numero}
-                                                {isProxima && <span className="ml-1.5 text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-full">Próxima</span>}
-                                                {emAtraso  && <span className="ml-1.5 text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full">Em atraso</span>}
-                                              </p>
-                                              <p className="text-xs text-white tabular-nums mt-0.5">
-                                                {p.paga && p.dataPagamento ? `Pago a ${fmtData(p.dataPagamento)}` : `Vence a ${fmtData(p.dataVencimento)}`}
-                                              </p>
-                                            </div>
-                                            <div className="text-right shrink-0">
-                                              {p.paga ? (
-                                                <>
-                                                  <p className="text-xs font-black text-emerald-400">{fmt(p.valorPago ?? p.valor)}</p>
-                                                  {p.valorPago && p.valorPago !== p.valor && <p className="text-xs text-white line-through">{fmt(p.valor)}</p>}
-                                                </>
-                                              ) : (
-                                                <p className={`text-xs font-bold tabular-nums ${isProxima ? 'text-amber-400' : 'text-white'}`}>{fmt(p.valor)}</p>
-                                              )}
-                                            </div>
+                                  )}
+                                  <span className={`text-[9px] font-black border rounded-md px-2 py-0.5 ${st.cls}`}>{st.label}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="divide-y divide-zinc-800">
+
+                              {/* ── Detalhes da Compra ── */}
+                              <div>
+                                <SecHeader id="det" label="Detalhes da Compra" />
+                                {isOpen('det') && (
+                                  <div className="px-4 pb-4">
+                                    <div className="bg-zinc-900 rounded-xl overflow-hidden divide-y divide-zinc-800">
+                                      <div className="flex items-center justify-between px-4 py-3 gap-3">
+                                        <span className="text-xs text-white">Veículo</span>
+                                        <span className="text-xs font-bold text-white text-right">{veh?.name ?? getVehicleName(c.vehicleId)}</span>
+                                      </div>
+                                      <div className="flex items-center justify-between px-4 py-3 gap-3">
+                                        <span className="text-xs text-white">Data da Compra</span>
+                                        <span className="text-xs font-semibold text-white">{fmtData(c.dataInicio)}</span>
+                                      </div>
+                                      <div className="flex items-center justify-between px-4 py-3 gap-3">
+                                        <span className="text-xs text-white">Estado</span>
+                                        <span className={`text-[10px] font-black border rounded-lg px-2.5 py-1 ${st.cls}`}>{st.label}</span>
+                                      </div>
+                                      <div className="flex items-center justify-between px-4 py-3 gap-3">
+                                        <span className="text-xs text-white">Valor Total</span>
+                                        <span className="text-lg font-black text-amber-400">{fmt(c.valorTotal)}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* ── Estado dos Pagamentos ── */}
+                              {isParcelada && (
+                                <div>
+                                  <SecHeader id="pag" label="Estado dos Pagamentos" />
+                                  {isOpen('pag') && (
+                                    <div className="px-4 pb-4">
+                                      <div className="bg-zinc-900 rounded-xl overflow-hidden divide-y divide-zinc-800">
+                                        <div className="flex items-center justify-between px-4 py-3 gap-3">
+                                          <span className="text-xs text-white">Prestações pagas</span>
+                                          <span className="text-sm font-black text-emerald-400">{prestacoesPagas} / {totalPrestacoes}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between px-4 py-3 gap-3">
+                                          <span className="text-xs text-white">Faltam</span>
+                                          <span className={`text-sm font-black ${prestRestantes > 0 ? 'text-amber-400' : 'text-white'}`}>{prestRestantes}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between px-4 py-3 gap-3">
+                                          <span className="text-xs text-white">Valor mensal</span>
+                                          <span className="text-sm font-bold text-white">{fmt(prestacoes.find(p => !p.paga)?.valor ?? c.deposito)}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between px-4 py-3 gap-3">
+                                          <span className="text-xs text-white">Total pago</span>
+                                          <span className="text-sm font-black text-emerald-400">{fmt(totalPago)}</span>
+                                        </div>
+                                        {totalEmFalta > 0 && (
+                                          <div className="flex items-center justify-between px-4 py-3 gap-3">
+                                            <span className="text-xs text-white">Total em dívida</span>
+                                            <span className="text-lg font-black text-red-400">{fmt(totalEmFalta)}</span>
                                           </div>
-                                        );
-                                      })}
+                                        )}
+                                        {prestRestantes === 0 && (
+                                          <div className="px-4 py-3 text-center">
+                                            <span className="text-emerald-400 font-black text-xs">Viatura totalmente liquidada!</span>
+                                          </div>
+                                        )}
+                                        {proximaNumero !== null && prestRestantes > 0 && (
+                                          <div className="flex items-center justify-between px-4 py-3 gap-3">
+                                            <span className="text-xs text-white">Próxima prestação</span>
+                                            <span className="text-xs font-bold text-amber-400">
+                                              #{proximaNumero} · {fmt(prestacoes.find(p => p.numero === proximaNumero)?.valor ?? c.deposito)}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Progress bar */}
+                                      <div className="mt-3">
+                                        <div className="flex justify-between text-xs mb-1.5">
+                                          <span className="text-white font-bold">{Math.round(progressPct)}% pago</span>
+                                        </div>
+                                        <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                                          <div className={`h-1.5 rounded-full transition-all duration-700 ${prestRestantes === 0 ? 'bg-emerald-400' : 'bg-amber-500'}`} style={{ width: `${progressPct}%` }} />
+                                        </div>
+                                      </div>
+
+                                      {/* Prestações detail list */}
+                                      {prestacoes.length > 0 && (
+                                        <div className="space-y-1 mt-3">
+                                          <button
+                                            type="button"
+                                            onClick={() => setPrestOpen(prev => { const n = new Set(prev); n.has(c.id) ? n.delete(c.id) : n.add(c.id); return n; })}
+                                            className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 border border-zinc-700/50 transition-all"
+                                          >
+                                            <span className="flex items-center gap-2 text-xs font-black text-white">
+                                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                              Detalhe das Prestações
+                                              <span className="text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/20 rounded-md px-2 py-0.5">{prestacoesPagas}/{totalPrestacoes}</span>
+                                            </span>
+                                            <IcoChevron open={prestOpen.has(c.id)} />
+                                          </button>
+                                          {prestOpen.has(c.id) && (
+                                            <div className="bg-zinc-900 rounded-xl overflow-hidden divide-y divide-zinc-800">
+                                              {prestacoes.map(p => {
+                                                const isProxima = p.numero === proximaNumero;
+                                                const hoje2 = new Date().toISOString().split('T')[0];
+                                                const emAtraso = !p.paga && p.dataVencimento < hoje2;
+                                                return (
+                                                  <div key={p.numero} className={`flex items-center gap-3 px-4 py-3 ${p.paga ? 'bg-emerald-500/5' : isProxima ? 'bg-amber-500/5' : ''}`}>
+                                                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 border ${
+                                                      p.paga    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                                                      isProxima ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                                                      emAtraso  ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                                                  'bg-zinc-800 text-white border-zinc-700'
+                                                    }`}>
+                                                      {p.paga ? '✓' : p.numero}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                      <p className={`text-xs font-bold ${p.paga ? 'text-emerald-300' : isProxima ? 'text-amber-300' : 'text-white'}`}>
+                                                        Prestação {p.numero}
+                                                        {isProxima && <span className="ml-1.5 text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-full">Próxima</span>}
+                                                        {emAtraso  && <span className="ml-1.5 text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-md">Em atraso</span>}
+                                                      </p>
+                                                      <p className="text-xs text-white tabular-nums mt-0.5">
+                                                        {p.paga && p.dataPagamento ? `Pago a ${fmtData(p.dataPagamento)}` : `Vence a ${fmtData(p.dataVencimento)}`}
+                                                      </p>
+                                                    </div>
+                                                    <div className="text-right shrink-0">
+                                                      {p.paga ? (
+                                                        <>
+                                                          <p className="text-xs font-black text-emerald-400">{fmt(p.valorPago ?? p.valor)}</p>
+                                                          {p.valorPago && p.valorPago !== p.valor && <p className="text-xs text-white line-through">{fmt(p.valor)}</p>}
+                                                        </>
+                                                      ) : (
+                                                        <p className={`text-xs font-bold tabular-nums ${isProxima ? 'text-amber-400' : 'text-white'}`}>{fmt(p.valor)}</p>
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </div>
                               )}
-                            </div>
-                          )}
 
-                          {c.deposito > 0 && !isParcelada && (
-                            <div className="bg-zinc-800/60 rounded-xl px-4 py-3 text-sm">
-                              <p className="text-xs text-amber-400 font-black uppercase tracking-widest mb-1">Pagamento</p>
-                              <div className="flex justify-between">
-                                <span className="text-white">Valor pago (pronto pagamento)</span>
-                                <span className="font-black text-emerald-400">{fmt(c.deposito)}</span>
-                              </div>
-                            </div>
-                          )}
+                              {/* ── Pagamento único ── */}
+                              {c.deposito > 0 && !isParcelada && (
+                                <div>
+                                  <SecHeader id="pag" label="Pagamento" />
+                                  {isOpen('pag') && (
+                                    <div className="px-4 pb-4">
+                                      <div className="bg-zinc-900 rounded-xl overflow-hidden">
+                                        <div className="flex items-center justify-between px-4 py-3 gap-3">
+                                          <span className="text-xs text-white">Valor pago (pronto pagamento)</span>
+                                          <span className="text-lg font-black text-emerald-400">{fmt(c.deposito)}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
 
-                          {/* Botão cancelar compra — só para estados canceláveis */}
-                          {(c.status === 'pendente' || c.status === 'compra_aprovada') && cancelConfirm !== c.id && (
-                            <button
-                              onClick={() => { setCancelConfirm(c.id); setCancelMotivo(''); }}
-                              className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold transition-colors"
-                            >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                              Cancelar compra
-                            </button>
-                          )}
-
-                          {/* Painel de confirmação cancelamento compra */}
-                          {cancelConfirm === c.id && (
-                            <div className="border border-red-500/20 bg-red-500/5 rounded-xl px-4 py-4 space-y-3">
+                              {/* ── Garantia ── */}
                               <div>
-                                <p className="text-sm text-white font-bold mb-0.5">Cancelar compra?</p>
-                                <p className="text-xs text-white/70">Esta acção não pode ser desfeita. O pedido de compra de <span className="text-white font-bold">{veh?.name ?? getVehicleName(c.vehicleId)}</span> será cancelado.</p>
+                                <SecHeader id="gar" label="Garantia" />
+                                {isOpen('gar') && (
+                                  <div className="px-4 pb-4">
+                                    <div className="bg-zinc-900 rounded-xl overflow-hidden divide-y divide-zinc-800">
+                                      <div className="flex items-center justify-between px-4 py-3 gap-3">
+                                        <span className="text-xs text-white">Estado</span>
+                                        <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg border ${gar.ativa ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-red-500/15 border-red-500/30 text-red-400'}`}>
+                                          {gar.ativa ? 'Activa' : 'Expirada'}
+                                        </span>
+                                      </div>
+                                      {gar.ativa && (
+                                        <div className="flex items-center justify-between px-4 py-3 gap-3">
+                                          <span className="text-xs text-white">Tempo restante</span>
+                                          <span className="text-sm font-black text-emerald-400">{gar.mesesRestantes} meses</span>
+                                        </div>
+                                      )}
+                                      <div className="flex items-center justify-between px-4 py-3 gap-3">
+                                        <span className="text-xs text-white">Válida até</span>
+                                        <span className="text-xs font-bold text-white">{fmtData(gar.expira)}</span>
+                                      </div>
+                                      <div className="flex items-start justify-between px-4 py-3 gap-3">
+                                        <span className="text-xs text-white shrink-0">Cobertura</span>
+                                        <span className="text-xs text-white text-right">Motor, transmissão e componentes estruturais</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
+
+                              {/* ── Documentos ── */}
                               <div>
-                                <label className="text-xs text-white font-bold block mb-1">Motivo do cancelamento <span className="text-red-400">*</span></label>
-                                <textarea
-                                  value={cancelMotivo}
-                                  onChange={e => setCancelMotivo(e.target.value)}
-                                  placeholder="Descreva o motivo (ex: mudança de decisão, dificuldade financeira…)"
-                                  rows={3}
-                                  className="w-full bg-zinc-900 border border-zinc-700 focus:border-red-400 rounded-lg px-3 py-2 text-xs text-white placeholder-white/30 resize-none outline-none transition-colors"
-                                />
+                                <SecHeader id="docs" label="Documentos do Veículo" />
+                                {isOpen('docs') && (
+                                  <div className="px-4 pb-4">
+                                    <div className="bg-zinc-900 rounded-xl overflow-hidden divide-y divide-zinc-800">
+                                      {docs.map(doc => (
+                                        <div key={doc.label} className="flex items-center justify-between px-4 py-3 gap-3">
+                                          <span className="text-xs text-white">{doc.label}</span>
+                                          <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg border ${doc.ok ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-amber-500/15 border-amber-500/30 text-amber-400'}`}>
+                                            {doc.ok ? doc.valor : 'Pendente'}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
+
+                            </div>
+
+                            {/* ── Bottom actions ── */}
+                            <div className="px-4 py-3 border-t border-zinc-800 space-y-2">
+
                               <div className="flex gap-2">
                                 <button
-                                  onClick={() => handleCancelCompra(c.id)}
-                                  disabled={!cancelMotivo.trim()}
-                                  className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-black transition-colors"
+                                  onClick={() => downloadComprovativo(c, veh)}
+                                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-xs font-bold transition-colors"
                                 >
-                                  Sim, cancelar
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                  Baixar Comprovativo
                                 </button>
-                                <button
-                                  onClick={() => { setCancelConfirm(null); setCancelMotivo(''); }}
-                                  className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-xs font-bold transition-colors"
-                                >
-                                  Não, manter
-                                </button>
+
+                                {(c.status === 'pendente' || c.status === 'compra_aprovada') && cancelConfirm !== c.id && (
+                                  <button
+                                    onClick={() => { setCancelConfirm(c.id); setCancelMotivo(''); }}
+                                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold transition-colors"
+                                  >
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                                    Cancelar Compra
+                                  </button>
+                                )}
                               </div>
+
+                              {cancelConfirm === c.id && (
+                                <div className="border border-red-500/20 bg-red-500/5 rounded-xl px-4 py-4 space-y-3">
+                                  <div>
+                                    <p className="text-sm text-white font-bold mb-0.5">Cancelar compra?</p>
+                                    <p className="text-xs text-white/70">Esta acção não pode ser desfeita. O pedido de compra de <span className="text-white font-bold">{veh?.name ?? getVehicleName(c.vehicleId)}</span> será cancelado.</p>
+                                  </div>
+                                  <div>
+                                    <label className="text-xs text-white font-bold block mb-1">Motivo do cancelamento <span className="text-red-400">*</span></label>
+                                    <textarea
+                                      value={cancelMotivo}
+                                      onChange={e => setCancelMotivo(e.target.value)}
+                                      placeholder="Descreva o motivo (ex: mudança de decisão, dificuldade financeira…)"
+                                      rows={3}
+                                      className="w-full bg-zinc-900 border border-zinc-700 focus:border-red-400 rounded-lg px-3 py-2 text-xs text-white placeholder-white/30 resize-none outline-none transition-colors"
+                                    />
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => handleCancelCompra(c.id)}
+                                      disabled={!cancelMotivo.trim()}
+                                      className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-black transition-colors"
+                                    >
+                                      Sim, cancelar
+                                    </button>
+                                    <button
+                                      onClick={() => { setCancelConfirm(null); setCancelMotivo(''); }}
+                                      className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-xs font-bold transition-colors"
+                                    >
+                                      Não, manter
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
                             </div>
-                          )}
-                        </div>
-                      )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
@@ -1333,289 +1851,681 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                 };
               });
 
-            // ── Histórico de pagamentos (todos os eventos pagos) ─────────────
-            type PagEvt = { label: string; sub: string; valor: number; data: string; tipo: 'aluguer' | 'compra' | 'xitique' | 'divida' };
-            const historico: PagEvt[] = [];
-            alugueres.filter(a => a.status === 'concluida').forEach(a => {
-              historico.push({ label: getVehicleName(a.vehicleId), sub: 'Aluguer concluído', valor: a.valorTotal, data: a.dataFim, tipo: 'aluguer' });
-            });
-            compras.forEach(c => {
-              (c.prestacoes ?? []).filter(p => p.paga && p.dataPagamento).forEach(p => {
-                historico.push({ label: getVehicleName(c.vehicleId), sub: `Prestação ${p.numero}`, valor: p.valorPago ?? p.valor, data: p.dataPagamento!, tipo: 'compra' });
-              });
-            });
-            if (membro) {
-              (membro.mesesPagos as number[]).forEach(mes => {
-                const reg = (membro.pagamentos as Record<number, { data: string; metodo?: string }>)?.[mes];
-                historico.push({ label: grupoDoUser?.nome ?? 'Xitique', sub: `Quota mês ${mes}`, valor: quotaMT, data: reg?.data ?? '', tipo: 'xitique' });
-              });
-            }
-            historico.sort((a, b) => b.data.localeCompare(a.data));
+            const historico = historicoPag;
+            const tipoCls   = TIPO_CLS;
+            const tipoLabel = TIPO_LABEL;
 
-            const tipoCls: Record<PagEvt['tipo'], string> = {
-              aluguer: 'bg-blue-400/10 text-blue-400 border-blue-400/20',
-              compra:  'bg-purple-400/10 text-purple-400 border-purple-400/20',
-              xitique: 'bg-amber-400/10 text-amber-400 border-amber-400/20',
-              divida:  'bg-red-400/10 text-red-400 border-red-400/20',
-            };
-            const tipoLabel: Record<PagEvt['tipo'], string> = {
-              aluguer: 'Aluguer', compra: 'Compra', xitique: 'Xitique', divida: 'Dívida',
+            // ── Download extrato ────────────────────────────────────────────
+            const downloadExtrato = () => {
+              const hoje = fmtData(new Date().toISOString().split('T')[0]);
+              const totalHist = historico.reduce((s, e) => s + e.valor, 0);
+              const body = `
+                <div class="doc-title">Extrato de Conta</div>
+                <div class="doc-sub">Gerado a ${hoje}</div>
+                <div class="info-grid">
+                  <div class="info-box">
+                    <div class="info-label">Remetente</div>
+                    <div class="info-value">SOS Motors</div>
+                    <div class="info-sub">info@rentcar.co.mz</div>
+                  </div>
+                  <div class="info-box">
+                    <div class="info-label">Destinatário</div>
+                    <div class="info-value">${fullUser?.name ?? authUser?.name ?? '—'}</div>
+                    <div class="info-sub">${fullUser?.email ?? authUser?.email ?? '—'}</div>
+                  </div>
+                </div>
+                <div class="section-title">Resumo de Contratos</div>
+                <div class="summary-box">
+                  ${totalPagoAlugueres > 0 ? `<div class="summary-row"><span>Alugueres pagos</span><span class="val-green">${fmt(totalPagoAlugueres)}</span></div>` : ''}
+                  ${totalPagoCompras   > 0 ? `<div class="summary-row"><span>Compras (prestações pagas)</span><span class="val-green">${fmt(totalPagoCompras)}</span></div>` : ''}
+                  ${totalPagoXitique   > 0 ? `<div class="summary-row"><span>Xitique</span><span class="val-green">${fmt(totalPagoXitique)}</span></div>` : ''}
+                  <div class="summary-row total"><span>Total Pago</span><span class="val-green">${fmt(totalPago)}</span></div>
+                  <div class="summary-row total"><span>Total em Dívida</span><span class="${totalDivida > 0 ? 'val-red' : 'val-green'}">${totalDivida > 0 ? fmt(totalDivida) : 'Em dia'}</span></div>
+                </div>
+                <div class="section-title">Histórico de Pagamentos</div>
+                <table>
+                  <thead>
+                    <tr><th>Data</th><th>Item</th><th>Tipo</th><th style="text-align:right">Valor</th></tr>
+                  </thead>
+                  <tbody>
+                    ${historico.map(ev => `
+                      <tr>
+                        <td>${ev.data.length === 10 ? fmtData(ev.data) : (ev.data || '—')}</td>
+                        <td>${ev.sub}<br><span style="font-size:10px;color:#71717a;">${ev.label}</span></td>
+                        <td><span class="badge badge-${ev.tipo}">${tipoLabel[ev.tipo]}</span></td>
+                        <td class="val-green" style="text-align:right">${fmt(ev.valor)}</td>
+                      </tr>
+                    `).join('')}
+                    <tr class="total-row">
+                      <td colspan="3">Total</td>
+                      <td class="val-green" style="text-align:right;font-size:14px;">${fmt(totalHist)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              `;
+              printAsPDF(body, 'Extrato de Conta');
             };
 
             return (
               <div className="space-y-4">
 
-                {/* ── KPI cards ─────────────────────────────────────────────── */}
-                <div className="grid grid-cols-2 gap-3">
-
-                  {/* Total Pago */}
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-                    <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Total Pago</div>
-                    <div className="text-lg font-black text-emerald-400">{totalPago > 0 ? fmt(totalPago) : '—'}</div>
-                    <div className="mt-1.5 space-y-0.5">
-                      {totalPagoAlugueres > 0 && <div className="flex items-center justify-between"><span className="text-[10px] text-white/60">Alugueres</span><span className="text-[10px] text-white font-bold">{fmt(totalPagoAlugueres)}</span></div>}
-                      {totalPagoCompras   > 0 && <div className="flex items-center justify-between"><span className="text-[10px] text-white/60">Compras</span><span className="text-[10px] text-white font-bold">{fmt(totalPagoCompras)}</span></div>}
-                      {totalPagoXitique   > 0 && <div className="flex items-center justify-between"><span className="text-[10px] text-white/60">Xitique</span><span className="text-[10px] text-white font-bold">{fmt(totalPagoXitique)}</span></div>}
-                    </div>
-                  </div>
-
-                  {/* Total em Dívida */}
-                  <div className={`rounded-2xl p-4 border ${totalDivida > 0 ? 'bg-red-500/8 border-red-500/20' : 'bg-zinc-900 border-zinc-800'}`}>
-                    <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Total em Dívida</div>
-                    <div className={`text-lg font-black ${totalDivida > 0 ? 'text-red-400' : 'text-white'}`}>{totalDivida > 0 ? fmt(totalDivida) : '—'}</div>
-                    {totalDivida > 0 && (
-                      <div className="mt-1.5 space-y-0.5">
-                        {totalDividaCompras > 0 && <div className="flex items-center justify-between"><span className="text-[10px] text-white/60">Prestações</span><span className="text-[10px] text-white font-bold">{fmt(totalDividaCompras)}</span></div>}
-                        {totalDividaOutras  > 0 && <div className="flex items-center justify-between"><span className="text-[10px] text-white/60">Outras</span><span className="text-[10px] text-white font-bold">{fmt(totalDividaOutras)}</span></div>}
-                      </div>
-                    )}
-                    {totalDivida === 0 && <div className="text-[10px] text-emerald-400 mt-1">Sem dívidas em aberto</div>}
-                  </div>
-
-                  {/* Próxima Prestação */}
-                  <div className={`rounded-2xl p-4 border ${proximaPrestacao ? 'bg-amber-500/8 border-amber-500/20' : 'bg-zinc-900 border-zinc-800'}`}>
-                    <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Próxima Prestação</div>
-                    {proximaPrestacao ? (
-                      <>
-                        <div className="text-lg font-black text-amber-400">{fmt(proximaPrestacao.valor)}</div>
-                        <div className="text-[10px] text-white mt-0.5 truncate">{proximaPrestacao.veiculo}</div>
-                        <div className="text-[10px] text-white">Vence: {fmtData(proximaPrestacao.data)}</div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="text-lg font-black text-white">—</div>
-                        <div className="text-[10px] text-white mt-0.5">Sem prestações pendentes</div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Prestações Pagas */}
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-                    <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Prestações Pagas</div>
-                    <div className="text-lg font-black text-white">
-                      {totalPrestacoesPagas}
-                      {totalPrestacoesTotais > 0 && <span className="text-sm text-white/60 font-bold"> / {totalPrestacoesTotais}</span>}
-                    </div>
-                    {viaturasLiquidadas > 0 && (
-                      <div className="text-[10px] text-emerald-400 mt-1">{viaturasLiquidadas} viatura{viaturasLiquidadas > 1 ? 's' : ''} liquidada{viaturasLiquidadas > 1 ? 's' : ''}</div>
-                    )}
-                    {totalPrestacoesTotais === 0 && <div className="text-[10px] text-white mt-1">Sem planos de prestação</div>}
-                  </div>
-                </div>
-
-                {/* ── Gráfico: Evolução de pagamentos ───────────────────────── */}
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
-                    <span className="text-amber-400"><IcoBarChart /></span>
-                    <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Evolução de Pagamentos</span>
-                    <span className="text-[10px] text-white ml-auto">Últimos 12 meses</span>
-                  </div>
-                  <div className="px-4 pt-4 pb-3">
-                    {mesesEvol.every(m => m.valor === 0) ? (
-                      <div className="flex flex-col items-center justify-center h-24 gap-1">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="9" width="4" height="12"/><rect x="10" y="5" width="4" height="16"/><rect x="17" y="1" width="4" height="20"/></svg>
-                        <span className="text-xs text-white">Sem dados de pagamento nos últimos 12 meses</span>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="flex items-end gap-1 h-24">
-                          {mesesEvol.map((m, i) => {
-                            const pct = maxEvol > 0 ? (m.valor / maxEvol) * 100 : 0;
-                            return (
-                              <div key={i} className="flex-1 flex flex-col items-center gap-0.5 group relative">
-                                {m.valor > 0 && (
-                                  <div className="absolute bottom-0 left-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                                    <div className="bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5 text-[9px] text-white font-bold whitespace-nowrap -translate-y-6 mx-auto w-fit">
-                                      {fmt(m.valor)}
-                                    </div>
-                                  </div>
-                                )}
-                                <div className="w-full flex flex-col justify-end" style={{ height: '76px' }}>
-                                  {m.valor > 0 ? (
-                                    <div
-                                      className={`w-full rounded-t transition-all ${m.isNow ? 'bg-amber-500' : 'bg-zinc-700 group-hover:bg-zinc-600'}`}
-                                      style={{ height: `${Math.max(pct, 6)}%` }}
-                                    />
-                                  ) : (
-                                    <div className="w-full h-0.5 bg-zinc-800/60 rounded mt-auto" />
+                {/* ── KPI strip compacto ──────────────────────────────────────── */}
+                {(() => {
+                  const contratosAtivos =
+                    alugueres.filter(a => ACTIVE_STATUSES.includes(a.status)).length +
+                    compras.filter(c => c.status !== 'cancelada' && c.status !== 'liquidada').length;
+                  const kpis = [
+                    {
+                      label: 'Total em Dívida',
+                      value: totalDivida > 0 ? fmt(totalDivida) : 'Em dia',
+                      sub:   totalDivida > 0
+                               ? (compras.some(c => c.status === 'prestacao_atraso') ? 'Em atraso' : 'Em aberto')
+                               : 'Conta regularizada',
+                      bar:   totalDivida > 0 ? 'bg-red-400' : 'bg-emerald-400',
+                      valueColor: totalDivida > 0 ? 'text-red-400' : 'text-emerald-400',
+                    },
+                    {
+                      label: 'Contratos Ativos',
+                      value: String(contratosAtivos),
+                      sub:   contratosAtivos > 0
+                               ? `${alugueres.filter(a => ACTIVE_STATUSES.includes(a.status)).length} aluguer · ${compras.filter(c => c.status !== 'cancelada' && c.status !== 'liquidada').length} compra`
+                               : 'Nenhum em curso',
+                      bar:   contratosAtivos > 0 ? 'bg-emerald-400' : 'bg-zinc-600',
+                      valueColor: contratosAtivos > 0 ? 'text-emerald-400' : 'text-white',
+                    },
+                    {
+                      label: 'Próxima Prestação',
+                      value: proximaPrestacao ? fmt(proximaPrestacao.valor) : '—',
+                      sub:   proximaPrestacao ? `Vence ${fmtData(proximaPrestacao.data)}` : 'Sem pendentes',
+                      bar:   proximaPrestacao ? 'bg-amber-400' : 'bg-zinc-600',
+                      valueColor: proximaPrestacao ? 'text-amber-400' : 'text-white',
+                    },
+                    {
+                      label: 'Total Pago',
+                      value: totalPago > 0 ? fmt(totalPago) : '—',
+                      sub:   totalPago > 0
+                               ? [totalPagoAlugueres > 0 && 'Alu.', totalPagoCompras > 0 && 'Compra', totalPagoXitique > 0 && 'Xit.'].filter(Boolean).join(' · ')
+                               : 'Sem pagamentos',
+                      bar:   totalPago > 0 ? 'bg-emerald-400' : 'bg-zinc-600',
+                      valueColor: totalPago > 0 ? 'text-emerald-400' : 'text-white',
+                    },
+                    {
+                      label: 'Prestações Pagas',
+                      value: totalPrestacoesTotais > 0 ? `${totalPrestacoesPagas}/${totalPrestacoesTotais}` : '—',
+                      sub:   viaturasLiquidadas > 0 ? `${viaturasLiquidadas} liquidada${viaturasLiquidadas > 1 ? 's' : ''}` : 'Em curso',
+                      bar:   totalPrestacoesPagas > 0 ? 'bg-amber-400' : 'bg-zinc-600',
+                      valueColor: totalPrestacoesPagas > 0 ? 'text-amber-400' : 'text-white',
+                    },
+                  ];
+                  return (
+                    <>
+                      <div className="grid grid-cols-5 gap-3">
+                        {kpis.map((k, i) => {
+                          const isDiv = i === 0;
+                          return (
+                            <div
+                              key={i}
+                              onClick={isDiv ? () => setShowDividaDetail(v => !v) : undefined}
+                              className={`bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden transition-all duration-200 ${isDiv ? 'cursor-pointer hover:border-zinc-700 hover:-translate-y-0.5 select-none' : 'hover:border-zinc-700 hover:-translate-y-0.5'}`}
+                            >
+                              <div className={`h-0.5 w-full ${k.bar}`} />
+                              <div className="p-3.5">
+                                <div className="flex items-center justify-between mb-2">
+                                  <p className="text-[10px] font-bold text-white uppercase tracking-widest leading-tight">{k.label}</p>
+                                  {isDiv && (
+                                    <svg
+                                      width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"
+                                      strokeLinecap="round"
+                                      className={`text-white shrink-0 transition-transform duration-200 ${showDividaDetail ? 'rotate-180' : ''}`}
+                                    >
+                                      <polyline points="6 9 12 15 18 9"/>
+                                    </svg>
                                   )}
                                 </div>
-                                <span className={`text-[8px] font-bold leading-none ${m.isNow ? 'text-amber-400' : 'text-white/50'}`}>{m.label}</span>
+                                <p className={`text-base font-black leading-none tabular-nums mb-1.5 ${k.valueColor}`}>{k.value}</p>
+                                <p className="text-[10px] text-white leading-tight truncate">{k.sub}</p>
                               </div>
-                            );
-                          })}
-                        </div>
-                        <div className="flex items-center gap-3 mt-3 pt-3 border-t border-zinc-800/60">
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-2.5 h-2.5 rounded-sm bg-amber-500" />
-                            <span className="text-[10px] text-white">Mês actual</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* ── Painel de detalhe da dívida ────────────────────────── */}
+                      {showDividaDetail && (
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                          <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-800 bg-zinc-800/40">
+                            <div className="flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                              <span className="text-[10px] font-black text-red-400 uppercase tracking-widest">Detalhe da Dívida</span>
+                            </div>
+                            <button
+                              onClick={() => setShowDividaDetail(false)}
+                              className="w-5 h-5 flex items-center justify-center rounded text-white hover:bg-zinc-800 transition-colors"
+                            >
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-2.5 h-2.5 rounded-sm bg-zinc-700" />
-                            <span className="text-[10px] text-white">Meses anteriores</span>
-                          </div>
-                          <span className="ml-auto text-[10px] text-white">Total 12m: <span className="text-white font-black">{fmt(mesesEvol.reduce((s, m) => s + m.valor, 0))}</span></span>
+
+                          {totalDivida === 0 ? (
+                            <div className="flex items-center gap-2 px-4 py-4">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                              <p className="text-xs font-bold text-emerald-400">Conta regularizada — sem dívidas em aberto.</p>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="divide-y divide-zinc-800/60">
+
+                                {/* Prestações de compras */}
+                                {prestacoesPendentes.map(c => {
+                                  const restam      = (c.totalPrestacoes ?? 0) - (c.prestacoesPagas ?? 0);
+                                  const proxPrest   = (c.prestacoes ?? []).find(p => !p.paga);
+                                  const montante    = (c.prestacoes ?? []).filter(p => !p.paga).reduce((s, p) => s + p.valor, 0) || restam * c.deposito;
+                                  const emAtraso    = c.status === 'prestacao_atraso';
+                                  return (
+                                    <div key={c.id} className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-zinc-800/20 transition-colors">
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                          <p className="text-xs font-bold text-white truncate">{getVehicleName(c.vehicleId)}</p>
+                                          {emAtraso && (
+                                            <span className="text-[8px] font-black bg-red-500/15 text-red-400 border border-red-500/25 rounded-md px-1.5 py-0.5 shrink-0">Atraso</span>
+                                          )}
+                                        </div>
+                                        <p className="text-[10px] text-white">
+                                          {restam} prestação{restam !== 1 ? 'ões' : ''} em falta
+                                          {proxPrest?.dataVencimento ? ` · Próxima: ${fmtData(proxPrest.dataVencimento)}` : ''}
+                                        </p>
+                                        {(c.totalPrestacoes ?? 0) > 0 && (
+                                          <div className="flex gap-0.5 mt-1.5">
+                                            {Array.from({ length: c.totalPrestacoes ?? 0 }).map((_, idx) => (
+                                              <div key={idx} className={`flex-1 h-0.5 rounded-full ${idx < (c.prestacoesPagas ?? 0) ? 'bg-amber-500' : emAtraso ? 'bg-red-500/50' : 'bg-zinc-700'}`} />
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="text-right shrink-0">
+                                        <p className={`text-sm font-black tabular-nums ${emAtraso ? 'text-red-400' : 'text-amber-400'}`}>{fmt(montante)}</p>
+                                        <p className="text-[9px] text-white">{fmt(proxPrest?.valor ?? c.deposito)}/mês</p>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+
+                                {/* Outras dívidas (Finance context) */}
+                                {minhasDividas.map(d => {
+                                  const emAberto = d.valorTotal - d.valorPago;
+                                  return (
+                                    <div key={d.id} className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-zinc-800/20 transition-colors">
+                                      <div className="min-w-0 flex-1">
+                                        <p className="text-xs font-bold text-white truncate">{d.descricao}</p>
+                                        <p className="text-[10px] text-white">
+                                          {d.dataVencimento ? `Vence ${d.dataVencimento}` : 'Sem data de vencimento'}
+                                          {d.valorPago > 0 && ` · Pago: ${fmt(d.valorPago)}`}
+                                        </p>
+                                      </div>
+                                      <p className="text-sm font-black text-red-400 tabular-nums shrink-0">{fmt(emAberto)}</p>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Totais breakdown + rodapé */}
+                              <div className="border-t border-zinc-800 bg-zinc-800/30">
+                                {totalDividaCompras > 0 && (
+                                  <div className="flex items-center justify-between px-4 py-2">
+                                    <span className="text-[10px] text-white">Prestações em aberto</span>
+                                    <span className="text-[10px] font-black text-amber-400 tabular-nums">{fmt(totalDividaCompras)}</span>
+                                  </div>
+                                )}
+                                {totalDividaOutras > 0 && (
+                                  <div className="flex items-center justify-between px-4 py-2 border-t border-zinc-800/50">
+                                    <span className="text-[10px] text-white">Outras dívidas</span>
+                                    <span className="text-[10px] font-black text-red-400 tabular-nums">{fmt(totalDividaOutras)}</span>
+                                  </div>
+                                )}
+                                <div className="flex items-center justify-between px-4 py-2.5 border-t border-zinc-800">
+                                  <span className="text-[10px] font-black text-white uppercase tracking-wide">Total em Dívida</span>
+                                  <span className="text-base font-black text-red-400 tabular-nums">{fmt(totalDivida)}</span>
+                                </div>
+                              </div>
+                            </>
+                          )}
                         </div>
-                      </>
-                    )}
+                      )}
+                    </>
+                  );
+                })()}
+
+                {/* ── Evolução + Compras em Prestação (2 col) ──────────────── */}
+                <div className="grid lg:grid-cols-2 gap-3">
+
+                  {/* Evolução de Pagamentos — compacto */}
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                    <div className="flex items-center gap-2 px-3 py-2.5 border-b border-zinc-800 bg-zinc-800/40">
+                      <span className="text-amber-400"><IcoBarChart /></span>
+                      <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Evolução</span>
+                      <span className="text-[9px] text-white ml-auto">12 meses</span>
+                    </div>
+                    <div className="px-3 pt-3 pb-2.5">
+                      {mesesEvol.every(m => m.valor === 0) ? (
+                        <div className="flex items-center justify-center py-5">
+                          <span className="text-xs text-white">Sem pagamentos registados</span>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-end gap-0.5 h-14">
+                            {mesesEvol.map((m, i) => {
+                              const pct = maxEvol > 0 ? (m.valor / maxEvol) * 100 : 0;
+                              return (
+                                <div key={i} className="flex-1 flex flex-col items-center gap-0.5 group relative">
+                                  {m.valor > 0 && (
+                                    <div className="absolute bottom-0 left-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                                      <div className="bg-zinc-800 border border-zinc-700 rounded px-1 py-0.5 text-[8px] text-white whitespace-nowrap -translate-y-5 mx-auto w-fit">{fmt(m.valor)}</div>
+                                    </div>
+                                  )}
+                                  <div className="w-full flex flex-col justify-end" style={{ height: '46px' }}>
+                                    {m.valor > 0
+                                      ? <div className={`w-full rounded-t ${m.isNow ? 'bg-amber-500' : 'bg-zinc-700 group-hover:bg-zinc-600'}`} style={{ height: `${Math.max(pct, 8)}%` }} />
+                                      : <div className="w-full h-px bg-zinc-800/60 mt-auto" />
+                                    }
+                                  </div>
+                                  <span className={`text-[7px] font-bold leading-none ${m.isNow ? 'text-amber-400' : 'text-white'}`}>{m.label}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <p className="text-[9px] text-white text-right mt-2">
+                            Total: <span className="text-white font-black">{fmt(mesesEvol.reduce((s, m) => s + m.valor, 0))}</span>
+                          </p>
+                        </>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Compras em Prestação — Prestação Mensal + Pendentes fundidos */}
+                  {compras.filter(c => (c.totalPrestacoes ?? 0) > 0).length > 0 ? (
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-zinc-800 bg-zinc-800/40">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                        <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Compras em Prestação</span>
+                        <span className="text-[9px] text-white ml-auto">{compras.filter(c => (c.totalPrestacoes ?? 0) > 0).length}</span>
+                      </div>
+                      <div className="divide-y divide-zinc-800/50">
+                        {compras.filter(c => (c.totalPrestacoes ?? 0) > 0).map(c => {
+                          const pagas  = c.prestacoesPagas ?? 0;
+                          const total  = c.totalPrestacoes ?? 0;
+                          const pct    = total > 0 ? (pagas / total) * 100 : 0;
+                          const proxP  = (c.prestacoes ?? []).find(p => !p.paga);
+                          const emAtr  = c.status === 'prestacao_atraso';
+                          const liquid = c.status === 'liquidada';
+                          const st     = RES_STATUS[c.status];
+                          return (
+                            <div key={c.id} className="px-3 py-3">
+                              <div className="flex items-center justify-between gap-2 mb-1.5">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5 mb-0.5">
+                                    <p className="text-xs font-bold text-white truncate">{getVehicleName(c.vehicleId)}</p>
+                                    <span className={`text-[8px] font-black border rounded-md px-1.5 py-0.5 shrink-0 ${st.cls}`}>{st.label}</span>
+                                  </div>
+                                  <p className="text-[10px] text-white">
+                                    {pagas}/{total} prestações
+                                    {proxP?.dataVencimento && !liquid ? ` · Próxima: ${fmtData(proxP.dataVencimento)}` : ''}
+                                  </p>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <p className={`text-sm font-black tabular-nums ${liquid ? 'text-emerald-400' : emAtr ? 'text-red-400' : 'text-amber-400'}`}>
+                                    {fmt(proxP?.valor ?? c.deposito)}
+                                  </p>
+                                  {!liquid && <p className="text-[9px] text-white">/mês</p>}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                                  <div className={`h-full rounded-full transition-all ${liquid ? 'bg-emerald-500' : emAtr ? 'bg-red-500' : 'bg-amber-500'}`} style={{ width: `${pct}%` }} />
+                                </div>
+                                <span className="text-[9px] text-white tabular-nums shrink-0">{Math.round(pct)}%</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center p-6">
+                      <p className="text-xs text-white text-center">Sem planos de prestação activos</p>
+                    </div>
+                  )}
                 </div>
 
-                {/* ── Gráfico: Prestação mensal por viatura ─────────────────── */}
-                {prestMensais.length > 0 && (
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                    <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
-                      <span className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />
-                      <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Prestação Mensal</span>
-                      <span className="text-[10px] text-white ml-auto">Por viatura</span>
+                {/* ── Outras Dívidas (Finance context) — só aparece se existirem ── */}
+                {minhasDividas.length > 0 && (
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                    <div className="flex items-center gap-2 px-3 py-2.5 border-b border-zinc-800 bg-zinc-800/40">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                      <span className="text-[10px] font-black text-red-400 uppercase tracking-widest">Outras Dívidas</span>
+                      <span className="text-[9px] font-bold text-white ml-auto">{minhasDividas.length}</span>
                     </div>
                     <div className="divide-y divide-zinc-800/50">
-                      {prestMensais.map((p, i) => {
-                        const progPct = p.total > 0 ? (p.pagas / p.total) * 100 : 0;
-                        return (
-                          <div key={i} className="px-4 py-3.5">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="min-w-0">
-                                <p className="text-xs font-black text-white truncate">{p.nome}</p>
-                                <p className="text-[10px] text-white mt-0.5">
-                                  {p.pagas}/{p.total} prestações
-                                  {p.data && ` · Próxima: ${fmtData(p.data)}`}
-                                </p>
-                              </div>
-                              <span className="text-sm font-black text-amber-400 shrink-0 ml-3">
-                                {fmt(p.valor)}<span className="text-[10px] text-white font-bold">/mês</span>
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                                <div className="h-full bg-amber-500 rounded-full transition-all" style={{ width: `${progPct}%` }} />
-                              </div>
-                              <span className="text-[10px] text-white font-bold shrink-0 tabular-nums">{Math.round(progPct)}%</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Dívidas em aberto ─────────────────────────────────────── */}
-                {minhasDividas.length > 0 && (
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                    <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
-                      <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" />
-                      <span className="text-[10px] font-black text-red-400 uppercase tracking-widest">Dívidas em Aberto</span>
-                      <span className="text-[10px] text-white font-bold ml-auto">{minhasDividas.length}</span>
-                    </div>
-                    <div className="divide-y divide-zinc-800">
                       {minhasDividas.map(d => (
-                        <div key={d.id} className="flex items-center justify-between gap-3 px-4 py-3.5">
+                        <div key={d.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
                           <div className="min-w-0">
-                            <p className="text-sm font-bold text-white truncate">{d.descricao}</p>
-                            <p className="text-xs text-white mt-0.5">
-                              Em aberto: <span className="text-red-400 font-black">{fmt(d.valorTotal - d.valorPago)}</span>
-                              {d.dataVencimento ? ` · Vence ${d.dataVencimento}` : ''}
+                            <p className="text-xs font-bold text-white truncate">{d.descricao}</p>
+                            <p className="text-[10px] text-white">
+                              {d.dataVencimento ? `Vence ${d.dataVencimento}` : 'Sem data'}
+                              {d.valorPago > 0 ? ` · Pago: ${fmt(d.valorPago)}` : ''}
                             </p>
                           </div>
-                          <span className="text-[10px] font-bold border rounded-full px-2 py-0.5 shrink-0 bg-red-400/10 text-red-400 border-red-400/20">
-                            Em aberto
-                          </span>
+                          <span className="text-sm font-black text-red-400 tabular-nums shrink-0">{fmt(d.valorTotal - d.valorPago)}</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* ── Prestações pendentes ───────────────────────────────────── */}
-                {prestacoesPendentes.length > 0 && (
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                    <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
-                      <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
-                      <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Prestações Pendentes</span>
-                      <span className="text-[10px] text-white font-bold ml-auto">{prestacoesPendentes.length}</span>
-                    </div>
-                    <div className="divide-y divide-zinc-800">
-                      {prestacoesPendentes.map(c => {
-                        const restam = (c.totalPrestacoes ?? 0) - (c.prestacoesPagas ?? 0);
-                        const proximaPrest = c.prestacoes?.find(p => !p.paga);
-                        return (
-                          <div key={c.id} className="px-4 py-3.5">
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="text-sm font-bold text-white truncate">{getVehicleName(c.vehicleId)}</p>
-                                <p className="text-xs text-white mt-0.5">
-                                  {restam} prestação{restam > 1 ? 'ões' : ''} em falta
-                                  {proximaPrest?.dataVencimento ? ` · Próxima: ${fmtData(proximaPrest.dataVencimento)}` : ''}
-                                </p>
-                              </div>
-                              <div className="text-right shrink-0">
-                                <p className="text-sm font-black text-amber-400">{fmt(proximaPrest?.valor ?? c.deposito)}</p>
-                                <p className="text-[10px] text-white">por mês</p>
-                              </div>
-                            </div>
-                            <div className="mt-2 flex gap-1">
-                              {Array.from({ length: c.totalPrestacoes ?? 0 }).map((_, i) => (
-                                <div key={i} className={`flex-1 h-1 rounded-full ${i < (c.prestacoesPagas ?? 0) ? 'bg-amber-500' : 'bg-zinc-700'}`} />
-                              ))}
-                            </div>
+                {/* ── Tabela Detalhada + Centro de Descargas ─────────────────── */}
+                {(() => {
+                  type FaturaStatus = 'pago' | 'vencendo' | 'pendente' | 'atrasado' | 'cancelado';
+                  type Fatura = { id: string; descricao: string; dataVencimento: string; valor: number; statusKey: FaturaStatus };
+
+                  const hojeStr  = new Date().toISOString().split('T')[0];
+                  const diasAte  = (d: string) => Math.ceil((new Date(d).getTime() - new Date(hojeStr).getTime()) / 86400000);
+                  const getFatStatus = (paga: boolean, cancel: boolean, dataVenc: string): FaturaStatus => {
+                    if (cancel) return 'cancelado';
+                    if (paga)   return 'pago';
+                    const d = diasAte(dataVenc);
+                    return d < 0 ? 'atrasado' : d <= 7 ? 'vencendo' : 'pendente';
+                  };
+
+                  const faturas: Fatura[] = [];
+                  let fi = 1;
+                  alugueres.forEach(a => {
+                    faturas.push({
+                      id: `FAT-${String(fi++).padStart(3, '0')}`,
+                      descricao: getVehicleName(a.vehicleId),
+                      dataVencimento: a.dataFim,
+                      valor: a.valorTotal,
+                      statusKey: getFatStatus(a.status === 'concluida', a.status === 'cancelada', a.dataFim),
+                    });
+                  });
+                  compras.forEach(c => {
+                    const prests = c.prestacoes ?? [];
+                    if (prests.length > 0) {
+                      prests.forEach(p => {
+                        faturas.push({
+                          id: `FAT-${String(fi++).padStart(3, '0')}`,
+                          descricao: `${getVehicleName(c.vehicleId)} · Prest. ${p.numero}`,
+                          dataVencimento: p.dataVencimento,
+                          valor: p.valorPago ?? p.valor,
+                          statusKey: getFatStatus(p.paga, c.status === 'cancelada', p.dataVencimento),
+                        });
+                      });
+                    } else {
+                      faturas.push({
+                        id: `FAT-${String(fi++).padStart(3, '0')}`,
+                        descricao: getVehicleName(c.vehicleId),
+                        dataVencimento: c.dataFim,
+                        valor: c.deposito,
+                        statusKey: getFatStatus(c.status === 'liquidada', c.status === 'cancelada', c.dataFim),
+                      });
+                    }
+                  });
+
+                  const STATUS_STYLE: Record<FaturaStatus, { label: string; cls: string; dot: string }> = {
+                    pago:      { label: 'Pago',      cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30', dot: 'bg-emerald-400' },
+                    vencendo:  { label: 'Vencendo',  cls: 'bg-amber-500/15 text-amber-400 border-amber-500/30',       dot: 'bg-amber-400' },
+                    pendente:  { label: 'Pendente',  cls: 'bg-zinc-700/60 text-white border-zinc-600',                dot: 'bg-white' },
+                    atrasado:  { label: 'Atrasado',  cls: 'bg-red-500/15 text-red-400 border-red-500/30',             dot: 'bg-red-400' },
+                    cancelado: { label: 'Cancelado', cls: 'bg-zinc-800 text-white border-zinc-700',                   dot: 'bg-zinc-500' },
+                  };
+
+                  const fatFiltradas = faturas.filter(f => {
+                    const matchStatus = faturaStatusFiltro === 'todos' || f.statusKey === faturaStatusFiltro;
+                    const q = faturaSearch.toLowerCase();
+                    const matchQ = !q || f.id.toLowerCase().includes(q) || f.descricao.toLowerCase().includes(q) || f.dataVencimento.includes(q);
+                    return matchStatus && matchQ;
+                  });
+
+                  const downloadResumoDiv = () => {
+                    const hoje = fmtData(new Date().toISOString().split('T')[0]);
+                    const rows = faturas.filter(f => f.statusKey !== 'pago' && f.statusKey !== 'cancelado').map(f => `
+                      <tr>
+                        <td>${f.id}</td>
+                        <td>${f.descricao}</td>
+                        <td>${fmtData(f.dataVencimento)}</td>
+                        <td class="val-red">${fmt(f.valor)}</td>
+                        <td><span class="badge badge-divida">${STATUS_STYLE[f.statusKey].label}</span></td>
+                      </tr>
+                    `).join('');
+                    const body = `
+                      <div class="doc-title">Resumo de Dívida</div>
+                      <div class="doc-sub">Gerado a ${hoje}</div>
+                      <div class="info-grid">
+                        <div class="info-box"><div class="info-label">Titular</div><div class="info-value">${authUser?.nome ?? '—'}</div><div class="info-sub">${authUser?.email ?? '—'}</div></div>
+                        <div class="info-box"><div class="info-label">Total em Dívida</div><div class="info-value val-red">${fmt(totalDivida)}</div></div>
+                      </div>
+                      <div class="section-title">Faturas em Aberto</div>
+                      <table><thead><tr><th>Fatura</th><th>Descrição</th><th>Vencimento</th><th>Valor</th><th>Estado</th></tr></thead>
+                      <tbody>${rows || '<tr><td colspan="5" style="text-align:center;color:#a1a1aa">Sem dívidas em aberto</td></tr>'}</tbody></table>
+                    `;
+                    printAsPDF(body, 'Resumo de Dívida');
+                  };
+
+                  const downloadContratos = () => {
+                    const hoje = fmtData(new Date().toISOString().split('T')[0]);
+                    const rowsA = alugueres.map(a => `<tr><td>${getVehicleName(a.vehicleId)}</td><td>${fmtData(a.dataInicio)}</td><td>${fmtData(a.dataFim)}</td><td class="val-amber">${fmt(a.valorTotal)}</td><td>${RES_STATUS[a.status]?.label ?? a.status}</td></tr>`).join('');
+                    const rowsC = compras.map(c => `<tr><td>${getVehicleName(c.vehicleId)}</td><td>${fmtData(c.dataInicio)}</td><td>—</td><td class="val-green">${fmt(c.deposito)}/mês</td><td>${RES_STATUS[c.status]?.label ?? c.status}</td></tr>`).join('');
+                    const body = `
+                      <div class="doc-title">Comprovativo de Contratos</div>
+                      <div class="doc-sub">Gerado a ${hoje}</div>
+                      <div class="section-title">Alugueres</div>
+                      <table><thead><tr><th>Viatura</th><th>Início</th><th>Fim</th><th>Valor</th><th>Estado</th></tr></thead><tbody>${rowsA || '<tr><td colspan="5" style="text-align:center;color:#a1a1aa">Sem alugueres</td></tr>'}</tbody></table>
+                      <div class="section-title">Compras</div>
+                      <table><thead><tr><th>Viatura</th><th>Data</th><th>—</th><th>Prestação</th><th>Estado</th></tr></thead><tbody>${rowsC || '<tr><td colspan="5" style="text-align:center;color:#a1a1aa">Sem compras</td></tr>'}</tbody></table>
+                    `;
+                    printAsPDF(body, 'Comprovativo de Contratos');
+                  };
+
+                  return (
+                    <div className="space-y-3">
+                      {/* Título da secção */}
+                      <div className="flex items-center gap-2 pt-1">
+                        <div className="w-1 h-4 rounded-full bg-amber-500" />
+                        <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Tabela Detalhada de Pagamentos</span>
+                      </div>
+
+                      {/* Barra de pesquisa + filtro */}
+                      <div className="flex gap-2 flex-wrap">
+                        <div className="relative flex-1 min-w-[140px]">
+                          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-white" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                          <input
+                            value={faturaSearch}
+                            onChange={e => setFaturaSearch(e.target.value)}
+                            placeholder="Pesquisar fatura..."
+                            className="w-full rounded-xl bg-zinc-900 border border-zinc-800 pl-8 pr-3 py-2 text-xs text-white placeholder:text-white/30 outline-none focus:border-amber-500/50"
+                          />
+                        </div>
+                        <select
+                          value={faturaStatusFiltro}
+                          onChange={e => setFaturaStatusFiltro(e.target.value as typeof faturaStatusFiltro)}
+                          className="rounded-xl bg-zinc-900 border border-zinc-800 px-3 py-2 text-xs text-white outline-none focus:border-amber-500/50 cursor-pointer"
+                        >
+                          <option value="todos">Todos os estados</option>
+                          <option value="pago">Pago</option>
+                          <option value="vencendo">Vencendo</option>
+                          <option value="pendente">Pendente</option>
+                          <option value="atrasado">Atrasado</option>
+                          <option value="cancelado">Cancelado</option>
+                        </select>
+                      </div>
+
+                      {/* Tabela + Centro de Descargas */}
+                      <div className="grid lg:grid-cols-[1fr_200px] gap-3 items-start">
+
+                        {/* Tabela */}
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                          {/* Cabeçalho */}
+                          <div className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-2 px-4 py-2.5 border-b border-zinc-800 bg-zinc-800/50">
+                            <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest w-[72px]">Fatura ID</span>
+                            <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest">Data Vencimento</span>
+                            <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest text-right">Valor</span>
+                            <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest text-center w-20">Status</span>
+                            <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest text-center">PDF</span>
                           </div>
-                        );
-                      })}
+
+                          {fatFiltradas.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-10 gap-2">
+                              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#52525b" strokeWidth="1.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                              <span className="text-xs text-white">Sem faturas encontradas</span>
+                            </div>
+                          ) : (
+                            <div className="divide-y divide-zinc-800/50 max-h-72 overflow-y-auto">
+                              {fatFiltradas.map((f) => {
+                                const st = STATUS_STYLE[f.statusKey];
+                                const downloadFatura = () => {
+                                  const body = `
+                                    <div class="doc-title">Fatura / Recibo</div>
+                                    <div class="doc-sub">${f.id}</div>
+                                    <div class="summary-box">
+                                      <div class="summary-row"><span>Fatura</span><span><b>${f.id}</b></span></div>
+                                      <div class="summary-row"><span>Descrição</span><span>${f.descricao}</span></div>
+                                      <div class="summary-row"><span>Vencimento</span><span>${fmtData(f.dataVencimento)}</span></div>
+                                      <div class="summary-row"><span>Estado</span><span>${st.label}</span></div>
+                                      <div class="summary-row total"><span>Valor</span><span class="${f.statusKey === 'pago' ? 'val-green' : 'val-amber'}">${fmt(f.valor)}</span></div>
+                                    </div>
+                                  `;
+                                  printAsPDF(body, f.id);
+                                };
+                                return (
+                                  <div key={f.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-2 px-4 py-3 hover:bg-zinc-800/30 transition-colors">
+                                    <span className="text-[10px] font-black text-amber-400 tabular-nums w-[72px] shrink-0">{f.id}</span>
+                                    <div className="min-w-0">
+                                      <p className="text-[11px] font-bold text-white truncate">{f.descricao}</p>
+                                      <p className="text-[10px] text-white">{fmtData(f.dataVencimento)}</p>
+                                    </div>
+                                    <span className="text-xs font-black text-white tabular-nums text-right whitespace-nowrap shrink-0">{fmt(f.valor)}</span>
+                                    <span className={`text-[9px] font-black border rounded-md px-2 py-0.5 whitespace-nowrap w-20 text-center shrink-0 ${st.cls}`}>
+                                      {st.label}
+                                    </span>
+                                    <button
+                                      onClick={downloadFatura}
+                                      title="Ver PDF"
+                                      className="w-6 h-6 flex items-center justify-center rounded-lg bg-zinc-800 hover:bg-amber-400/20 hover:text-amber-400 text-white border border-zinc-700 transition-colors shrink-0"
+                                    >
+                                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Centro de Descargas */}
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                          <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest">Descargas</span>
+                          </div>
+                          <div className="p-3 space-y-2">
+                            <button
+                              onClick={downloadResumoDiv}
+                              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-amber-500/30 transition-all text-left group"
+                            >
+                              <svg width="14" height="14" className="text-amber-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                              <span className="text-[10px] font-bold text-white group-hover:text-amber-400 transition-colors leading-tight">Resumo de Dívida<br/><span className="text-white font-normal">PDF</span></span>
+                            </button>
+                            <button
+                              onClick={downloadContratos}
+                              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-amber-500/30 transition-all text-left group"
+                            >
+                              <svg width="14" height="14" className="text-amber-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                              <span className="text-[10px] font-bold text-white group-hover:text-amber-400 transition-colors leading-tight">Comprovativo<br/><span className="text-white font-normal">PDF</span></span>
+                            </button>
+                            <button
+                              onClick={downloadExtrato}
+                              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-amber-500/30 transition-all text-left group"
+                            >
+                              <svg width="14" height="14" className="text-amber-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"/></svg>
+                              <span className="text-[10px] font-bold text-white group-hover:text-amber-400 transition-colors leading-tight">Histórico de Faturas<br/><span className="text-white font-normal">PDF</span></span>
+                            </button>
+                          </div>
+                        </div>
+
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* ── Histórico de pagamentos ────────────────────────────────── */}
-                {historico.length > 0 && (
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                    <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
-                      <IcoHistory />
-                      <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Histórico de Pagamentos</span>
-                      <span className="text-[10px] text-white font-bold ml-auto">{historico.length}</span>
-                    </div>
-                    <div className="divide-y divide-zinc-800/50 max-h-72 overflow-y-auto">
-                      {historico.map((ev, i) => (
-                        <div key={i} className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/30 transition-colors">
-                          <div className="flex flex-col items-center shrink-0">
-                            <div className={`w-1.5 h-1.5 rounded-full ${ev.tipo === 'aluguer' ? 'bg-blue-400' : ev.tipo === 'compra' ? 'bg-purple-400' : ev.tipo === 'xitique' ? 'bg-amber-400' : 'bg-red-400'}`} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-white truncate">{ev.label}</p>
-                            <p className="text-[10px] text-white">{ev.sub}{ev.data ? ` · ${ev.data.length === 10 ? fmtData(ev.data) : ev.data}` : ''}</p>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <p className="text-xs font-black text-emerald-400">{fmt(ev.valor)}</p>
-                            <span className={`text-[9px] font-bold border rounded-full px-1.5 py-0.5 ${tipoCls[ev.tipo]}`}>{tipoLabel[ev.tipo]}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-between px-4 py-2.5 border-t border-zinc-800 bg-zinc-800/30">
-                      <span className="text-[10px] text-white font-bold">Total do histórico</span>
-                      <span className="text-xs font-black text-emerald-400">{fmt(historico.reduce((s, e) => s + e.valor, 0))}</span>
-                    </div>
+                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
+                    <IcoHistory />
+                    <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Histórico</span>
+                    <span className="ml-auto text-[10px] font-black bg-zinc-800 border border-zinc-700 text-white rounded-full px-2 py-0.5">{historico.length}</span>
                   </div>
-                )}
+
+                  {historico.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-10 gap-2">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#52525b" strokeWidth="1.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      <span className="text-xs text-white">Sem pagamentos registados</span>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Column headers */}
+                      <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 px-4 py-2 border-b border-zinc-800 bg-zinc-800/25">
+                        <span className="text-[9px] font-black text-white uppercase tracking-widest">Data / Item</span>
+                        <span className="text-[9px] font-black text-white uppercase tracking-widest text-right">Valor</span>
+                        <span className="text-[9px] font-black text-white uppercase tracking-widest text-center">Tipo</span>
+                        <span className="text-[9px] font-black text-white uppercase tracking-widest text-center">Recibo</span>
+                      </div>
+
+                      {/* Rows */}
+                      <div className="divide-y divide-zinc-800/50 max-h-80 overflow-y-auto">
+                        {historico.map((ev, i) => {
+                          const downloadRecibo = () => {
+                            const body = `
+                              <div class="doc-title">Recibo de Pagamento</div>
+                              <div class="doc-sub">Recibo Nº ${i + 1}</div>
+                              <div class="section-title">Detalhes</div>
+                              <div class="summary-box">
+                                <div class="summary-row"><span>Item</span><span><b>${ev.sub}</b></span></div>
+                                <div class="summary-row"><span>Viatura / Origem</span><span>${ev.label}</span></div>
+                                <div class="summary-row"><span>Data</span><span>${ev.data.length === 10 ? fmtData(ev.data) : (ev.data || '—')}</span></div>
+                                <div class="summary-row"><span>Tipo</span><span><span class="badge badge-${ev.tipo}">${tipoLabel[ev.tipo]}</span></span></div>
+                                <div class="summary-row total"><span>Valor Pago</span><span class="val-green">${fmt(ev.valor)}</span></div>
+                              </div>
+                            `;
+                            printAsPDF(body, `Recibo ${i + 1}`);
+                          };
+                          return (
+                            <div key={i} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 px-4 py-3 hover:bg-zinc-800/30 transition-colors">
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-white truncate">{ev.sub}</p>
+                                <p className="text-[10px] text-white truncate">{ev.data ? (ev.data.length === 10 ? fmtData(ev.data) : ev.data) : '—'}</p>
+                              </div>
+                              <span className="text-xs font-black text-emerald-400 tabular-nums text-right whitespace-nowrap">{fmt(ev.valor)}</span>
+                              <span className={`text-[9px] font-black border rounded-md px-2 py-0.5 whitespace-nowrap ${tipoCls[ev.tipo]}`}>
+                                {tipoLabel[ev.tipo].toUpperCase()}
+                              </span>
+                              <button
+                                onClick={downloadRecibo}
+                                title="Baixar recibo"
+                                className="w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-800 hover:bg-amber-400/20 hover:text-amber-400 text-white border border-zinc-700 transition-colors"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Footer total */}
+                      <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-800 bg-zinc-800/30">
+                        <span className="text-[10px] text-white font-bold">Total do histórico</span>
+                        <span className="text-sm font-black text-emerald-400">{fmt(historico.reduce((s, e) => s + e.valor, 0))}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
 
                 {/* ── Estado vazio ───────────────────────────────────────────── */}
                 {totalPago === 0 && totalDivida === 0 && historico.length === 0 && (
@@ -1648,7 +2558,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                         { label: 'Prémio Mensal', value: fmt(premioMT) },
                       ].map(s => (
                         <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
-                          <div className="text-[9px] text-zinc-400 uppercase font-bold tracking-wider mb-1">{s.label}</div>
+                          <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">{s.label}</div>
                           <div className="text-sm font-black text-white leading-tight">{s.value}</div>
                         </div>
                       ))}
@@ -1656,7 +2566,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                     {dataInicio && (
                       <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        <span className="text-[10px] text-zinc-400">Início do ciclo:</span>
+                        <span className="text-[10px] text-white">Início do ciclo:</span>
                         <span className="text-[10px] font-black text-amber-400">{fmtData(dataInicio)}</span>
                       </div>
                     )}
@@ -1742,9 +2652,9 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                           </div>
                           {pagou && registo && (
                             <div className="flex flex-wrap gap-x-4 gap-y-0.5 px-3 py-1.5 bg-zinc-900/60 border-t border-zinc-700/40">
-                              <span className="text-[10px] text-zinc-400">Via <span className="text-white font-bold">{registo.metodo}</span></span>
-                              {registo.referencia && <span className="text-[10px] text-zinc-400">Ref: <span className="text-white font-mono">{registo.referencia}</span></span>}
-                              <span className="text-[10px] text-zinc-400">{registo.data}</span>
+                              <span className="text-[10px] text-white">Via <span className="text-white font-bold">{registo.metodo}</span></span>
+                              {registo.referencia && <span className="text-[10px] text-white">Ref: <span className="text-white font-mono">{registo.referencia}</span></span>}
+                              <span className="text-[10px] text-white">{registo.data}</span>
                             </div>
                           )}
                         </div>
@@ -1778,48 +2688,31 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
               )}
 
               {!membro && !inscricaoPendente && (
-                <div className="relative bg-zinc-900 border border-amber-500/20 rounded-2xl overflow-hidden">
-                  {/* glow decorativo */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-transparent pointer-events-none" />
-
-                  <div className="relative p-6 flex flex-col items-center text-center gap-4">
-                    {/* Ícone */}
-                    <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-3xl shadow-lg">
-                      🏆
+                <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl overflow-hidden">
+                  <div className="grid grid-cols-2 divide-x divide-zinc-800">
+                    {/* Esquerda: porquê participar */}
+                    <div className="px-5 py-4">
+                      <p className="text-sm font-black text-white mb-3">Porquê Participar?</p>
+                      <ul className="space-y-2">
+                        {['Poupança Colectiva', 'Sorteio Mensal', 'Grupo de confiança'].map(item => (
+                          <li key={item} className="flex items-center gap-2">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span className="text-xs text-white">{item}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
 
-                    {/* Texto */}
-                    <div className="space-y-1.5">
-                      <h3 className="text-white font-black text-base">Ainda não participa no Xitique</h3>
-                      <p className="text-white text-sm leading-relaxed max-w-xs mx-auto">
-                        O Xitique é uma poupança colectiva mensal. Cada membro contribui com uma quota e um sortudo recebe o prémio acumulado.
-                      </p>
+                    {/* Direita: CTA */}
+                    <div className="px-5 py-4 flex flex-col items-center justify-center gap-2">
+                      <button
+                        onClick={() => setShowXitiqueModal(true)}
+                        className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-zinc-950 font-black text-[10px] uppercase tracking-widest transition-all shadow-md shadow-amber-500/20"
+                      >
+                        Participar no Xitique
+                      </button>
+                      <p className="text-[10px] text-white text-center">Comece agora!</p>
                     </div>
-
-                    {/* Benefícios rápidos */}
-                    <div className="w-full grid grid-cols-3 gap-2 text-center">
-                      {[
-                        { emoji: '💰', label: 'Poupança colectiva' },
-                        { emoji: '🎲', label: 'Sorteio mensal' },
-                        { emoji: '🤝', label: 'Grupo de confiança' },
-                      ].map(b => (
-                        <div key={b.label} className="bg-zinc-800/60 border border-zinc-700/60 rounded-xl px-2 py-3">
-                          <div className="text-lg mb-1">{b.emoji}</div>
-                          <p className="text-[10px] text-white font-semibold leading-tight">{b.label}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* CTA */}
-                    <button
-                      onClick={() => setShowXitiqueModal(true)}
-                      className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-zinc-950 font-black text-sm uppercase tracking-widest transition-all shadow-lg shadow-amber-500/20"
-                    >
-                      🏆 Participar no Xitique
-                    </button>
-                    <p className="text-[10px] text-white/70 leading-relaxed">
-                      A sua inscrição fica sujeita a validação pelo administrador.
-                    </p>
                   </div>
                 </div>
               )}
@@ -1827,118 +2720,193 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
           )}
 
           {/* ══ HISTÓRICO ═════════════════════════════════════════════════════ */}
-          {section === 'historico' && (
-            <div className="space-y-2">
-              {fullUser?.status === 'suspenso' && fullUser.motivoSuspensao && (
-                <div className="flex gap-3 bg-red-500/5 border border-red-500/20 rounded-xl px-4 py-3 mb-2">
-                  <svg className="shrink-0 mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.8" fill="#f87171"/></svg>
-                  <div>
-                    <p className="text-xs font-bold text-red-400 uppercase tracking-wider">Conta suspensa</p>
-                    <p className="text-sm text-red-300 mt-0.5 leading-relaxed">{fullUser.motivoSuspensao}</p>
+          {section === 'historico' && (() => {
+            const totalHist = historicoPag.reduce((s, e) => s + e.valor, 0);
+            const filtrado  = historicoPag.filter(e => {
+              const matchTipo   = histFiltro === 'todos' || e.tipo === histFiltro;
+              const q           = histSearch.toLowerCase();
+              const matchSearch = !q || e.sub.toLowerCase().includes(q) || e.label.toLowerCase().includes(q) || e.data.includes(q);
+              return matchTipo && matchSearch;
+            });
+
+            const downloadRecibo = (ev: PagEvt, idx: number) => {
+              const body = `
+                <div class="doc-title">Recibo de Pagamento</div>
+                <div class="doc-sub">Recibo Nº ${idx + 1}</div>
+                <div class="section-title">Detalhes</div>
+                <div class="summary-box">
+                  <div class="summary-row"><span>Item</span><span><b>${ev.sub}</b></span></div>
+                  <div class="summary-row"><span>Viatura / Origem</span><span>${ev.label}</span></div>
+                  <div class="summary-row"><span>Data</span><span>${ev.data.length === 10 ? fmtData(ev.data) : (ev.data || '—')}</span></div>
+                  <div class="summary-row"><span>Tipo</span><span><span class="badge badge-${ev.tipo}">${TIPO_LABEL[ev.tipo]}</span></span></div>
+                  <div class="summary-row total"><span>Valor Pago</span><span class="val-green">${fmt(ev.valor)}</span></div>
+                </div>
+              `;
+              printAsPDF(body, `Recibo ${idx + 1}`);
+            };
+
+            const downloadExtrato = () => {
+              const hoje  = fmtData(new Date().toISOString().split('T')[0]);
+              const rows  = historicoPag.map(e => `
+                <tr>
+                  <td>${e.data.length === 10 ? fmtData(e.data) : (e.data || '—')}</td>
+                  <td>${e.sub}<br><span style="color:#71717a;font-size:10px">${e.label}</span></td>
+                  <td class="val-green">${fmt(e.valor)}</td>
+                  <td><span class="badge badge-${e.tipo}">${TIPO_LABEL[e.tipo]}</span></td>
+                </tr>
+              `).join('');
+              const body = `
+                <div class="doc-title">Extrato de Conta</div>
+                <div class="doc-sub">Gerado a ${hoje}</div>
+                <div class="info-grid">
+                  <div class="info-box">
+                    <div class="info-label">Remetente</div>
+                    <div class="info-value">SOS Motors</div>
+                    <div class="info-sub">info@rentcar.co.mz</div>
+                  </div>
+                  <div class="info-box">
+                    <div class="info-label">Titular</div>
+                    <div class="info-value">${authUser?.nome ?? '—'}</div>
+                    <div class="info-sub">${authUser?.email ?? '—'}</div>
                   </div>
                 </div>
-              )}
+                <div class="section-title">Histórico de Pagamentos</div>
+                <table>
+                  <thead><tr><th>Data</th><th>Item</th><th>Valor</th><th>Tipo</th></tr></thead>
+                  <tbody>${rows}<tr class="total-row"><td colspan="2">Total</td><td class="val-green">${fmt(totalHist)}</td><td></td></tr></tbody>
+                </table>
+              `;
+              printAsPDF(body, 'Extrato de Conta');
+            };
 
-              {userRes.length === 0 && !membro && !inscricaoPendente && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center">
-                  <p className="text-white text-sm">Ainda não tem actividade registada.</p>
-                  <p className="text-zinc-400 text-xs mt-1 opacity-60">As suas reservas, compras e xitique aparecem aqui.</p>
+            return (
+              <div className="space-y-4">
+
+                {/* KPI cards */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+                    <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-1">Total Pago</p>
+                    <p className="text-lg font-black text-emerald-400 tabular-nums">{fmt(totalHist)}</p>
+                  </div>
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+                    <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-1">Transações</p>
+                    <p className="text-lg font-black text-white tabular-nums">{historicoPag.length}</p>
+                  </div>
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+                    <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-1">Contratos</p>
+                    <p className="text-lg font-black text-white tabular-nums">{alugueres.length + compras.length}</p>
+                  </div>
                 </div>
-              )}
 
-              {alugueres.length > 0 && (
+                {/* Search + extrato */}
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input
+                      value={histSearch}
+                      onChange={e => setHistSearch(e.target.value)}
+                      placeholder="Pesquisar pagamento..."
+                      className="w-full rounded-xl bg-zinc-900 border border-zinc-800 pl-9 pr-3 py-2.5 text-sm text-white placeholder:text-white/30 outline-none focus:border-amber-500/50"
+                    />
+                  </div>
+                  <button
+                    onClick={downloadExtrato}
+                    title="Baixar extrato completo"
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-amber-500/30 hover:text-amber-400 text-white text-xs font-bold transition-colors shrink-0"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Extrato
+                  </button>
+                </div>
+
+                {/* Filter tabs */}
+                <div className="flex gap-1.5 flex-wrap">
+                  {(['todos', 'aluguer', 'compra', 'xitique'] as const).map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setHistFiltro(f)}
+                      className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wide border transition-colors ${
+                        histFiltro === f
+                          ? 'bg-amber-500 text-zinc-950 border-amber-400'
+                          : 'bg-zinc-900 border-zinc-700 text-white hover:border-zinc-600'
+                      }`}
+                    >
+                      {f === 'todos' ? `Todos (${historicoPag.length})` : `${TIPO_LABEL[f]} (${historicoPag.filter(e => e.tipo === f).length})`}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Tabela */}
                 <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
-                    <span className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />
-                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Alugueres</span>
-                    <span className="text-[10px] text-zinc-500 font-bold ml-auto">{alugueres.length}</span>
-                  </div>
-                  <div className="divide-y divide-zinc-800">
-                    {alugueres.map(r => {
-                      const st = RES_STATUS[r.status];
-                      return (
-                        <div key={r.id} className="flex items-center justify-between gap-3 px-4 py-3.5 hover:bg-zinc-800/30 transition-colors">
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-white truncate">{getVehicleName(r.vehicleId)}</p>
-                            <p className="text-xs text-zinc-400 mt-0.5">{r.dataInicio} → {r.dataFim}</p>
-                          </div>
-                          <div className="flex flex-col items-end gap-1 shrink-0">
-                            <span className={`text-[10px] border rounded-full px-2 py-0.5 font-bold ${st.cls}`}>{st.label}</span>
-                            <span className="text-xs text-amber-400 font-black">{fmt(r.valorTotal)}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+                  {filtrado.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 gap-2">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#52525b" strokeWidth="1.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      <span className="text-xs text-white/40">
+                        {histSearch ? 'Nenhum resultado para a pesquisa' : 'Sem pagamentos registados'}
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Cabeçalho */}
+                      <div className="grid grid-cols-[80px_1fr_auto_auto_auto] items-center gap-3 px-4 py-2.5 border-b border-zinc-800 bg-zinc-800/40">
+                        <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Data</span>
+                        <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Item</span>
+                        <span className="text-[9px] font-black text-white/40 uppercase tracking-widest text-right">Valor</span>
+                        <span className="text-[9px] font-black text-white/40 uppercase tracking-widest text-center">Tipo</span>
+                        <span className="text-[9px] font-black text-white/40 uppercase tracking-widest text-center">Recibo</span>
+                      </div>
 
-              {compras.length > 0 && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
-                    <span className="w-2 h-2 rounded-full bg-purple-400 shrink-0" />
-                    <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest">Compras</span>
-                    <span className="text-[10px] text-zinc-500 font-bold ml-auto">{compras.length}</span>
-                  </div>
-                  <div className="divide-y divide-zinc-800">
-                    {compras.map(c => {
-                      const st = RES_STATUS[c.status];
-                      const isParcelada = (c.totalPrestacoes ?? 0) > 0;
-                      const pagas = c.prestacoesPagas ?? 0;
-                      const total = c.totalPrestacoes ?? 0;
-                      const restam = total - pagas;
-                      return (
-                        <div key={c.id} className="flex items-center justify-between gap-3 px-4 py-3.5 hover:bg-zinc-800/30 transition-colors">
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-white truncate">{getVehicleName(c.vehicleId)}</p>
-                            <p className="text-xs text-zinc-400 mt-0.5">
-                              {isParcelada
-                                ? restam > 0 ? `${pagas}/${total} prestações · faltam ${restam}` : 'Liquidado'
-                                : `Pronto pagamento · ${fmtData(c.dataInicio)}`}
-                            </p>
+                      {/* Linhas */}
+                      <div className="divide-y divide-zinc-800/50">
+                        {filtrado.map((ev, i) => (
+                          <div key={i} className="grid grid-cols-[80px_1fr_auto_auto_auto] items-center gap-3 px-4 py-3 hover:bg-zinc-800/30 transition-colors">
+                            <div className="shrink-0">
+                              <p className="text-[10px] text-white/50 whitespace-nowrap">
+                                {ev.data.length === 10 ? fmtData(ev.data) : (ev.data || '—')}
+                              </p>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-white truncate">{ev.sub}</p>
+                              <p className="text-[10px] text-white/40 truncate">{ev.label}</p>
+                            </div>
+                            <span className="text-xs font-black text-emerald-400 tabular-nums text-right whitespace-nowrap shrink-0">
+                              {fmt(ev.valor)}
+                            </span>
+                            <span className={`text-[9px] font-black border rounded-md px-2 py-0.5 whitespace-nowrap shrink-0 ${TIPO_CLS[ev.tipo]}`}>
+                              {TIPO_LABEL[ev.tipo]}
+                            </span>
+                            <button
+                              onClick={() => downloadRecibo(ev, i)}
+                              title="Baixar recibo"
+                              className="w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-800 hover:bg-amber-400/20 hover:text-amber-400 text-white border border-zinc-700 transition-colors shrink-0"
+                            >
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            </button>
                           </div>
-                          <div className="flex flex-col items-end gap-1 shrink-0">
-                            <span className={`text-[10px] border rounded-full px-2 py-0.5 font-bold ${st.cls}`}>{st.label}</span>
-                            {isParcelada && <span className="text-xs text-amber-400 font-black">{fmt(c.deposito)}/mês</span>}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+                        ))}
+                      </div>
 
-              {(membro || inscricaoPendente) && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
-                    <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
-                    <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Xitique</span>
-                  </div>
-                  <div className="divide-y divide-zinc-800">
-                    {membro && (
-                      <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-white">{membro.estado === 'Sorteado' ? 'Contemplado 🏆' : membro.estado === 'Aceite' ? 'Pagamento confirmado' : 'Pagamento pendente'}</p>
-                          <p className="text-xs text-zinc-400 mt-0.5">Mês {mesAtual} de {numMembros} · Prémio {fmt(premioMT)}</p>
-                        </div>
-                        <span className={`text-[10px] font-bold border rounded-full px-2 py-0.5 shrink-0 ${membro.estado === 'Sorteado' ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' : membro.estado === 'Aceite' ? 'bg-amber-400/10 text-amber-400 border-amber-400/20' : 'bg-zinc-800 text-white border-zinc-700'}`}>
-                          {membro.estado === 'Sorteado' ? 'Contemplado' : membro.estado === 'Aceite' ? 'Pago' : 'Pendente'}
+                      {/* Footer total */}
+                      <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-800 bg-zinc-800/30">
+                        <span className="text-[10px] text-white/40 font-bold">
+                          {filtrado.length === historicoPag.length
+                            ? `${historicoPag.length} transações`
+                            : `${filtrado.length} de ${historicoPag.length} transações`}
+                        </span>
+                        <span className="text-sm font-black text-emerald-400">
+                          {fmt(filtrado.reduce((s, e) => s + e.valor, 0))}
                         </span>
                       </div>
-                    )}
-                    {!membro && inscricaoPendente && (
-                      <div className="flex items-center gap-3 px-4 py-3.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
-                        <div>
-                          <p className="text-sm font-bold text-white">Inscrição em análise</p>
-                          <p className="text-xs text-zinc-400 mt-0.5">Aguarda validação pelo administrador.</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                    </>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            );
+          })()}
+
+          {/* ══ NOTIFICAÇÕES ══════════════════════════════════════════════════ */}
+          {section === 'notificacoes' && (
+            <NotificacoesPanel />
           )}
 
         </div>

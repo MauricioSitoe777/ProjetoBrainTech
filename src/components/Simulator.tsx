@@ -66,7 +66,7 @@ function NumberField({
 
   return (
     <div>
-      <label className="text-zinc-300 text-sm font-normal block mb-1.5">{label}</label>
+      <label className="text-white text-sm font-normal block mb-1.5">{label}</label>
       <div className={`flex items-center gap-2 rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2 ${disabled ? 'opacity-70 cursor-not-allowed' : 'focus-within:border-amber-500/50 focus-within:ring-1 focus-within:ring-amber-500/20'}`}>
         <input
           type="text"
@@ -77,7 +77,7 @@ function NumberField({
           disabled={disabled}
           className={`w-full bg-transparent text-sm text-white font-medium outline-none ${disabled ? 'cursor-not-allowed' : ''}`}
         />
-        {suffix ? <span className="text-zinc-400 text-xs font-normal">{suffix}</span> : null}
+        {suffix ? <span className="text-white text-xs font-normal">{suffix}</span> : null}
       </div>
     </div>
   );
@@ -103,7 +103,7 @@ function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) 
       <select value={h} onChange={e => onChange(`${e.target.value}:${minute}`)} className={`${cls} flex-1`}>
         {HOURS.map(hh => <option key={hh} value={hh}>{hh}</option>)}
       </select>
-      <span className="text-zinc-500 font-normal text-sm">:</span>
+      <span className="text-white font-normal text-sm">:</span>
       <select value={minute} onChange={e => onChange(`${h}:${e.target.value}`)} className={`${cls} flex-1`}>
         {MINUTES.map(mm => <option key={mm} value={mm}>{mm}</option>)}
       </select>
@@ -543,40 +543,46 @@ export default function Simulator({
         ) : null}
 
         {/* Header */}
-        <div className="text-center mb-2">
-          <div className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-0.5">
-            {lockedFlow === "aluguer" ? "Aluguer" : "Compra & Aluguer"}
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/25 rounded-full px-4 py-1 mb-3">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+            <span className="text-amber-400 text-[10px] font-black uppercase tracking-widest">
+              {lockedFlow === "aluguer" ? "Aluguer de Viatura" : "Simulador de Compra & Aluguer"}
+            </span>
           </div>
-          <h2 className="text-white text-2xl md:text-3xl font-bold">Simulador</h2>
+          <h2 className="text-white text-3xl md:text-4xl font-black tracking-tight leading-none">
+            Simule o seu <span className="text-amber-400">contrato</span>
+          </h2>
+          <p className="text-white/60 text-sm mt-2">Preencha os campos e veja o valor estimado em tempo real.</p>
         </div>
 
-        <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-3">
+        <div className="grid lg:grid-cols-[3fr_2fr] gap-4 items-stretch">
 
           {/* ── Controls panel ── */}
-          <div className="bg-zinc-800/50 backdrop-blur-md rounded-2xl border border-white/10 p-3 flex flex-col gap-2 shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)] self-start">
+          <div className="bg-zinc-800/50 backdrop-blur-md rounded-2xl border border-white/10 p-4 flex flex-col gap-2 shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)]">
 
-            {/* Row 1: Tipo de Serviço + Tipo de Funcionário (compra) lado a lado */}
-            <div className={`grid gap-2 ${flow === 'compra' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {/* Row 1: Tipo de Serviço + [Tipo de Funcionário (compra)] + Cliente */}
+            <div className={`grid gap-2 ${flow === 'compra' ? 'grid-cols-3' : 'grid-cols-2'}`}>
               {/* Serviço */}
               {!lockedFlow ? (
                 <div>
-                  <label className="text-zinc-300 text-sm font-normal block mb-1.5 uppercase tracking-tight">Tipo de Serviço</label>
+                  <label className="text-white text-xs font-normal block mb-1 uppercase tracking-tight">Tipo de Serviço</label>
                   <select
                     value={flow}
                     onChange={(e) => setFlow(e.target.value as FlowType)}
-                    className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2.5 text-sm text-white font-normal outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 cursor-pointer"
+                    className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-1.5 text-sm text-white font-normal outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 cursor-pointer"
                   >
                     <option value="compra">🚗  Compra</option>
                     <option value="aluguer">🔑  Aluguer</option>
                   </select>
                 </div>
               ) : (
-                <div className="py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-1.5 bg-amber-500 text-zinc-950">
+                <div className="py-1.5 rounded-lg text-sm font-bold flex items-center justify-center gap-1.5 bg-amber-500 text-zinc-950">
                   {lockedFlow === "aluguer" ? <><IconKey size={13} /> Aluguer</> : <><IconCar size={13} /> Compra</>}
                 </div>
               )}
 
-              {/* Tipo de Funcionário — só aparece para compra, na mesma linha */}
+              {/* Tipo de Funcionário — só aparece para compra */}
               {flow === 'compra' && (() => {
                 const PROFILES = [
                   { key: 'func_publico', emoji: '🏛️', label: 'Func. Público',        rules: 'Sem entrada · até 48 prestações' },
@@ -587,34 +593,32 @@ export default function Simulator({
                 const active = PROFILES.find(p => p.key === category);
                 return (
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-zinc-300 text-sm font-normal uppercase tracking-tight">Tipo de Funcionário</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-white text-xs font-normal uppercase tracking-tight">Tipo de Funcionário</label>
                       {currentUser?.category && (
-                        <span className="text-xs font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 rounded-full">Perfil</span>
+                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-1.5 py-0.5 rounded-full">Perfil</span>
                       )}
                     </div>
                     <select
                       value={category}
                       disabled={locked}
                       onChange={(e) => !locked && setCategory(e.target.value as Category)}
-                      className={`w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2.5 text-sm text-white font-normal outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 ${locked ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
+                      className={`w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-1.5 text-sm text-white font-normal outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 ${locked ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
                     >
                       {PROFILES.map(p => (
                         <option key={p.key} value={p.key}>{p.emoji}  {p.label}</option>
                       ))}
                     </select>
                     {active && (
-                      <p className="text-xs text-zinc-300 mt-1.5 leading-snug">{active.rules}</p>
+                      <p className="text-[10px] text-white/60 mt-1 leading-snug">{active.rules}</p>
                     )}
                   </div>
                 );
               })()}
-            </div>
 
-            {/* Row 2: Cliente + Contacto * + Contacto alternativo — 3 colunas */}
-            <div className="grid grid-cols-3 gap-3">
+              {/* Cliente — mesma linha */}
               <div className="relative">
-                <label className="text-zinc-300 text-sm font-normal block mb-1.5">Cliente</label>
+                <label className="text-white text-xs font-normal block mb-1">Cliente</label>
                 <input
                   value={clientName}
                   onChange={(e) => {
@@ -624,41 +628,44 @@ export default function Simulator({
                   }}
                   onFocus={() => !authUser && setShowSuggestions(true)}
                   onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                  placeholder="Ex: Ana Mussa"
+                  placeholder="Nome do cliente"
                   readOnly={!!authUser}
-                  className={`w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2 text-sm text-white font-medium placeholder:text-zinc-500 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 ${
+                  className={`w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-1.5 text-sm text-white font-medium placeholder:text-zinc-500 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 ${
                     authUser ? 'opacity-70 cursor-not-allowed' : ''
                   }`}
                 />
                 {showSuggestions && suggestions.length > 0 && !authUser && (
-                  <div className="absolute left-0 right-0 mt-2 bg-zinc-900 border border-zinc-700 rounded-xl max-h-60 overflow-y-auto z-20 shadow-2xl divide-y divide-zinc-800">
+                  <div className="absolute left-0 right-0 mt-2 bg-zinc-900 border border-zinc-700 rounded-xl max-h-48 overflow-y-auto z-20 shadow-2xl divide-y divide-zinc-800">
                     {suggestions.map(u => (
                       <button
                         key={u.id}
                         type="button"
                         onClick={() => handleSelectUser(u)}
-                        className="w-full text-left px-4 py-3 text-sm hover:bg-zinc-800/80 flex items-center justify-between transition-colors"
+                        className="w-full text-left px-3 py-2.5 text-sm hover:bg-zinc-800/80 flex items-center justify-between transition-colors gap-2"
                       >
-                        <div>
-                          <p className="font-medium text-white">{u.nome}</p>
-                          <p className="text-xs text-zinc-400 font-normal">{u.email}</p>
+                        <div className="min-w-0">
+                          <p className="font-medium text-white truncate">{u.nome}</p>
+                          <p className="text-xs text-white/60 truncate">{u.email}</p>
                         </div>
-                        <span className="text-xs text-amber-400 bg-amber-400/10 px-2 py-1 rounded-lg border border-amber-400/20 font-normal">
-                          {u.telefone || 'Sem Telefone'}
+                        <span className="text-[10px] text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20 shrink-0">
+                          {u.telefone || '—'}
                         </span>
                       </button>
                     ))}
                   </div>
                 )}
               </div>
+            </div>
 
-              {/* Contacto principal (obrigatório) */}
+            {/* Row 3: Contacto * | Contacto alternativo — 2 colunas */}
+            <div className="grid grid-cols-2 gap-2">
+              {/* Contacto principal */}
               <div>
-                <label className="text-zinc-300 text-sm font-normal block mb-1.5">
+                <label className="text-white text-xs font-normal block mb-1">
                   Contacto <span className="text-amber-500">*</span>
                 </label>
                 <div className={`flex items-center w-full rounded-lg bg-zinc-950 border border-zinc-700 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500/20 overflow-hidden ${authUser ? 'opacity-70' : ''}`}>
-                  <div className="pl-3 pr-2 py-2 text-sm text-amber-500 font-normal bg-zinc-900 border-r border-zinc-700 shrink-0">
+                  <div className="pl-2.5 pr-2 py-1.5 text-xs text-amber-500 font-bold bg-zinc-900 border-r border-zinc-700 shrink-0">
                     +258
                   </div>
                   <input
@@ -666,27 +673,27 @@ export default function Simulator({
                     onChange={(e) => !authUser && setClientContact(formatContact(e.target.value))}
                     placeholder="84 123 4567"
                     readOnly={!!authUser}
-                    className={`w-full bg-transparent px-2.5 py-2 text-sm text-white font-medium placeholder:text-zinc-500 outline-none ${
+                    className={`w-full bg-transparent px-2 py-1.5 text-sm text-white font-medium placeholder:text-zinc-500 outline-none ${
                       authUser ? 'cursor-not-allowed' : ''
                     }`}
                   />
                 </div>
               </div>
 
-              {/* Contacto alternativo (opcional) */}
+              {/* Contacto alternativo */}
               <div>
-                <label className="text-zinc-300 text-sm font-normal block mb-1.5">
-                  Alt. <span className="text-zinc-400 font-normal text-xs">(opcional)</span>
+                <label className="text-white text-xs font-normal block mb-1">
+                  Alt. <span className="text-white/50 text-[10px]">(opcional)</span>
                 </label>
                 <div className="flex items-center w-full rounded-lg bg-zinc-950 border border-zinc-700 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500/20 overflow-hidden">
-                  <div className="pl-3 pr-2 py-2 text-sm text-amber-500 font-normal bg-zinc-900 border-r border-zinc-700 shrink-0">
+                  <div className="pl-2.5 pr-2 py-1.5 text-xs text-amber-500 font-bold bg-zinc-900 border-r border-zinc-700 shrink-0">
                     +258
                   </div>
                   <input
                     value={clientContact2}
                     onChange={(e) => setClientContact2(formatContact(e.target.value))}
                     placeholder="86 987 6543"
-                    className="w-full bg-transparent px-2.5 py-2 text-sm text-white font-medium placeholder:text-zinc-500 outline-none"
+                    className="w-full bg-transparent px-2 py-1.5 text-sm text-white font-medium placeholder:text-zinc-500 outline-none"
                   />
                 </div>
               </div>
@@ -706,7 +713,7 @@ export default function Simulator({
                       onChange={(v) => setIncome(Math.min(100_000_000, Math.max(0, v)))} min={0} suffix="MT/mês" />
                   )}
                   <div>
-                    <label className="text-zinc-300 text-sm font-normal block mb-1.5">Como pagar?</label>
+                    <label className="text-white text-sm font-normal block mb-1.5">Como pagar?</label>
                     <select
                       value={paymentPlan}
                       onChange={(e) => setPaymentPlan(e.target.value as PaymentPlan)}
@@ -762,10 +769,10 @@ export default function Simulator({
                       {/* Slider de meses */}
                       <div>
                         <div className="flex items-center justify-between mb-2">
-                          <label className="text-zinc-300 text-sm font-normal">Nº de Meses</label>
+                          <label className="text-white text-sm font-normal">Nº de Meses</label>
                           <div className="flex items-baseline gap-1 bg-zinc-800 border border-zinc-700 rounded-md px-2.5 py-1">
                             <span className="text-lg font-black text-amber-400 leading-none">{mesesPrestacoes}</span>
-                            <span className="text-xs text-zinc-400 font-normal">m</span>
+                            <span className="text-xs text-white font-normal">m</span>
                           </div>
                         </div>
                         <input type="range" className="months-slider w-full"
@@ -777,7 +784,7 @@ export default function Simulator({
                           {(maxMonthsForCategory <= 12 ? [1, 6, 12] : [1, 12, 24, 48])
                             .filter(v => v <= maxMonthsForCategory).map(v => (
                             <button key={v} type="button" onClick={() => setMesesPrestacoes(v)}
-                              className={`text-xs font-medium px-1.5 py-0.5 rounded transition-all ${mesesPrestacoes === v ? 'text-amber-400 bg-amber-400/10 border border-amber-400/30' : 'text-zinc-400'}`}>{v}</button>
+                              className={`text-xs font-medium px-1.5 py-0.5 rounded transition-all ${mesesPrestacoes === v ? 'text-amber-400 bg-amber-400/10 border border-amber-400/30' : 'text-white'}`}>{v}</button>
                           ))}
                         </div>
                       </div>
@@ -787,103 +794,118 @@ export default function Simulator({
               </>
             ) : (
               <>
-                {/* Aluguer — datas e horas: 4 colunas numa linha */}
-                <div className="grid grid-cols-4 gap-3">
-                  <div>
-                    <label className="text-zinc-300 text-sm font-normal block mb-1.5">Data início</label>
-                    <input
-                      type="date"
-                      value={dataInicio}
-                      onChange={(e) => setDataInicio(e.target.value)}
-                      className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2 text-sm text-white font-medium outline-none focus:border-amber-500"
-                    />
+                {/* Datas — Levantamento | Devolução, cada um com data+hora inline */}
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Levantamento */}
+                  <div className="bg-zinc-900/60 border border-zinc-700/60 rounded-xl p-2.5 space-y-1.5">
+                    <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest">Levantamento</p>
+                    <div className="grid grid-cols-[3fr_2fr] gap-1.5">
+                      <div>
+                        <label className="text-white text-[10px] font-normal block mb-1">Data</label>
+                        <input
+                          type="date"
+                          value={dataInicio}
+                          onChange={(e) => setDataInicio(e.target.value)}
+                          className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-2 py-1.5 text-xs text-white font-medium outline-none focus:border-amber-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-white text-[10px] font-normal block mb-1">Hora</label>
+                        <TimeSelect value={horaLevantamento} onChange={setHoraLevantamento} />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-zinc-300 text-sm font-normal block mb-1.5">Hora lev.</label>
-                    <TimeSelect value={horaLevantamento} onChange={setHoraLevantamento} />
-                  </div>
-                  <div>
-                    <label className="text-zinc-300 text-sm font-normal block mb-1.5">Data fim</label>
-                    <input
-                      type="date"
-                      value={dataFim}
-                      onChange={(e) => setDataFim(e.target.value)}
-                      className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2 text-sm text-white font-medium outline-none focus:border-amber-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-zinc-300 text-sm font-normal block mb-1.5">Hora dev.</label>
-                    <TimeSelect value={horaDevolucao} onChange={setHoraDevolucao} />
+
+                  {/* Devolução */}
+                  <div className="bg-zinc-900/60 border border-zinc-700/60 rounded-xl p-2.5 space-y-1.5">
+                    <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest">Devolução</p>
+                    <div className="grid grid-cols-[3fr_2fr] gap-1.5">
+                      <div>
+                        <label className="text-white text-[10px] font-normal block mb-1">Data</label>
+                        <input
+                          type="date"
+                          value={dataFim}
+                          onChange={(e) => setDataFim(e.target.value)}
+                          className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-2 py-1.5 text-xs text-white font-medium outline-none focus:border-amber-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-white text-[10px] font-normal block mb-1">Hora</label>
+                        <TimeSelect value={horaDevolucao} onChange={setHoraDevolucao} />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-zinc-300 text-sm font-normal block mb-1.5">Motivo da viagem</label>
-                  <textarea
+                  <label className="text-white text-xs font-normal block mb-1">Motivo da viagem</label>
+                  <input
+                    type="text"
                     value={motivoViagem}
                     onChange={(e) => setMotivoViagem(e.target.value)}
                     placeholder="Ex: Viagem de negócios à Beira, férias em Bilene..."
-                    rows={1}
-                    className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2 text-sm text-white font-medium placeholder:text-zinc-500 outline-none focus:border-amber-500 resize-none"
+                    className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-1.5 text-sm text-white font-medium placeholder:text-zinc-500 outline-none focus:border-amber-500"
                   />
                 </div>
 
-                <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 flex items-center gap-3">
-                  <div className="shrink-0 w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-zinc-500 font-normal mb-0.5">Local de levantamento e devolução</p>
-                    <p className="text-sm font-medium text-white truncate">Escritório Central</p>
-                    <p className="text-xs text-zinc-300">Av. Julius Nyerere, Maputo</p>
-                  </div>
-                  <span className="shrink-0 text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full px-2.5 py-0.5 font-bold">Fixo</span>
-                </div>
-
-                {/* Solicitar motorista */}
-                {(() => {
-                  const disponiveis = motoristas.filter(m => m.status === 'disponivel');
-                  return (
-                    <div className={`rounded-xl border transition-all ${comMotorista ? 'border-amber-400/30 bg-amber-400/5' : 'border-zinc-700/60 bg-zinc-800/30'}`}>
-                      <button
-                        type="button"
-                        onClick={() => { setComMotorista(v => !v); setMotoristaId(''); }}
-                        className="w-full flex items-center justify-between px-4 py-3.5"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-lg">🧑‍✈️</span>
-                          <div className="text-left">
-                            <p className={`text-sm font-medium ${comMotorista ? 'text-amber-400' : 'text-white'}`}>Com ou sem motorista</p>
-                            <p className="text-xs text-zinc-300 mt-0.5">Condutor profissional incluído na reserva</p>
-                          </div>
-                        </div>
-                        <div className={`w-10 h-5 rounded-full flex items-center transition-all px-0.5 shrink-0 ${comMotorista ? 'bg-amber-400 justify-end' : 'bg-zinc-700 justify-start'}`}>
-                          <div className="w-4 h-4 rounded-full bg-white shadow" />
-                        </div>
-                      </button>
-                      {comMotorista && (
-                        <div className="px-4 pb-4">
-                          {disponiveis.length === 0 ? (
-                            <p className="text-sm text-zinc-300 italic">Sem motoristas disponíveis no momento.</p>
-                          ) : (
-                            <select
-                              value={motoristaId}
-                              onChange={e => setMotoristaId(e.target.value)}
-                              className="w-full bg-zinc-900 border border-zinc-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-amber-400 outline-none"
-                            >
-                              <option value="">Selecionar motorista (opcional)</option>
-                              {disponiveis.map(m => (
-                                <option key={m.id} value={m.id}>{m.nome} · {m.telefone}</option>
-                              ))}
-                            </select>
-                          )}
-                        </div>
-                      )}
+                {/* Local + Motorista — lado a lado */}
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Local fixo */}
+                  <div className="rounded-xl border border-zinc-700/70 bg-zinc-900/60 px-3 py-2 flex items-center gap-2.5">
+                    <div className="shrink-0 w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                      </svg>
                     </div>
-                  );
-                })()}
+                    <div className="min-w-0">
+                      <p className="text-[9px] text-white uppercase tracking-wider font-bold mb-0.5">Local</p>
+                      <p className="text-xs font-semibold text-white truncate">Escritório Central</p>
+                      <p className="text-[10px] text-white/60 truncate">Av. Julius Nyerere</p>
+                    </div>
+                  </div>
+
+                  {/* Motorista toggle */}
+                  {(() => {
+                    const disponiveis = motoristas.filter(m => m.status === 'disponivel');
+                    return (
+                      <div className={`rounded-xl border transition-all ${comMotorista ? 'border-amber-400/30 bg-amber-400/5' : 'border-zinc-700/70 bg-zinc-900/60'}`}>
+                        <button
+                          type="button"
+                          onClick={() => { setComMotorista(v => !v); setMotoristaId(''); }}
+                          className="w-full flex items-center justify-between px-3 py-2"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-[9px] text-white uppercase tracking-wider font-bold mb-0.5">Motorista</p>
+                            <p className={`text-xs font-semibold truncate ${comMotorista ? 'text-amber-400' : 'text-white'}`}>
+                              {comMotorista ? 'Com motorista' : 'Sem motorista'}
+                            </p>
+                          </div>
+                          <div className={`w-9 h-5 rounded-full flex items-center transition-all px-0.5 shrink-0 ml-2 ${comMotorista ? 'bg-amber-400 justify-end' : 'bg-zinc-700 justify-start'}`}>
+                            <div className="w-3.5 h-3.5 rounded-full bg-white shadow" />
+                          </div>
+                        </button>
+                        {comMotorista && (
+                          <div className="px-3 pb-2.5">
+                            {disponiveis.length === 0 ? (
+                              <p className="text-xs text-white italic">Sem motoristas disponíveis.</p>
+                            ) : (
+                              <select
+                                value={motoristaId}
+                                onChange={e => setMotoristaId(e.target.value)}
+                                className="w-full bg-zinc-900 border border-zinc-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:border-amber-400 outline-none"
+                              >
+                                <option value="">Selecionar (opcional)</option>
+                                {disponiveis.map(m => (
+                                  <option key={m.id} value={m.id}>{m.nome}</option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
 
                 {flow === 'aluguer' && dateValidation && !dateValidation.valid ? (
                   <div className="text-sm text-red-100 bg-red-600 border border-red-500 rounded-lg p-3">
@@ -978,12 +1000,12 @@ export default function Simulator({
           </div>
 
           {/* ── Result panel ── */}
-          <div className="bg-zinc-800/50 backdrop-blur-md rounded-2xl border border-white/10 p-4 flex flex-col justify-between shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06),0_0_40px_-12px_rgba(228,180,46,0.12)] relative overflow-hidden h-fit">
+          <div className="bg-zinc-800/50 backdrop-blur-md rounded-2xl border border-white/10 p-5 flex flex-col justify-between shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06),0_0_40px_-12px_rgba(228,180,46,0.12)] relative overflow-hidden sticky top-6">
             {/* Decoration */}
             <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 blur-3xl -mr-12 -mt-12" />
             
             <div className="relative z-10">
-              <div className="text-zinc-400 text-xs mb-2 font-normal uppercase tracking-widest">
+              <div className="text-white text-xs mb-2 font-normal uppercase tracking-widest">
                 {flow === "compra"
                   ? paymentPlan === "prestacoes"
                     ? "Prestação Mensal"
@@ -999,7 +1021,7 @@ export default function Simulator({
                     : fmt(rentalTotal)}
                   <span className="text-lg text-amber-500 ml-1.5 font-black">MT</span>
                 </span>
-                <span className="text-zinc-400 text-xs font-normal bg-white/5 px-2.5 py-1 rounded-md border border-white/10">
+                <span className="text-white text-xs font-normal bg-white/5 px-2.5 py-1 rounded-md border border-white/10">
                   {flow === "compra" && paymentPlan === "prestacoes"
                     ? `${(TAXA_MENSAL * 100).toFixed(1)}%/mês · ${Math.min(maxMonthsForCategory, Math.max(1, Math.round(mesesPrestacoes)))} meses`
                     : flow === "compra"
@@ -1044,7 +1066,7 @@ export default function Simulator({
                     </p>
                     {financingStatus.why && (
                       <div className="bg-zinc-800/70 rounded-lg px-2.5 py-2 border border-zinc-700/50">
-                        <p className="text-xs text-zinc-400 font-normal mb-1">O que acontece?</p>
+                        <p className="text-xs text-white font-normal mb-1">O que acontece?</p>
                         <p className="text-xs text-white leading-relaxed">{financingStatus.why}</p>
                       </div>
                     )}
@@ -1075,7 +1097,7 @@ export default function Simulator({
                 : ([] as [string, string][])
               ).map(([label, val]) => (
                 <div key={label} className="bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-3">
-                  <div className="text-zinc-500 text-xs font-normal uppercase tracking-wider mb-1">{label}</div>
+                  <div className="text-white text-xs font-normal uppercase tracking-wider mb-1">{label}</div>
                   <div className="text-white font-medium text-base truncate">{val}</div>
                 </div>
               ))}
@@ -1112,7 +1134,7 @@ export default function Simulator({
                     <p className="text-emerald-400 font-black text-base">
                       {flow === "compra" ? "Pedido de compra enviado!" : "Reserva submetida!"}
                     </p>
-                    <p className="text-white/60 text-xs mt-1">O administrador foi notificado e entrará em contacto.</p>
+                    <p className="text-white text-xs mt-1">O administrador foi notificado e entrará em contacto.</p>
                   </div>
                 </div>
                 <div className="px-4 py-3 space-y-1.5">
@@ -1125,7 +1147,7 @@ export default function Simulator({
                     ["Próximo passo", "Aguarde contacto da SOS Motors para instruções de pagamento."],
                   ].map(([label, val]) => (
                     <div key={label} className="flex gap-2 text-xs">
-                      <span className="text-white/40 font-normal w-28 shrink-0">{label}</span>
+                      <span className="text-white font-normal w-28 shrink-0">{label}</span>
                       <span className="text-white">{val}</span>
                     </div>
                   ))}

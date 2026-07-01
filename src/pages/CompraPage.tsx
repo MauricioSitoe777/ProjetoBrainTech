@@ -90,10 +90,10 @@ function PrestacoeModal({
                 </span>
               )}
             </div>
-            <p className="text-zinc-400 text-xs mt-0.5">{vehicleName(r.vehicleId)} · {fmt(r.valorTotal)}</p>
+            <p className="text-white text-xs mt-0.5">{vehicleName(r.vehicleId)} · {fmt(r.valorTotal)}</p>
           </div>
           <button onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-xl bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-all shrink-0 text-lg font-black">
+            className="w-8 h-8 flex items-center justify-center rounded-xl bg-zinc-800 text-white hover:bg-zinc-700 hover:text-white transition-all shrink-0 text-lg font-black">
             ×
           </button>
         </div>
@@ -101,14 +101,14 @@ function PrestacoeModal({
         {/* Barra de progresso global */}
         <div className={`px-6 py-3 border-b border-zinc-800 flex items-center gap-4 ${isAtraso ? 'bg-red-500/5' : 'bg-zinc-950/40'}`}>
           <span className={`text-2xl font-black tabular-nums ${isAtraso ? 'text-red-400' : allPaid ? 'text-emerald-400' : 'text-blue-400'}`}>
-            {pagas}<span className="text-sm text-zinc-500 font-bold">/{total}</span>
+            {pagas}<span className="text-sm text-white font-bold">/{total}</span>
           </span>
           <div className="flex-1">
             <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
               <div className={`h-full rounded-full transition-all duration-300 ${isAtraso ? 'bg-red-500' : allPaid ? 'bg-emerald-500' : 'bg-blue-500'}`}
                 style={{ width: `${pct}%` }} />
             </div>
-            <div className="flex justify-between mt-1 text-[10px] text-zinc-500">
+            <div className="flex justify-between mt-1 text-[10px] text-white">
               <span>{pct}% concluído</span>
               {allPaid
                 ? <span className="text-emerald-400 font-semibold">✓ Todas as prestações pagas</span>
@@ -139,24 +139,24 @@ function PrestacoeModal({
                     p.paga                   ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20'
                     : isProxima && isOverdue ? 'bg-red-500/15 text-red-400 border-red-500/20'
                     : isProxima              ? 'bg-blue-500/15 text-blue-400 border-blue-500/20'
-                    : 'bg-zinc-800/60 text-zinc-600 border-zinc-700/50'
+                    : 'bg-zinc-800/60 text-white border-zinc-700/50'
                   }`}>
                     {p.paga ? '✓' : p.numero}
                   </span>
 
                   {/* Data vencimento */}
                   <span className={`text-xs tabular-nums w-28 shrink-0 ${
-                    p.paga                   ? 'text-zinc-500 line-through'
+                    p.paga                   ? 'text-white line-through'
                     : isProxima && isOverdue ? 'text-red-400 font-semibold'
                     : isProxima              ? 'text-zinc-200 font-semibold'
-                    : 'text-zinc-600'
+                    : 'text-white'
                   }`}>
                     {fmtDate(p.dataVencimento)}
                   </span>
 
                   {/* Valor */}
                   <span className={`text-sm font-bold tabular-nums flex-1 ${
-                    p.paga ? 'text-zinc-600' : isProxima ? (isOverdue ? 'text-red-300' : 'text-white') : 'text-zinc-600'
+                    p.paga ? 'text-white' : isProxima ? (isOverdue ? 'text-red-300' : 'text-white') : 'text-white'
                   }`}>
                     {fmt(p.valor)}
                   </span>
@@ -166,7 +166,7 @@ function PrestacoeModal({
                     p.paga                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                     : isProxima && isOverdue ? 'bg-red-500/10 text-red-400 border-red-500/20'
                     : isProxima              ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                    : 'bg-zinc-900 text-zinc-600 border-zinc-800'
+                    : 'bg-zinc-900 text-white border-zinc-800'
                   }`}>
                     {p.paga
                       ? (p.dataPagamento ? fmtDate(p.dataPagamento) : 'Paga')
@@ -204,7 +204,7 @@ function PrestacoeModal({
                               onChange={e => setValorCustom(e.target.value.replace(/\D/g, ''))}
                               className="w-28 text-xs text-right bg-zinc-800 border border-zinc-700 focus:border-amber-500 rounded-lg px-2 py-1 text-white outline-none tabular-nums font-bold"
                             />
-                            <span className="text-[10px] text-zinc-500 font-semibold">MT</span>
+                            <span className="text-[10px] text-white font-semibold">MT</span>
                           </div>
                           {/* Preview de recálculo */}
                           {isAbove && unpaidAfter.length > 0 && (
@@ -239,19 +239,19 @@ function PrestacoeModal({
         {/* Rodapé com resumo financeiro + fechar */}
         <div className={`px-6 py-4 border-t border-zinc-800 flex items-center justify-between gap-4 rounded-b-2xl ${isAtraso ? 'bg-red-500/5' : 'bg-zinc-950/40'}`}>
           <div className="flex gap-6 text-xs">
-            <span className="text-zinc-500">
+            <span className="text-white">
               Pago: <span className="text-emerald-400 font-black">
                 {fmt(prestacoes.filter(p => p.paga).reduce((s, p) => s + p.valor, 0))}
               </span>
             </span>
-            <span className="text-zinc-500">
+            <span className="text-white">
               Restante: <span className={`font-black ${isAtraso ? 'text-red-400' : 'text-amber-400'}`}>
                 {fmt(prestacoes.filter(p => !p.paga).reduce((s, p) => s + p.valor, 0))}
               </span>
             </span>
           </div>
           <button onClick={onClose}
-            className="text-sm px-5 py-2 rounded-xl bg-zinc-800 text-zinc-300 hover:bg-zinc-700 font-semibold transition-all">
+            className="text-sm px-5 py-2 rounded-xl bg-zinc-800 text-white hover:bg-zinc-700 font-semibold transition-all">
             Fechar
           </button>
         </div>
@@ -392,7 +392,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
             { label: 'Em Prestação',        value: kpis.emPrestacao, color: 'text-blue-400',    dot: 'bg-blue-400',    hl: false },
             { label: 'Prestação em Atraso', value: kpis.emAtraso,    color: 'text-red-400',     dot: 'bg-red-500',     hl: kpis.emAtraso > 0 },
             { label: 'Liquidadas',          value: kpis.liquidadas,  color: 'text-emerald-400', dot: 'bg-emerald-400', hl: false },
-            { label: 'Canceladas',          value: kpis.canceladas,  color: 'text-zinc-400',    dot: 'bg-zinc-500',    hl: false },
+            { label: 'Canceladas',          value: kpis.canceladas,  color: 'text-white',    dot: 'bg-zinc-500',    hl: false },
           ].map(k => (
             <div key={k.label} className={`border rounded-2xl p-4 flex flex-col gap-2 ${k.hl ? 'border-red-500/40 bg-red-500/5' : 'bg-zinc-900 border-zinc-800'}`}>
               <div className="flex items-center gap-2">
@@ -467,7 +467,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
             <tbody className="divide-y divide-zinc-800">
               {historico.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="text-center py-12 text-zinc-500 text-sm">
+                  <td colSpan={5} className="text-center py-12 text-white text-sm">
                     Sem contratos concluídos ainda
                   </td>
                 </tr>
@@ -481,19 +481,19 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                   <tr key={r.id} className="hover:bg-zinc-800/30 transition-colors">
                     <td className="px-5 py-4">
                       <p className="text-sm font-semibold text-white">{r.clientName}</p>
-                      <p className="text-xs text-zinc-500">{r.clientPhone ?? r.clientEmail ?? '—'}</p>
+                      <p className="text-xs text-white">{r.clientPhone ?? r.clientEmail ?? '—'}</p>
                     </td>
-                    <td className="px-5 py-4 hidden md:table-cell text-sm text-zinc-300">
+                    <td className="px-5 py-4 hidden md:table-cell text-sm text-white">
                       {vehicleName(r.vehicleId)}
                     </td>
                     <td className="px-5 py-4 hidden sm:table-cell">
                       <p className="text-sm font-bold text-amber-400">{fmt(r.valorTotal)}</p>
                       {total > 0 && (
-                        <p className="text-xs text-zinc-500">{pagas}/{total} prestações</p>
+                        <p className="text-xs text-white">{pagas}/{total} prestações</p>
                       )}
                     </td>
                     <td className="px-5 py-4">
-                      <p className="text-sm text-zinc-300 tabular-nums">{r.dataInicio}</p>
+                      <p className="text-sm text-white tabular-nums">{r.dataInicio}</p>
                     </td>
                     <td className="px-5 py-4">
                       <span className={`text-xs border rounded-md px-2 py-0.5 font-semibold ${st.className}`}>{st.label}</span>
@@ -504,7 +504,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
             </tbody>
           </table>
           {historico.length > 0 && (
-            <div className="px-5 py-4 border-t border-zinc-800 text-xs text-zinc-500">
+            <div className="px-5 py-4 border-t border-zinc-800 text-xs text-white">
               {historico.length} contrato(s) no histórico
             </div>
           )}
@@ -527,7 +527,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
           return (
             <div className="space-y-3">
               {accionaveis.length === 0 && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl py-12 text-center text-zinc-500 text-sm">
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl py-12 text-center text-white text-sm">
                   Sem compras com acções pendentes
                 </div>
               )}
@@ -567,7 +567,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-zinc-400 mt-0.5">
+                        <p className="text-xs text-white mt-0.5">
                           {vehicleName(r.vehicleId)} · {fmt(r.valorTotal)}
                           {total > 0 && ` · Prestações ${pagas}/${total}`}
                         </p>
@@ -586,7 +586,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                             Entrada Recebida
                           </button>
                           <button disabled={isBlocked} onClick={() => openGerarConfig(r.id, true)}
-                            className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-zinc-700 text-zinc-300 border border-zinc-600 hover:bg-zinc-600 disabled:opacity-50 transition-all"
+                            className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-zinc-700 text-white border border-zinc-600 hover:bg-zinc-600 disabled:opacity-50 transition-all"
                             title="Funcionário público — sem entrada">
                             Sem Entrada
                           </button>
@@ -598,7 +598,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                                 Definir Plano de Prestações
                               </button>
                             : <button onClick={() => setGerarConfig(null)}
-                                className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-zinc-800 text-zinc-400 border border-zinc-700 hover:bg-zinc-700 transition-all">
+                                className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 transition-all">
                                 Cancelar
                               </button>
                         )}
@@ -631,7 +631,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                           )}
                         </>)}
                         <button disabled={isBlocked} onClick={() => cancelReservation(r.id)}
-                          className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-zinc-800 text-zinc-400 border border-zinc-700 hover:bg-zinc-700 disabled:opacity-50 transition-all">
+                          className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 disabled:opacity-50 transition-all">
                           Cancelar
                         </button>
                       </div>
@@ -682,26 +682,26 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
 
                           {/* Resumo financeiro */}
                           <div className="bg-zinc-800/50 rounded-xl px-4 py-3 flex flex-wrap gap-4 text-xs">
-                            <span className="text-white/60">Valor por prestação: <span className="text-amber-400 font-black">{fmt(valorPrest)}</span></span>
+                            <span className="text-white">Valor por prestação: <span className="text-amber-400 font-black">{fmt(valorPrest)}</span></span>
                             {gerarConfig.semEntrada && <span className="text-blue-400 font-bold">· Sem entrada</span>}
-                            {!gerarConfig.semEntrada && r.deposito > 0 && <span className="text-white/60">Entrada: <span className="text-teal-400 font-black">{fmt(r.deposito)}</span></span>}
-                            <span className="text-white/60">Total: <span className="text-white font-black">{fmt(r.valorTotal)}</span></span>
+                            {!gerarConfig.semEntrada && r.deposito > 0 && <span className="text-white">Entrada: <span className="text-teal-400 font-black">{fmt(r.deposito)}</span></span>}
+                            <span className="text-white">Total: <span className="text-white font-black">{fmt(r.valorTotal)}</span></span>
                           </div>
 
                           {/* Preview das primeiras datas */}
                           {preview.length > 0 && (
                             <div>
-                              <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider mb-1.5">Primeiras datas</p>
+                              <p className="text-[10px] text-white font-bold uppercase tracking-wider mb-1.5">Primeiras datas</p>
                               <div className="flex flex-wrap gap-2">
                                 {preview.map((d, i) => (
                                   <span key={i} className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg px-2.5 py-1 text-xs">
                                     <span className="w-4 h-4 rounded-full bg-blue-500/20 text-blue-400 text-[9px] font-black flex items-center justify-center shrink-0">{i + 1}</span>
                                     <span className="text-white font-bold">{d}</span>
-                                    <span className="text-white/50 tabular-nums">{fmt(valorPrest)}</span>
+                                    <span className="text-white tabular-nums">{fmt(valorPrest)}</span>
                                   </span>
                                 ))}
                                 {gerarNum > 3 && (
-                                  <span className="text-[10px] text-white/40 flex items-center px-2">+{gerarNum - 3} mais</span>
+                                  <span className="text-[10px] text-white flex items-center px-2">+{gerarNum - 3} mais</span>
                                 )}
                               </div>
                             </div>
@@ -716,7 +716,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                               Gerar Plano e Notificar Cliente
                             </button>
                             <button onClick={() => setGerarConfig(null)}
-                              className="text-xs px-3 py-2 rounded-lg font-semibold bg-zinc-800 text-zinc-400 border border-zinc-700 hover:bg-zinc-700 transition-all">
+                              className="text-xs px-3 py-2 rounded-lg font-semibold bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 transition-all">
                               Cancelar
                             </button>
                           </div>

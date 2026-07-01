@@ -388,8 +388,7 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
                     {/* Direita: estado + valor + acção */}
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
                       {/* H1 — ponto de cor + label de estado */}
-                      <span className={`flex items-center gap-1.5 text-[10px] border rounded-full px-2 py-0.5 font-bold ${st.cls}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
+                      <span className={`text-[10px] border rounded-md px-2 py-0.5 font-bold ${st.cls}`}>
                         {st.label}
                       </span>
                       <p className="text-sm font-black text-white">

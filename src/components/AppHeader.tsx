@@ -30,15 +30,19 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
 
     const observer = new IntersectionObserver(
       (entries) => {
-        const visibleEntry = entries.find(entry => entry.isIntersecting);
-        if (visibleEntry) {
-          setActiveSection(visibleEntry.target.id);
+        const visibleEntries = entries.filter(entry => entry.isIntersecting);
+        if (visibleEntries.length > 0) {
+          const best = visibleEntries.reduce((prev, current) => 
+            (prev.intersectionRatio > current.intersectionRatio) ? prev : current
+          );
+          setActiveSection(best.target.id);
         }
       },
-      { rootMargin: "-80px 0px -60% 0px" }
+      { rootMargin: "-80px 0px -60% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] }
     );
 
-    NAV_LINKS.forEach(([id]) => {
+    const sections = ["hero", "catalogo", "como-funciona", "simulador", "pagamentos"];
+    sections.forEach((id) => {
       const el = document.getElementById(id);
       if (el) observer.observe(el);
     });
@@ -101,11 +105,17 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
   };
 
   /* ── Header background ────────────────────────────────────────────── */
-  const headerCls = `fixed top-0 left-0 right-0 z-50 border-b transition-colors duration-300 ${
-    scrolled || isAdmin
-      ? "bg-zinc-950/95 backdrop-blur-xl border-zinc-800"
-      : "bg-zinc-950 border-zinc-900"
-  }`;
+  let bgClass = "bg-transparent border-transparent";
+  
+  if (activeSection === "hero" || (!activeSection && !scrolled)) {
+    bgClass = "bg-transparent border-transparent";
+  } else if (activeSection === "como-funciona" || activeSection === "simulador") {
+    bgClass = "bg-zinc-900 border-zinc-800";
+  } else {
+    bgClass = "bg-zinc-950 border-zinc-900";
+  }
+
+  const headerCls = `fixed top-0 left-0 right-0 z-50 border-b transition-colors duration-500 ${bgClass}`;
 
   /* ══════════════════════════════════════════════════════════════════
      RIGHT SIDE — Desktop
@@ -117,7 +127,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
         <div className="hidden md:flex items-center gap-2">
           <button
             onClick={() => navigate("/admin")}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:text-white transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold text-white border border-zinc-700 hover:border-zinc-500 hover:text-white transition-all"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
@@ -150,7 +160,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
           >
             <Avatar />
           </button>
-          <span className="text-sm text-zinc-300 font-medium hidden lg:block max-w-[120px] truncate">
+          <span className="text-sm text-white font-medium hidden lg:block max-w-[120px] truncate">
             {user.nome.split(" ")[0]}
           </span>
           <div className="w-px h-5 bg-zinc-800 mx-1" />
@@ -265,12 +275,12 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
             <Avatar size="sm" />
             <div className="min-w-0">
               <p className="text-white text-sm font-bold leading-tight truncate">{user.nome}</p>
-              <p className="text-zinc-500 text-[11px]">{isAdmin ? "Administrador" : "Cliente"}</p>
+              <p className="text-white text-[11px]">{isAdmin ? "Administrador" : "Cliente"}</p>
             </div>
           </div>
           {isClient && (
             <button onClick={() => { navigate("/admin"); setMenuOpen(false); }}
-              className="text-left text-sm font-medium py-2 text-zinc-300 hover:text-white transition-colors">
+              className="text-left text-sm font-medium py-2 text-white hover:text-white transition-colors">
               Minha Conta
             </button>
           )}
@@ -318,7 +328,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
           {isAdmin && (
             <button
               onClick={onToggleSidebar}
-              className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white transition-colors"
+              className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg border border-zinc-700 hover:border-zinc-500 text-white hover:text-white transition-colors"
               aria-label="Abrir menu"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

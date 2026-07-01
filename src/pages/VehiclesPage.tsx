@@ -247,11 +247,11 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
                   <div className="w-full h-full flex items-center justify-center text-white text-3xl">🚗</div>
                 )}
                 <div className="absolute top-2 right-2 flex gap-1">
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
                     v.mode === 'aluguer' ? 'bg-blue-500/90 text-white' : 'bg-amber-500/90 text-zinc-950'
                   }`}>{v.mode}</span>
                 </div>
-                <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-950/70 text-white border border-zinc-700/50">
+                <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-zinc-950/70 text-white border border-zinc-700/50">
                   {v.cat}
                 </div>
                 {v.images && v.images.length > 1 && (
@@ -335,7 +335,7 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
                     value={form.name}
                     onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                     placeholder="Ex: Ford Ranger Raptor"
-                    className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-zinc-600"
+                    className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-white outline-none focus:border-zinc-600"
                   />
                 </div>
 
@@ -380,7 +380,7 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
                           setForm(f => ({ ...f, price: formatted + suffix }));
                         }}
                         placeholder={form.mode === 'aluguer' ? '4.500' : '7.200.000'}
-                        className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 pl-4 pr-20 py-2.5 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-zinc-600"
+                        className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 pl-4 pr-20 py-2.5 text-sm text-white placeholder:text-white outline-none focus:border-zinc-600"
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-black text-amber-400 pointer-events-none">
                         {form.mode === 'aluguer' ? 'MT/dia' : 'MT'}
@@ -428,7 +428,7 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
                     value={form.matricula ?? ''}
                     onChange={e => setForm(f => ({ ...f, matricula: e.target.value.toUpperCase() }))}
                     placeholder="Ex: MZ-12-AB-34"
-                    className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-zinc-600 font-mono tracking-widest uppercase"
+                    className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-white outline-none focus:border-zinc-600 font-mono tracking-widest uppercase"
                   />
                 </div>
 
@@ -460,10 +460,10 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
                           value={form.motivoIndisponibilidade ?? ''}
                           onChange={e => setForm(f => ({ ...f, motivoIndisponibilidade: e.target.value }))}
                           placeholder="Motivo (ex: Em manutenção...)"
-                          className="w-full rounded-xl bg-zinc-950/40 border border-red-500/30 px-3 py-2 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-red-400/50"
+                          className="w-full rounded-xl bg-zinc-950/40 border border-red-500/30 px-3 py-2 text-sm text-white placeholder:text-white outline-none focus:border-red-400/50"
                         />
                         <div>
-                          <label className="text-zinc-400 text-xs font-medium block mb-1">Disponível a partir de</label>
+                          <label className="text-white text-xs font-medium block mb-1">Disponível a partir de</label>
                           <input
                             type="date"
                             value={form.dataDisponibilidade ?? ''}
@@ -484,7 +484,7 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
                     onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                     placeholder="Descreva as características, vantagens e detalhes do veículo..."
                     rows={4}
-                    className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-zinc-600 resize-none"
+                    className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-white outline-none focus:border-zinc-600 resize-none"
                   />
                 </div>
 
@@ -545,7 +545,7 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
                       onChange={e => setImageInput(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddImage())}
                       placeholder="Ou cole o URL da imagem"
-                      className="flex-1 rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-zinc-600"
+                      className="flex-1 rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-white outline-none focus:border-zinc-600"
                     />
                     <button
                       type="button"
