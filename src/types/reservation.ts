@@ -17,12 +17,16 @@ export type ReservationStatus =
 export type BlockReason = 'manutencao' | 'reserva_interna' | 'indisponivel' | 'outro';
 
 export interface Prestacao {
-  numero: number;          // 1-based index
-  dataVencimento: string;  // ISO date
-  valor: number;           // valor acordado/previsto
-  valorPago?: number;      // valor efectivamente recebido (pode ser > valor)
+  numero: number;               // 1-based index
+  dataVencimento: string;       // ISO date
+  valor: number;                // valor acordado/previsto
+  valorPago?: number;           // valor efectivamente recebido (pode ser > valor)
   paga: boolean;
-  dataPagamento?: string;  // ISO date when marked paid
+  dataPagamento?: string;       // ISO date when marked paid
+  horaPagamento?: string;       // HH:mm
+  formaPagamento?: string;      // 'dinheiro' | 'mpesa' | 'emola' | 'transferencia' | 'cheque' | 'outros'
+  referenciaPagamento?: string; // n.º transacção / comprovativo
+  notasPagamento?: string;
 }
 
 export interface Reservation {

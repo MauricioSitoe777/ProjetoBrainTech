@@ -40,7 +40,13 @@ interface ReservationsContextType {
   getClientReservations: (userId: string) => Reservation[];
   quoteRental: (vehicleId: number, start: string, end: string) => ReturnType<typeof calculateRentalTotal> & { days: number; dailyRate: number } | null;
   gerarPrestacoes: (id: string, semEntrada?: boolean, dataInicioCustom?: string, numPrestacoesCustom?: number) => void;
-  marcarPrestacao: (reservationId: string, numero: number, paga: boolean, valorPago?: number) => void;
+  marcarPrestacao: (reservationId: string, numero: number, paga: boolean, valorPago?: number, detalhes?: {
+    formaPagamento?: string;
+    horaPagamento?: string;
+    dataPagamento?: string;
+    referenciaPagamento?: string;
+    notasPagamento?: string;
+  }) => void;
 }
 
 const ReservationsContext = createContext<ReservationsContextType | null>(null);
@@ -263,17 +269,32 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const marcarPrestacao = (reservationId: string, numero: number, paga: boolean, valorPago?: number) => {
+  const marcarPrestacao = (reservationId: string, numero: number, paga: boolean, valorPago?: number, detalhes?: {
+    formaPagamento?: string;
+    horaPagamento?: string;
+    dataPagamento?: string;
+    referenciaPagamento?: string;
+    notasPagamento?: string;
+  }) => {
     if (authUser?.role !== 'admin') return;
     const today = new Date().toISOString().split('T')[0];
     setReservations(prev =>
       prev.map(r => {
         if (r.id !== reservationId) return r;
 
-        // Mark the target installment
+        // Mark the target installment with payment details
         let prestacoes = (r.prestacoes ?? []).map(p =>
           p.numero === numero
-            ? { ...p, paga, valorPago: paga ? (valorPago ?? p.valor) : undefined, dataPagamento: paga ? today : undefined }
+            ? {
+                ...p,
+                paga,
+                valorPago:            paga ? (valorPago ?? p.valor) : undefined,
+                dataPagamento:        paga ? (detalhes?.dataPagamento ?? today) : undefined,
+                horaPagamento:        paga ? detalhes?.horaPagamento : undefined,
+                formaPagamento:       paga ? detalhes?.formaPagamento : undefined,
+                referenciaPagamento:  paga ? detalhes?.referenciaPagamento : undefined,
+                notasPagamento:       paga ? detalhes?.notasPagamento : undefined,
+              }
             : p
         );
 
@@ -281,13 +302,13 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
         if (paga) {
           const efectivo = valorPago ?? prestacoes.find(p => p.numero === numero)?.valor ?? 0;
           const acordado = r.prestacoes?.find(p => p.numero === numero)?.valor ?? 0;
-          const extra = Math.max(0, efectivo - acordado);
+          const surplus  = Math.max(0, efectivo - acordado);
 
-          if (extra > 0) {
+          if (surplus > 0) {
             const unpaid = prestacoes.filter(p => !p.paga);
             if (unpaid.length > 0) {
               const totalUnpaid = unpaid.reduce((s, p) => s + p.valor, 0);
-              const newTotal    = Math.max(0, totalUnpaid - extra);
+              const newTotal    = Math.max(0, totalUnpaid - surplus);
               const novoValor   = Math.round(newTotal / unpaid.length);
               prestacoes = prestacoes.map(p => !p.paga ? { ...p, valor: novoValor } : p);
             }

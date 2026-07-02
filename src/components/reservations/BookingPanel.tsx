@@ -396,9 +396,12 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
                 Acesso Restrito
               </div>
               <p className="text-white text-[11px] leading-tight font-medium opacity-95">
-                {isRestricted 
-                  ? "Esta conta foi suspensa permanentemente (Blacklisted)." 
-                  : "Operação bloqueada devido a irregularidades financeiras. Contacte a administração."}
+                {isRestricted
+                  ? "Esta conta foi suspensa permanentemente (Blacklisted)."
+                  : "Operação bloqueada devido a irregularidades financeiras."}
+              </p>
+              <p className="text-white/80 text-[11px] leading-tight mt-1.5">
+                Contacte o administrador para resolver a situação.
               </p>
             </div>
           )}

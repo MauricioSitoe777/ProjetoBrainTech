@@ -17,8 +17,8 @@ import { IconKey, IconCar } from '../components/Icons';
 // ── Configs ────────────────────────────────────────────────────────────────
 
 const roleConfig = {
-  admin:    { label: 'Administrador', className: 'bg-purple-400/10 text-purple-400 border-purple-400/20' },
-  cliente:  { label: 'Cliente',       className: 'bg-zinc-700 text-white border-zinc-600' },
+  admin:    { label: 'Administrador', className: 'bg-amber-500/15 text-amber-400 border-amber-500/30' },
+  cliente:  { label: 'Cliente',       className: 'bg-zinc-800 text-white border-zinc-700' },
 };
 
 const userStatusConfig = {
@@ -30,8 +30,8 @@ const userStatusConfig = {
 
 const motoristaStatusConfig: Record<MotoristaSatus, { label: string; dot: string; badge: string }> = {
   disponivel: { label: 'Disponível',  dot: 'bg-emerald-400', badge: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
-  em_servico: { label: 'Em Serviço',  dot: 'bg-blue-400',    badge: 'bg-blue-400/10 text-blue-400 border-blue-400/20' },
-  inativo:    { label: 'Inativo',     dot: 'bg-zinc-500',    badge: 'bg-zinc-700 text-white border-zinc-600' },
+  em_servico: { label: 'Em Serviço',  dot: 'bg-amber-400',   badge: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
+  inativo:    { label: 'Inativo',     dot: 'bg-zinc-500',    badge: 'bg-zinc-800 text-white border-zinc-700' },
 };
 
 const restrictionConfig = {
@@ -128,7 +128,7 @@ function MotoristaModal({ initial, onSave, onClose }: {
 
 // ── Page ──────────────────────────────────────────────────────────────────
 
-export function UsersPage({ onExit }: { onExit?: () => void }) {
+export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
   const { users, addUser, updateUser, deleteUser } = useUsers();
   const { motoristas, addMotorista, updateMotorista, deleteMotorista } = useMotoristas();
   const { guests, updateGuest } = useGuests();
@@ -240,157 +240,179 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
     setShowUserModal(true);
   };
 
+  // ── Stats por tab ─────────────────────────────────────────────────────────
+  const kpiCards = useMemo(() => {
+    if (mainTab === 'utilizadores') return [
+      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, value: activePool.length, label: 'Total', sub: 'Utilizadores', col: 'text-white', bg: 'bg-zinc-700/40 border-zinc-600' },
+      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>, value: activePool.filter(u => u.status === 'ativo').length, label: 'Ativos', sub: 'Utilizadores', col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30' },
+      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, value: activePool.filter(u => u.status === 'suspenso').length, label: 'Suspensos', sub: 'Utilizadores', col: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' },
+      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>, value: activePool.filter(u => u.status === 'inativo').length, label: 'Inativos', sub: 'Utilizadores', col: 'text-white', bg: 'bg-zinc-700/40 border-zinc-600' },
+    ];
+    if (mainTab === 'motoristas') return [
+      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="7" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg>, value: motoristas.length, label: 'Total', sub: 'Motoristas', col: 'text-white', bg: 'bg-zinc-700/40 border-zinc-600' },
+      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="7" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/><polyline points="16 11 18 13 22 9"/></svg>, value: motoristas.filter(m => m.status === 'disponivel').length, label: 'Disponíveis', sub: 'Motoristas', col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30' },
+      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>, value: motoristas.filter(m => m.status === 'em_servico').length, label: 'Em Serviço', sub: 'Motoristas', col: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' },
+      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>, value: motoristas.filter(m => m.status === 'inativo').length, label: 'Inativos', sub: 'Motoristas', col: 'text-white', bg: 'bg-zinc-700/40 border-zinc-600' },
+    ];
+    return [
+      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>, value: guests.length, label: 'Total', sub: 'Visitantes', col: 'text-white', bg: 'bg-zinc-700/40 border-zinc-600' },
+      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>, value: guests.filter(g => g.status !== 'aprovado' && g.status !== 'rejeitado').length, label: 'Pendentes', sub: 'Visitantes', col: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' },
+      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>, value: guests.filter(g => g.status === 'aprovado').length, label: 'Aprovados', sub: 'Visitantes', col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30' },
+      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>, value: guests.filter(g => g.status === 'rejeitado').length, label: 'Rejeitados', sub: 'Visitantes', col: 'text-white', bg: 'bg-zinc-700/40 border-zinc-600' },
+    ];
+  }, [mainTab, activePool, motoristas, guests]);
+
   return (
     <div className="bg-zinc-950 text-white">
-      <div className="w-full px-5 sm:px-8 py-8 space-y-6">
+      <div className="w-full px-6 py-6 space-y-5">
 
-        <AcoesNecessarias />
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-sm font-black text-white uppercase tracking-widest">
+              {mainTab === 'utilizadores' ? 'Utilizadores' : mainTab === 'motoristas' ? 'Motoristas' : 'Visitantes'}
+            </h1>
+            <p className="text-xs text-white mt-0.5">Gestão de pessoas no sistema</p>
+          </div>
+        </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: 'Utilizadores',      value: activePool.length,                                           color: 'text-white' },
-            { label: 'Ativos',            value: activePool.filter(u => u.status === 'ativo').length,         color: 'text-emerald-400' },
-            { label: 'Visitantes',        value: guests.filter(g => g.status !== 'aprovado' && g.status !== 'rejeitado').length, color: 'text-amber-400' },
-            { label: 'Motoristas disp.',  value: motoristas.filter(m => m.status === 'disponivel').length,    color: 'text-blue-400' },
-          ].map(s => (
-            <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-              <p className="text-xs text-white">{s.label}</p>
-              <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
+        {/* KPI Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {kpiCards.map(k => (
+            <div key={k.label} className="bg-zinc-900 border border-amber-500/20 rounded-2xl overflow-hidden">
+              <div className="h-0.5 w-full bg-amber-500/40" />
+              <div className="p-4 flex items-start gap-3">
+                <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${k.bg} ${k.col}`}>
+                  {k.icon}
+                </div>
+                <div>
+                  <p className={`text-2xl font-black leading-none tabular-nums ${k.col}`}>{k.value}</p>
+                  <p className="text-sm font-bold text-white mt-0.5">{k.label}</p>
+                  <p className="text-xs text-white">{k.sub}</p>
+                </div>
+              </div>
             </div>
           ))}
         </div>
 
-        {/* Filters */}
-        <div className="space-y-3">
-          {/* Search + Novo */}
-          <div className="flex gap-3">
-            <div className="relative flex-1">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-white" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Pesquisar por nome, email ou telefone..."
-                className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-lg pl-9 pr-4 py-2 text-sm placeholder-zinc-500 focus:outline-none focus:border-amber-400 transition-colors"
-              />
-            </div>
+        {/* Search + Tabs + Novo — tudo numa linha */}
+        <div className="flex items-center gap-2 flex-wrap">
 
+          {/* Search pequeno */}
+          <div className="relative w-52 shrink-0">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-white" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Pesquisar..."
+              className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-xl pl-8 pr-3 py-2 text-sm placeholder-zinc-500 focus:outline-none focus:border-amber-400 transition-colors"
+            />
+          </div>
+
+          {/* Sub-filters — Utilizadores */}
+          {mainTab === 'utilizadores' && ([
+            { value: 'todos',    label: 'Todos' },
+            { value: 'admins',   label: 'Administradores' },
+            { value: 'clientes', label: 'Clientes' },
+          ] as { value: UserSubFilter; label: string }[]).map(sf => (
+            <button key={sf.value}
+              onClick={() => setUserSub(sf.value)}
+              className={`px-4 py-2 rounded-xl text-sm font-bold border transition-colors whitespace-nowrap ${
+                userSub === sf.value
+                  ? 'bg-amber-500 text-zinc-950 border-amber-500'
+                  : 'bg-zinc-900 text-white border-zinc-700 hover:border-zinc-500'
+              }`}>
+              {sf.label}
+            </button>
+          ))}
+
+          {/* Sub-filters — Visitantes */}
+          {mainTab === 'visitantes' && ([
+            { value: 'todos',               label: 'Todos' },
+            { value: 'aguarda_documentos',  label: 'Aguarda Docs', badge: guests.filter(g => g.status === 'aguarda_documentos' || g.status === 'documentos_submetidos').length || undefined },
+            { value: 'em_analise',          label: 'Registrar',    badge: guests.filter(g => g.status === 'em_analise').length || undefined },
+            { value: 'aprovado',            label: 'Aprovados' },
+            { value: 'rejeitado',           label: 'Rejeitados' },
+          ] as { value: GuestSubFilter; label: string; badge?: number }[]).map(sf => {
+            const isActive = guestSub === sf.value;
+            const isUrgent = !!sf.badge && sf.badge > 0 && !isActive;
+            return (
+              <button key={sf.value}
+                onClick={() => setGuestSub(sf.value)}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold border transition-colors whitespace-nowrap ${
+                  isActive
+                    ? 'bg-amber-500 text-zinc-950 border-amber-500'
+                    : isUrgent
+                    ? 'bg-zinc-900 text-red-400 border-red-500/40 hover:border-red-500/70'
+                    : 'bg-zinc-900 text-white border-zinc-700 hover:border-zinc-500'
+                }`}>
+                {sf.label}
+                {sf.badge !== undefined && (
+                  <span className={`min-w-[18px] h-5 flex items-center justify-center rounded-full text-xs font-black px-1 ${
+                    isActive ? 'bg-zinc-950/30 text-zinc-950' : 'bg-red-500/20 text-red-400'
+                  }`}>{sf.badge}</span>
+                )}
+              </button>
+            );
+          })}
+
+          {/* Spacer + Novo */}
+          <div className="ml-auto relative shrink-0">
             {canManage && (
-              <div className="relative">
+              <>
                 <button
                   onClick={() => setNovoOpen(o => !o)}
-                  className="bg-amber-400 hover:bg-amber-300 text-zinc-950 font-semibold rounded-lg px-4 py-2 text-sm transition-colors flex items-center gap-2 whitespace-nowrap"
+                  className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black rounded-xl px-5 py-2 text-sm transition-colors flex items-center gap-2 whitespace-nowrap"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                   Novo
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                 </button>
                 {novoOpen && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setNovoOpen(false)} />
-                    <div className="absolute right-0 mt-1 z-20 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden min-w-[160px]">
+                    <div className="absolute right-0 mt-1 z-20 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden min-w-[170px]">
                       <button
                         onClick={() => { setNovoOpen(false); setEditingUser(null); setShowUserModal(true); }}
-                        className="w-full text-left px-5 py-4 text-sm text-white hover:bg-zinc-800 transition flex items-center gap-3"
+                        className="w-full text-left px-5 py-4 text-sm font-bold text-white hover:bg-zinc-800 transition flex items-center gap-3"
                       >
-                        <div className="w-6 h-6 rounded-md bg-amber-400/15 border border-amber-400/30 flex items-center justify-center shrink-0">
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                         </div>
                         Utilizador
                       </button>
                       <div className="h-px bg-zinc-800" />
                       <button
                         onClick={() => { setNovoOpen(false); setMotoristaModal('new'); }}
-                        className="w-full text-left px-5 py-4 text-sm text-white hover:bg-zinc-800 transition flex items-center gap-3"
+                        className="w-full text-left px-5 py-4 text-sm font-bold text-white hover:bg-zinc-800 transition flex items-center gap-3"
                       >
-                        <div className="w-6 h-6 rounded-md bg-blue-400/15 border border-blue-400/30 flex items-center justify-center shrink-0">
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2.5"><circle cx="12" cy="7" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/><path d="M18 11l3 3-3 3"/></svg>
+                        <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5"><circle cx="12" cy="7" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/><path d="M18 11l3 3-3 3"/></svg>
                         </div>
                         Motorista
                       </button>
                     </div>
                   </>
                 )}
-              </div>
+              </>
             )}
           </div>
-
-          {/* Sub-filters — Visitantes */}
-          {mainTab === 'visitantes' && (
-            <div className="flex gap-2 flex-wrap">
-              {([
-                { value: 'todos',               label: 'Todos' },
-                { value: 'aguarda_documentos',  label: 'Aguarda Docs', badge: guests.filter(g => g.status === 'aguarda_documentos' || g.status === 'documentos_submetidos').length || undefined },
-                { value: 'em_analise',          label: 'Registrar',     badge: guests.filter(g => g.status === 'em_analise').length || undefined },
-                { value: 'aprovado',            label: 'Aprovados' },
-                { value: 'rejeitado',           label: 'Rejeitados' },
-              ] as { value: GuestSubFilter; label: string; badge?: number }[]).map(sf => {
-                const isActive  = guestSub === sf.value;
-                const isUrgent  = !!sf.badge && sf.badge > 0 && !isActive;
-                return (
-                  <button key={sf.value}
-                    onClick={() => setGuestSub(sf.value)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
-                      isActive
-                        ? 'bg-amber-500 text-zinc-950 border-amber-500'
-                        : isUrgent
-                        ? 'bg-zinc-900 text-red-400 border-red-500/40 animate-pulse hover:border-red-500/70 hover:text-red-300'
-                        : 'bg-zinc-900 text-white border-zinc-700 hover:border-zinc-500 hover:text-white'
-                    }`}>
-                    {sf.label}
-                    {sf.badge !== undefined && (
-                      <span className={`min-w-[16px] h-4 flex items-center justify-center rounded-full text-[10px] font-black px-1 ${
-                        isActive ? 'bg-zinc-950/30 text-zinc-950' : 'bg-red-500/20 text-red-400'
-                      }`}>{sf.badge}</span>
-                    )}
-                    {isUrgent && (
-                      <span className="relative flex h-1.5 w-1.5 shrink-0">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" />
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Sub-filters — Utilizadores */}
-          {mainTab === 'utilizadores' && (
-            <div className="flex gap-2 flex-wrap">
-              {([
-                { value: 'todos',    label: 'Todos' },
-                { value: 'admins',   label: 'Administradores' },
-                { value: 'clientes', label: 'Clientes' },
-              ] as { value: UserSubFilter; label: string }[]).map(sf => (
-                <button key={sf.value}
-                  onClick={() => setUserSub(sf.value)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
-                    userSub === sf.value
-                      ? 'bg-amber-500 text-zinc-950 border-amber-500'
-                      : 'bg-zinc-900 text-white border-zinc-700 hover:border-zinc-500 hover:text-white'
-                  }`}>
-                  {sf.label}
-                </button>
-              ))}
-            </div>
-          )}
 
         </div>
 
         {/* Table */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[700px]">
               <thead>
-                <tr className="border-b border-zinc-700 bg-zinc-800/50">
-                  <th className="text-left px-4 py-3 text-[10px] font-black text-white/50 uppercase tracking-widest whitespace-nowrap">Nome</th>
-                  <th className="text-left px-4 py-3 text-[10px] font-black text-white/50 uppercase tracking-widest whitespace-nowrap hidden sm:table-cell w-[110px]">Tipo</th>
-                  <th className="text-left px-4 py-3 text-[10px] font-black text-white/50 uppercase tracking-widest whitespace-nowrap hidden md:table-cell w-[130px]">Telefone</th>
-                  <th className="text-left px-4 py-3 text-[10px] font-black text-white/50 uppercase tracking-widest whitespace-nowrap w-[110px]">Estado</th>
-                  <th className="text-left px-4 py-3 text-[10px] font-black text-white/50 uppercase tracking-widest whitespace-nowrap hidden md:table-cell w-[145px]">Registo</th>
-                  <th className="text-left px-4 py-3 text-[10px] font-black text-white/50 uppercase tracking-widest whitespace-nowrap hidden lg:table-cell w-[105px]">Restrição</th>
-                  <th className="text-right px-4 py-3 text-[10px] font-black text-white/50 uppercase tracking-widest whitespace-nowrap w-[110px]">Ações</th>
+                <tr className="border-b border-zinc-700/60 bg-zinc-800/40">
+                  <th className="text-left px-5 py-3.5 text-xs font-black text-white uppercase tracking-widest whitespace-nowrap">Nome</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-black text-white uppercase tracking-widest whitespace-nowrap hidden sm:table-cell w-[130px]">Tipo</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-black text-white uppercase tracking-widest whitespace-nowrap hidden md:table-cell w-[150px]">Telefone</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-black text-white uppercase tracking-widest whitespace-nowrap w-[120px]">Estado</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-black text-white uppercase tracking-widest whitespace-nowrap hidden md:table-cell w-[145px]">Registo</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-black text-white uppercase tracking-widest whitespace-nowrap hidden lg:table-cell w-[110px]">Restrição</th>
+                  <th className="text-right px-5 py-3.5 text-xs font-black text-white uppercase tracking-widest whitespace-nowrap w-[120px]">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800">
@@ -434,46 +456,46 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                     const role   = roleConfig[u.role];
                     const status = userStatusConfig[u.status];
                     return (
-                      <tr key={`u-${u.id}`} className="hover:bg-zinc-800/50 transition-colors group border-b border-zinc-800/60">
-                        <td className="px-4 py-3 max-w-0">
-                          <button onClick={() => setDetailUser(u)} className="flex items-center gap-2.5 text-left w-full min-w-0">
-                            <div className="w-8 h-8 rounded-lg bg-amber-400/15 border border-amber-400/30 flex items-center justify-center text-amber-400 text-[11px] font-black flex-shrink-0">
+                      <tr key={`u-${u.id}`} className="hover:bg-zinc-800/40 transition-colors group border-b border-zinc-800/60">
+                        <td className="px-5 py-3.5 max-w-0">
+                          <button onClick={() => setDetailUser(u)} className="flex items-center gap-3 text-left w-full min-w-0">
+                            <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xs font-black flex-shrink-0">
                               {initials(u.nome)}
                             </div>
                             <div className="min-w-0">
                               <p className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors truncate">{u.nome}</p>
-                              <p className="text-[11px] text-white/50 mt-0.5 truncate">{u.email}</p>
+                              <p className="text-xs text-white mt-0.5 truncate">{u.email}</p>
                             </div>
                           </button>
                         </td>
-                        <td className="px-4 py-3 hidden sm:table-cell">
-                          <span className={`text-[11px] font-bold border rounded-md px-2 py-0.5 ${role.className}`}>{role.label}</span>
+                        <td className="px-5 py-3.5 hidden sm:table-cell">
+                          <span className={`text-xs font-bold border rounded-md px-2.5 py-1 ${role.className}`}>{role.label}</span>
                         </td>
-                        <td className="px-4 py-3 hidden md:table-cell text-sm font-medium text-white whitespace-nowrap">{u.telefone}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5">
+                        <td className="px-5 py-3.5 hidden md:table-cell text-sm font-medium text-white whitespace-nowrap">{u.telefone}</td>
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-2">
                             <span className={`w-2 h-2 rounded-full shrink-0 ${status.dot}`} />
                             <span className="text-sm font-semibold text-white whitespace-nowrap">{status.label}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 hidden md:table-cell">
+                        <td className="px-5 py-3.5 hidden md:table-cell">
                           <div className="flex flex-col gap-0.5">
                             <span className="text-sm font-semibold text-white whitespace-nowrap">
                               {u.dataCriacao ? new Date(u.dataCriacao).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
                             </span>
                             {u.ultimoAcesso && u.ultimoAcesso !== u.dataCriacao && (
-                              <span className="text-[11px] text-white/50 whitespace-nowrap">
+                              <span className="text-xs text-white whitespace-nowrap">
                                 Acesso: {new Date(u.ultimoAcesso).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                               </span>
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3 hidden lg:table-cell">
-                          <span className={`text-[11px] font-bold border rounded-md px-2 py-0.5 ${restrictionConfig[u.restriction || 'nenhuma'].className}`}>
+                        <td className="px-5 py-3.5 hidden lg:table-cell">
+                          <span className={`text-xs font-bold border rounded-md px-2.5 py-1 ${restrictionConfig[u.restriction || 'nenhuma'].className}`}>
                             {restrictionConfig[u.restriction || 'nenhuma'].label}
                           </span>
                         </td>
-                        <td className="px-3 py-3">
+                        <td className="px-5 py-3.5">
                           <div className="flex items-center justify-end gap-0.5">
                             <button onClick={() => setDetailUser(u)} className="p-1.5 text-white hover:text-white transition-colors rounded-lg hover:bg-zinc-700" title="Ver detalhes">
                               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -519,41 +541,41 @@ export function UsersPage({ onExit }: { onExit?: () => void }) {
                   const m  = row.data;
                   const st = motoristaStatusConfig[m.status];
                   return (
-                    <tr key={`m-${m.id}`} className="hover:bg-zinc-800/50 transition-colors group border-b border-zinc-800/60">
-                      <td className="px-4 py-3 max-w-0">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-8 h-8 rounded-lg bg-blue-400/15 border border-blue-400/30 flex items-center justify-center text-blue-400 text-[11px] font-black flex-shrink-0">
+                    <tr key={`m-${m.id}`} className="hover:bg-zinc-800/40 transition-colors group border-b border-zinc-800/60">
+                      <td className="px-5 py-3.5 max-w-0">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-xs font-black flex-shrink-0">
                             {initials(m.nome)}
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-bold text-white truncate">{m.nome}</p>
-                            {m.observacoes && <p className="text-[11px] text-white/50 italic mt-0.5 truncate">{m.observacoes}</p>}
+                            {m.observacoes && <p className="text-xs text-white italic mt-0.5 truncate">{m.observacoes}</p>}
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 hidden sm:table-cell">
-                        <span className="text-[11px] font-bold border rounded-md px-2 py-0.5 bg-blue-400/10 text-blue-400 border-blue-400/20">Motorista</span>
+                      <td className="px-5 py-3.5 hidden sm:table-cell">
+                        <span className="text-xs font-bold border rounded-md px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border-emerald-500/30">Motorista</span>
                       </td>
-                      <td className="px-4 py-3 hidden md:table-cell text-sm font-medium text-white whitespace-nowrap">{m.telefone}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
+                      <td className="px-5 py-3.5 hidden md:table-cell text-sm font-medium text-white whitespace-nowrap">{m.telefone}</td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2">
                           <span className={`w-2 h-2 rounded-full shrink-0 ${st.dot}`} />
                           <span className="text-sm font-semibold text-white whitespace-nowrap">{st.label}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 hidden md:table-cell">
+                      <td className="px-5 py-3.5 hidden md:table-cell">
                         <span className="text-sm font-semibold text-white whitespace-nowrap">
                           {m.dataCriacao ? new Date(m.dataCriacao).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
                         </span>
                         <div className="flex gap-1.5 mt-1 flex-wrap">
-                          {m.bi    && <span className="text-[10px] bg-zinc-800 border border-zinc-700 text-white px-1.5 py-0.5 rounded">BI: {m.bi}</span>}
-                          {m.carta && <span className="text-[10px] bg-zinc-800 border border-zinc-700 text-white px-1.5 py-0.5 rounded">Carta: {m.carta}</span>}
+                          {m.bi    && <span className="text-xs bg-zinc-800 border border-zinc-700 text-white px-2 py-0.5 rounded-md">BI: {m.bi}</span>}
+                          {m.carta && <span className="text-xs bg-zinc-800 border border-zinc-700 text-white px-2 py-0.5 rounded-md">Carta: {m.carta}</span>}
                         </div>
                       </td>
-                      <td className="px-4 py-3 hidden lg:table-cell">
-                        <span className="text-[11px] text-white/50">—</span>
+                      <td className="px-5 py-3.5 hidden lg:table-cell">
+                        <span className="text-xs text-white">—</span>
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="px-5 py-3.5">
                         <div className="flex items-center justify-end gap-0.5">
                           {canManage && (
                             <>
@@ -737,29 +759,29 @@ function GuestRow({ g, guestStatusConfig, onReview, onAdvance }: {
   const canAdvance = g.status in NEXT_STATUS;
 
   return (
-    <tr className="hover:bg-zinc-800/50 transition-colors group border-b border-zinc-800/60 cursor-pointer" onClick={() => onReview(g)}>
-      <td className="px-4 py-3 max-w-0">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 text-[11px] font-black flex-shrink-0">
+    <tr className="hover:bg-zinc-800/40 transition-colors group border-b border-zinc-800/60 cursor-pointer" onClick={() => onReview(g)}>
+      <td className="px-5 py-3.5 max-w-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xs font-black flex-shrink-0">
             {g.nome.split(' ').filter(Boolean).slice(0, 2).map(n => n[0]).join('').toUpperCase()}
           </div>
           <div className="min-w-0">
             <p className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors truncate">{g.nome}</p>
-            <p className="text-[11px] text-white/50 mt-0.5 truncate">{g.email}</p>
+            <p className="text-xs text-white mt-0.5 truncate">{g.email}</p>
             {g.status === 'rejeitado' && g.notaAdmin && (
-              <p className="text-[10px] text-red-400 mt-1 font-semibold leading-tight truncate">✕ {g.notaAdmin}</p>
+              <p className="text-xs text-red-400 mt-1 font-semibold leading-tight truncate">✕ {g.notaAdmin}</p>
             )}
           </div>
         </div>
       </td>
-      <td className="px-4 py-3 hidden sm:table-cell">
-        <span className="text-[11px] font-bold border rounded-md px-2 py-0.5 bg-amber-500/10 text-amber-400 border-amber-500/20 whitespace-nowrap">
+      <td className="px-5 py-3.5 hidden sm:table-cell">
+        <span className="text-xs font-bold border rounded-md px-2.5 py-1 bg-amber-500/10 text-amber-400 border-amber-500/20 whitespace-nowrap">
           Visitante · {g.intent === 'aluguer' ? 'Aluguer' : 'Compra'}
         </span>
       </td>
-      <td className="px-4 py-3 hidden md:table-cell text-sm font-medium text-white whitespace-nowrap">{g.telefone}</td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-1.5">
+      <td className="px-5 py-3.5 hidden md:table-cell text-sm font-medium text-white whitespace-nowrap">{g.telefone}</td>
+      <td className="px-5 py-3.5">
+        <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full shrink-0 ${gs.dot}`} />
           <span className="text-sm font-semibold text-white whitespace-nowrap">{gs.label}</span>
           {canAdvance && (
@@ -773,13 +795,13 @@ function GuestRow({ g, guestStatusConfig, onReview, onAdvance }: {
           )}
         </div>
       </td>
-      <td className="px-4 py-3 hidden md:table-cell text-sm font-semibold text-white whitespace-nowrap">
+      <td className="px-5 py-3.5 hidden md:table-cell text-sm font-semibold text-white whitespace-nowrap">
         {new Date(g.dataCriacao).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
       </td>
-      <td className="px-4 py-3 hidden lg:table-cell">
-        {g.vehicleName ? <span className="text-[11px] text-white truncate block max-w-[90px]">{g.vehicleName}</span> : <span className="text-[11px] text-white/50">—</span>}
+      <td className="px-5 py-3.5 hidden lg:table-cell">
+        {g.vehicleName ? <span className="text-xs text-white truncate block max-w-[90px]">{g.vehicleName}</span> : <span className="text-xs text-white">—</span>}
       </td>
-      <td className="px-3 py-3">
+      <td className="px-5 py-3.5">
         <div className="flex items-center justify-end">
           <button onClick={e => { e.stopPropagation(); onReview(g); }}
             className="p-1.5 text-white hover:text-amber-400 transition-colors rounded-lg hover:bg-amber-400/10" title="Analisar">

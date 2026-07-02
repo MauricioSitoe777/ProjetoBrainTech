@@ -1118,7 +1118,10 @@ export default function Simulator({
                 <p className="text-white text-sm leading-snug font-medium opacity-95">
                   {isRestricted
                     ? "Esta conta foi suspensa permanentemente por violação das políticas de segurança (Blacklisted)."
-                    : "Operação bloqueada devido a pendências financeiras ou irregularidades cadastrais. Por favor, contacte a administração."}
+                    : "Operação bloqueada devido a pendências financeiras ou irregularidades cadastrais."}
+                </p>
+                <p className="text-white/80 text-sm leading-snug mt-1.5">
+                  Contacte o administrador para resolver a situação.
                 </p>
               </div>
             )}
@@ -1163,7 +1166,7 @@ export default function Simulator({
                     }}
                     className="w-full py-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-sm font-medium transition-colors"
                   >
-                    Nova compra
+                    {flow === 'compra' ? 'Nova compra' : 'Nova reserva'}
                   </button>
                 </div>
               </div>

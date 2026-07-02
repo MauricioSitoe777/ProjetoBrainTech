@@ -97,14 +97,31 @@ const NEXT_STATE_LABEL: Partial<Record<ReservationStatus, string>> = {
   devolucao_pendente:  'Avança para → Concluído',
 };
 
+const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+function fmtStepDate(dateStr: string, isCurrent: boolean): string {
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const diffDays = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (isCurrent) {
+    if (diffDays === 0) return 'hoje';
+    if (diffDays === 1) return 'há 1 dia';
+    return `há ${diffDays} dias`;
+  }
+  return `${String(d.getDate()).padStart(2, '0')} ${MONTHS[d.getMonth()]}`;
+}
+
 interface Props {
   status: ReservationStatus;
   onAdvance?: (next: ReservationStatus) => void;
   onCancel?: () => void;
+  onEdit?: () => void;
+  onContract?: () => void;
   readonly?: boolean;
+  stepDates?: Partial<Record<ReservationStatus, string>>;
 }
 
-export function ReservationTracker({ status, onAdvance, onCancel, readonly }: Props) {
+export function ReservationTracker({ status, onAdvance, onCancel, onEdit, onContract, readonly, stepDates }: Props) {
   const [confirming, setConfirming] = useState<'advance' | 'cancel' | null>(null);
 
   const currentIdx     = STEPS.findIndex(s => s.status === status);
@@ -132,17 +149,17 @@ export function ReservationTracker({ status, onAdvance, onCancel, readonly }: Pr
           {STEPS.map((step, idx) => {
             const isDone    = idx < currentIdx;
             const isCurrent = idx === currentIdx;
+            const dateStr   = stepDates?.[step.status];
 
             return (
               <div key={step.status} className="flex items-start">
 
                 {/* Step node */}
-                <div className="flex flex-col items-center gap-2.5 w-[90px]">
+                <div className="flex flex-col items-center gap-1.5 w-[90px]">
 
                   {/* Circle + pulse rings */}
                   <div className="relative w-[56px] h-[56px] shrink-0">
 
-                    {/* Outer pulse ring (opacity only — no size change, no overflow clip issue) */}
                     {isCurrent && (
                       <span
                         className="absolute rounded-full border border-amber-400/25 animate-pulse"
@@ -150,7 +167,6 @@ export function ReservationTracker({ status, onAdvance, onCancel, readonly }: Pr
                       />
                     )}
 
-                    {/* Inner pulse ring */}
                     {isCurrent && (
                       <span
                         className="absolute rounded-full border-2 border-amber-400/55 animate-pulse"
@@ -158,7 +174,6 @@ export function ReservationTracker({ status, onAdvance, onCancel, readonly }: Pr
                       />
                     )}
 
-                    {/* Main circle */}
                     <div className={`absolute inset-0 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${
                       isDone
                         ? 'bg-emerald-500/20 border-emerald-400 text-emerald-400'
@@ -184,6 +199,15 @@ export function ReservationTracker({ status, onAdvance, onCancel, readonly }: Pr
                   }`}>
                     {step.short}
                   </span>
+
+                  {/* Timestamp */}
+                  {dateStr && (isDone || isCurrent) && (
+                    <span className={`text-[9px] text-center leading-tight tabular-nums ${
+                      isDone ? 'text-emerald-400/60' : 'text-amber-300/80'
+                    }`}>
+                      {fmtStepDate(dateStr, isCurrent)}
+                    </span>
+                  )}
                 </div>
 
                 {/* Connector */}
@@ -236,7 +260,7 @@ export function ReservationTracker({ status, onAdvance, onCancel, readonly }: Pr
             </button>
           </div>
         ) : (
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
             {nextStatus && nextLabel && onAdvance && (
               <button
                 onClick={() => setConfirming('advance')}
@@ -249,13 +273,32 @@ export function ReservationTracker({ status, onAdvance, onCancel, readonly }: Pr
                 </svg>
               </button>
             )}
+            <button
+              onClick={onEdit}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 active:scale-95 transition-all"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Editar reserva
+            </button>
+            <button
+              onClick={onContract}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white border border-zinc-700 hover:bg-zinc-800/60 active:scale-95 transition-all"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+              Ver contrato
+            </button>
             {status !== 'devolucao_pendente' && status !== 'concluida' && onCancel && (
               <button
                 onClick={() => setConfirming('cancel')}
-                title="Avança para → Cancelado"
-                className="px-4 py-2 rounded-lg text-xs font-semibold bg-red-400/10 text-red-400 border border-red-400/20 hover:bg-red-400/20 active:scale-95 transition-all"
+                className="ml-auto px-4 py-2 rounded-lg text-xs font-semibold bg-red-400/10 text-red-400 border border-red-400/20 hover:bg-red-400/20 active:scale-95 transition-all"
               >
-                Cancelar
+                Cancelar aluguer
               </button>
             )}
           </div>

@@ -14,7 +14,7 @@ import { VEHICLES } from '../data/constants';
 import { ReservationTracker } from '../components/ReservationTracker';
 import XitiqueModal from '../components/XitiqueModal';
 import { NotificacoesPanel } from '../components/NotificacoesPanel';
-import type { Reservation, ReservationStatus } from '../types/reservation';
+import type { Prestacao, Reservation, ReservationStatus } from '../types/reservation';
 
 const ACTIVE_STATUSES: ReservationStatus[] = [
   'pendente', 'confirmada', 'pronta_levantamento', 'ativa', 'devolucao_pendente',
@@ -63,18 +63,11 @@ function diffDias(inicio: string, fim: string) {
 }
 
 // ── Geração de PDF (impressão de HTML estilizado) ───────────────────────────
-function printAsPDF(bodyHtml: string, docTitle: string) {
-  const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>${docTitle}</title>
-<style>
+const DOC_SHARED_CSS = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, Helvetica, sans-serif; color: #18181b; background: #fff; padding: 36px; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #18181b; }
   .doc-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #f59e0b; padding-bottom: 14px; margin-bottom: 22px; }
-  .doc-logo { font-size: 22px; font-weight: 900; color: #f59e0b; letter-spacing: -0.5px; }
-  .doc-logo span { color: #18181b; }
+  .doc-logo img { height: 36px; width: auto; display: block; }
   .doc-meta { text-align: right; font-size: 11px; color: #71717a; }
   .doc-title { font-size: 18px; font-weight: 900; color: #18181b; margin-bottom: 2px; }
   .doc-sub { font-size: 12px; color: #71717a; }
@@ -102,16 +95,75 @@ function printAsPDF(bodyHtml: string, docTitle: string) {
   .summary-row.total { font-weight: 800; background: #fafafa; }
   .total-row td { font-weight: 900; background: #fafafa; border-top: 2px solid #e4e4e7; }
   .doc-footer { margin-top: 32px; text-align: center; font-size: 10px; color: #a1a1aa; border-top: 1px solid #e4e4e7; padding-top: 14px; }
-  @media print { body { padding: 18px; } }
-</style>
-</head>
-<body>
+`;
+
+const DOC_BODY = (bodyHtml: string) => `
   <div class="doc-header">
-    <div class="doc-logo">SOS<span>motors</span></div>
+    <div class="doc-logo"><img src="/sos-motors-logo.png" alt="SOS Motors"></div>
     <div class="doc-meta">Documento gerado pela plataforma<br>SOS Motors</div>
   </div>
   ${bodyHtml}
   <div class="doc-footer">SOS Motors &middot; Este documento foi gerado automaticamente</div>
+`;
+
+// Abre o documento em nova aba com toolbar de visualização e botão de descarregar
+function viewAsPDF(bodyHtml: string, docTitle: string) {
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>${docTitle}</title>
+<style>
+  ${DOC_SHARED_CSS}
+  body { background: #f4f4f5; }
+  .toolbar { position: sticky; top: 0; z-index: 100; background: #18181b; padding: 10px 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+  .toolbar-title { color: #f59e0b; font-weight: 900; font-size: 13px; letter-spacing: -0.3px; }
+  .btn-dl { background: #f59e0b; color: #18181b; border: none; border-radius: 8px; padding: 8px 18px; font-weight: 900; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+  .btn-dl:hover { background: #fbbf24; }
+  .doc-wrap { max-width: 700px; margin: 28px auto 48px; background: #fff; border-radius: 12px; padding: 36px; box-shadow: 0 4px 24px rgba(0,0,0,.08); }
+  @media print {
+    body { background: #fff; }
+    .toolbar { display: none; }
+    .doc-wrap { max-width: none; margin: 0; box-shadow: none; border-radius: 0; padding: 18px; }
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <span class="toolbar-title">${docTitle}</span>
+    <button class="btn-dl" onclick="window.print()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Descarregar PDF
+    </button>
+  </div>
+  <div class="doc-wrap">
+    ${DOC_BODY(bodyHtml)}
+  </div>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+}
+
+// Abre diretamente a janela de impressão/guardar como PDF (para downloads directos)
+function printAsPDF(bodyHtml: string, docTitle: string) {
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>${docTitle}</title>
+<style>
+  ${DOC_SHARED_CSS}
+  body { background: #fff; padding: 36px; }
+  @media print { body { padding: 18px; } }
+</style>
+</head>
+<body>
+  ${DOC_BODY(bodyHtml)}
 </body>
 </html>`;
 
@@ -550,7 +602,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                     )}
                     <div className="flex flex-wrap gap-2">
                       <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[11px] font-bold border ${fullUser?.status === 'ativo' ? 'bg-emerald-400/10 border-emerald-400/20 text-emerald-400' : 'bg-red-400/10 border-red-400/20 text-red-400'}`}>
-                        {fullUser?.status === 'ativo' ? 'Conta Activa' : 'Conta ' + (fullUser?.status ?? 'Pendente')}
+                        {fullUser?.status === 'ativo' ? 'Conta Activa' : fullUser?.status === 'suspenso' ? 'Conta suspensa' : fullUser?.status === 'inativo' ? 'Conta inactiva' : 'Conta pendente'}
                       </span>
                       <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[11px] font-bold border ${fullUser?.regularity === 'regular' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-red-400/10 border-red-400/20 text-red-400'}`}>
                         {fullUser?.regularity === 'regular' ? 'Regular' : 'Pagamento em Falta'}
@@ -2224,7 +2276,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                 {/* ── Tabela Detalhada + Centro de Descargas ─────────────────── */}
                 {(() => {
                   type FaturaStatus = 'pago' | 'vencendo' | 'pendente' | 'atrasado' | 'cancelado';
-                  type Fatura = { id: string; descricao: string; dataVencimento: string; valor: number; statusKey: FaturaStatus };
+                  type Fatura = { id: string; descricao: string; dataVencimento: string; valor: number; statusKey: FaturaStatus; reservationRef: Reservation; tipo: 'aluguer' | 'compra'; prestacaoRef?: Prestacao; };
 
                   const hojeStr  = new Date().toISOString().split('T')[0];
                   const diasAte  = (d: string) => Math.ceil((new Date(d).getTime() - new Date(hojeStr).getTime()) / 86400000);
@@ -2244,6 +2296,8 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                       dataVencimento: a.dataFim,
                       valor: a.valorTotal,
                       statusKey: getFatStatus(a.status === 'concluida', a.status === 'cancelada', a.dataFim),
+                      reservationRef: a,
+                      tipo: 'aluguer',
                     });
                   });
                   compras.forEach(c => {
@@ -2256,6 +2310,9 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                           dataVencimento: p.dataVencimento,
                           valor: p.valorPago ?? p.valor,
                           statusKey: getFatStatus(p.paga, c.status === 'cancelada', p.dataVencimento),
+                          reservationRef: c,
+                          tipo: 'compra',
+                          prestacaoRef: p,
                         });
                       });
                     } else {
@@ -2265,6 +2322,8 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                         dataVencimento: c.dataFim,
                         valor: c.deposito,
                         statusKey: getFatStatus(c.status === 'liquidada', c.status === 'cancelada', c.dataFim),
+                        reservationRef: c,
+                        tipo: 'compra',
                       });
                     }
                   });
@@ -2381,18 +2440,223 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                               {fatFiltradas.map((f) => {
                                 const st = STATUS_STYLE[f.statusKey];
                                 const downloadFatura = () => {
-                                  const body = `
-                                    <div class="doc-title">Fatura / Recibo</div>
-                                    <div class="doc-sub">${f.id}</div>
-                                    <div class="summary-box">
-                                      <div class="summary-row"><span>Fatura</span><span><b>${f.id}</b></span></div>
-                                      <div class="summary-row"><span>Descrição</span><span>${f.descricao}</span></div>
-                                      <div class="summary-row"><span>Vencimento</span><span>${fmtData(f.dataVencimento)}</span></div>
-                                      <div class="summary-row"><span>Estado</span><span>${st.label}</span></div>
-                                      <div class="summary-row total"><span>Valor</span><span class="${f.statusKey === 'pago' ? 'val-green' : 'val-amber'}">${fmt(f.valor)}</span></div>
-                                    </div>
+                                  const r    = f.reservationRef;
+                                  const veh  = getVehicle(r.vehicleId);
+                                  const vehName  = veh?.name ?? `Viatura #${r.vehicleId}`;
+                                  const matricula = veh?.matricula ?? '—';
+                                  const periodo  = `${fmtData(r.dataInicio)} → ${fmtData(r.dataFim)}`;
+                                  const dias = Math.max(1, Math.ceil((new Date(r.dataFim).getTime() - new Date(r.dataInicio).getTime()) / 86400000));
+                                  const emitidoEm = fmtData(new Date().toISOString().split('T')[0]);
+                                  const statusLabel = st.label;
+                                  const sPill = f.statusKey === 'pago'
+                                    ? 'background:#d1fae5;color:#065f46'
+                                    : f.statusKey === 'atrasado'
+                                    ? 'background:#fee2e2;color:#991b1b'
+                                    : 'background:#fef3c7;color:#92400e';
+
+                                  const p = f.prestacaoRef;
+                                  const FORMA_LABEL: Record<string, string> = {
+                                    mpesa: 'M-Pesa', emola: 'e-Mola', dinheiro: 'Dinheiro',
+                                    transferencia: 'Transferência Bancária', cheque: 'Cheque', outros: 'Outros',
+                                  };
+                                  const forma   = p?.formaPagamento   ?? r.prestacoes?.find(pp => pp.paga)?.formaPagamento;
+                                  const ref     = p?.referenciaPagamento ?? r.prestacoes?.find(pp => pp.paga)?.referenciaPagamento;
+                                  const dataPag = p?.dataPagamento    ?? r.prestacoes?.find(pp => pp.paga)?.dataPagamento;
+
+                                  let trows = '';
+                                  if (f.tipo === 'aluguer') {
+                                    const dailyRate = veh?.price ? parseInt(veh.price.replace(/\D/g, ''), 10) : 0;
+                                    if (dailyRate) {
+                                      trows += `<tr><td class="td-desc">Aluguer de Viatura</td><td>${fmt(dailyRate)} MT</td><td>${dias} dia${dias !== 1 ? 's' : ''}</td><td class="td-val">${fmt(dailyRate * dias)} MT</td></tr>`;
+                                    } else {
+                                      trows += `<tr><td class="td-desc">Aluguer de Viatura</td><td>—</td><td>—</td><td class="td-val">${fmt(r.valorTotal)} MT</td></tr>`;
+                                    }
+                                    if (r.deposito > 0) {
+                                      trows += `<tr><td class="td-desc">Depósito / Caução</td><td>—</td><td>—</td><td class="td-val">${fmt(r.deposito)} MT</td></tr>`;
+                                    }
+                                  } else {
+                                    if (p) {
+                                      const total = r.prestacoes?.length ?? 0;
+                                      trows += `<tr><td class="td-desc">${vehName} · Prestação ${p.numero}${total ? `/${total}` : ''}</td><td>—</td><td>—</td><td class="td-val">${fmt(p.valor)} MT</td></tr>`;
+                                    } else {
+                                      trows += `<tr><td class="td-desc">${vehName}</td><td>—</td><td>—</td><td class="td-val">${fmt(f.valor)} MT</td></tr>`;
+                                    }
+                                  }
+
+                                  const vehSection = `
+                                    <div class="section">
+                                      <div class="section-title">${f.tipo === 'aluguer' ? 'Informação da Viatura' : 'Informação da Viatura'}</div>
+                                      <div class="veh-grid">
+                                        <div class="veh-cell"><div class="veh-lbl">Modelo</div><div class="veh-val">${vehName}</div></div>
+                                        <div class="veh-cell"><div class="veh-lbl">Matrícula</div><div class="veh-val">${matricula}</div></div>
+                                        <div class="veh-cell"><div class="veh-lbl">${f.tipo === 'aluguer' ? 'Período de Aluguer' : 'Tipo'}</div><div class="veh-val" style="font-size:11px">${f.tipo === 'aluguer' ? periodo : 'Compra'}</div></div>
+                                      </div>
+                                    </div>`;
+
+                                  const payLeft = `
+                                    <div class="pay-row"><span class="pay-lbl">Data de Vencimento</span><span class="pay-val">${fmtData(f.dataVencimento)}</span></div>
+                                    <div class="pay-row"><span class="pay-lbl">Estado</span><span class="pay-val">${statusLabel}</span></div>
+                                    ${dataPag ? `<div class="pay-row"><span class="pay-lbl">Data de Pagamento</span><span class="pay-val">${fmtData(dataPag)}</span></div>` : ''}
                                   `;
-                                  printAsPDF(body, f.id);
+                                  const payRight = `
+                                    ${forma ? `<div class="pay-row"><span class="pay-lbl">Forma de Pagamento</span><span class="pay-val">${FORMA_LABEL[forma] ?? forma}</span></div>` : ''}
+                                    ${ref   ? `<div class="pay-row"><span class="pay-lbl">Referência</span><span class="pay-val">${ref}</span></div>` : ''}
+                                    <div class="pay-row"><span class="pay-lbl">Valor Total</span><span class="pay-val" style="color:#92400e;font-size:13px">${fmt(f.valor)} MT</span></div>
+                                  `;
+
+                                  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>${f.id}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
+.toolbar{position:sticky;top:0;z-index:100;background:#18181b;padding:10px 28px;display:flex;align-items:center;justify-content:space-between}
+.toolbar-title{color:#f59e0b;font-weight:900;font-size:13px}
+.btn-dl{background:#f59e0b;color:#18181b;border:none;border-radius:8px;padding:8px 18px;font-weight:900;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.btn-dl:hover{background:#fbbf24}
+.invoice{max-width:740px;margin:28px auto 48px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.1)}
+.inv-header{display:flex}
+.inv-brand{background:#18181b;padding:26px 32px;flex:0 0 55%;display:flex;align-items:center;gap:14px}
+.inv-brand img{height:42px;width:auto}
+.brand-name{color:#f59e0b;font-size:19px;font-weight:900;letter-spacing:-.5px;line-height:1}
+.brand-sub{color:#a16207;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;margin-top:3px}
+.inv-contact{padding:20px 28px;flex:1;display:flex;flex-direction:column;justify-content:center;gap:4px;text-align:right}
+.contact-item{font-size:11px;color:#57534e}
+.gold-bar{height:3px;background:linear-gradient(90deg,#f59e0b 60%,#fef3c7)}
+.inv-meta{display:flex}
+.bill-to{padding:22px 32px;flex:1}
+.section-lbl{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1.8px;color:#92400e;margin-bottom:12px}
+.bill-row{display:flex;align-items:baseline;gap:6px;margin-bottom:5px;font-size:12px}
+.bill-label{color:#a8a29e;min-width:58px;font-size:11px}
+.bill-val{font-weight:700;color:#1c1917}
+.inv-badge{background:#18181b;padding:22px 28px;min-width:220px;text-align:right}
+.inv-badge-title{font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:2.5px;color:#f59e0b;margin-bottom:14px}
+.inv-badge-row{font-size:11px;color:#d6d3d1;margin-bottom:6px}
+.inv-badge-val{color:#fff;font-weight:800}
+.section{padding:18px 32px 0}
+.section-title{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:#92400e;padding-bottom:8px;border-bottom:1px solid #fef3c7;margin-bottom:12px}
+.veh-grid{display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid #e7e5e4;border-radius:8px;overflow:hidden}
+.veh-cell{padding:11px 16px;border-right:1px solid #e7e5e4}
+.veh-cell:last-child{border-right:none}
+.veh-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#a8a29e;margin-bottom:4px}
+.veh-val{font-size:13px;font-weight:800;color:#1c1917}
+.inv-tbl{width:100%;border-collapse:collapse;margin-top:8px}
+.inv-tbl thead tr{background:#18181b}
+.inv-tbl th{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:#f59e0b;padding:11px 16px;text-align:left}
+.inv-tbl th:not(:first-child){text-align:right}
+.inv-tbl td{font-size:12px;padding:11px 16px;border-bottom:1px solid #f5f5f4;color:#1c1917}
+.td-desc{font-weight:600}
+.td-val{font-weight:800;text-align:right}
+.inv-tbl td:not(:first-child){text-align:right}
+.row-sub td{background:#fefce8;font-weight:700;border-bottom:none}
+.row-total td{background:#f59e0b;font-weight:900;font-size:13px;border-bottom:none;color:#1c1917}
+.pay-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #e7e5e4;border-radius:8px;overflow:hidden;margin-top:8px}
+.pay-col:first-child{border-right:1px solid #e7e5e4}
+.pay-row{display:flex;padding:9px 16px;border-bottom:1px solid #f5f5f4;font-size:12px}
+.pay-row:last-child{border-bottom:none}
+.pay-lbl{color:#a8a29e;min-width:120px;font-size:11px}
+.pay-val{font-weight:700;color:#1c1917}
+.inv-bottom{padding:20px 32px;display:flex;justify-content:space-between;align-items:flex-end}
+.notes-text{font-size:11px;color:#78716c;line-height:1.7;max-width:320px}
+.sig-block{text-align:right}
+.sig-date{font-size:11px;color:#78716c;margin-bottom:28px}
+.sig-line-el{border-top:1px solid #1c1917;padding-top:6px;display:inline-block;min-width:150px}
+.sig-name{font-size:12px;font-weight:900}
+.sig-role{font-size:10px;color:#78716c;margin-top:2px}
+.inv-footer{background:#18181b;padding:12px 32px;display:flex;justify-content:space-between;align-items:center}
+.footer-txt{font-size:10px;color:#78716c}
+.status-pill{font-size:10px;font-weight:800;padding:3px 14px;border-radius:20px}
+@media print{body{background:#fff}.toolbar{display:none!important}.invoice{max-width:none;margin:0;box-shadow:none;border-radius:0}}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <span class="toolbar-title">${f.id} · ${vehName}</span>
+  <button class="btn-dl" onclick="window.print()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Descarregar PDF
+  </button>
+</div>
+<div class="invoice">
+  <div class="inv-header">
+    <div class="inv-brand">
+      <img src="/sos-motors-logo.png" alt="SOS Motors">
+      <div><div class="brand-name">SOS Motors</div><div class="brand-sub">Aluguer de Viaturas · Moçambique</div></div>
+    </div>
+    <div class="inv-contact">
+      <span class="contact-item">Av. Julius Nyerere, Maputo, Moçambique</span>
+      <span class="contact-item">+258 84 000 0000</span>
+      <span class="contact-item">geral@sosmotors.co.mz</span>
+      <span class="contact-item">www.sosmotors.co.mz</span>
+    </div>
+  </div>
+  <div class="gold-bar"></div>
+  <div class="inv-meta">
+    <div class="bill-to">
+      <div class="section-lbl">Bill To</div>
+      <div class="bill-row"><span class="bill-label">Nome</span><span class="bill-val">${r.clientName}</span></div>
+      ${r.clientEmail ? `<div class="bill-row"><span class="bill-label">Email</span><span class="bill-val">${r.clientEmail}</span></div>` : ''}
+      ${r.clientPhone ? `<div class="bill-row"><span class="bill-label">Telefone</span><span class="bill-val">${r.clientPhone}</span></div>` : ''}
+    </div>
+    <div class="inv-badge">
+      <div class="inv-badge-title">Fatura</div>
+      <div class="inv-badge-row">N.º Fatura: <span class="inv-badge-val">${f.id}</span></div>
+      <div class="inv-badge-row">Emitida a: <span class="inv-badge-val">${emitidoEm}</span></div>
+      <div class="inv-badge-row">Vencimento: <span class="inv-badge-val">${fmtData(f.dataVencimento)}</span></div>
+    </div>
+  </div>
+  ${vehSection}
+  <div class="section" style="margin-top:16px">
+    <div class="section-title">Descrição de Encargos</div>
+    <table class="inv-tbl">
+      <thead><tr>
+        <th style="width:45%">Descrição</th>
+        <th>Preço Unit.</th>
+        <th>Qtd.</th>
+        <th>Subtotal</th>
+      </tr></thead>
+      <tbody>
+        ${trows}
+        <tr class="row-sub"><td colspan="3">Subtotal</td><td class="td-val">${fmt(f.valor)} MT</td></tr>
+        <tr class="row-total"><td colspan="3">Total</td><td class="td-val">${fmt(f.valor)} MT</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="section" style="margin-top:16px">
+    <div class="section-title">Informação de Pagamento</div>
+    <div class="pay-grid">
+      <div class="pay-col">${payLeft}</div>
+      <div class="pay-col">${payRight}</div>
+    </div>
+  </div>
+  <div class="inv-bottom">
+    <div class="notes-text">
+      Obrigado por escolher a SOS Motors para as suas necessidades.<br>
+      Para qualquer questão sobre esta fatura, contacte-nos em<br>
+      <b>+258 84 000 0000</b> ou <b>geral@sosmotors.co.mz</b>.
+    </div>
+    <div class="sig-block">
+      <div class="sig-date">Data: ${emitidoEm}</div>
+      <div class="sig-line-el">
+        <div class="sig-name">SOS Motors Lda.</div>
+        <div class="sig-role">Assinatura Autorizada</div>
+      </div>
+    </div>
+  </div>
+  <div class="inv-footer">
+    <span class="footer-txt">SOS Motors · Documento gerado automaticamente</span>
+    <span class="status-pill" style="${sPill}">${statusLabel}</span>
+  </div>
+</div>
+</body>
+</html>`;
+                                  const win = window.open('', '_blank');
+                                  if (!win) return;
+                                  win.document.write(html);
+                                  win.document.close();
+                                  win.focus();
                                 };
                                 return (
                                   <div key={f.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-2 px-4 py-3 hover:bg-zinc-800/30 transition-colors">
