@@ -9,9 +9,11 @@ import { EditReservationModal } from '../components/reservations/EditReservation
 import { ContratoModal } from '../components/reservations/ContratoModal';
 import { RegistarPagamentoModal } from '../components/reservations/RegistarPagamentoModal';
 import { ReservationTracker } from '../components/ReservationTracker';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import { Button } from '../components/ui/button';
 import type { Prestacao, Reservation, ReservationStatus } from '../types/reservation';
 
-const fmt = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' MT';
+const fmt = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',00 MT';
 
 const STATUS_CFG: Record<ReservationStatus, { label: string; className: string }> = {
   pendente:            { label: 'Aguarda Pagamento',      className: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
@@ -37,11 +39,11 @@ const GRUPOS: Array<{
   badge: string;
   textColor: string;
 }> = [
-  { status: 'devolucao_pendente',  title: 'Devolução Pendente',      dot: 'bg-orange-400', badge: 'bg-orange-400/10 text-orange-400 border-orange-400/20', textColor: 'text-orange-400' },
-  { status: 'ativa',               title: 'Alugueres Ativos',        dot: 'bg-blue-400',   badge: 'bg-blue-400/10 text-blue-400 border-blue-400/20',       textColor: 'text-blue-400'   },
-  { status: 'pronta_levantamento', title: 'Prontas p/ Levantamento', dot: 'bg-sky-400',    badge: 'bg-sky-400/10 text-sky-400 border-sky-400/20',           textColor: 'text-sky-400'    },
-  { status: 'confirmada',          title: 'Reservas Confirmadas',    dot: 'bg-emerald-400',badge: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20',textColor: 'text-emerald-400'},
-  { status: 'pendente',            title: 'Aguarda Pagamento',       dot: 'bg-amber-400',  badge: 'bg-amber-400/10 text-amber-400 border-amber-400/20',     textColor: 'text-amber-400'  },
+  { status: 'pendente',            title: 'Aguarda Pagamento',       dot: 'bg-amber-400',   badge: 'bg-amber-400/10 text-amber-400 border-amber-400/20',     textColor: 'text-amber-400'   },
+  { status: 'confirmada',          title: 'Reservas Confirmadas',    dot: 'bg-emerald-400', badge: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20',textColor: 'text-emerald-400' },
+  { status: 'pronta_levantamento', title: 'Prontas p/ Levantamento', dot: 'bg-sky-400',     badge: 'bg-sky-400/10 text-sky-400 border-sky-400/20',           textColor: 'text-sky-400'     },
+  { status: 'ativa',               title: 'Alugueres Ativos',        dot: 'bg-blue-400',    badge: 'bg-blue-400/10 text-blue-400 border-blue-400/20',        textColor: 'text-blue-400'    },
+  { status: 'devolucao_pendente',  title: 'Devolução Pendente',      dot: 'bg-orange-400',  badge: 'bg-orange-400/10 text-orange-400 border-orange-400/20',  textColor: 'text-orange-400'  },
 ];
 
 const aluguerVehicles = VEHICLES.filter(v => v.mode === 'aluguer');
@@ -60,9 +62,15 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
     getUrlParams().get('status')
   );
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
+  const [selectedCalDate, setSelectedCalDate] = useState<string | null>(null);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [editingReservation, setEditingReservation] = useState<Reservation | null>(null);
   const [contractReservation, setContractReservation] = useState<Reservation | null>(null);
+  const [lastActedId, setLastActedId] = useState<string | null>(null);
+  const [acoesFilter, setAcoesFilter] = useState<ReservationStatus | 'todos'>('todos');
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  const toggleCollapse = (id: string) =>
+    setCollapsedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const [pagamentoModal, setPagamentoModal] = useState<{
     reservationId: string;
     prestacao: Prestacao;
@@ -91,6 +99,17 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
     }, 150);
     return () => clearTimeout(timer);
   }, [tab, highlightStatus]);
+
+  // After an action, scroll to the card's new position and briefly highlight it
+  useEffect(() => {
+    if (!lastActedId) return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`res-card-${lastActedId}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 80);
+    const clear = setTimeout(() => setLastActedId(null), 3500);
+    return () => { clearTimeout(timer); clearTimeout(clear); };
+  }, [lastActedId]);
 
   const aluguerReservations = useMemo(() =>
     reservations
@@ -176,10 +195,10 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
             {
               label: 'Prontas p/ Levantar', sub: 'Prontas para entrega',
               value: kpis.prontas,
-              numCol: kpis.prontas > 0 ? 'text-emerald-400' : 'text-white',
-              iconCol: 'text-emerald-400',
-              iconBg: 'bg-emerald-500/10 border-emerald-500/30',
-              bar: 'bg-emerald-500',
+              numCol: kpis.prontas > 0 ? 'text-amber-400' : 'text-white',
+              iconCol: 'text-amber-400',
+              iconBg: 'bg-amber-500/10 border-amber-500/30',
+              bar: 'bg-amber-500',
               icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>,
             },
             {
@@ -203,10 +222,10 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
             {
               label: 'Cancelamentos', sub: 'Total cancelado',
               value: kpis.cancelamentos,
-              numCol: kpis.cancelamentos > 0 ? 'text-red-400' : 'text-white',
-              iconCol: 'text-red-400',
-              iconBg: 'bg-red-500/10 border-red-500/30',
-              bar: 'bg-red-500',
+              numCol: kpis.cancelamentos > 0 ? 'text-amber-400' : 'text-white',
+              iconCol: 'text-amber-400',
+              iconBg: 'bg-amber-500/10 border-amber-500/30',
+              bar: 'bg-amber-500',
               icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="10" y1="14" x2="14" y2="18"/><line x1="14" y1="14" x2="10" y2="18"/></svg>,
             },
           ] as const).map(k => (
@@ -229,7 +248,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
         {/* Tabs */}
         <div className="flex gap-1 border-b border-zinc-800 overflow-x-auto">
           {tabList.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)}
+            <button key={t.key} onClick={() => { setTab(t.key); if (t.key !== 'acoes') setAcoesFilter('todos'); }}
               className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold whitespace-nowrap rounded-t-lg border-b-2 transition ${
                 tab === t.key
                   ? 'border-amber-500 text-amber-400'
@@ -311,14 +330,55 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
         {/* TAB: Ações — separado por estado */}
         {tab === 'acoes' && (() => {
           const totalAcionaveis = aluguerReservations.filter(r => r.status !== 'cancelada' && r.status !== 'concluida').length;
+          const gruposVisiveis = GRUPOS.filter(g => acoesFilter === 'todos' || g.status === acoesFilter);
           return (
-            <div className="space-y-8">
+            <div className="space-y-6">
+
+              {/* Barra de filtros */}
+              <div className="flex flex-wrap gap-2 p-2 bg-zinc-900 border border-zinc-800 rounded-2xl">
+                <button
+                  onClick={() => setAcoesFilter('todos')}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                    acoesFilter === 'todos'
+                      ? 'bg-zinc-700 text-white border border-zinc-500'
+                      : 'text-white border border-zinc-700 hover:bg-zinc-800 hover:border-zinc-600'
+                  }`}
+                >
+                  Todos
+                  <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${acoesFilter === 'todos' ? 'bg-zinc-600 text-white' : 'bg-zinc-800 text-white'}`}>
+                    {totalAcionaveis}
+                  </span>
+                </button>
+                {GRUPOS.map(g => {
+                  const count = aluguerReservations.filter(r => r.status === g.status).length;
+                  if (count === 0) return null;
+                  const isActive = acoesFilter === g.status;
+                  return (
+                    <button
+                      key={g.status}
+                      onClick={() => setAcoesFilter(isActive ? 'todos' : g.status)}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border transition-all ${
+                        isActive
+                          ? `${g.badge} border-current`
+                          : 'text-white border-zinc-700 hover:bg-zinc-800 hover:border-zinc-600'
+                      }`}
+                    >
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${g.dot}`} />
+                      {g.title}
+                      <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${isActive ? 'bg-black/25 text-current' : 'bg-zinc-800 text-white'}`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
               {totalAcionaveis === 0 && (
                 <div className="bg-zinc-900 border border-zinc-800 rounded-xl py-12 text-center text-white text-sm">
                   Sem reservas com acções pendentes
                 </div>
               )}
-              {GRUPOS.map(grupo => {
+              {gruposVisiveis.map(grupo => {
                 const lista = aluguerReservations.filter(r => r.status === grupo.status);
                 if (lista.length === 0) return null;
                 const isHighlighted = highlightStatus === grupo.status;
@@ -329,7 +389,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                     className={`space-y-3 rounded-2xl transition-all duration-500 ${isHighlighted ? 'ring-2 ring-amber-400/50 ring-offset-2 ring-offset-zinc-950 p-3 -mx-3' : ''}`}
                   >
                     {/* Cabeçalho de secção */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 pt-2">
                       <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${grupo.dot}`} />
                       <h3 className={`text-xs font-black uppercase tracking-widest ${grupo.textColor}`}>
                         {grupo.title}
@@ -355,10 +415,20 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                       const estadoVeiculo = r.status === 'ativa' ? 'Em Uso' : r.status === 'devolucao_pendente' ? 'A Devolver' : r.status === 'pronta_levantamento' ? 'Reservado' : 'Disponível';
                       const mot = r.motoristaId ? motoristas.find(m => m.id === r.motoristaId) : null;
 
+                      const isLastActed = lastActedId === r.id;
+                      const isCollapsed = collapsedIds.has(r.id);
                       return (
-                        <div key={r.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden hover:border-zinc-700 transition-colors">
+                        <div
+                          key={r.id}
+                          id={`res-card-${r.id}`}
+                          className={`bg-zinc-900 rounded-2xl overflow-hidden transition-all duration-300 ${
+                            isLastActed
+                              ? 'border-2 border-amber-500/70 ring-4 ring-amber-500/20 shadow-lg shadow-amber-500/10'
+                              : 'border border-zinc-800 hover:border-zinc-700'
+                          }`}
+                        >
 
-                          {/* Header */}
+                          {/* Header — clicável para colapsar/expandir */}
                           <div className="px-5 pt-4 pb-4 flex items-center justify-between gap-3 border-b border-zinc-800/60">
                             <div className="flex items-center gap-2 flex-wrap min-w-0">
                               <span className={`text-xs border rounded-md px-2 py-0.5 font-semibold shrink-0 ${st.className}`}>{st.label}</span>
@@ -368,9 +438,31 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                                   🧑‍✈️ {mot.nome}
                                 </span>
                               )}
+                              {isLastActed && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-300 bg-amber-400/15 border border-amber-400/30 rounded-md px-2 py-0.5 animate-pulse">
+                                  ✓ Última ação
+                                </span>
+                              )}
                             </div>
-                            <span className="text-[10px] text-white/40 font-mono shrink-0">#{r.id.slice(0, 8).toUpperCase()}</span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-[10px] text-white/40 font-mono">#{r.id.slice(0, 8).toUpperCase()}</span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => toggleCollapse(r.id)}
+                                aria-expanded={!isCollapsed}
+                                className="h-8 w-8 text-amber-400 hover:text-amber-300 hover:bg-amber-400/10 transition-colors"
+                              >
+                                {isCollapsed
+                                  ? <ChevronDown size={16} strokeWidth={2.5} />
+                                  : <ChevronUp size={16} strokeWidth={2.5} />
+                                }
+                              </Button>
+                            </div>
                           </div>
+
+                          {/* Corpo colapsável */}
+                          {!isCollapsed && <>
 
                           {/* Tracker + Botões */}
                           <div className="px-5 pt-4 pb-4 border-b border-zinc-800/60">
@@ -378,7 +470,6 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                               status={r.status}
                               onAdvance={next => {
                                 if (next === 'confirmada') {
-                                  // 1ª prestação: registar pagamento antes de confirmar
                                   const firstPrest: Prestacao = r.prestacoes?.[0] ?? {
                                     numero: 1,
                                     dataVencimento: new Date().toISOString().split('T')[0],
@@ -389,10 +480,9 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                                     reservationId: r.id,
                                     prestacao: firstPrest,
                                     titulo: 'Registar 1º Pagamento',
-                                    onAfterSave: () => updateReservation(r.id, { status: 'confirmada' }),
+                                    onAfterSave: () => { updateReservation(r.id, { status: 'confirmada' }); setLastActedId(r.id); },
                                   });
                                 } else if (next === 'concluida') {
-                                  // Última prestação: registar pagamento final antes de concluir
                                   const lastUnpaid = r.prestacoes?.filter(p => !p.paga).at(-1);
                                   const remaining = Math.max(0, r.valorTotal - pago);
                                   const finalPrest: Prestacao = lastUnpaid ?? {
@@ -405,14 +495,14 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                                     reservationId: r.id,
                                     prestacao: finalPrest,
                                     titulo: 'Registar Pagamento Final',
-                                    onAfterSave: () => updateReservation(r.id, { status: 'concluida' }),
+                                    onAfterSave: () => { updateReservation(r.id, { status: 'concluida' }); setLastActedId(r.id); },
                                   });
                                 } else {
-                                  // Outras transições: apenas atualizar estado (sem pagamento)
                                   updateReservation(r.id, { status: next });
+                                  setLastActedId(r.id);
                                 }
                               }}
-                              onCancel={() => cancelReservation(r.id)}
+                              onCancel={() => { cancelReservation(r.id); setLastActedId(r.id); }}
                               onEdit={() => setEditingReservation(r)}
                               onContract={() => setContractReservation(r)}
                               stepDates={{
@@ -552,7 +642,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                                           </span>
                                           {!p.paga && (
                                             <button
-                                              onClick={() => setPagamentoModal({ reservationId: r.id, prestacao: p })}
+                                              onClick={() => setPagamentoModal({ reservationId: r.id, prestacao: p, onAfterSave: () => setLastActedId(r.id) })}
                                               className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-amber-400 text-zinc-950 hover:bg-amber-300 active:scale-95 transition"
                                             >
                                               Pagar
@@ -647,6 +737,8 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                             ))}
                           </div>
 
+                          </>}
+
                         </div>
                       );
                     })}
@@ -658,26 +750,180 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
         })()}
 
         {/* TAB: Calendário */}
-        {tab === 'calendario' && (
-          <div className="grid lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1 space-y-4">
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <label className="block text-xs text-white mb-2">Viatura</label>
-                <select
-                  value={selectedVehicle ?? ''}
-                  onChange={e => setSelectedVehicle(e.target.value ? Number(e.target.value) : null)}
-                  className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="">Visão geral da frota</option>
-                  {aluguerVehicles.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-                </select>
+        {tab === 'calendario' && (() => {
+          const inRange = (d: string, s: string, e: string) => d >= s && d <= e;
+
+          const calDateResv = selectedCalDate
+            ? aluguerReservations.filter(r =>
+                (selectedVehicle === null || r.vehicleId === selectedVehicle) &&
+                r.status !== 'cancelada' && r.status !== 'concluida' &&
+                inRange(selectedCalDate, r.dataInicio, r.dataFim)
+              )
+            : [];
+
+          const calDateBlocks = selectedCalDate
+            ? blocks.filter(b =>
+                (selectedVehicle === null || b.vehicleId === null || b.vehicleId === selectedVehicle) &&
+                inRange(selectedCalDate, b.dataInicio, b.dataFim)
+              )
+            : [];
+
+          const fmtCalDate = (d: string) =>
+            new Date(d + 'T00:00:00').toLocaleDateString('pt-MZ', {
+              weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+            });
+
+          return (
+            <div className="grid lg:grid-cols-3 gap-6">
+
+              {/* Left: selector + detail panel */}
+              <div className="lg:col-span-1 space-y-4">
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+                  <label className="block text-[10px] font-black text-white uppercase tracking-widest mb-2">Viatura</label>
+                  <select
+                    value={selectedVehicle ?? ''}
+                    onChange={e => {
+                      setSelectedVehicle(e.target.value ? Number(e.target.value) : null);
+                      setSelectedCalDate(null);
+                    }}
+                    className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="">Visão geral da frota</option>
+                    {aluguerVehicles.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+                  </select>
+                </div>
+
+                {/* Date detail panel */}
+                {selectedCalDate ? (
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                    <div className="px-4 py-3 border-b border-zinc-800 flex items-start justify-between gap-2">
+                      <p className="text-xs font-black text-white leading-snug capitalize">
+                        {fmtCalDate(selectedCalDate)}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCalDate(null)}
+                        className="text-white/40 hover:text-white text-xl leading-none shrink-0"
+                      >×</button>
+                    </div>
+
+                    {calDateResv.length === 0 && calDateBlocks.length === 0 ? (
+                      <div className="px-4 py-8 text-center">
+                        <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-3">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        </div>
+                        <p className="text-sm font-bold text-emerald-400">Disponível</p>
+                        <p className="text-xs text-white/60 mt-1">
+                          {selectedVehicle ? vehicleName(selectedVehicle) : 'Toda a frota'} · sem ocupações
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-zinc-800/80">
+
+                        {/* Reservations on this date */}
+                        {calDateResv.map(r => {
+                          const st = STATUS_CFG[r.status];
+                          return (
+                            <div key={r.id} className="px-4 py-4">
+                              <div className="flex items-center gap-2 mb-3">
+                                <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                                <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider">Reservado</span>
+                                <span className={`ml-auto text-[10px] border rounded-md px-2 py-0.5 font-semibold ${st.className}`}>
+                                  {st.label}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2.5 mb-3">
+                                <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/20 flex items-center justify-center text-amber-400 font-black text-xs shrink-0">
+                                  {r.clientName.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-black text-white leading-tight truncate">{r.clientName}</p>
+                                  {r.clientPhone && <p className="text-[10px] text-white/60">{r.clientPhone}</p>}
+                                  {!r.clientPhone && r.clientEmail && <p className="text-[10px] text-white/60">{r.clientEmail}</p>}
+                                </div>
+                              </div>
+
+                              <div className="space-y-1.5">
+                                <div className="flex items-center gap-2 text-[11px]">
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50 shrink-0"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                                  <span className="text-white">{vehicleName(r.vehicleId)}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-[11px]">
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50 shrink-0"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                  <span className="text-white tabular-nums">{r.dataInicio} → {r.dataFim}</span>
+                                </div>
+                                {r.localLevantamento && (
+                                  <div className="flex items-center gap-2 text-[11px]">
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50 shrink-0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                    <span className="text-white/70">{r.localLevantamento}</span>
+                                  </div>
+                                )}
+                                {r.motivoViagem && (
+                                  <div className="flex items-center gap-2 text-[11px]">
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50 shrink-0"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                                    <span className="text-white/70 italic">{r.motivoViagem}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* Blocks on this date */}
+                        {calDateBlocks.map(b => (
+                          <div key={b.id} className="px-4 py-4">
+                            <div className="flex items-center gap-2 mb-3">
+                              <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" />
+                              <span className="text-[10px] font-black text-red-400 uppercase tracking-wider">Bloqueado</span>
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <div className="flex items-center gap-2 text-[11px]">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-400/70 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                                <span className="text-white font-semibold capitalize">{b.motivo.replace(/_/g, ' ')}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-[11px]">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50 shrink-0"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                                <span className="text-white">{b.vehicleId === null ? 'Toda a frota' : vehicleName(b.vehicleId)}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-[11px]">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50 shrink-0"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                <span className="text-white tabular-nums">{b.dataInicio} → {b.dataFim}</span>
+                              </div>
+                              {b.descricao && (
+                                <div className="mt-2 bg-red-500/5 border border-red-500/15 rounded-lg px-3 py-2">
+                                  <p className="text-[10px] text-red-300 italic">{b.descricao}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-10 text-center">
+                    <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-3">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    </div>
+                    <p className="text-sm font-bold text-white">Clique numa data</p>
+                    <p className="text-xs text-white/50 mt-1">para ver os detalhes de ocupação</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Calendar */}
+              <div className="lg:col-span-2">
+                <AvailabilityCalendar
+                  vehicleId={selectedVehicle}
+                  selectedDate={selectedCalDate}
+                  onSelectDate={setSelectedCalDate}
+                />
               </div>
             </div>
-            <div className="lg:col-span-2">
-              <AvailabilityCalendar vehicleId={selectedVehicle} />
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* TAB: Bloqueios */}
         {tab === 'bloqueios' && (

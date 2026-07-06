@@ -147,10 +147,10 @@ export default function CatalogSection({
             <div className="text-amber-500 text-[10px] font-bold uppercase tracking-widest mb-2">
               Catálogo
             </div>
-            <h2 className="text-white text-2xl md:text-3xl font-black leading-tight tracking-tight">
+            <h2 className="text-white text-3xl md:text-4xl font-black leading-tight tracking-tight">
               Frota Disponível
             </h2>
-            <p className="text-white text-sm mt-1.5 max-w-md">
+            <p className="text-white text-base mt-1.5 max-w-md">
               Defina o destino, nós tratamos do caminho. Comece aqui.
             </p>
           </div>
@@ -161,7 +161,7 @@ export default function CatalogSection({
               <button
                 key={f.key}
                 onClick={() => handleMode(f.key)}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${
+                className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 ${
                   mode === f.key
                     ? "bg-amber-500 text-zinc-950"
                     : "bg-zinc-900 text-zinc-300 border border-zinc-800 hover:border-zinc-600 hover:text-white"

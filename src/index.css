@@ -123,6 +123,17 @@ html {
   font-size: 16px;
 }
 
+/* Escala progressiva para ecrãs grandes — todos os valores rem crescem juntos */
+@media (min-width: 1920px) {
+  html { font-size: 18px; }
+}
+@media (min-width: 2560px) {
+  html { font-size: 21px; }
+}
+@media (min-width: 3200px) {
+  html { font-size: 24px; }
+}
+
 html, body {
   scroll-behavior: smooth;
   background-color: #0D0D0D;

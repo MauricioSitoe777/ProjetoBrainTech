@@ -358,7 +358,7 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
 
           {/* Spacer + Novo */}
           <div className="ml-auto relative shrink-0">
-            {canManage && (
+            {canManage && mainTab !== 'visitantes' && (
               <>
                 <button
                   onClick={() => setNovoOpen(o => !o)}

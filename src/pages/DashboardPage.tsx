@@ -242,8 +242,8 @@ export function DashboardPage() {
 
         </div>
 
-        {/* ── Row 2: Three alert cards ────────────────────────────────────────── */}
-        <div className="grid grid-cols-3 gap-5">
+        {/* ── Row 2: Alert cards ──────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-5">
 
           {/* ALUGUERES CRÍTICOS */}
           <Card
@@ -359,37 +359,38 @@ export function DashboardPage() {
             )}
           </Card>
 
-        </div>
 
-        {/* ── Row 3: Alerts ───────────────────────────────────────────────────── */}
-        <Card
-          title="Alerts de Utilizadores"
-          badge={(s.pendentUsers + s.guestsPend) > 0 ? s.pendentUsers + s.guestsPend : undefined}
-          footer={
-            <BtnPrimary label="Revisar Conta" onClick={() => navigate('/admin/utilizadores')} />
-          }
-        >
-          {s.pendentUsers === 0 && s.guestsPend === 0 ? (
-            <p className="text-xs text-white">Sem utilizadores pendentes</p>
-          ) : (
-            <>
-              {s.pendentUsers > 0 && (
-                <AlertRow
-                  dot="bg-amber-500"
-                  label={`${s.pendentUsers} Utilizador${s.pendentUsers > 1 ? 'es' : ''} em Revisão`}
-                  sub={`Conta${s.pendentUsers > 1 ? 's' : ''} sob investigação`}
-                />
-              )}
-              {s.guestsPend > 0 && (
-                <AlertRow
-                  dot="bg-amber-400"
-                  label={`${s.guestsPend} Visitante${s.guestsPend > 1 ? 's' : ''} Pendente${s.guestsPend > 1 ? 's' : ''}`}
-                  sub="Aguarda aprovação"
-                />
-              )}
-            </>
-          )}
-        </Card>
+          {/* ALERTS DE UTILIZADORES */}
+          <Card
+            title="Alerts de Utilizadores"
+            badge={(s.pendentUsers + s.guestsPend) > 0 ? s.pendentUsers + s.guestsPend : undefined}
+            footer={
+              <BtnPrimary label="Revisar Conta" onClick={() => navigate('/admin/utilizadores')} />
+            }
+          >
+            {s.pendentUsers === 0 && s.guestsPend === 0 ? (
+              <p className="text-xs text-white">Sem utilizadores pendentes</p>
+            ) : (
+              <>
+                {s.pendentUsers > 0 && (
+                  <AlertRow
+                    dot="bg-amber-500"
+                    label={`${s.pendentUsers} Utilizador${s.pendentUsers > 1 ? 'es' : ''} em Revisão`}
+                    sub={`Conta${s.pendentUsers > 1 ? 's' : ''} sob investigação`}
+                  />
+                )}
+                {s.guestsPend > 0 && (
+                  <AlertRow
+                    dot="bg-amber-400"
+                    label={`${s.guestsPend} Visitante${s.guestsPend > 1 ? 's' : ''} Pendente${s.guestsPend > 1 ? 's' : ''}`}
+                    sub="Aguarda aprovação"
+                  />
+                )}
+              </>
+            )}
+          </Card>
+
+        </div>
 
       </div>
     </div>

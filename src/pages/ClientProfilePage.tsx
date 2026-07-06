@@ -31,7 +31,7 @@ type Section =
   | 'historico'
   | 'notificacoes';
 
-const fmt = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' MT';
+const fmt = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',00 MT';
 
 const RES_STATUS: Record<ReservationStatus, { label: string; cls: string }> = {
   pendente:            { label: 'Aguarda Pagamento',      cls: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },

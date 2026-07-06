@@ -17,7 +17,7 @@ interface Credencial {
 
 type Tab = 'grupo' | 'espera' | 'clientes';
 
-const fmt = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' MT';
+const fmt = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',00 MT';
 
 const estadoStyle: Record<EstadoGrupo, string> = {
   Aberto:      'bg-zinc-700/60 text-white border-zinc-600',
@@ -780,7 +780,7 @@ function CriarGrupoModal({ onClose, onCriar }: { onClose: () => void; onCriar: (
         </div>
 
         <div className="bg-zinc-800/60 rounded-xl px-4 py-3 text-xs text-white">
-          Prémio mensal: <span className="text-amber-400 font-black">{Math.round(max * quota).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')} MT</span>
+          Prémio mensal: <span className="text-amber-400 font-black">{Math.round(max * quota).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')},00 MT</span>
         </div>
 
         <div>

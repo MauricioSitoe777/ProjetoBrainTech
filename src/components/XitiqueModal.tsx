@@ -5,7 +5,7 @@ import type { GrupoXitique } from '../types/xitique';
 
 type Step = 'grupoSelect' | 'form' | 'otp' | 'sucesso';
 
-const fmt = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' MT';
+const fmt = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',00 MT';
 
 function gerarOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();

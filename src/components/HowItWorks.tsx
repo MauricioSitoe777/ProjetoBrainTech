@@ -24,13 +24,13 @@ export default function HowItWorks({
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
             <span className="text-amber-400 text-[10px] font-bold uppercase tracking-widest">Processo Simples</span>
           </div>
-          <h2 className="text-white text-2xl md:text-3xl font-black leading-tight tracking-tight">
+          <h2 className="text-white text-3xl md:text-4xl font-black leading-tight tracking-tight">
             Como{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">
               Funciona
             </span>
           </h2>
-          <p className="text-white text-sm mt-3 max-w-xl mx-auto leading-relaxed">
+          <p className="text-white text-base mt-3 max-w-xl mx-auto leading-relaxed">
             Do catálogo às chaves na mão — o processo é{" "}
             <span className="text-white font-semibold">100% digital</span>,{" "}
             <span className="text-white font-semibold">transparente</span> e
@@ -74,10 +74,10 @@ export default function HowItWorks({
                   </div>
 
                   {/* Content */}
-                  <h3 className="relative z-10 text-white font-bold text-sm mb-1.5 group-hover:text-amber-50 transition-colors duration-300">
+                  <h3 className="relative z-10 text-white font-bold text-base mb-1.5 group-hover:text-amber-50 transition-colors duration-300">
                     {step.title}
                   </h3>
-                  <p className="relative z-10 text-white text-[13px] leading-relaxed">
+                  <p className="relative z-10 text-white text-sm leading-relaxed">
                     {step.desc}
                   </p>
 

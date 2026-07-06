@@ -23,7 +23,7 @@ export default function XitiqueSection({
   }, []);
 
   const openGroups = grupos.filter(g => g.estadoGrupo === 'Aberto' && g.membros.length < g.maxMembros);
-  const fmt = (n: number) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const fmt = (n: number) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',00';
   const quotaDisplay = openGroups.length > 0 ? `${fmt(openGroups[0].quotaMT)} MT` : 'A definir';
   const premioDisplay = openGroups.length > 0 ? `${fmt(openGroups[0].premioMT)} MT` : 'A definir';
 

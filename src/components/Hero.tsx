@@ -250,7 +250,7 @@ function RotatingHeading() {
       initial={{ opacity: 0, y: 35 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.7 }}
-      className="text-center text-3xl font-black uppercase leading-[0.9] tracking-tight text-white sm:text-4xl md:text-left lg:text-5xl xl:text-6xl"
+      className="text-center text-4xl font-black uppercase leading-[0.9] tracking-tight text-white sm:text-5xl md:text-left lg:text-6xl xl:text-7xl"
     >
       O Seu
       <br />
@@ -314,7 +314,7 @@ function navigateToSimulator(cardId: string) {
   window.dispatchEvent(
     new CustomEvent("rentcar:open-simulator-category", { detail: CARD_SIMULATOR_NAV[cardId] })
   );
-  setTimeout(() => document.getElementById("simulador")?.scrollIntoView({ behavior: "smooth" }), 30);
+  window.dispatchEvent(new CustomEvent("rentcar:open-flow-modal"));
 }
 
 function ShufflingCards() {
@@ -480,7 +480,7 @@ function ShufflingCards() {
 
 // ─── Hero principal ────────────────────────────────────────────────────────────
 
-export default function Hero({ onShowSimulator }: { onShowSimulator?: () => void }) {
+export default function Hero() {
   const scrollTo = useScrollTo();
 
   return (
@@ -519,7 +519,7 @@ export default function Hero({ onShowSimulator }: { onShowSimulator?: () => void
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="max-w-md text-center text-sm font-medium leading-relaxed text-white md:text-left md:text-base"
+            className="max-w-md text-center text-base font-medium leading-relaxed text-white md:text-left md:text-lg"
           >
             Descubra o veículo certo para si — para comprar ou alugar.
             Catálogo completo, preços transparentes e entrega rápida em Moçambique.
@@ -533,18 +533,15 @@ export default function Hero({ onShowSimulator }: { onShowSimulator?: () => void
           >
             <button
               onClick={() => scrollTo("catalogo")}
-              className="group flex items-center justify-center gap-2 rounded-full bg-amber-500 px-6 py-2.5 text-sm font-black uppercase tracking-wider text-zinc-950 transition-all hover:-translate-y-0.5 hover:bg-amber-400 active:scale-95"
+              className="group flex items-center justify-center gap-2 rounded-full bg-amber-500 px-6 py-2.5 text-base font-black uppercase tracking-wider text-zinc-950 transition-all hover:-translate-y-0.5 hover:bg-amber-400 active:scale-95"
             >
               Ver Catálogo
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </button>
 
             <button
-              onClick={() => {
-                onShowSimulator?.();
-                scrollTo("simulador");
-              }}
-              className="flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 px-6 py-2.5 text-sm font-black uppercase tracking-wider text-white backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-amber-500/50 hover:text-white"
+              onClick={() => window.dispatchEvent(new CustomEvent("rentcar:open-flow-modal"))}
+              className="flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 px-6 py-2.5 text-base font-black uppercase tracking-wider text-white backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-amber-500/50 hover:text-white"
             >
               Simular Prestações
             </button>

@@ -5,7 +5,7 @@ import Footer from "../components/Footer";
 import XitiqueModal from "../components/XitiqueModal";
 import XitiqueRegulationsModal from "../components/XitiqueRegulationsModal";
 
-const fmt = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+const fmt = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + ',00';
 
 const STEPS = [
   {

@@ -41,7 +41,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
       { rootMargin: "-80px 0px -60% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] }
     );
 
-    const sections = ["hero", "catalogo", "como-funciona", "simulador", "pagamentos"];
+    const sections = ["hero", "catalogo", "como-funciona", "pagamentos"];
     sections.forEach((id) => {
       const el = document.getElementById(id);
       if (el) observer.observe(el);
@@ -77,6 +77,10 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
 
   const handleSimular = () => {
     setMenuOpen(false);
+    try {
+      sessionStorage.removeItem("rentcar:selectedVehicle:v1");
+      localStorage.removeItem("rentcar:selectedVehicle:v1");
+    } catch { /* ignore */ }
     if (path !== "/") {
       navigate("/");
       setTimeout(() => window.dispatchEvent(new CustomEvent("rentcar:open-flow-modal")), 150);
@@ -109,7 +113,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
   
   if (activeSection === "hero" || (!activeSection && !scrolled)) {
     bgClass = "bg-transparent border-transparent";
-  } else if (activeSection === "como-funciona" || activeSection === "simulador") {
+  } else if (activeSection === "como-funciona") {
     bgClass = "bg-zinc-900 border-zinc-800";
   } else {
     bgClass = "bg-zinc-950 border-zinc-900";
@@ -127,7 +131,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
         <div className="hidden md:flex items-center gap-2">
           <button
             onClick={() => navigate("/admin")}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold text-white border border-zinc-700 hover:border-zinc-500 hover:text-white transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-base font-semibold text-white border border-zinc-700 hover:border-zinc-500 hover:text-white transition-all"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
@@ -138,7 +142,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
           <div className="w-px h-5 bg-zinc-800 mx-1" />
           <button
             onClick={handleSimular}
-            className="px-5 py-2 text-sm font-semibold rounded-full bg-amber-500 text-zinc-950 hover:bg-amber-400 transition-all hover:scale-105 active:scale-95"
+            className="px-5 py-2 text-base font-semibold rounded-full bg-amber-500 text-zinc-950 hover:bg-amber-400 transition-all hover:scale-105 active:scale-95"
           >
             Simular agora
           </button>
@@ -167,7 +171,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
           {/* Logout */}
           <button
             onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold text-red-400 border border-red-500/20 hover:bg-red-500/10 hover:border-red-500/40 transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-base font-semibold text-red-400 border border-red-500/20 hover:bg-red-500/10 hover:border-red-500/40 transition-all"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -179,7 +183,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
           <div className="w-px h-5 bg-zinc-800 mx-1" />
           <button
             onClick={handleSimular}
-            className="px-5 py-2 text-sm font-semibold rounded-full bg-amber-500 text-zinc-950 hover:bg-amber-400 transition-all hover:scale-105 active:scale-95"
+            className="px-5 py-2 text-base font-semibold rounded-full bg-amber-500 text-zinc-950 hover:bg-amber-400 transition-all hover:scale-105 active:scale-95"
           >
             Simular agora
           </button>
@@ -233,7 +237,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
         <>
           {NAV_LINKS.map(([id, label]) => (
             <button key={id} onClick={() => handleNav(id)}
-              className={`text-left text-sm font-bold py-2.5 transition-colors ${
+              className={`text-left text-base font-bold py-2.5 transition-colors ${
                 activeSection === id ? "text-amber-400" : "text-white hover:text-amber-400"
               }`}>
               {label}
@@ -258,7 +262,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
           ].map(([href, label]) => (
             <button key={href}
               onClick={() => { navigate(href); setMenuOpen(false); }}
-              className={`text-left text-sm font-bold py-2.5 transition-colors ${
+              className={`text-left text-base font-bold py-2.5 transition-colors ${
                 path.startsWith(href) ? "text-amber-400" : "text-white hover:text-amber-400"
               }`}>
               {label}
@@ -309,7 +313,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
       {/* Simular CTA */}
       {!isAdmin && (
         <button onClick={handleSimular}
-          className="mt-3 px-5 py-3 text-sm font-bold rounded-full bg-amber-500 text-zinc-950 w-full hover:bg-amber-400 active:scale-95 transition-all">
+          className="mt-3 px-5 py-3 text-base font-bold rounded-full bg-amber-500 text-zinc-950 w-full hover:bg-amber-400 active:scale-95 transition-all">
           Simular agora
         </button>
       )}
@@ -350,7 +354,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
               <li key={id}>
                 <button
                   onClick={() => handleNav(id)}
-                  className={`text-sm font-bold transition-colors tracking-wide ${
+                  className={`text-base font-bold transition-colors tracking-wide ${
                     activeSection === id ? "text-amber-500" : "text-white hover:text-amber-500"
                   }`}
                 >

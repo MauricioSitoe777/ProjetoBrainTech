@@ -10,7 +10,7 @@ interface BookingPanelProps {
   onSuccess?: () => void;
 }
 
-const fmtN = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+const fmtN = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',00';
 
 export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps) {
   const { user, allUsers } = useAuth();

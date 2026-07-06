@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from 'react';
 import { useVehicles, type VehicleData } from '../context/VehiclesContext';
 import { useReservations } from '../context/ReservationsContext';
+import { useRoute } from '../hooks/useRoute';
 
 const CATEGORIES = ['suv', 'pickup', 'sedan', 'hatchback', 'van'];
 const MODES = ['aluguer', 'compra'];
@@ -13,9 +14,11 @@ const emptyForm: Omit<VehicleData, 'id'> = {
 export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
   const { vehicles, addVehicle, updateVehicle, removeVehicle } = useVehicles();
   const { reservations, blocks } = useReservations();
+  const { navigate } = useRoute();
   const [showForm, setShowForm] = useState(false);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
 
-  const vehicleStats = useMemo(() => {
+  const { vehicleStats, emAluguerIds, reservadasIds, manutencaoIds } = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     const emAluguerIds = new Set(
       reservations.filter(r => r.status === 'ativa').map(r => r.vehicleId)
@@ -37,13 +40,26 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
       });
     const occupied = new Set([...emAluguerIds, ...reservadasIds, ...manutencaoIds]);
     return {
-      total:       vehicles.length,
-      disponiveis: vehicles.filter(v => v.available && !occupied.has(v.id)).length,
-      emAluguer:   emAluguerIds.size,
-      reservadas:  reservadasIds.size,
-      emManutencao: manutencaoIds.size,
+      emAluguerIds,
+      reservadasIds,
+      manutencaoIds,
+      vehicleStats: {
+        total:        vehicles.length,
+        disponiveis:  vehicles.filter(v => v.available && !occupied.has(v.id)).length,
+        emAluguer:    emAluguerIds.size,
+        reservadas:   reservadasIds.size,
+        emManutencao: manutencaoIds.size,
+      },
     };
   }, [vehicles, reservations, blocks]);
+
+  const getVehicleStatus = (id: number, available: boolean) => {
+    if (emAluguerIds.has(id))  return { label: 'Em Aluguer',    col: 'text-amber-400',   bg: 'bg-amber-400/15 border-amber-400/30' };
+    if (reservadasIds.has(id)) return { label: 'Reservada',     col: 'text-orange-400',  bg: 'bg-orange-400/15 border-orange-400/30' };
+    if (manutencaoIds.has(id)) return { label: 'Em Manutenção', col: 'text-red-400',     bg: 'bg-red-400/15 border-red-400/30' };
+    if (available)             return { label: 'Disponível',    col: 'text-emerald-400', bg: 'bg-emerald-400/15 border-emerald-400/30' };
+    return                            { label: 'Indisponível',  col: 'text-zinc-400',    bg: 'bg-zinc-700/40 border-zinc-600' };
+  };
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [imageInput, setImageInput] = useState('');
@@ -205,16 +221,19 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
           {[
             { label: 'Total de Viaturas', value: vehicleStats.total,        color: 'text-white',       dot: 'bg-white' },
             { label: 'Disponíveis',       value: vehicleStats.disponiveis,  color: 'text-emerald-400', dot: 'bg-emerald-400' },
-            { label: 'Em Aluguer',        value: vehicleStats.emAluguer,    color: 'text-blue-400',    dot: 'bg-blue-400' },
+            { label: 'Em Aluguer',        value: vehicleStats.emAluguer,    color: 'text-amber-400',   dot: 'bg-amber-400' },
             { label: 'Reservadas',        value: vehicleStats.reservadas,   color: 'text-orange-400',  dot: 'bg-orange-400' },
             { label: 'Em Manutenção',     value: vehicleStats.emManutencao, color: 'text-red-400',     dot: 'bg-red-400' },
           ].map(k => (
-            <div key={k.label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${k.dot}`} />
-                <span className="text-xs text-white uppercase font-bold tracking-wide leading-tight">{k.label}</span>
+            <div key={k.label} className="bg-zinc-900 border border-amber-500/20 rounded-2xl overflow-hidden">
+              <div className="h-0.5 w-full bg-amber-500/40" />
+              <div className="p-4 flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${k.dot}`} />
+                  <span className="text-xs text-white uppercase font-bold tracking-wide leading-tight">{k.label}</span>
+                </div>
+                <p className={`text-3xl font-black mt-1 ${k.color}`}>{k.value}</p>
               </div>
-              <p className={`text-3xl font-black mt-1 ${k.color}`}>{k.value}</p>
             </div>
           ))}
         </div>
@@ -236,64 +255,121 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
           ))}
         </div>
 
-        {/* Vehicle list */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map(v => (
-            <div key={v.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/50 overflow-hidden group">
-              <div className="relative h-40 bg-zinc-800">
-                {v.img ? (
-                  <img src={v.img} alt={v.name} className="w-full h-full object-cover" loading="lazy" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-white text-3xl">🚗</div>
-                )}
-                <div className="absolute top-2 right-2 flex gap-1">
-                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
-                    v.mode === 'aluguer' ? 'bg-blue-500/90 text-white' : 'bg-amber-500/90 text-zinc-950'
-                  }`}>{v.mode}</span>
-                </div>
-                <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-zinc-950/70 text-white border border-zinc-700/50">
-                  {v.cat}
-                </div>
-                {v.images && v.images.length > 1 && (
-                  <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded-md bg-black/60 text-[10px] text-white font-semibold">
-                    📷 {v.images.length} fotos
-                  </div>
-                )}
-              </div>
-              <div className="p-4">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div>
-                    <h3 className="text-white font-bold text-sm">{v.name}</h3>
-                    <p className="text-white text-xs mt-0.5">{v.year} · {v.fuel} · {v.seats} lugares{v.matricula ? ` · ${v.matricula}` : ''}</p>
-                  </div>
-                  <div className="text-amber-400 font-black text-xs text-right whitespace-nowrap">{v.price}</div>
-                </div>
-                <div className="flex gap-2 mt-3">
-                  <button
-                    onClick={() => openEdit(v)}
-                    className="flex-1 py-2 rounded-xl text-xs font-semibold border border-zinc-700 text-white hover:bg-zinc-800 transition"
+        {/* Vehicle list + actions panel */}
+        <div className="flex gap-5 items-start">
+          {/* Grid */}
+          <div className="flex-1 min-w-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filtered.map(v => {
+                const st = getVehicleStatus(v.id, v.available);
+                const isSelected = selectedVehicleId === v.id;
+                return (
+                  <div
+                    key={v.id}
+                    onClick={() => setSelectedVehicleId(isSelected ? null : v.id)}
+                    className={`rounded-2xl border bg-zinc-900 overflow-hidden cursor-pointer transition-all ${
+                      isSelected
+                        ? 'border-amber-500/60 ring-1 ring-amber-500/30'
+                        : 'border-zinc-800 hover:border-zinc-700'
+                    }`}
                   >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => setConfirmDelete(v.id)}
-                    className="py-2 px-3 rounded-xl text-xs font-semibold border border-red-500/30 text-red-400 hover:bg-red-500/10 transition"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
+                    {/* Image */}
+                    <div className="relative h-44 bg-zinc-800">
+                      {v.img ? (
+                        <img src={v.img} alt={v.name} className="w-full h-full object-cover" loading="lazy" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-4xl">🚗</div>
+                      )}
+                      {/* Status badge — top left */}
+                      <div className={`absolute top-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-bold border ${st.bg} ${st.col}`}>
+                        {st.label}
+                      </div>
+                      {/* Mode badge — top right */}
+                      <div className={`absolute top-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                        v.mode === 'aluguer' ? 'bg-zinc-950/80 text-white border border-zinc-700/50' : 'bg-amber-500/90 text-zinc-950'
+                      }`}>
+                        {v.mode === 'aluguer' ? 'Aluguer' : 'Compra'}
+                      </div>
+                      {/* Photo count */}
+                      {v.images && v.images.length > 1 && (
+                        <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded-md bg-black/60 text-[10px] text-white font-semibold">
+                          📷 {v.images.length}
+                        </div>
+                      )}
+                    </div>
+                    {/* Info */}
+                    <div className="p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <h3 className="text-white font-bold text-sm truncate">{v.name}</h3>
+                          <p className="text-zinc-400 text-xs mt-0.5 truncate">{v.year} · {v.fuel} · {v.seats} lug.{v.matricula ? ` · ${v.matricula}` : ''}</p>
+                        </div>
+                        <div className="text-amber-400 font-black text-xs text-right whitespace-nowrap shrink-0">{v.price}</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          ))}
-        </div>
 
-        {filtered.length === 0 && (
-          <div className="text-center py-16 text-white text-sm">
-            Nenhum veículo encontrado nesta categoria.
+            {filtered.length === 0 && (
+              <div className="text-center py-16 text-white text-sm">
+                Nenhum veículo encontrado nesta categoria.
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Actions panel */}
+          {selectedVehicleId !== null && (() => {
+            const sv = vehicles.find(v => v.id === selectedVehicleId);
+            if (!sv) return null;
+            const st = getVehicleStatus(sv.id, sv.available);
+            return (
+              <div className="w-56 shrink-0 bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden sticky top-6">
+                <div className="h-0.5 w-full bg-amber-500/40" />
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-white text-xs font-bold uppercase tracking-wide">Ações</span>
+                    <button
+                      onClick={() => setSelectedVehicleId(null)}
+                      className="w-5 h-5 rounded-full bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center text-xs transition"
+                    >×</button>
+                  </div>
+                  <div className="mb-3 pb-3 border-b border-zinc-800">
+                    <p className="text-white font-bold text-sm truncate">{sv.name}</p>
+                    <span className={`inline-block mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${st.bg} ${st.col}`}>{st.label}</span>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => navigate('/admin/aluguer')}
+                      className="w-full py-2 rounded-xl text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition text-left px-3"
+                    >
+                      Alugar
+                    </button>
+                    <button
+                      onClick={() => navigate('/admin/compra')}
+                      className="w-full py-2 rounded-xl text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition text-left px-3"
+                    >
+                      Colocar à Venda
+                    </button>
+                    <button
+                      onClick={() => openEdit(sv)}
+                      className="w-full py-2 rounded-xl text-xs font-semibold border border-zinc-700 text-white hover:bg-zinc-800 transition text-left px-3"
+                    >
+                      Editar Viatura
+                    </button>
+                    <button
+                      onClick={() => { setConfirmDelete(sv.id); setSelectedVehicleId(null); }}
+                      className="w-full py-2 rounded-xl text-xs font-semibold border border-red-500/20 text-red-400 hover:bg-red-500/10 transition text-left px-3"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
       </div>
 
       {/* Delete confirmation */}

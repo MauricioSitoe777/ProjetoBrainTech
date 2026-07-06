@@ -24,6 +24,8 @@ function NumberField({
   min,
   suffix,
   disabled,
+  zeroAsEmpty,
+  placeholder,
 }: {
   label: string;
   value: number;
@@ -32,9 +34,12 @@ function NumberField({
   step?: number;
   suffix?: string;
   disabled?: boolean;
+  zeroAsEmpty?: boolean;
+  placeholder?: string;
 }) {
   const formatNumber = (num: number) => {
-    if (!Number.isFinite(num)) return "0";
+    if (!Number.isFinite(num)) return "";
+    if (zeroAsEmpty && num === 0) return "";
     return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
 
@@ -75,7 +80,8 @@ function NumberField({
           onBlur={handleBlur}
           onFocus={(e) => !disabled && e.currentTarget.select()}
           disabled={disabled}
-          className={`w-full bg-transparent text-sm text-white font-medium outline-none ${disabled ? 'cursor-not-allowed' : ''}`}
+          placeholder={placeholder}
+          className={`w-full bg-transparent text-sm text-white font-medium outline-none placeholder:text-zinc-500 ${disabled ? 'cursor-not-allowed' : ''}`}
         />
         {suffix ? <span className="text-white text-xs font-normal">{suffix}</span> : null}
       </div>
@@ -165,7 +171,7 @@ export default function Simulator({
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   // Compra
-  const [vehiclePrice, setVehiclePrice] = useState(1_500_000);
+  const [vehiclePrice, setVehiclePrice] = useState(0);
   const [income, setIncome] = useState(80_000);
   const [downPayment, setDownPayment] = useState(0);
   const [paymentPlan, setPaymentPlan] = useState<PaymentPlan>("prestacoes");
@@ -251,6 +257,11 @@ export default function Simulator({
 
       if (parsed.id) {
         setSelectedVehicleId(parsed.id);
+        // Clear after reading so generic opens always start fresh
+        try {
+          sessionStorage.removeItem("rentcar:selectedVehicle:v1");
+          localStorage.removeItem("rentcar:selectedVehicle:v1");
+        } catch { /* ignore */ }
       }
 
       if (lockedFlow) {
@@ -431,7 +442,7 @@ export default function Simulator({
     clientName.trim().length >= 2 &&
     contactValid &&
     rentalDetailsOk &&
-    (flow === "aluguer" || eligivel);
+    (flow === "aluguer" || (eligivel && vehiclePrice > 0));
 
   const handleSubmit = () => {
     setSubmitError("");
@@ -707,7 +718,8 @@ export default function Simulator({
                 <div className={`grid gap-3 ${paymentPlan === "prestacoes" ? "grid-cols-3" : "grid-cols-2"}`}>
                   <NumberField label="Preço do Veículo" value={vehiclePrice}
                     onChange={(v) => setVehiclePrice(Math.min(8_000_000, Math.max(0, v)))} min={0} suffix="MT"
-                    disabled={!isAdmin} />
+                    disabled={!!selectedVehicleId && !isAdmin}
+                    zeroAsEmpty placeholder="Insira o valor" />
                   {paymentPlan === "prestacoes" && (
                     <NumberField label="O Meu Salário" value={income}
                       onChange={(v) => setIncome(Math.min(100_000_000, Math.max(0, v)))} min={0} suffix="MT/mês" />
@@ -1157,18 +1169,19 @@ export default function Simulator({
                 </div>
                 <div className="px-4 pb-4">
                   <button
-                    onClick={() => {
-                      setSubmitted(false);
-                      setSubmitError("");
-                      setClientName(authUser?.nome ?? "");
-                      setClientContact("");
-                      setClientContact2("");
-                    }}
-                    className="w-full py-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-sm font-medium transition-colors"
+                    onClick={() => window.dispatchEvent(new CustomEvent("rentcar:close-flow-modal"))}
+                    className="w-full py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-sm font-bold transition-colors"
                   >
-                    {flow === 'compra' ? 'Nova compra' : 'Nova reserva'}
+                    Concluído
                   </button>
                 </div>
+              </div>
+            ) : !authUser && !selectedVehicleId ? (
+              <div className="mt-5 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-4 text-center relative z-10">
+                <p className="text-white text-xs font-semibold mb-1">Simulação de exploração</p>
+                <p className="text-white text-xs leading-relaxed">
+                  Nenhum pedido será enviado. Para avançar, escolha uma viatura no catálogo e clique em <span className="text-amber-400 font-semibold">Reservar</span> ou <span className="text-amber-400 font-semibold">Comprar</span>.
+                </p>
               </div>
             ) : (
               <button

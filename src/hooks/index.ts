@@ -30,7 +30,7 @@ export function useScrollTo(): (id: string) => void {
  */
 export function useCurrencyFormatter(): (n: number) => string {
   return useCallback(
-    (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'),
+    (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',00',
     []
   );
 }

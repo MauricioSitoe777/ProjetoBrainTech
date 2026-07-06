@@ -20,7 +20,7 @@ const FORMAS = [
 ];
 
 const fmtNum = (n: number) =>
-  Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',00';
 
 function fmtDateDisplay(d: string, h: string): string {
   if (!d) return '';

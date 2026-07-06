@@ -2,7 +2,7 @@ import { useAuth } from '../context/AuthContext';
 import { useXitique } from '../context/XitiqueContext';
 import { BrandLogo } from '../components/BrandLogo';
 
-const fmt = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' MT';
+const fmt = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',00 MT';
 
 export function XitiqueClientPage({ onExit, embedded }: { onExit?: () => void; embedded?: boolean }) {
   const { user: authUser, logout, allUsers } = useAuth();

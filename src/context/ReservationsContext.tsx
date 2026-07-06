@@ -59,7 +59,10 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem('rentcar:reservations:v2');
     return saved ? JSON.parse(saved) : mockReservations;
   });
-  const [blocks, setBlocks] = useState<BlockedPeriod[]>(mockBlockedPeriods);
+  const [blocks, setBlocks] = useState<BlockedPeriod[]>(() => {
+    const saved = localStorage.getItem('rentcar:blocks:v1');
+    return saved ? JSON.parse(saved) : mockBlockedPeriods;
+  });
   const [rules, setRules] = useState<BusinessRules>(() => {
     const saved = localStorage.getItem('rentcar:businessRules:v2');
     return saved ? JSON.parse(saved) : DEFAULT_BUSINESS_RULES;
@@ -68,6 +71,10 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem('rentcar:reservations:v2', JSON.stringify(reservations));
   }, [reservations]);
+
+  useEffect(() => {
+    localStorage.setItem('rentcar:blocks:v1', JSON.stringify(blocks));
+  }, [blocks]);
 
   useEffect(() => {
     localStorage.setItem('rentcar:businessRules:v2', JSON.stringify(rules));
@@ -309,8 +316,22 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
             if (unpaid.length > 0) {
               const totalUnpaid = unpaid.reduce((s, p) => s + p.valor, 0);
               const newTotal    = Math.max(0, totalUnpaid - surplus);
-              const novoValor   = Math.round(newTotal / unpaid.length);
-              prestacoes = prestacoes.map(p => !p.paga ? { ...p, valor: novoValor } : p);
+              if (newTotal === 0) {
+                // Excedente cobre todas as restantes — fechá-las automaticamente
+                prestacoes = prestacoes.map(p =>
+                  p.paga ? p : {
+                    ...p,
+                    valor: 0,
+                    paga: true,
+                    valorPago: 0,
+                    dataPagamento: today,
+                    notasPagamento: 'Liquidado antecipadamente',
+                  }
+                );
+              } else {
+                const novoValor = Math.round(newTotal / unpaid.length);
+                prestacoes = prestacoes.map(p => !p.paga ? { ...p, valor: novoValor } : p);
+              }
             }
           }
         }

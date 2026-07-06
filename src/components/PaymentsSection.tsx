@@ -17,7 +17,7 @@ export default function PaymentsSection({
           <div className="text-amber-500 text-[10px] font-bold uppercase tracking-widest mb-2">
             Pagamentos
           </div>
-          <h2 className="text-white text-2xl md:text-3xl font-black tracking-tight">
+          <h2 className="text-white text-3xl md:text-4xl font-black tracking-tight">
             Pague como preferir
           </h2>
         </div>
@@ -30,7 +30,7 @@ export default function PaymentsSection({
               <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
           </div>
-          <p className="text-white text-[13px] font-medium leading-relaxed">
+          <p className="text-white text-sm font-medium leading-relaxed">
             <span className="text-amber-500 font-bold uppercase text-[10px] block mb-0.5">Processo de Pagamento</span>
             O pagamento <span className="text-white font-semibold">não é processado nesta aplicação</span>. Após simular ou reservar, o administrador entrará em contacto para negociar e fornecer as instruções de pagamento seguro.
           </p>
@@ -57,8 +57,8 @@ export default function PaymentsSection({
                   }}
                 />
               </div>
-              <h3 className="text-white font-semibold text-sm mb-1">{m.name}</h3>
-              <p className="text-white text-[13px] leading-relaxed">{m.desc}</p>
+              <h3 className="text-white font-semibold text-base mb-1">{m.name}</h3>
+              <p className="text-white text-sm leading-relaxed">{m.desc}</p>
             </div>
           ))}
         </div>

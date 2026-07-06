@@ -8,13 +8,13 @@ const STATUS_CFG: Record<ReservationStatus, { label: string; className: string }
   pendente:            { label: 'Aguarda Pagamento',      className: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
   compra_aprovada:     { label: 'Compra Aprovada',        className: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
   entrada_paga:        { label: 'Entrada Paga',           className: 'bg-teal-400/10 text-teal-400 border-teal-400/20' },
-  em_prestacao:        { label: 'Em Prestação',           className: 'bg-blue-400/10 text-blue-400 border-blue-400/20' },
+  em_prestacao:        { label: 'Em Prestação',           className: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
   prestacao_atraso:    { label: 'Prestação em Atraso',    className: 'bg-red-500/15 text-red-400 border-red-500/30' },
   liquidada:           { label: 'Liquidada',              className: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
   cancelada:           { label: 'Cancelado',              className: 'bg-red-400/10 text-red-400 border-red-400/20' },
   confirmada:          { label: 'Reserva Confirmada',     className: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
-  pronta_levantamento: { label: 'Pronta p/ Levantamento', className: 'bg-sky-400/10 text-sky-400 border-sky-400/20' },
-  ativa:               { label: 'Aluguer Ativo',          className: 'bg-blue-400/10 text-blue-400 border-blue-400/20' },
+  pronta_levantamento: { label: 'Pronta p/ Levantamento', className: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
+  ativa:               { label: 'Aluguer Ativo',          className: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
   devolucao_pendente:  { label: 'Devolução Pendente',     className: 'bg-orange-400/10 text-orange-400 border-orange-400/20' },
   concluida:           { label: 'Concluído',              className: 'bg-zinc-700 text-white border-zinc-600' },
 };
@@ -32,7 +32,7 @@ function stepIndex(status: ReservationStatus) {
   return FLOW_STEPS.findIndex(s => s.key === status);
 }
 
-const fmt     = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' MT';
+const fmt     = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',00 MT';
 const fmtDate = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' });
 
 const compraVehicles = VEHICLES.filter(v => v.mode === 'compra');
@@ -100,12 +100,12 @@ function PrestacoeModal({
 
         {/* Barra de progresso global */}
         <div className={`px-6 py-3 border-b border-zinc-800 flex items-center gap-4 ${isAtraso ? 'bg-red-500/5' : 'bg-zinc-950/40'}`}>
-          <span className={`text-2xl font-black tabular-nums ${isAtraso ? 'text-red-400' : allPaid ? 'text-emerald-400' : 'text-blue-400'}`}>
+          <span className={`text-2xl font-black tabular-nums ${isAtraso ? 'text-red-400' : allPaid ? 'text-emerald-400' : 'text-amber-400'}`}>
             {pagas}<span className="text-sm text-white font-bold">/{total}</span>
           </span>
           <div className="flex-1">
             <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
-              <div className={`h-full rounded-full transition-all duration-300 ${isAtraso ? 'bg-red-500' : allPaid ? 'bg-emerald-500' : 'bg-blue-500'}`}
+              <div className={`h-full rounded-full transition-all duration-300 ${isAtraso ? 'bg-red-500' : allPaid ? 'bg-emerald-500' : 'bg-amber-500'}`}
                 style={{ width: `${pct}%` }} />
             </div>
             <div className="flex justify-between mt-1 text-[10px] text-white">
@@ -130,7 +130,7 @@ function PrestacoeModal({
                   className={`px-6 py-3 flex items-center gap-3 transition-colors ${
                     p.paga                   ? 'bg-emerald-500/3'
                     : isProxima && isOverdue ? 'bg-red-500/5'
-                    : isProxima              ? 'bg-blue-500/3'
+                    : isProxima              ? 'bg-amber-500/3'
                     : ''
                   }`}
                 >
@@ -138,7 +138,7 @@ function PrestacoeModal({
                   <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 border ${
                     p.paga                   ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20'
                     : isProxima && isOverdue ? 'bg-red-500/15 text-red-400 border-red-500/20'
-                    : isProxima              ? 'bg-blue-500/15 text-blue-400 border-blue-500/20'
+                    : isProxima              ? 'bg-amber-500/15 text-amber-400 border-amber-500/20'
                     : 'bg-zinc-800/60 text-white border-zinc-700/50'
                   }`}>
                     {p.paga ? '✓' : p.numero}
@@ -165,7 +165,7 @@ function PrestacoeModal({
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded border shrink-0 ${
                     p.paga                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                     : isProxima && isOverdue ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                    : isProxima              ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                    : isProxima              ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                     : 'bg-zinc-900 text-white border-zinc-800'
                   }`}>
                     {p.paga
@@ -219,7 +219,7 @@ function PrestacoeModal({
                             className={`text-xs px-3 py-1 rounded-lg font-black transition-all disabled:opacity-40 ${
                               isOverdue
                                 ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30 border border-red-500/30'
-                                : 'bg-blue-600 text-white hover:bg-blue-500'
+                                : 'bg-amber-500 text-zinc-950 hover:bg-amber-400'
                             }`}>
                             {isOverdue ? '⚠ Receber' : '✓ Receber'}
                           </button>
@@ -389,17 +389,20 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {[
             { label: 'Pendentes',           value: kpis.pendentes,   color: 'text-amber-400',   dot: 'bg-amber-400',   hl: false },
-            { label: 'Em Prestação',        value: kpis.emPrestacao, color: 'text-blue-400',    dot: 'bg-blue-400',    hl: false },
+            { label: 'Em Prestação',        value: kpis.emPrestacao, color: 'text-amber-400',   dot: 'bg-amber-400',   hl: false },
             { label: 'Prestação em Atraso', value: kpis.emAtraso,    color: 'text-red-400',     dot: 'bg-red-500',     hl: kpis.emAtraso > 0 },
             { label: 'Liquidadas',          value: kpis.liquidadas,  color: 'text-emerald-400', dot: 'bg-emerald-400', hl: false },
-            { label: 'Canceladas',          value: kpis.canceladas,  color: 'text-white',    dot: 'bg-zinc-500',    hl: false },
+            { label: 'Canceladas',          value: kpis.canceladas,  color: 'text-white',       dot: 'bg-zinc-500',    hl: false },
           ].map(k => (
-            <div key={k.label} className={`border rounded-2xl p-4 flex flex-col gap-2 ${k.hl ? 'border-red-500/40 bg-red-500/5' : 'bg-zinc-900 border-zinc-800'}`}>
-              <div className="flex items-center gap-2">
-                <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${k.dot}`} />
-                <span className="text-xs text-white uppercase font-bold tracking-wide leading-tight">{k.label}</span>
+            <div key={k.label} className={`rounded-2xl overflow-hidden ${k.hl ? 'border border-red-500/40 bg-red-500/5' : 'bg-zinc-900 border border-amber-500/20'}`}>
+              {!k.hl && <div className="h-0.5 w-full bg-amber-500/40" />}
+              <div className="p-4 flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${k.dot}`} />
+                  <span className="text-xs text-white uppercase font-bold tracking-wide leading-tight">{k.label}</span>
+                </div>
+                <p className={`text-3xl font-black mt-1 ${k.color}`}>{k.value}</p>
               </div>
-              <p className={`text-3xl font-black mt-1 ${k.color}`}>{k.value}</p>
             </div>
           ))}
         </div>
@@ -525,14 +528,15 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
 
           const seenStatuses = new Set<string>();
           return (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {accionaveis.length === 0 && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl py-12 text-center text-white text-sm">
+                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl py-12 text-center text-white text-sm">
                   Sem compras com acções pendentes
                 </div>
               )}
               {accionaveis.map(r => {
                 const st              = STATUS_CFG[r.status];
+                const si              = stepIndex(r.status);
                 const prestacoes      = r.prestacoes ?? [];
                 const pagas           = prestacoes.filter(p => p.paga).length;
                 const total           = prestacoes.length;
@@ -548,93 +552,139 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                   <div
                     key={r.id}
                     id={isFirstOfStatus ? `compra-status-${r.status}` : undefined}
-                    className={`bg-zinc-900 border rounded-xl px-5 py-4 space-y-3 transition-all ${
-                      isAtraso      ? 'border-red-500/30 bg-red-500/5' :
+                    className={`bg-zinc-900 border rounded-2xl overflow-hidden transition-all ${
+                      isAtraso      ? 'border-red-500/30' :
                       isHighlighted ? 'border-amber-400/50 ring-1 ring-amber-400/20' :
-                      gerarConfig?.id === r.id ? 'border-blue-500/30' :
+                      gerarConfig?.id === r.id ? 'border-amber-500/40' :
                       'border-zinc-800'
                     }`}
                   >
-                    {/* ── Linha de info + botões ── */}
-                    <div className="flex flex-wrap items-center justify-between gap-3">
+                    {/* ── Cabeçalho ── */}
+                    <div className={`px-5 pt-4 pb-3 flex items-center justify-between gap-3 border-b border-zinc-800/60 ${isAtraso ? 'bg-red-500/5' : ''}`}>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-white font-black text-sm">{r.clientName}</p>
+                          <p className="text-sm font-black text-white">{r.clientName}</p>
                           <span className={`text-xs border rounded-md px-2 py-0.5 font-semibold ${st.className}`}>{st.label}</span>
                           {isAtraso && (
-                            <span className="text-[10px] font-black text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-md animate-pulse">
-                              ⚠ ATRASO
-                            </span>
+                            <span className="text-[10px] font-black text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-md animate-pulse">⚠ ATRASO</span>
                           )}
                         </div>
                         <p className="text-xs text-white mt-0.5">
                           {vehicleName(r.vehicleId)} · {fmt(r.valorTotal)}
-                          {total > 0 && ` · Prestações ${pagas}/${total}`}
+                          {total > 0 && ` · ${pagas}/${total} prestações`}
                         </p>
                       </div>
+                      <span className="text-[10px] text-white/30 font-mono shrink-0">#{r.id.slice(0,8).toUpperCase()}</span>
+                    </div>
 
-                      <div className="flex flex-wrap gap-2 shrink-0">
-                        {r.status === 'pendente' && (
-                          <button disabled={isBlocked} onClick={() => advance(r.id, 'compra_aprovada')}
-                            className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-emerald-400/10 text-emerald-400 border border-emerald-400/20 hover:bg-emerald-400/20 disabled:opacity-50 transition-all">
-                            Aprovar Compra
-                          </button>
-                        )}
-                        {r.status === 'compra_aprovada' && (<>
-                          <button disabled={isBlocked} onClick={() => advance(r.id, 'entrada_paga')}
-                            className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-teal-400/10 text-teal-400 border border-teal-400/20 hover:bg-teal-400/20 disabled:opacity-50 transition-all">
-                            Entrada Recebida
-                          </button>
-                          <button disabled={isBlocked} onClick={() => openGerarConfig(r.id, true)}
-                            className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-zinc-700 text-white border border-zinc-600 hover:bg-zinc-600 disabled:opacity-50 transition-all"
-                            title="Funcionário público — sem entrada">
-                            Sem Entrada
-                          </button>
-                        </>)}
-                        {r.status === 'entrada_paga' && (
-                          gerarConfig?.id !== r.id
-                            ? <button disabled={isBlocked} onClick={() => openGerarConfig(r.id, false)}
-                                className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-blue-400/10 text-blue-400 border border-blue-400/20 hover:bg-blue-400/20 disabled:opacity-50 transition-all">
-                                Definir Plano de Prestações
-                              </button>
-                            : <button onClick={() => setGerarConfig(null)}
-                                className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 transition-all">
-                                Cancelar
-                              </button>
-                        )}
-                        {(r.status === 'em_prestacao' || r.status === 'prestacao_atraso') && (<>
-                          {allPaid && (
-                            <button disabled={isBlocked} onClick={() => advance(r.id, 'liquidada')}
-                              className="text-xs px-3 py-1.5 rounded-lg font-black bg-emerald-500 text-white hover:bg-emerald-400 disabled:opacity-50 transition-all">
-                              ✓ Liquidar Contrato
-                            </button>
-                          )}
-                          <button onClick={() => setModalAberto(r.id)}
-                            className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                              isAtraso
-                                ? 'bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/25'
-                                : 'bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20'
-                            }`}>
-                            Gerir Prestações
-                          </button>
-                          {isAtraso && (
-                            <button disabled={isBlocked} onClick={() => advance(r.id, 'em_prestacao')}
-                              className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-blue-400/10 text-blue-400 border border-blue-400/20 hover:bg-blue-400/20 disabled:opacity-50 transition-all">
-                              Regularizar
-                            </button>
-                          )}
-                          {!isAtraso && hasOverdue && (
-                            <button disabled={isBlocked} onClick={() => advance(r.id, 'prestacao_atraso')}
-                              className="text-xs px-3 py-1.5 rounded-lg font-semibold border border-red-500/30 text-red-400 hover:bg-red-500/10 disabled:opacity-50 transition-all">
-                              ⚠ Marcar Atraso
-                            </button>
-                          )}
-                        </>)}
-                        <button disabled={isBlocked} onClick={() => cancelReservation(r.id)}
-                          className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 disabled:opacity-50 transition-all">
-                          Cancelar
-                        </button>
+                    {/* ── Progress tracker ── */}
+                    <div className="px-5 py-4 border-b border-zinc-800/60">
+                      <div className="flex items-start">
+                        {FLOW_STEPS.map((step, i) => {
+                          const done   = si > i;
+                          const active = si === i;
+                          return (
+                            <React.Fragment key={step.key}>
+                              <div className="flex flex-col items-center shrink-0">
+                                <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
+                                  done   ? 'bg-amber-500 border-amber-500 text-zinc-950' :
+                                  active ? 'border-amber-400 bg-zinc-800 text-amber-400' :
+                                           'border-zinc-700 bg-zinc-800/60 text-white'
+                                }`}>
+                                  {done
+                                    ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                    : <span className="text-[9px] font-black">{i + 1}</span>
+                                  }
+                                </div>
+                                <span className={`text-[9px] mt-1 font-semibold text-center leading-tight max-w-[50px] ${
+                                  done ? 'text-amber-400' : active ? 'text-amber-300' : 'text-white'
+                                }`}>{step.label}</span>
+                              </div>
+                              {i < FLOW_STEPS.length - 1 && (
+                                <div className={`flex-1 h-0.5 mt-3.5 transition-all ${done ? 'bg-amber-500' : 'bg-zinc-700'}`} />
+                              )}
+                            </React.Fragment>
+                          );
+                        })}
                       </div>
+                    </div>
+
+                    {/* ── Botões de acção com ícones ── */}
+                    <div className="px-5 py-3 flex flex-wrap items-center gap-2">
+
+                      {/* 1. Aprovar */}
+                      {r.status === 'pendente' && (
+                        <button disabled={isBlocked} onClick={() => advance(r.id, 'compra_aprovada')}
+                          className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 disabled:opacity-50 transition-all">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                          Aprovar
+                        </button>
+                      )}
+
+                      {/* 2. Com Entrada */}
+                      {r.status === 'compra_aprovada' && (
+                        <button disabled={isBlocked} onClick={() => advance(r.id, 'entrada_paga')}
+                          className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-bold bg-teal-500/10 text-teal-400 border border-teal-500/20 hover:bg-teal-500/20 disabled:opacity-50 transition-all">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                          Com Entrada
+                        </button>
+                      )}
+
+                      {/* 3. Sem Entrada */}
+                      {r.status === 'compra_aprovada' && (
+                        <button disabled={isBlocked} onClick={() => openGerarConfig(r.id, true)}
+                          className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-bold bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 disabled:opacity-50 transition-all">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                          Sem Entrada
+                        </button>
+                      )}
+
+                      {/* 4. Definir Plano */}
+                      {r.status === 'entrada_paga' && gerarConfig?.id !== r.id && (
+                        <button disabled={isBlocked} onClick={() => openGerarConfig(r.id, false)}
+                          className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 disabled:opacity-50 transition-all">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                          Definir Plano
+                        </button>
+                      )}
+
+                      {/* Liquidar (quando todas pagas) */}
+                      {allPaid && (r.status === 'em_prestacao' || r.status === 'prestacao_atraso') && (
+                        <button disabled={isBlocked} onClick={() => advance(r.id, 'liquidada')}
+                          className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-black bg-emerald-500 text-white hover:bg-emerald-400 disabled:opacity-50 transition-all">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                          Liquidar Contrato
+                        </button>
+                      )}
+
+                      {/* Gerir Prestações */}
+                      {(r.status === 'em_prestacao' || r.status === 'prestacao_atraso') && (
+                        <button onClick={() => setModalAberto(r.id)}
+                          className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-bold transition-all ${
+                            isAtraso
+                              ? 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20'
+                              : 'bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'
+                          }`}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                          Gerir Prestações
+                        </button>
+                      )}
+
+                      {/* Regularizar (atraso) */}
+                      {isAtraso && (
+                        <button disabled={isBlocked} onClick={() => advance(r.id, 'em_prestacao')}
+                          className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 disabled:opacity-50 transition-all">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                          Regularizar
+                        </button>
+                      )}
+
+                      {/* Cancelar — sempre no fim, destacado */}
+                      <button disabled={isBlocked} onClick={() => cancelReservation(r.id)}
+                        className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-bold bg-zinc-800 text-red-400 border border-red-500/20 hover:bg-red-500/10 disabled:opacity-50 transition-all ml-auto">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        Cancelar
+                      </button>
                     </div>
 
                     {/* ── Painel de configuração do plano ── */}
@@ -651,73 +701,60 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                       const valorPrest = gerarNum > 0 ? Math.round(restante / gerarNum) : 0;
 
                       return (
-                        <div className="border-t border-blue-500/20 pt-3 space-y-3">
+                        <div className="border-t border-amber-500/20 px-5 py-4 space-y-3">
                           <div className="flex items-center gap-2 mb-1">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Configurar Plano de Prestações</span>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Configurar Plano de Prestações</span>
                           </div>
 
                           <div className="grid grid-cols-2 gap-3">
                             <div>
                               <label className="text-[10px] text-white font-bold block mb-1">Data da 1ª Prestação</label>
-                              <input
-                                type="date"
-                                value={gerarData}
-                                min={today}
+                              <input type="date" value={gerarData} min={today}
                                 onChange={e => setGerarData(e.target.value)}
-                                className="w-full bg-zinc-800 border border-zinc-700 focus:border-blue-500 text-white rounded-lg px-3 py-2 text-xs outline-none"
-                              />
+                                className="w-full bg-zinc-800 border border-zinc-700 focus:border-amber-500 text-white rounded-lg px-3 py-2 text-xs outline-none" />
                             </div>
                             <div>
                               <label className="text-[10px] text-white font-bold block mb-1">Nº de Prestações</label>
-                              <input
-                                type="number"
-                                min={1} max={60}
-                                value={gerarNum}
+                              <input type="number" min={1} max={60} value={gerarNum}
                                 onChange={e => setGerarNum(Math.max(1, parseInt(e.target.value) || 1))}
-                                className="w-full bg-zinc-800 border border-zinc-700 focus:border-blue-500 text-white rounded-lg px-3 py-2 text-xs outline-none"
-                              />
+                                className="w-full bg-zinc-800 border border-zinc-700 focus:border-amber-500 text-white rounded-lg px-3 py-2 text-xs outline-none" />
                             </div>
                           </div>
 
-                          {/* Resumo financeiro */}
                           <div className="bg-zinc-800/50 rounded-xl px-4 py-3 flex flex-wrap gap-4 text-xs">
-                            <span className="text-white">Valor por prestação: <span className="text-amber-400 font-black">{fmt(valorPrest)}</span></span>
-                            {gerarConfig.semEntrada && <span className="text-blue-400 font-bold">· Sem entrada</span>}
+                            <span className="text-white">Prestação: <span className="text-amber-400 font-black">{fmt(valorPrest)}</span></span>
+                            {gerarConfig.semEntrada && <span className="text-amber-400 font-bold">· Sem entrada</span>}
                             {!gerarConfig.semEntrada && r.deposito > 0 && <span className="text-white">Entrada: <span className="text-teal-400 font-black">{fmt(r.deposito)}</span></span>}
                             <span className="text-white">Total: <span className="text-white font-black">{fmt(r.valorTotal)}</span></span>
                           </div>
 
-                          {/* Preview das primeiras datas */}
                           {preview.length > 0 && (
                             <div>
                               <p className="text-[10px] text-white font-bold uppercase tracking-wider mb-1.5">Primeiras datas</p>
                               <div className="flex flex-wrap gap-2">
                                 {preview.map((d, i) => (
-                                  <span key={i} className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg px-2.5 py-1 text-xs">
-                                    <span className="w-4 h-4 rounded-full bg-blue-500/20 text-blue-400 text-[9px] font-black flex items-center justify-center shrink-0">{i + 1}</span>
+                                  <span key={i} className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2.5 py-1 text-xs">
+                                    <span className="w-4 h-4 rounded-full bg-amber-500/20 text-amber-400 text-[9px] font-black flex items-center justify-center shrink-0">{i + 1}</span>
                                     <span className="text-white font-bold">{d}</span>
                                     <span className="text-white tabular-nums">{fmt(valorPrest)}</span>
                                   </span>
                                 ))}
-                                {gerarNum > 3 && (
-                                  <span className="text-[10px] text-white flex items-center px-2">+{gerarNum - 3} mais</span>
-                                )}
+                                {gerarNum > 3 && <span className="text-[10px] text-white flex items-center px-2">+{gerarNum - 3} mais</span>}
                               </div>
                             </div>
                           )}
 
                           <div className="flex gap-2">
-                            <button
-                              disabled={!gerarData || gerarNum < 1 || isBlocked}
-                              onClick={confirmarGerar}
-                              className="text-xs px-4 py-2 rounded-lg font-black bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                            >
-                              Gerar Plano e Notificar Cliente
+                            <button disabled={!gerarData || gerarNum < 1 || isBlocked} onClick={confirmarGerar}
+                              className="flex items-center gap-1.5 text-xs px-4 py-2 rounded-xl font-black bg-amber-500 text-zinc-950 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                              Gerar Plano
                             </button>
                             <button onClick={() => setGerarConfig(null)}
-                              className="text-xs px-3 py-2 rounded-lg font-semibold bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 transition-all">
-                              Cancelar
+                              className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-bold bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 transition-all">
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                              Fechar
                             </button>
                           </div>
                         </div>

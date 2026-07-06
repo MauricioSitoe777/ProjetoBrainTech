@@ -171,7 +171,7 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
         {[
           { label: 'Alugueres',      value: alugueres.length,                         color: 'text-white' },
           { label: 'Compras',        value: compras.length,                            color: 'text-white' },
-          { label: 'Total investido',value: `${Math.round(totalGasto).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')} MT`, color: 'text-amber-400', small: true },
+          { label: 'Total investido',value: `${Math.round(totalGasto).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')},00 MT`, color: 'text-amber-400', small: true },
         ].map(k => (
           <div key={k.label} className="bg-zinc-800/50 rounded-xl p-3 border border-zinc-800 text-center">
             <p className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">{k.label}</p>
@@ -393,8 +393,8 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
                       </span>
                       <p className="text-sm font-black text-white">
                         {isPurchase && isInstallment
-                          ? `${Math.round(a.deposito).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')} MT/mês`
-                          : `${Math.round(a.valorTotal).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')} MT`}
+                          ? `${Math.round(a.deposito).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')},00 MT/mês`
+                          : `${Math.round(a.valorTotal).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')},00 MT`}
                       </p>
                       {isAdmin && (
                         /* H3/H5 — pede confirmação antes de eliminar */
