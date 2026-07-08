@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import { VEHICLES } from '../data/constants';
 import { useReservations } from '../context/ReservationsContext';
-import type { Reservation, ReservationStatus } from '../types/reservation';
+import type { Prestacao, Reservation, ReservationStatus } from '../types/reservation';
+import { RegistarPagamentoModal } from '../components/reservations/RegistarPagamentoModal';
 
 
 const STATUS_CFG: Record<ReservationStatus, { label: string; className: string }> = {
@@ -42,12 +43,13 @@ const isFinal        = (s: ReservationStatus) => s === 'cancelada' || s === 'liq
 
 // ── Modal de gestão de prestações ────────────────────────────────────────────
 function PrestacoeModal({
-  r, today, onClose, onToggle, isBlocked,
+  r, today, onClose, onToggle, onOpenPagar, isBlocked,
 }: {
   r: Reservation;
   today: string;
   onClose: () => void;
   onToggle: (numero: number, paga: boolean, valorPago?: number) => void;
+  onOpenPagar: (prestacao: Prestacao) => void;
   isBlocked: boolean;
 }) {
   const prestacoes    = r.prestacoes ?? [];
@@ -74,7 +76,7 @@ function PrestacoeModal({
       style={{ backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
+      <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
 
         {/* Cabeçalho do modal */}
         <div className={`px-6 py-4 border-b border-zinc-800 flex items-start justify-between gap-4 rounded-t-2xl ${isAtraso ? 'bg-red-500/5' : ''}`}>
@@ -215,7 +217,10 @@ function PrestacoeModal({
                           {/* Botão Receber */}
                           <button
                             disabled={isBlocked || custom <= 0}
-                            onClick={() => { onToggle(p.numero, true, custom); setValorCustom(''); }}
+                            onClick={() => {
+                              onOpenPagar({ ...p, valor: custom });
+                              setValorCustom('');
+                            }}
                             className={`text-xs px-3 py-1 rounded-lg font-black transition-all disabled:opacity-40 ${
                               isOverdue
                                 ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30 border border-red-500/30'
@@ -235,6 +240,37 @@ function PrestacoeModal({
             })}
           </div>
         </div>
+
+        {/* ── Registo de Pagamentos ── */}
+        {(() => {
+          const FORMA_MAP: Record<string, string> = { mpesa: 'M-Pesa', emola: 'e-Mola', dinheiro: 'Dinheiro', transferencia: 'Transferência', cheque: 'Cheque', outros: 'Outros' };
+          const pagos = prestacoes.filter(p => p.paga && (p.formaPagamento || p.referenciaPagamento || p.notasPagamento || p.dataPagamento));
+          if (pagos.length === 0) return null;
+          return (
+            <div className="px-6 py-4 border-t border-zinc-800 space-y-2">
+              <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-2">Registo de Pagamentos</p>
+              {pagos.map(p => (
+                <div key={p.numero} className="bg-zinc-800/50 border border-zinc-700/50 rounded-xl px-4 py-3 flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="text-xs font-black text-white">{p.numero}ª Prestação</span>
+                      <span className="text-sm font-black text-emerald-400 tabular-nums">{fmt(p.valorPago ?? p.valor)}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-white">
+                      {p.dataPagamento && <span>{p.dataPagamento}{p.horaPagamento ? ` · ${p.horaPagamento}` : ''}</span>}
+                      {p.formaPagamento && <span className="font-bold text-amber-400">{FORMA_MAP[p.formaPagamento] ?? p.formaPagamento}</span>}
+                      {p.referenciaPagamento && <span className="font-mono text-white/70">Ref: {p.referenciaPagamento}</span>}
+                    </div>
+                    {p.notasPagamento && <p className="text-[11px] text-white/60 italic mt-1">{p.notasPagamento}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* Rodapé com resumo financeiro + fechar */}
         <div className={`px-6 py-4 border-t border-zinc-800 flex items-center justify-between gap-4 rounded-b-2xl ${isAtraso ? 'bg-red-500/5' : 'bg-zinc-950/40'}`}>
@@ -274,12 +310,15 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
   const [highlightStatus, setHighlightStatus] = useState<string | null>(() =>
     getUrlParams().get('status')
   );
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const [updating,        setUpdating]        = useState<string | null>(null);
-  const [modalAberto,     setModalAberto]     = useState<string | null>(null);
-  const [gerarConfig,     setGerarConfig]     = useState<{ id: string; semEntrada: boolean } | null>(null);
-  const [gerarData,       setGerarData]       = useState('');
-  const [gerarNum,        setGerarNum]        = useState(12);
+  const [selectedVehicle,  setSelectedVehicle]  = useState<number | null>(null);
+  const [updating,         setUpdating]         = useState<string | null>(null);
+  const [modalAberto,      setModalAberto]      = useState<string | null>(null);
+  const [gerarConfig,      setGerarConfig]      = useState<{ id: string; semEntrada: boolean } | null>(null);
+  const [gerarData,        setGerarData]        = useState('');
+  const [gerarNum,         setGerarNum]         = useState(12);
+  const [cancelConfirmId,  setCancelConfirmId]  = useState<string | null>(null);
+  const [cancelMotivo,     setCancelMotivo]     = useState('');
+  const [pagamentoModal,   setPagamentoModal]   = useState<{ reservationId: string; prestacao: Prestacao } | null>(null);
 
   // Sync tab + status with URL on navigation
   React.useEffect(() => {
@@ -379,7 +418,16 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
           today={today}
           onClose={() => setModalAberto(null)}
           onToggle={(numero, paga, valorPago) => togglePrestacao(modalReservation.id, numero, paga, valorPago)}
+          onOpenPagar={p => setPagamentoModal({ reservationId: modalReservation.id, prestacao: p })}
           isBlocked={updating === modalReservation.id}
+        />
+      )}
+      {pagamentoModal && (
+        <RegistarPagamentoModal
+          reservationId={pagamentoModal.reservationId}
+          prestacao={pagamentoModal.prestacao}
+          onAfterSave={() => setPagamentoModal(null)}
+          onClose={() => setPagamentoModal(null)}
         />
       )}
 
@@ -399,7 +447,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
               <div className="p-4 flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${k.dot}`} />
-                  <span className="text-xs text-white uppercase font-bold tracking-wide leading-tight">{k.label}</span>
+                  <span className="text-xs text-amber-400 uppercase font-bold tracking-wide leading-tight">{k.label}</span>
                 </div>
                 <p className={`text-3xl font-black mt-1 ${k.color}`}>{k.value}</p>
               </div>
@@ -408,7 +456,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
         </div>
 
         {/* Volume */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 flex items-center justify-between">
+        <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl px-5 py-4 flex items-center justify-between">
           <span className="text-sm text-white font-bold uppercase tracking-wider">Volume Total de Vendas</span>
           <span className="text-2xl font-black text-amber-400">{fmt(kpis.volume)}</span>
         </div>
@@ -456,32 +504,38 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
         </div>
 
         {/* Histórico de contratos */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+        <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
+          <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-zinc-800/70">
+            <div className="w-1 h-4 bg-amber-500 rounded-full" />
+            <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Histórico de Contratos</p>
+          </div>
           <table className="w-full">
             <thead>
               <tr className="border-b border-zinc-800 bg-zinc-800/40">
-                <th className="text-left px-5 py-4 text-xs text-white font-bold uppercase tracking-wider">Cliente</th>
-                <th className="text-left px-5 py-4 text-xs text-white font-bold uppercase tracking-wider hidden md:table-cell">Viatura</th>
-                <th className="text-left px-5 py-4 text-xs text-white font-bold uppercase tracking-wider hidden sm:table-cell">Valor Total</th>
-                <th className="text-left px-5 py-4 text-xs text-white font-bold uppercase tracking-wider">Data</th>
-                <th className="text-left px-5 py-4 text-xs text-white font-bold uppercase tracking-wider">Estado</th>
+                <th className="text-left px-5 py-4 text-xs text-white/40 font-black uppercase tracking-widest w-10">#</th>
+                <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest">Cliente</th>
+                <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest hidden md:table-cell">Viatura</th>
+                <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest hidden sm:table-cell">Valor Total</th>
+                <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest">Data</th>
+                <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest">Estado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800">
               {historico.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="text-center py-12 text-white text-sm">
+                  <td colSpan={6} className="text-center py-12 text-white text-sm">
                     Sem contratos concluídos ainda
                   </td>
                 </tr>
               )}
-              {historico.map(r => {
+              {historico.map((r, idx) => {
                 const st = STATUS_CFG[r.status];
                 const prestacoes = r.prestacoes ?? [];
                 const pagas = prestacoes.filter(p => p.paga).length;
                 const total = prestacoes.length || (r.totalPrestacoes ?? 0);
                 return (
                   <tr key={r.id} className="hover:bg-zinc-800/30 transition-colors">
+                    <td className="px-5 py-4 text-xs font-black text-white/30 tabular-nums w-10">{idx + 1}</td>
                     <td className="px-5 py-4">
                       <p className="text-sm font-semibold text-white">{r.clientName}</p>
                       <p className="text-xs text-white">{r.clientPhone ?? r.clientEmail ?? '—'}</p>
@@ -530,7 +584,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
           return (
             <div className="space-y-4">
               {accionaveis.length === 0 && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl py-12 text-center text-white text-sm">
+                <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl py-12 text-center text-white text-sm">
                   Sem compras com acções pendentes
                 </div>
               )}
@@ -680,12 +734,48 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                       )}
 
                       {/* Cancelar — sempre no fim, destacado */}
-                      <button disabled={isBlocked} onClick={() => cancelReservation(r.id)}
-                        className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-bold bg-zinc-800 text-red-400 border border-red-500/20 hover:bg-red-500/10 disabled:opacity-50 transition-all ml-auto">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                        Cancelar
-                      </button>
+                      {cancelConfirmId !== r.id && (
+                        <button disabled={isBlocked} onClick={() => { setCancelConfirmId(r.id); setCancelMotivo(''); }}
+                          className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-bold bg-zinc-800 text-red-400 border border-red-500/20 hover:bg-red-500/10 disabled:opacity-50 transition-all ml-auto">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                          Cancelar
+                        </button>
+                      )}
                     </div>
+
+                    {/* ── Painel de confirmação de cancelamento ── */}
+                    {cancelConfirmId === r.id && (
+                      <div className="border-t border-red-500/20 px-5 py-4 space-y-3 bg-red-500/5">
+                        <p className="text-xs font-semibold text-white">Cancelar esta compra — indique o motivo:</p>
+                        <textarea
+                          value={cancelMotivo}
+                          onChange={e => setCancelMotivo(e.target.value)}
+                          placeholder="Descreva o motivo do cancelamento..."
+                          rows={2}
+                          className="w-full bg-zinc-900 border border-zinc-700 focus:border-red-500/50 rounded-lg px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none resize-none"
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <button
+                            onClick={() => { setCancelConfirmId(null); setCancelMotivo(''); }}
+                            className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-semibold bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 transition-all"
+                          >
+                            Voltar
+                          </button>
+                          <button
+                            disabled={!cancelMotivo.trim() || isBlocked}
+                            onClick={() => {
+                              cancelReservation(r.id, cancelMotivo.trim());
+                              setCancelConfirmId(null);
+                              setCancelMotivo('');
+                            }}
+                            className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-black bg-red-500 text-white hover:bg-red-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            Confirmar Cancelamento
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {/* ── Painel de configuração do plano ── */}
                     {gerarConfig?.id === r.id && (() => {

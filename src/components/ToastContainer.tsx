@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+﻿import type { ReactElement } from 'react';
 import { useNotifications, type Toast, type AppNotification } from '../context/NotificationsContext';
 import { useRoute } from '../hooks/useRoute';
 
@@ -65,7 +65,7 @@ function ToastItem({
   return (
     <div
       onClick={hasLink ? handleClick : undefined}
-      className={`${toast.leaving ? 'toast-out' : 'toast-in'} relative flex gap-3 w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden pointer-events-auto ${hasLink ? 'cursor-pointer hover:border-zinc-600 active:scale-[0.98] transition-all' : ''}`}
+      className={`${toast.leaving ? 'toast-out' : 'toast-in'} relative flex gap-3 w-full max-w-sm bg-zinc-900 border border-amber-500/20 rounded-xl shadow-2xl overflow-hidden pointer-events-auto ${hasLink ? 'cursor-pointer hover:border-zinc-600 active:scale-[0.98] transition-all' : ''}`}
     >
       {/* Left accent bar */}
       <div className={`absolute left-0 top-0 bottom-0 w-1 ${s.bar}`} />

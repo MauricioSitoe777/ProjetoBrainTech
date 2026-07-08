@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useReservations } from "../context/ReservationsContext";
 import { useUsers } from "../context/UsersContext";
 import { useMotoristas } from "../context/MotoristasContext";
+import { useVehicles } from "../context/VehiclesContext";
 import { VEHICLES } from "../data/constants";
 import { GuestRequestModal } from "./GuestRequestModal";
 import { IconCar, IconKey } from "./Icons";
@@ -128,6 +129,7 @@ export default function Simulator({
   const { user: authUser, allUsers, addUser } = useAuth();
   const { updateUser, getUser } = useUsers();
   const { motoristas } = useMotoristas();
+  const { vehicles: allVehicles } = useVehicles();
   const {
     createReservation,
     validateDates,
@@ -153,7 +155,13 @@ export default function Simulator({
     return MAX_MESES_PADRAO;
   }, [category]);
 
-  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(() => {
+    try {
+      const raw = sessionStorage.getItem("rentcar:selectedVehicle:v1") ?? localStorage.getItem("rentcar:selectedVehicle:v1");
+      if (raw) { const p = JSON.parse(raw); if (p.id) return p.id as number; }
+    } catch {}
+    return null;
+  });
 
   const formatContact = (val: string) => {
     const digits = val.replace(/\D/g, '').slice(0, 9);
@@ -171,15 +179,38 @@ export default function Simulator({
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   // Compra
-  const [vehiclePrice, setVehiclePrice] = useState(0);
+  const [vehiclePrice, setVehiclePrice] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem("rentcar:selectedVehicle:v1") ?? localStorage.getItem("rentcar:selectedVehicle:v1");
+      if (raw) { const p = JSON.parse(raw); if (p.mode === 'compra' && typeof p.vehiclePrice === 'number' && p.vehiclePrice > 0) return p.vehiclePrice as number; }
+    } catch {}
+    return 0;
+  });
   const [income, setIncome] = useState(80_000);
   const [downPayment, setDownPayment] = useState(0);
   const [paymentPlan, setPaymentPlan] = useState<PaymentPlan>("prestacoes");
   const [mesesPrestacoes, setMesesPrestacoes] = useState(12);
 
   // Aluguer
+  const aluguerVehicles = useMemo(() => allVehicles.filter(v => v.mode === 'aluguer'), [allVehicles]);
+  const [rentalVehicleIdState, setRentalVehicleIdState] = useState<number>(() => {
+    try {
+      const raw = sessionStorage.getItem("rentcar:selectedVehicle:v1") ?? localStorage.getItem("rentcar:selectedVehicle:v1");
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (p.id && p.mode === 'aluguer') return p.id as number;
+      }
+    } catch {}
+    return VEHICLES.find(v => v.mode === 'aluguer')?.id ?? 4;
+  });
   const [days, setDays] = useState(3);
-  const [dailyRate, setDailyRate] = useState(8_500);
+  const [dailyRate, setDailyRate] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem("rentcar:selectedVehicle:v1") ?? localStorage.getItem("rentcar:selectedVehicle:v1");
+      if (raw) { const p = JSON.parse(raw); if (p.mode === 'aluguer' && typeof p.dailyRate === 'number' && p.dailyRate > 0) return p.dailyRate as number; }
+    } catch {}
+    return 8_500;
+  });
   const [discountPct, setDiscountPct] = useState(10);
   const [cleaningFee, setCleaningFee] = useState(500);
   const [deposit, setDeposit] = useState(() => rules.caucaoValor);
@@ -243,6 +274,25 @@ export default function Simulator({
   }, [currentUser?.category]);
 
   useEffect(() => {
+    const handler = (e: Event) => {
+      const { id, mode, dailyRate, vehiclePrice: vp } = (e as CustomEvent<{
+        id: number; mode: "aluguer" | "compra"; dailyRate?: number; vehiclePrice?: number;
+      }>).detail;
+      setSelectedVehicleId(id);
+      if (mode === "aluguer") {
+        setRentalVehicleIdState(id);
+        if (typeof dailyRate === "number" && dailyRate > 0) setDailyRate(dailyRate);
+        if (!lockedFlow) setFlow("aluguer");
+      } else if (mode === "compra") {
+        if (typeof vp === "number" && vp > 0) setVehiclePrice(vp);
+        if (!lockedFlow) setFlow("compra");
+      }
+    };
+    window.addEventListener("rentcar:vehicle-selected", handler as EventListener);
+    return () => window.removeEventListener("rentcar:vehicle-selected", handler as EventListener);
+  }, [lockedFlow]);
+
+  useEffect(() => {
     try {
       const raw =
         sessionStorage.getItem("rentcar:selectedVehicle:v1") ??
@@ -257,11 +307,7 @@ export default function Simulator({
 
       if (parsed.id) {
         setSelectedVehicleId(parsed.id);
-        // Clear after reading so generic opens always start fresh
-        try {
-          sessionStorage.removeItem("rentcar:selectedVehicle:v1");
-          localStorage.removeItem("rentcar:selectedVehicle:v1");
-        } catch { /* ignore */ }
+        if (parsed.mode === 'aluguer') setRentalVehicleIdState(parsed.id);
       }
 
       if (lockedFlow) {
@@ -366,17 +412,11 @@ export default function Simulator({
 
   const eligivel = financingStatus.ok;
 
-  const rentalVehicleId = (() => {
-    if (selectedVehicleId) {
-      const v = VEHICLES.find(v => v.id === selectedVehicleId);
-      if (v?.mode === 'aluguer') return selectedVehicleId;
-    }
-    return 4; // Toyota Hilux — aluguer por defeito
-  })();
+  const rentalVehicleId = rentalVehicleIdState;
 
   const purchaseVehicleId = (() => {
     if (selectedVehicleId) {
-      const v = VEHICLES.find(v => v.id === selectedVehicleId);
+      const v = allVehicles.find(v => v.id === selectedVehicleId);
       if (v?.mode === 'compra') return selectedVehicleId;
     }
     return 2; // BMW X5 — compra por defeito
@@ -444,6 +484,32 @@ export default function Simulator({
     rentalDetailsOk &&
     (flow === "aluguer" || (eligivel && vehiclePrice > 0));
 
+  // Razão clara do primeiro bloqueio — mostrada no painel de resultado
+  const blockReason = useMemo(() => {
+    if (isBlocked || submitted) return null;
+    if (clientName.trim().length < 2)
+      return { msg: "Preencha o nome completo do cliente antes de continuar.", icon: "user" as const };
+    if (authUser && !contactValid)
+      return { msg: "Contacto principal obrigatório. Insira pelo menos 9 dígitos.", icon: "phone" as const };
+    if (flow === "aluguer") {
+      if (!dataInicio && !dataFim)
+        return { msg: "Selecione as datas de levantamento e devolução.", icon: "calendar" as const };
+      if (!dataInicio)
+        return { msg: "Selecione a data de levantamento.", icon: "calendar" as const };
+      if (!dataFim)
+        return { msg: "Selecione a data de devolução.", icon: "calendar" as const };
+      if (dateValidation && !dateValidation.valid)
+        return { msg: dateValidation.errors[0], icon: "calendar" as const };
+      if (availability && !availability.available)
+        return { msg: availability.conflicts[0] ?? "A viatura está indisponível para as datas seleccionadas.", icon: "car" as const };
+    }
+    if (flow === "compra" && vehiclePrice <= 0)
+      return { msg: "Indique o valor do veículo para continuar.", icon: "car" as const };
+    if (flow === "compra" && !eligivel)
+      return { msg: "A simulação não cumpre os requisitos de financiamento. Reveja os parâmetros acima.", icon: "warn" as const };
+    return null;
+  }, [isBlocked, submitted, clientName, authUser, contactValid, flow, dataInicio, dataFim, dateValidation, availability, vehiclePrice, eligivel]);
+
   const handleSubmit = () => {
     setSubmitError("");
     if (!canSubmit) return;
@@ -497,6 +563,10 @@ export default function Simulator({
         setSubmitError(result.error ?? "Não foi possível criar a reserva.");
         return;
       }
+      try {
+        sessionStorage.removeItem("rentcar:selectedVehicle:v1");
+        localStorage.removeItem("rentcar:selectedVehicle:v1");
+      } catch { /* ignore */ }
       setSubmitted(true);
     } else if (flow === "compra") {
       const start = new Date();
@@ -522,6 +592,10 @@ export default function Simulator({
         setSubmitError(result.error ?? "Não foi possível submeter o pedido de compra.");
         return;
       }
+      try {
+        sessionStorage.removeItem("rentcar:selectedVehicle:v1");
+        localStorage.removeItem("rentcar:selectedVehicle:v1");
+      } catch { /* ignore */ }
       setSubmitted(true);
     }
   };
@@ -806,6 +880,21 @@ export default function Simulator({
               </>
             ) : (
               <>
+                {/* Viatura selecionada — sempre visível, sem fallback silencioso */}
+                <div>
+                  <label className="text-white text-xs font-normal block mb-1 uppercase tracking-tight">Viatura</label>
+                  <select
+                    value={rentalVehicleIdState}
+                    onChange={e => setRentalVehicleIdState(Number(e.target.value))}
+                    disabled={!isAdmin && aluguerVehicles.some(v => v.id === selectedVehicleId)}
+                    className="w-full rounded-lg bg-zinc-950 border border-amber-500/40 px-3 py-1.5 text-sm text-white font-medium outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 cursor-pointer disabled:opacity-80 disabled:cursor-not-allowed"
+                  >
+                    {aluguerVehicles.map(v => (
+                      <option key={v.id} value={v.id}>{v.name}</option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Datas — Levantamento | Devolução, cada um com data+hora inline */}
                 <div className="grid grid-cols-2 gap-2">
                   {/* Levantamento */}
@@ -1115,8 +1204,30 @@ export default function Simulator({
               ))}
             </div>
 
+            {/* Razão de bloqueio — aparece quando o botão está desabilitado */}
+            {!canSubmit && !isBlocked && !submitted && blockReason && (
+              <div className="mt-4 flex items-start gap-3 p-3.5 rounded-xl bg-amber-500/8 border border-amber-500/25">
+                <div className="shrink-0 mt-0.5">
+                  {blockReason.icon === "calendar" && (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  )}
+                  {blockReason.icon === "phone" && (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12.6 19.79 19.79 0 0 1 1.65 4a2 2 0 0 1 1.99-2H6.5a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.4a16 16 0 0 0 6.29 6.29l1.36-1.36a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                  )}
+                  {blockReason.icon === "user" && (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  )}
+                  {(blockReason.icon === "car" || blockReason.icon === "warn") && (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  )}
+                </div>
+                <p className="text-sm text-amber-200 leading-relaxed">{blockReason.msg}</p>
+              </div>
+            )}
+
             {submitError ? (
-              <div className="mt-4 p-3.5 rounded-lg bg-red-600/90 text-white text-sm font-normal text-center shadow-lg">
+              <div className="mt-4 flex items-start gap-2.5 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm leading-relaxed">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                 {submitError}
               </div>
             ) : null}
@@ -1130,7 +1241,7 @@ export default function Simulator({
                 <p className="text-white text-sm leading-snug font-medium opacity-95">
                   {isRestricted
                     ? "Esta conta foi suspensa permanentemente por violação das políticas de segurança (Blacklisted)."
-                    : "Operação bloqueada devido a pendências financeiras ou irregularidades cadastrais."}
+                    : "Operação bloqueada devido a pendências financeiras ou irregularidades de registo."}
                 </p>
                 <p className="text-white/80 text-sm leading-snug mt-1.5">
                   Contacte o administrador para resolver a situação.
@@ -1155,8 +1266,8 @@ export default function Simulator({
                 <div className="px-4 py-3 space-y-1.5">
                   {[
                     ["Viatura", flow === "compra"
-                      ? (VEHICLES.find(v => v.id === purchaseVehicleId)?.name ?? "Viatura seleccionada")
-                      : (VEHICLES.find(v => v.id === rentalVehicleId)?.name ?? "Viatura seleccionada")],
+                      ? (allVehicles.find(v => v.id === purchaseVehicleId)?.name ?? "Viatura seleccionada")
+                      : (aluguerVehicles.find(v => v.id === rentalVehicleId)?.name ?? "Viatura seleccionada")],
                     ["Cliente", clientName.trim() || authUser?.nome || "—"],
                     ["Estado", "Aguarda confirmação de pagamento"],
                     ["Próximo passo", "Aguarde contacto da SOS Motors para instruções de pagamento."],
@@ -1207,7 +1318,7 @@ export default function Simulator({
       {showGuestModal && (
         <GuestRequestModal
           intent={flow as 'aluguer' | 'compra'}
-          vehicleName={VEHICLES.find(v => v.id === selectedVehicleId)?.name}
+          vehicleName={allVehicles.find(v => v.id === selectedVehicleId)?.name}
           prefill={{ nome: clientName, telefone: clientContact || undefined }}
           preCategory={flow === 'compra' ? (category as import('../types/guest').GuestCategory) : undefined}
           withDriver={flow === 'aluguer' ? comMotorista : undefined}

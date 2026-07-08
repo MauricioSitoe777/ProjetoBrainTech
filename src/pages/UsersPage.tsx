@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+﻿import { useState, useMemo, useEffect } from 'react';
 import { useUsers } from '../context/UsersContext';
 import { useAuth } from '../context/AuthContext';
 import { useMotoristas } from '../context/MotoristasContext';
@@ -9,7 +9,6 @@ import type { Motorista, MotoristaSatus } from '../types/motorista';
 import type { Guest, GuestStatus } from '../types/guest';
 import { useGuests } from '../context/GuestsContext';
 import { GuestReviewModal } from '../components/GuestReviewModal';
-import { AcoesNecessarias } from '../components/AcoesNecessarias';
 import { useRoute } from '../hooks/useRoute';
 import { useNotifications } from '../context/NotificationsContext';
 import { IconKey, IconCar } from '../components/Icons';
@@ -52,8 +51,10 @@ const guestStatusConfig: Record<GuestStatus, { label: string; dot: string }> = {
   rejeitado:             { label: 'Rejeitado',         dot: 'bg-red-400' },
 };
 
-function initials(nome: string) {
-  return nome.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
+function firstLast(nome: string) {
+  const parts = nome.trim().split(/\s+/);
+  if (parts.length <= 1) return nome;
+  return `${parts[0]} ${parts[parts.length - 1]}`;
 }
 
 // ── Motorista Modal (inline) ───────────────────────────────────────────────
@@ -74,7 +75,7 @@ function MotoristaModal({ initial, onSave, onClose }: {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl">
+      <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl w-full max-w-md shadow-2xl">
         <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
           <h2 className="text-base font-black text-white">{initial?.id ? 'Editar Motorista' : 'Novo Motorista'}</h2>
           <button type="button" onClick={onClose} className="text-white hover:text-white text-xl leading-none">×</button>
@@ -287,7 +288,7 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
                 </div>
                 <div>
                   <p className={`text-2xl font-black leading-none tabular-nums ${k.col}`}>{k.value}</p>
-                  <p className="text-sm font-bold text-white mt-0.5">{k.label}</p>
+                  <p className="text-sm font-bold text-amber-400 mt-0.5">{k.label}</p>
                   <p className="text-xs text-white">{k.sub}</p>
                 </div>
               </div>
@@ -401,30 +402,39 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
         </div>
 
         {/* Table */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+        <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
+          <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-zinc-800/70">
+            <div className="w-1 h-4 bg-amber-500 rounded-full" />
+            <p className="text-xs font-black text-amber-400 uppercase tracking-widest">
+              {mainTab === 'utilizadores' ? 'Utilizadores' : mainTab === 'motoristas' ? 'Motoristas' : 'Visitantes'}
+            </p>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[700px]">
               <thead>
                 <tr className="border-b border-zinc-700/60 bg-zinc-800/40">
-                  <th className="text-left px-5 py-3.5 text-xs font-black text-white uppercase tracking-widest whitespace-nowrap">Nome</th>
-                  <th className="text-left px-5 py-3.5 text-xs font-black text-white uppercase tracking-widest whitespace-nowrap hidden sm:table-cell w-[130px]">Tipo</th>
-                  <th className="text-left px-5 py-3.5 text-xs font-black text-white uppercase tracking-widest whitespace-nowrap hidden md:table-cell w-[150px]">Telefone</th>
-                  <th className="text-left px-5 py-3.5 text-xs font-black text-white uppercase tracking-widest whitespace-nowrap w-[120px]">Estado</th>
-                  <th className="text-left px-5 py-3.5 text-xs font-black text-white uppercase tracking-widest whitespace-nowrap hidden md:table-cell w-[145px]">Registo</th>
-                  <th className="text-left px-5 py-3.5 text-xs font-black text-white uppercase tracking-widest whitespace-nowrap hidden lg:table-cell w-[110px]">Restrição</th>
-                  <th className="text-right px-5 py-3.5 text-xs font-black text-white uppercase tracking-widest whitespace-nowrap w-[120px]">Ações</th>
+                  <th className="text-left px-4 py-2 text-[10px] font-black text-white/40 uppercase tracking-widest whitespace-nowrap w-8">#</th>
+                  <th className="text-left px-4 py-2 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap">Nome</th>
+                  <th className="text-left px-4 py-2 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap hidden sm:table-cell w-[110px]">Tipo</th>
+                  <th className="text-left px-4 py-2 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap hidden md:table-cell w-[130px]">Telefone</th>
+                  <th className="text-left px-4 py-2 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap w-[100px]">Estado</th>
+                  <th className="text-left px-4 py-2 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap hidden md:table-cell w-[120px]">Registo</th>
+                  <th className="text-left px-4 py-2 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap hidden lg:table-cell w-[100px]">Restrição</th>
+                  <th className="text-right px-4 py-2 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap w-[100px]">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800">
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="text-center py-12 text-white text-sm font-medium">
+                    <td colSpan={8} className="text-center py-12 text-white text-sm font-medium">
                       Nenhum resultado encontrado
                     </td>
                   </tr>
                 )}
 
-                {rows.map((row, rowIndex) => {
+                {(() => {
+                  let dataRowCount = 0;
+                  return rows.map((row, rowIndex) => {
                   // Separator between aluguer / compra groups in visitantes tab
                   if (row.kind === 'guest') {
                     const prev = rows[rowIndex - 1];
@@ -434,14 +444,16 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
                     const groupLabel = row.data.intent === 'aluguer'
                       ? <span className="flex items-center gap-1.5"><IconKey size={12} /> Aluguer</span>
                       : <span className="flex items-center gap-1.5"><IconCar size={12} /> Compra</span>;
+                    dataRowCount++;
                     const guestRowEl = (
                       <GuestRow key={`g-${row.data.id}`} g={row.data} guestStatusConfig={guestStatusConfig}
-                        onReview={setReviewGuest} onAdvance={(g, next) => next ? updateGuest(g.id, { status: next }) : setReviewGuest(g)} />
+                        onReview={setReviewGuest} onAdvance={(g, next) => next ? updateGuest(g.id, { status: next }) : setReviewGuest(g)}
+                        rowNum={dataRowCount} />
                     );
                     if (showSep || showFirst) {
                       return [
                         <tr key={`sep-${row.data.intent}-${row.data.id}`} className="bg-zinc-800/30">
-                          <td colSpan={7} className="px-4 py-1.5">
+                          <td colSpan={8} className="px-4 py-1.5">
                             <span className="text-[10px] font-black uppercase tracking-widest text-amber-500">{groupLabel}</span>
                           </td>
                         </tr>,
@@ -455,47 +467,44 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
                     const u = row.data;
                     const role   = roleConfig[u.role];
                     const status = userStatusConfig[u.status];
+                    dataRowCount++;
                     return (
                       <tr key={`u-${u.id}`} className="hover:bg-zinc-800/40 transition-colors group border-b border-zinc-800/60">
-                        <td className="px-5 py-3.5 max-w-0">
-                          <button onClick={() => setDetailUser(u)} className="flex items-center gap-3 text-left w-full min-w-0">
-                            <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xs font-black flex-shrink-0">
-                              {initials(u.nome)}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors truncate">{u.nome}</p>
-                              <p className="text-xs text-white mt-0.5 truncate">{u.email}</p>
-                            </div>
-                          </button>
-                        </td>
-                        <td className="px-5 py-3.5 hidden sm:table-cell">
-                          <span className={`text-xs font-bold border rounded-md px-2.5 py-1 ${role.className}`}>{role.label}</span>
-                        </td>
-                        <td className="px-5 py-3.5 hidden md:table-cell text-sm font-medium text-white whitespace-nowrap">{u.telefone}</td>
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-2">
-                            <span className={`w-2 h-2 rounded-full shrink-0 ${status.dot}`} />
-                            <span className="text-sm font-semibold text-white whitespace-nowrap">{status.label}</span>
+                        <td className="px-4 py-2 text-[10px] font-black text-white/30 tabular-nums w-8">{dataRowCount}</td>
+                        <td className="px-4 py-2 max-w-0">
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-white truncate">{firstLast(u.nome)}</p>
+                            <p className="text-[10px] text-white mt-0.5 truncate">{u.email}</p>
                           </div>
                         </td>
-                        <td className="px-5 py-3.5 hidden md:table-cell">
+                        <td className="px-4 py-2 hidden sm:table-cell">
+                          <span className={`text-[10px] font-bold border rounded-md px-2 py-0.5 ${role.className}`}>{role.label}</span>
+                        </td>
+                        <td className="px-4 py-2 hidden md:table-cell text-xs font-medium text-white whitespace-nowrap">{u.telefone}</td>
+                        <td className="px-4 py-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${status.dot}`} />
+                            <span className="text-xs font-semibold text-white whitespace-nowrap">{status.label}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-2 hidden md:table-cell">
                           <div className="flex flex-col gap-0.5">
-                            <span className="text-sm font-semibold text-white whitespace-nowrap">
+                            <span className="text-xs font-semibold text-white whitespace-nowrap">
                               {u.dataCriacao ? new Date(u.dataCriacao).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
                             </span>
                             {u.ultimoAcesso && u.ultimoAcesso !== u.dataCriacao && (
-                              <span className="text-xs text-white whitespace-nowrap">
+                              <span className="text-[10px] text-white whitespace-nowrap">
                                 Acesso: {new Date(u.ultimoAcesso).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                               </span>
                             )}
                           </div>
                         </td>
-                        <td className="px-5 py-3.5 hidden lg:table-cell">
-                          <span className={`text-xs font-bold border rounded-md px-2.5 py-1 ${restrictionConfig[u.restriction || 'nenhuma'].className}`}>
+                        <td className="px-4 py-2 hidden lg:table-cell">
+                          <span className={`text-[10px] font-bold border rounded-md px-2 py-0.5 ${restrictionConfig[u.restriction || 'nenhuma'].className}`}>
                             {restrictionConfig[u.restriction || 'nenhuma'].label}
                           </span>
                         </td>
-                        <td className="px-5 py-3.5">
+                        <td className="px-4 py-2">
                           <div className="flex items-center justify-end gap-0.5">
                             <button onClick={() => setDetailUser(u)} className="p-1.5 text-white hover:text-white transition-colors rounded-lg hover:bg-zinc-700" title="Ver detalhes">
                               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -540,42 +549,39 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
                   // Motorista row
                   const m  = row.data;
                   const st = motoristaStatusConfig[m.status];
+                  dataRowCount++;
                   return (
                     <tr key={`m-${m.id}`} className="hover:bg-zinc-800/40 transition-colors group border-b border-zinc-800/60">
-                      <td className="px-5 py-3.5 max-w-0">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-xs font-black flex-shrink-0">
-                            {initials(m.nome)}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-white truncate">{m.nome}</p>
-                            {m.observacoes && <p className="text-xs text-white italic mt-0.5 truncate">{m.observacoes}</p>}
-                          </div>
+                      <td className="px-4 py-2 text-[10px] font-black text-white/30 tabular-nums w-8">{dataRowCount}</td>
+                      <td className="px-4 py-2 max-w-0">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white truncate">{firstLast(m.nome)}</p>
+                          {m.observacoes && <p className="text-[10px] text-white italic mt-0.5 truncate">{m.observacoes}</p>}
                         </div>
                       </td>
-                      <td className="px-5 py-3.5 hidden sm:table-cell">
-                        <span className="text-xs font-bold border rounded-md px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border-emerald-500/30">Motorista</span>
+                      <td className="px-4 py-2 hidden sm:table-cell">
+                        <span className="text-[10px] font-bold border rounded-md px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border-emerald-500/30">Motorista</span>
                       </td>
-                      <td className="px-5 py-3.5 hidden md:table-cell text-sm font-medium text-white whitespace-nowrap">{m.telefone}</td>
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full shrink-0 ${st.dot}`} />
-                          <span className="text-sm font-semibold text-white whitespace-nowrap">{st.label}</span>
+                      <td className="px-4 py-2 hidden md:table-cell text-xs font-medium text-white whitespace-nowrap">{m.telefone}</td>
+                      <td className="px-4 py-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${st.dot}`} />
+                          <span className="text-xs font-semibold text-white whitespace-nowrap">{st.label}</span>
                         </div>
                       </td>
-                      <td className="px-5 py-3.5 hidden md:table-cell">
-                        <span className="text-sm font-semibold text-white whitespace-nowrap">
+                      <td className="px-4 py-2 hidden md:table-cell">
+                        <span className="text-xs font-semibold text-white whitespace-nowrap">
                           {m.dataCriacao ? new Date(m.dataCriacao).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
                         </span>
-                        <div className="flex gap-1.5 mt-1 flex-wrap">
-                          {m.bi    && <span className="text-xs bg-zinc-800 border border-zinc-700 text-white px-2 py-0.5 rounded-md">BI: {m.bi}</span>}
-                          {m.carta && <span className="text-xs bg-zinc-800 border border-zinc-700 text-white px-2 py-0.5 rounded-md">Carta: {m.carta}</span>}
+                        <div className="flex gap-1.5 mt-0.5 flex-wrap">
+                          {m.bi    && <span className="text-[10px] bg-zinc-800 border border-zinc-700 text-white px-1.5 py-0.5 rounded-md">BI: {m.bi}</span>}
+                          {m.carta && <span className="text-[10px] bg-zinc-800 border border-zinc-700 text-white px-1.5 py-0.5 rounded-md">Carta: {m.carta}</span>}
                         </div>
                       </td>
-                      <td className="px-5 py-3.5 hidden lg:table-cell">
-                        <span className="text-xs text-white">—</span>
+                      <td className="px-4 py-2 hidden lg:table-cell">
+                        <span className="text-[10px] text-white">—</span>
                       </td>
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 py-2">
                         <div className="flex items-center justify-end gap-0.5">
                           {canManage && (
                             <>
@@ -591,12 +597,13 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
                       </td>
                     </tr>
                   );
-                })}
+                  })
+                })()}
               </tbody>
             </table>
           </div>
           {rows.length > 0 && (
-            <div className="px-5 py-4 border-t border-zinc-800 text-xs font-semibold text-white">
+            <div className="px-4 py-2.5 border-t border-zinc-800 text-[10px] font-semibold text-white">
               {rows.length} resultado(s)
             </div>
           )}
@@ -629,7 +636,7 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
       )}
       {deleteUserConfirm && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-sm w-full">
+          <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-6 max-w-sm w-full">
             <h3 className="text-white font-semibold mb-1">Eliminar utilizador</h3>
             <p className="text-white text-sm mb-6">Esta ação é permanente e não pode ser desfeita.</p>
             <div className="flex gap-3">
@@ -659,7 +666,7 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
       )}
       {deleteMotoristaConfirm && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-sm w-full">
+          <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-6 max-w-sm w-full">
             <h3 className="text-white font-semibold mb-1">Remover motorista</h3>
             <p className="text-white text-sm mb-6">Esta acção não pode ser desfeita.</p>
             <div className="flex gap-3">
@@ -677,7 +684,7 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
           style={{ backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
           onClick={e => { if (e.target === e.currentTarget) setSuspendTarget(null); }}
         >
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm shadow-2xl">
+          <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl w-full max-w-sm shadow-2xl">
             <div className="px-5 py-4 border-b border-zinc-800 flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-amber-400/10 border border-amber-400/20 flex items-center justify-center shrink-0">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
@@ -748,11 +755,12 @@ const NEXT_STATUS: Partial<Record<GuestStatus, GuestStatus | null>> = {
   em_analise:            null, // null = open review modal
 };
 
-function GuestRow({ g, guestStatusConfig, onReview, onAdvance }: {
+function GuestRow({ g, guestStatusConfig, onReview, onAdvance, rowNum }: {
   g: Guest;
   guestStatusConfig: Record<GuestStatus, { label: string; dot: string }>;
   onReview: (g: Guest) => void;
   onAdvance: (g: Guest, next: GuestStatus | null) => void;
+  rowNum?: number;
 }) {
   const gs = guestStatusConfig[g.status];
   const nextStatus = NEXT_STATUS[g.status];
@@ -760,52 +768,48 @@ function GuestRow({ g, guestStatusConfig, onReview, onAdvance }: {
 
   return (
     <tr className="hover:bg-zinc-800/40 transition-colors group border-b border-zinc-800/60 cursor-pointer" onClick={() => onReview(g)}>
-      <td className="px-5 py-3.5 max-w-0">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xs font-black flex-shrink-0">
-            {g.nome.split(' ').filter(Boolean).slice(0, 2).map(n => n[0]).join('').toUpperCase()}
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors truncate">{g.nome}</p>
-            <p className="text-xs text-white mt-0.5 truncate">{g.email}</p>
-            {g.status === 'rejeitado' && g.notaAdmin && (
-              <p className="text-xs text-red-400 mt-1 font-semibold leading-tight truncate">✕ {g.notaAdmin}</p>
-            )}
-          </div>
+      <td className="px-4 py-2 text-[10px] font-black text-white/30 tabular-nums w-8">{rowNum ?? ''}</td>
+      <td className="px-4 py-2 max-w-0">
+        <div className="min-w-0">
+          <p className="text-xs font-bold text-white truncate">{firstLast(g.nome)}</p>
+          <p className="text-[10px] text-white mt-0.5 truncate">{g.email}</p>
+          {g.status === 'rejeitado' && g.notaAdmin && (
+            <p className="text-[10px] text-red-400 mt-0.5 font-semibold leading-tight truncate">✕ {g.notaAdmin}</p>
+          )}
         </div>
       </td>
-      <td className="px-5 py-3.5 hidden sm:table-cell">
-        <span className="text-xs font-bold border rounded-md px-2.5 py-1 bg-amber-500/10 text-amber-400 border-amber-500/20 whitespace-nowrap">
+      <td className="px-4 py-2 hidden sm:table-cell">
+        <span className="text-[10px] font-bold border rounded-md px-2 py-0.5 bg-amber-500/10 text-amber-400 border-amber-500/20 whitespace-nowrap">
           Visitante · {g.intent === 'aluguer' ? 'Aluguer' : 'Compra'}
         </span>
       </td>
-      <td className="px-5 py-3.5 hidden md:table-cell text-sm font-medium text-white whitespace-nowrap">{g.telefone}</td>
-      <td className="px-5 py-3.5">
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full shrink-0 ${gs.dot}`} />
-          <span className="text-sm font-semibold text-white whitespace-nowrap">{gs.label}</span>
+      <td className="px-4 py-2 hidden md:table-cell text-xs font-medium text-white whitespace-nowrap">{g.telefone}</td>
+      <td className="px-4 py-2">
+        <div className="flex items-center gap-1.5">
+          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${gs.dot}`} />
+          <span className="text-xs font-semibold text-white whitespace-nowrap">{gs.label}</span>
           {canAdvance && (
             <button
               onClick={e => { e.stopPropagation(); onAdvance(g, nextStatus ?? null); }}
               title={nextStatus ? `→ ${guestStatusConfig[nextStatus]?.label ?? nextStatus}` : '→ Aprovar / Rejeitar'}
               className="p-0.5 text-amber-500 hover:text-amber-400 transition-colors shrink-0"
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
           )}
         </div>
       </td>
-      <td className="px-5 py-3.5 hidden md:table-cell text-sm font-semibold text-white whitespace-nowrap">
+      <td className="px-4 py-2 hidden md:table-cell text-xs font-semibold text-white whitespace-nowrap">
         {new Date(g.dataCriacao).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
       </td>
-      <td className="px-5 py-3.5 hidden lg:table-cell">
-        {g.vehicleName ? <span className="text-xs text-white truncate block max-w-[90px]">{g.vehicleName}</span> : <span className="text-xs text-white">—</span>}
+      <td className="px-4 py-2 hidden lg:table-cell">
+        {g.vehicleName ? <span className="text-[10px] text-white truncate block max-w-[90px]">{g.vehicleName}</span> : <span className="text-[10px] text-white">—</span>}
       </td>
-      <td className="px-5 py-3.5">
+      <td className="px-4 py-2">
         <div className="flex items-center justify-end">
           <button onClick={e => { e.stopPropagation(); onReview(g); }}
-            className="p-1.5 text-white hover:text-amber-400 transition-colors rounded-lg hover:bg-amber-400/10" title="Analisar">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            className="p-1 text-white hover:text-amber-400 transition-colors rounded-lg hover:bg-amber-400/10" title="Analisar">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
         </div>
       </td>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import type { Prestacao } from '../../types/reservation';
 import { useReservations } from '../../context/ReservationsContext';
 
@@ -75,7 +75,7 @@ export function RegistarPagamentoModal({ reservationId, prestacao: p, onClose, o
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
       onClick={e => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+      <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
 
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-5 pt-5 pb-4">

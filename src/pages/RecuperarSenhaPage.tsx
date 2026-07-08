@@ -49,9 +49,9 @@ export function RecuperarSenhaPage({ onVoltar }: { onVoltar: () => void }) {
           {estado === 'form' && (
             <>
               <div>
-                <h2 className="text-xl font-black text-white">Recuperar Senha</h2>
+                <h2 className="text-xl font-black text-white">Recuperar Palavra-passe</h2>
                 <p className="text-white text-sm mt-1 leading-relaxed opacity-70">
-                  Introduza o seu endereço de e-mail. Enviaremos um link para redefinir a senha.
+                  Introduza o seu e-mail. Enviaremos um link para redefinir a palavra-passe.
                 </p>
               </div>
 

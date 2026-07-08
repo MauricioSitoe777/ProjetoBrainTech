@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import { VEHICLES } from '../data/constants';
 import { AvailabilityCalendar } from '../components/reservations/AvailabilityCalendar';
 import { BlockPeriodModal } from '../components/reservations/BlockPeriodModal';
@@ -32,7 +32,9 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [filterStatus, setFilterStatus] = useState<ReservationStatus | 'todos'>('todos');
   // Guarda o ID da reserva que está a ser actualizada para bloquear duplo-clique
-  const [updatingPrestacao, setUpdatingPrestacao] = useState<string | null>(null);
+  const [updatingPrestacao,  setUpdatingPrestacao]  = useState<string | null>(null);
+  const [cancelConfirmId,   setCancelConfirmId]   = useState<string | null>(null);
+  const [cancelMotivo,      setCancelMotivo]      = useState('');
 
   const registarPrestacao = (id: string, novoValor: number) => {
     if (updatingPrestacao === id) return; // bloqueia se já está em curso
@@ -90,7 +92,7 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
         {tab === 'calendario' && (
           <div className="grid lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1 space-y-4">
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+              <div className="bg-zinc-900 border border-amber-500/20 rounded-xl p-4">
                 <label className="block text-xs text-white mb-2">Viatura</label>
                 <select
                   value={selectedVehicle ?? ''}
@@ -140,29 +142,36 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
                 ))}
               </select>
             </div>
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+            <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
+              <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-zinc-800/70">
+                <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Reservas</p>
+              </div>
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-zinc-800">
-                    <th className="text-left px-5 py-4 text-xs text-white uppercase">Cliente</th>
-                    <th className="text-left px-5 py-4 text-xs text-white uppercase hidden md:table-cell">Viatura</th>
-                    <th className="text-left px-5 py-4 text-xs text-white uppercase">Período</th>
-                    <th className="text-left px-5 py-4 text-xs text-white uppercase">Estado</th>
-                    <th className="text-right px-5 py-4 text-xs text-white uppercase">Ações</th>
+                  <tr className="border-b border-zinc-800 bg-zinc-800/40">
+                    <th className="text-left px-5 py-4 text-xs text-white/40 font-black uppercase tracking-widest w-10">#</th>
+                    <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest">Cliente</th>
+                    <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest hidden md:table-cell">Viatura</th>
+                    <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest">Período</th>
+                    <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest">Estado</th>
+                    <th className="text-right px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800">
                   {filteredReservations.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="text-center py-10 text-white text-sm">Sem reservas</td>
+                      <td colSpan={6} className="text-center py-10 text-white text-sm">Sem reservas</td>
                     </tr>
                   )}
-                  {filteredReservations.map(r => {
+                  {filteredReservations.map((r, idx) => {
                     const st = STATUS_CFG[r.status];
                     const vehicle = VEHICLES.find(v => v.id === r.vehicleId);
                     const isPurchase = vehicle?.mode === 'compra';
                     return (
-                      <tr key={r.id} className="hover:bg-zinc-800/40">
+                      <React.Fragment key={r.id}>
+                      <tr className="hover:bg-zinc-800/40">
+                        <td className="px-5 py-4 text-xs font-black text-white/30 tabular-nums w-10">{idx + 1}</td>
                         <td className="px-5 py-4">
                           <p className="text-sm text-white">{r.clientName}</p>
                           <p className="text-xs text-white">{r.clientPhone ?? r.clientEmail ?? '—'}</p>
@@ -230,7 +239,7 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
                                         Concluir Venda
                                       </button>
                                       <button
-                                        onClick={() => cancelReservation(r.id)}
+                                        onClick={() => { setCancelConfirmId(r.id); setCancelMotivo(''); }}
                                         className="text-xs px-2 py-1 rounded bg-red-400/10 text-red-400 hover:bg-red-400/20"
                                       >
                                         Cancelar Venda
@@ -303,7 +312,7 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
                                   </button>
                                 )}
                                 {r.status !== 'cancelada' && r.status !== 'concluida' && r.status !== 'devolucao_pendente' && (
-                                  <button onClick={() => cancelReservation(r.id)}
+                                  <button onClick={() => { setCancelConfirmId(r.id); setCancelMotivo(''); }}
                                     className="text-xs px-2 py-1 rounded bg-red-400/10 text-red-400 border border-red-400/20 hover:bg-red-400/20">
                                     Cancelar
                                   </button>
@@ -313,6 +322,44 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
                           </div>
                         </td>
                       </tr>
+                      {cancelConfirmId === r.id && (
+                        <tr className="bg-red-500/5">
+                          <td colSpan={5} className="px-5 py-4">
+                            <div className="space-y-3">
+                              <p className="text-xs font-semibold text-white">
+                                Cancelar {isPurchase ? 'esta venda' : 'esta reserva'} — indique o motivo:
+                              </p>
+                              <textarea
+                                value={cancelMotivo}
+                                onChange={e => setCancelMotivo(e.target.value)}
+                                placeholder="Descreva o motivo do cancelamento..."
+                                rows={2}
+                                className="w-full bg-zinc-900 border border-zinc-700 focus:border-red-500/50 rounded-lg px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none resize-none"
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => { setCancelConfirmId(null); setCancelMotivo(''); }}
+                                  className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 transition-all"
+                                >
+                                  Voltar
+                                </button>
+                                <button
+                                  disabled={!cancelMotivo.trim()}
+                                  onClick={() => {
+                                    cancelReservation(r.id, cancelMotivo.trim());
+                                    setCancelConfirmId(null);
+                                    setCancelMotivo('');
+                                  }}
+                                  className="text-xs px-3 py-1.5 rounded-lg font-black bg-red-500 text-white hover:bg-red-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                                >
+                                  Confirmar Cancelamento
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
@@ -329,7 +376,7 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
             >
               + Novo bloqueio
             </button>
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl divide-y divide-zinc-800">
+            <div className="bg-zinc-900 border border-amber-500/20 rounded-xl divide-y divide-zinc-800">
               {blocks.length === 0 && (
                 <p className="text-center py-10 text-white text-sm">Sem bloqueios activos</p>
               )}
@@ -363,7 +410,7 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
             { label: 'Activas / confirmadas', value: stats.ativas, color: 'text-emerald-400' },
             { label: 'Bloqueios', value: stats.bloqueios, color: 'text-red-400' },
           ].map(s => (
-            <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+            <div key={s.label} className="bg-zinc-900 border border-amber-500/20 rounded-xl p-4">
               <p className="text-xs text-white">{s.label}</p>
               <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
             </div>

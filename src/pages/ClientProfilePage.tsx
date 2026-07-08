@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+﻿import { useState, type ReactNode } from 'react';
 import {
   Mail, Phone, MapPin, Briefcase, Calendar,
   Home, KeyRound, ShoppingCart, CreditCard,
@@ -186,7 +186,13 @@ const IcoChevron   = ({ open }: { open: boolean }) => <svg width="12" height="12
 const IcoShield    = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
 const IcoBarChart  = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="9" width="4" height="12"/><rect x="10" y="5" width="4" height="16"/><rect x="17" y="1" width="4" height="20"/></svg>;
 
-type PagEvt = { label: string; sub: string; valor: number; data: string; tipo: 'aluguer' | 'compra' | 'xitique' | 'divida' };
+type PagEvt = {
+  label: string; sub: string; valor: number; data: string; tipo: 'aluguer' | 'compra' | 'xitique' | 'divida';
+  clientName?: string; clientEmail?: string; clientPhone?: string;
+  matricula?: string; dataInicio?: string; dataFim?: string;
+  formaPagamento?: string; referenciaPagamento?: string; horaPagamento?: string;
+  diasAluguer?: number; valorDiario?: number;
+};
 const TIPO_CLS: Record<PagEvt['tipo'], string> = {
   aluguer: 'bg-amber-400/10 text-amber-400 border-amber-400/20',
   compra:  'bg-emerald-400/10 text-emerald-400 border-emerald-400/20',
@@ -343,11 +349,27 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
   // ── Histórico de pagamentos partilhado (Pagamentos + Histórico) ───────────
   const historicoPag: PagEvt[] = [];
   alugueres.filter(a => a.status === 'concluida').forEach(a => {
-    historicoPag.push({ label: getVehicleName(a.vehicleId), sub: 'Aluguer concluído', valor: a.valorTotal, data: a.dataFim, tipo: 'aluguer' });
+    const dias = Math.max(1, Math.ceil((new Date(a.dataFim).getTime() - new Date(a.dataInicio).getTime()) / 86400000));
+    historicoPag.push({
+      label: getVehicleName(a.vehicleId), sub: 'Aluguer concluído', valor: a.valorTotal, data: a.dataFim, tipo: 'aluguer',
+      clientName: a.clientName, clientEmail: a.clientEmail, clientPhone: a.clientPhone,
+      matricula: getVehicle(a.vehicleId)?.matricula,
+      dataInicio: a.dataInicio, dataFim: a.dataFim,
+      formaPagamento: a.formaPagamento, referenciaPagamento: a.referenciaPagamento, horaPagamento: a.horaPagamento,
+      diasAluguer: dias, valorDiario: Math.round(a.valorTotal / dias),
+    });
   });
   compras.forEach(c => {
     (c.prestacoes ?? []).filter(p => p.paga && p.dataPagamento).forEach(p => {
-      historicoPag.push({ label: getVehicleName(c.vehicleId), sub: `Prestação ${p.numero}`, valor: p.valorPago ?? p.valor, data: p.dataPagamento!, tipo: 'compra' });
+      historicoPag.push({
+        label: getVehicleName(c.vehicleId), sub: `Prestação ${p.numero}`, valor: p.valorPago ?? p.valor, data: p.dataPagamento!, tipo: 'compra',
+        clientName: c.clientName, clientEmail: c.clientEmail, clientPhone: c.clientPhone,
+        matricula: getVehicle(c.vehicleId)?.matricula,
+        dataInicio: c.dataInicio,
+        formaPagamento: (p as any).formaPagamento ?? c.formaPagamento,
+        referenciaPagamento: (p as any).referenciaPagamento ?? c.referenciaPagamento,
+        horaPagamento: (p as any).horaPagamento ?? c.horaPagamento,
+      });
     });
   });
   if (membro) {
@@ -371,7 +393,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex">
+    <div className="min-h-screen bg-zinc-950 text-white flex font-medium">
 
       {/* ══ ASIDE SIDEBAR ════════════════════════════════════════════════════ */}
       <aside className="w-56 shrink-0 bg-zinc-900 border-r border-zinc-800 flex flex-col sticky top-0 h-screen overflow-hidden">
@@ -383,9 +405,9 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
           {(() => {
             const active = section === 'resumo';
             return (
-              <button onClick={() => goto('resumo')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
+              <button onClick={() => goto('resumo')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
                 <Home size={15} className="shrink-0" />
-                <span className="flex-1 text-left text-xs">Início</span>
+                <span className="flex-1 text-left text-xs font-medium">Início</span>
               </button>
             );
           })()}
@@ -394,10 +416,10 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
           {(() => {
             const active = section === 'reservas';
             return (
-              <button onClick={() => goto('reservas')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
+              <button onClick={() => goto('reservas')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
                 <KeyRound size={15} className="shrink-0" />
-                <span className="flex-1 text-left text-xs">Reservas</span>
-                {alugueres.length > 0 && <span className={`text-[10px] font-black min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center ${active ? 'bg-amber-500 text-zinc-950' : 'bg-zinc-700 text-white'}`}>{alugueres.length}</span>}
+                <span className="flex-1 text-left text-xs font-medium">Reservas</span>
+                {alugueres.length > 0 && <span className={`text-xs font-black min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center ${active ? 'bg-amber-500 text-zinc-950' : 'bg-zinc-700 text-white'}`}>{alugueres.length}</span>}
               </button>
             );
           })()}
@@ -406,10 +428,10 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
           {(() => {
             const active = section === 'compras';
             return (
-              <button onClick={() => goto('compras')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
+              <button onClick={() => goto('compras')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
                 <ShoppingCart size={15} className="shrink-0" />
-                <span className="flex-1 text-left text-xs">Compras</span>
-                {compras.length > 0 && <span className={`text-[10px] font-black min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center ${active ? 'bg-amber-500 text-zinc-950' : 'bg-zinc-700 text-white'}`}>{compras.length}</span>}
+                <span className="flex-1 text-left text-xs font-medium">Compras</span>
+                {compras.length > 0 && <span className={`text-xs font-black min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center ${active ? 'bg-amber-500 text-zinc-950' : 'bg-zinc-700 text-white'}`}>{compras.length}</span>}
               </button>
             );
           })()}
@@ -418,10 +440,10 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
           {(() => {
             const active = section === 'pagamentos';
             return (
-              <button onClick={() => goto('pagamentos')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
+              <button onClick={() => goto('pagamentos')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
                 <CreditCard size={15} className="shrink-0" />
-                <span className="flex-1 text-left text-xs">Pagamentos</span>
-                {pagamentosBadge > 0 && <span className="text-[10px] font-black min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center bg-red-500 text-white">{pagamentosBadge}</span>}
+                <span className="flex-1 text-left text-xs font-medium">Pagamentos</span>
+                {pagamentosBadge > 0 && <span className="text-xs font-black min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center bg-red-500 text-white">{pagamentosBadge}</span>}
               </button>
             );
           })()}
@@ -430,10 +452,10 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
           {(() => {
             const active = section === 'xitique';
             return (
-              <button onClick={() => goto('xitique')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
+              <button onClick={() => goto('xitique')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
                 <Trophy size={15} className="shrink-0" />
-                <span className="flex-1 text-left text-xs">Xitique</span>
-                {xitiqueBadge > 0 && <span className="text-[10px] font-black min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center bg-amber-500 text-zinc-950">!</span>}
+                <span className="flex-1 text-left text-xs font-medium">Xitique</span>
+                {xitiqueBadge > 0 && <span className="text-xs font-black min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center bg-amber-500 text-zinc-950">!</span>}
               </button>
             );
           })()}
@@ -442,9 +464,9 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
           {(() => {
             const active = section === 'historico';
             return (
-              <button onClick={() => goto('historico')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
+              <button onClick={() => goto('historico')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
                 <History size={15} className="shrink-0" />
-                <span className="flex-1 text-left text-xs">Histórico</span>
+                <span className="flex-1 text-left text-xs font-medium">Histórico</span>
               </button>
             );
           })()}
@@ -453,10 +475,10 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
           {(() => {
             const active = section === 'notificacoes';
             return (
-              <button onClick={() => goto('notificacoes')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
+              <button onClick={() => goto('notificacoes')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
                 <Bell size={15} className="shrink-0" />
-                <span className="flex-1 text-left text-xs">Notificações</span>
-                {unreadCount > 0 && <span className={`text-[10px] font-black min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center ${active ? 'bg-amber-500 text-zinc-950' : 'bg-red-500 text-white'}`}>{unreadCount}</span>}
+                <span className="flex-1 text-left text-xs font-medium">Notificações</span>
+                {unreadCount > 0 && <span className={`text-xs font-black min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center ${active ? 'bg-amber-500 text-zinc-950' : 'bg-red-500 text-white'}`}>{unreadCount}</span>}
               </button>
             );
           })()}
@@ -465,9 +487,9 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
           {(() => {
             const active = section === 'dados_pessoais';
             return (
-              <button onClick={() => goto('dados_pessoais')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
+              <button onClick={() => goto('dados_pessoais')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all border-l-[3px] ${active ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-transparent text-white hover:bg-zinc-800/60 hover:text-white'}`}>
                 <User size={15} className="shrink-0" />
-                <span className="flex-1 text-left text-xs">Dados Pessoais</span>
+                <span className="flex-1 text-left text-xs font-medium">Dados Pessoais</span>
               </button>
             );
           })()}
@@ -591,24 +613,27 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                 )}
 
                 {/* ── Welcome banner ── */}
-                <div className="relative bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 border border-zinc-800 rounded-2xl px-5 py-5 overflow-hidden">
-                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(228,180,46,0.07),transparent_60%)]" />
-                  <div className="relative">
+                <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
+                  <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-zinc-800/70">
+                    <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                    <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Bem-vindo</p>
+                  </div>
+                  <div className="px-5 py-4">
                     <h2 className="text-lg font-black text-white mb-0.5">
                       {saudacao}, <span className="text-amber-400">{firstName}</span> 👋
                     </h2>
                     {fullUser?.dataCriacao && (
-                      <p className="text-xs text-white mb-3">Membro desde {fmtData(fullUser.dataCriacao.slice(0,10))}</p>
+                      <p className="text-sm text-white mb-3">Membro desde {fmtData(fullUser.dataCriacao.slice(0,10))}</p>
                     )}
                     <div className="flex flex-wrap gap-2">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[11px] font-bold border ${fullUser?.status === 'ativo' ? 'bg-emerald-400/10 border-emerald-400/20 text-emerald-400' : 'bg-red-400/10 border-red-400/20 text-red-400'}`}>
+                      <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold border ${fullUser?.status === 'ativo' ? 'bg-emerald-400/10 border-emerald-400/20 text-emerald-400' : 'bg-red-400/10 border-red-400/20 text-red-400'}`}>
                         {fullUser?.status === 'ativo' ? 'Conta Activa' : fullUser?.status === 'suspenso' ? 'Conta suspensa' : fullUser?.status === 'inativo' ? 'Conta inactiva' : 'Conta pendente'}
                       </span>
-                      <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[11px] font-bold border ${fullUser?.regularity === 'regular' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-red-400/10 border-red-400/20 text-red-400'}`}>
+                      <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold border ${fullUser?.regularity === 'regular' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-red-400/10 border-red-400/20 text-red-400'}`}>
                         {fullUser?.regularity === 'regular' ? 'Regular' : 'Pagamento em Falta'}
                       </span>
                       {membro && (
-                        <span className="inline-flex items-center px-3 py-1 rounded-lg text-[11px] font-bold border bg-amber-500/10 border-amber-500/20 text-amber-400">
+                        <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold border bg-amber-500/10 border-amber-500/20 text-amber-400">
                           Xitique Activo
                         </span>
                       )}
@@ -619,13 +644,11 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                 {/* ── 4 KPI cards ── */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {stats.map(s => (
-                    <button key={s.label} onClick={s.onClick} className="group bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-2xl overflow-hidden text-left transition-all hover:-translate-y-0.5">
-                      <div className={`h-0.5 w-full ${s.accentLine}`} />
+                    <button key={s.label} onClick={s.onClick} className="group bg-zinc-900 border border-amber-500/30 hover:border-amber-500/50 rounded-2xl overflow-hidden text-left transition-all hover:-translate-y-0.5">
                       <div className="p-4">
-                        <div className={`mb-3 ${s.valueColor}`}>{s.icon}</div>
-                        <p className="text-[10px] text-white uppercase font-bold tracking-widest mb-1">{s.label}</p>
+                        <p className="text-xs font-black text-amber-400 uppercase tracking-widest mb-1">{s.label}</p>
                         <p className={`text-3xl font-black ${s.valueColor} leading-none mb-1`}>{s.value}</p>
-                        <p className="text-[11px] text-white">{s.sub}</p>
+                        <p className="text-sm text-white">{s.sub}</p>
                       </div>
                     </button>
                   ))}
@@ -635,28 +658,28 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
                   {/* Actividade recente */}
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-800/30">
-                      <div className="flex items-center gap-2">
-                        <Clock size={13} className="text-amber-400" />
-                        <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Actividade Recente</span>
+                  <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
+                    <div className="flex items-center justify-between gap-2.5 px-5 py-3.5 border-b border-zinc-800/70">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                        <span className="text-xs font-black text-amber-400 uppercase tracking-widest">Actividade Recente</span>
                       </div>
-                      <button onClick={() => goto('historico')} className="text-[11px] text-amber-400/70 hover:text-amber-400 transition-colors">Ver tudo →</button>
+                      <button onClick={() => goto('historico')} className="text-xs text-amber-400/70 hover:text-amber-400 transition-colors">Ver tudo →</button>
                     </div>
                     {feedDisplay.length === 0 ? (
-                      <div className="px-4 py-8 text-center text-xs text-white/70">Sem actividade registada.</div>
+                      <div className="px-4 py-8 text-center text-xs text-white">Sem actividade registada.</div>
                     ) : (
                       <div className="divide-y divide-zinc-800/60">
                         {feedDisplay.map(evt => (
                           <div key={evt.id} className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/30 transition-colors">
-                            <div className={`w-8 h-8 rounded-xl ${evt.iconBg} flex items-center justify-center text-white/70 shrink-0`}>
+                            <div className={`w-8 h-8 rounded-xl ${evt.iconBg} flex items-center justify-center text-white shrink-0`}>
                               {evt.icon}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold text-white truncate">{evt.title}</p>
-                              <p className="text-[10px] text-white mt-0.5">{evt.sub}</p>
+                              <p className="text-sm font-bold text-white truncate">{evt.title}</p>
+                              <p className="text-xs text-white mt-0.5">{evt.sub}</p>
                             </div>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${evt.statusCls}`}>{evt.status}</span>
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-md border shrink-0 ${evt.statusCls}`}>{evt.status}</span>
                           </div>
                         ))}
                       </div>
@@ -664,34 +687,34 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                   </div>
 
                   {/* Xitique card */}
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-800/30">
-                      <div className="flex items-center gap-2">
-                        <Trophy size={13} className="text-amber-400" />
-                        <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">O Meu Xitique</span>
+                  <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
+                    <div className="flex items-center justify-between gap-2.5 px-5 py-3.5 border-b border-zinc-800/70">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                        <span className="text-xs font-black text-amber-400 uppercase tracking-widest">O Meu Xitique</span>
                       </div>
-                      <button onClick={() => goto('xitique')} className="text-[11px] text-amber-400/70 hover:text-amber-400 transition-colors">Detalhes →</button>
+                      <button onClick={() => goto('xitique')} className="text-xs text-amber-400/70 hover:text-amber-400 transition-colors">Detalhes →</button>
                     </div>
                     {!membro ? (
                       <div className="px-4 py-8 text-center space-y-2">
                         <Trophy size={28} className="mx-auto text-white" />
-                        <p className="text-xs text-white">Não está inscrito num grupo de Xitique.</p>
-                        <button onClick={() => goto('xitique')} className="mt-2 px-4 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold hover:bg-amber-500/20 transition-colors">
+                        <p className="text-sm text-white">Não está inscrito num grupo de Xitique.</p>
+                        <button onClick={() => goto('xitique')} className="mt-2 px-4 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold hover:bg-amber-500/20 transition-colors">
                           Saber mais
                         </button>
                       </div>
                     ) : (
-                      <div className="px-4 py-4 space-y-4">
+                      <div className="px-5 py-4 space-y-4">
                         {/* Valor acumulado */}
                         <div className="flex items-end justify-between">
-                          <span className="text-[11px] text-white">Poupança acumulada</span>
-                          <span className="text-2xl font-black text-amber-400">{fmt(pagosQuotas)}</span>
+                          <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Poupança acumulada</p>
+                          <span className="text-2xl font-black text-white">{fmt(pagosQuotas)}</span>
                         </div>
                         {/* Barra de progresso */}
                         <div>
-                          <div className="flex justify-between text-[10px] text-white mb-1.5">
+                          <div className="flex justify-between text-xs text-white mb-1.5">
                             <span>Meta: {fmt(totalQuotas)}</span>
-                            <span className="text-amber-400 font-bold">{xitiquePct}%</span>
+                            <span className="text-amber-400 font-black">{xitiquePct}%</span>
                           </div>
                           <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
                             <div className="h-2 rounded-full bg-gradient-to-r from-amber-600 to-amber-400 transition-all" style={{ width: `${xitiquePct}%` }} />
@@ -700,16 +723,16 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                         {/* Membros do grupo */}
                         {grupoDoUser && (
                           <div>
-                            <p className="text-[10px] text-white/70 uppercase font-bold tracking-widest mb-2">Membros</p>
+                            <p className="text-xs font-black text-amber-400 uppercase tracking-widest mb-2">Membros</p>
                             <div className="flex flex-wrap gap-1.5">
                               {grupoDoUser.membros.slice(0,4).map(m => (
-                                <span key={m.nome} className="inline-flex items-center gap-1.5 bg-zinc-800 border border-zinc-700 rounded-full px-2.5 py-1 text-[10px] text-white/70">
+                                <span key={m.nome} className="inline-flex items-center gap-1.5 bg-zinc-800 border border-zinc-700 rounded-full px-2.5 py-1 text-xs text-white">
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                                   {m.nome.split(' ')[0]}
                                 </span>
                               ))}
                               {grupoDoUser.membros.length > 4 && (
-                                <span className="inline-flex items-center bg-zinc-800 border border-zinc-700 rounded-full px-2.5 py-1 text-[10px] text-white">
+                                <span className="inline-flex items-center bg-zinc-800 border border-zinc-700 rounded-full px-2.5 py-1 text-xs text-white">
                                   +{grupoDoUser.membros.length - 4}
                                 </span>
                               )}
@@ -720,8 +743,8 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                         {nextXitique && (
                           <div className="flex items-center justify-between pt-2 border-t border-zinc-800">
                             <div>
-                              <p className="text-[10px] text-white/70 uppercase font-bold tracking-widest">Próxima contribuição</p>
-                              <p className="text-sm font-bold text-white mt-0.5">{fmt(nextXitique.valor)} <span className="text-white font-normal">· Mês {nextXitique.mes}</span></p>
+                              <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Próxima contribuição</p>
+                              <p className="text-sm font-black text-white mt-0.5">{fmt(nextXitique.valor)} <span className="text-white font-medium">· Mês {nextXitique.mes}</span></p>
                             </div>
                             <button onClick={() => goto('xitique')} className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-xs font-bold transition-colors">
                               Ver Xitique
@@ -742,58 +765,53 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
             <div className="space-y-4">
 
               {/* Profile Hero */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                <div className="h-0.5 w-full bg-gradient-to-r from-amber-600 via-amber-400 to-amber-600" />
-                <div className="px-5 pt-5 pb-5">
-                  <div className="flex items-start gap-4">
-                    <div className="w-20 h-20 rounded-full overflow-hidden bg-amber-500 flex items-center justify-center text-zinc-950 font-black text-xl shrink-0 shadow-lg ring-2 ring-amber-500/30">
+              <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
+                <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-zinc-800/70">
+                  <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                  <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Perfil</p>
+                </div>
+                <div className="px-5 py-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full overflow-hidden bg-amber-500 flex items-center justify-center text-zinc-950 font-black text-lg shrink-0 shadow-lg ring-2 ring-amber-500/30">
                       {fullUser?.avatar
                         ? <img src={fullUser.avatar} alt={authUser?.nome} className="w-full h-full object-cover" />
                         : <span>{authUser ? initials(authUser.nome) : '?'}</span>
                       }
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h2 className="text-white font-black text-xl leading-tight">
-                        {fullUser?.nome ?? authUser?.nome}
-                      </h2>
+                      <p className="text-white font-black text-lg leading-tight">{fullUser?.nome ?? authUser?.nome}</p>
                       <p className="text-white text-sm mt-0.5">{authUser?.email}</p>
                       {fullUser?.dataCriacao && (
-                        <p className="text-white text-xs mt-0.5">
-                          Membro desde {fmtData(fullUser.dataCriacao.slice(0, 10))}
-                        </p>
+                        <p className="text-white/60 text-xs mt-0.5">Membro desde {fmtData(fullUser.dataCriacao.slice(0, 10))}</p>
                       )}
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* 3 Mini Stat Cards */}
+              {/* 3 Stat Cards — estilo Metric admin */}
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-center relative overflow-hidden">
-                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-amber-500" />
-                  <div className="text-xl font-black text-amber-400">{alugueres.length}</div>
-                  <div className="text-[10px] text-white mt-0.5 font-medium">Reservas</div>
-                </div>
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-center relative overflow-hidden">
-                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-emerald-500" />
-                  <div className="text-xl font-black text-emerald-400">{compras.length}</div>
-                  <div className="text-[10px] text-white mt-0.5 font-medium">Compras</div>
-                </div>
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-center relative overflow-hidden">
-                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-red-500" />
-                  <div className="text-xl font-black text-red-400">{minhasDividas.length + prestacoesPendentes.length}</div>
-                  <div className="text-[10px] text-white mt-0.5 font-medium">Pagamentos</div>
-                </div>
+                {[
+                  { label: 'Reservas',   value: alugueres.length, sub: `${alugueres.filter(a => a.status === 'concluida').length} concluída(s)`, color: 'text-amber-400' },
+                  { label: 'Compras',    value: compras.length,   sub: `${compras.filter(c => c.status === 'liquidada').length} liquidada(s)`,   color: 'text-white' },
+                  { label: 'Pagamentos', value: minhasDividas.length + prestacoesPendentes.length, sub: (minhasDividas.length + prestacoesPendentes.length) > 0 ? 'pendente(s)' : 'Em dia', color: (minhasDividas.length + prestacoesPendentes.length) > 0 ? 'text-red-400' : 'text-white' },
+                ].map(s => (
+                  <div key={s.label} className="bg-zinc-900 border border-amber-500/30 rounded-2xl px-5 py-4">
+                    <p className="text-xs font-black text-amber-400 uppercase tracking-widest mb-1">{s.label}</p>
+                    <p className={`text-3xl font-black leading-none ${s.color}`}>{s.value}</p>
+                    <p className="text-xs text-white mt-1">{s.sub}</p>
+                  </div>
+                ))}
               </div>
 
               {/* Two-column layout */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
                 {/* Left: Dados Pessoais info rows */}
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
-                    <span className="text-amber-400"><User size={12} /></span>
-                    <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Dados Pessoais</span>
+                <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
+                  <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-zinc-800/70">
+                    <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                    <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Dados Pessoais</p>
                   </div>
                   <div className="divide-y divide-zinc-800/50">
                     {([
@@ -811,8 +829,8 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                           {f.icon}
                         </div>
                         <div className="min-w-0">
-                          <div className="text-[10px] text-white font-medium">{f.label}</div>
-                          <div className="text-xs text-white truncate mt-0.5">{f.value}</div>
+                          <div className="text-xs text-amber-400 font-black uppercase tracking-widest">{f.label}</div>
+                          <div className="text-sm text-white mt-0.5 truncate">{f.value}</div>
                         </div>
                       </div>
                     ))}
@@ -827,12 +845,12 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                 {/* Right: Estado da Conta + Segurança */}
                 <div className="space-y-3">
                   {/* Estado da Conta 2×2 grid */}
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                    <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
-                      <span className="text-amber-400"><IcoShield /></span>
-                      <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Estado da Conta</span>
+                  <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
+                    <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-zinc-800/70">
+                      <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                      <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Estado da Conta</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-px bg-zinc-800">
+                    <div className="grid grid-cols-2 gap-px bg-zinc-800/70">
                       {[
                         {
                           label: 'Estado',
@@ -841,7 +859,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                  fullUser?.status === 'inativo'  ? 'Inactivo'  : 'Pendente',
                           cls: fullUser?.status === 'ativo'    ? 'text-emerald-400' :
                                fullUser?.status === 'suspenso' ? 'text-red-400'     :
-                               fullUser?.status === 'inativo'  ? 'text-white'    : 'text-amber-400',
+                               fullUser?.status === 'inativo'  ? 'text-white'       : 'text-amber-400',
                         },
                         {
                           label: 'Regularidade',
@@ -861,35 +879,35 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                           cls:   'text-white',
                         },
                       ].map(row => (
-                        <div key={row.label} className="bg-zinc-900 px-3 py-3">
-                          <div className="text-[10px] text-white font-medium mb-1">{row.label}</div>
-                          <div className={`text-xs font-bold ${row.cls}`}>{row.value}</div>
+                        <div key={row.label} className="bg-zinc-900 px-4 py-3">
+                          <p className="text-xs font-black text-amber-400 uppercase tracking-widest mb-1">{row.label}</p>
+                          <p className={`text-sm font-black ${row.cls}`}>{row.value}</p>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   {/* Segurança */}
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                    <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
-                      <span className="text-amber-400"><KeyRound size={12} /></span>
-                      <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Segurança</span>
+                  <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
+                    <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-zinc-800/70">
+                      <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                      <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Segurança</p>
                     </div>
                     <div className="divide-y divide-zinc-800/50">
                       {[
-                        { icon: <KeyRound size={13} />,   label: 'Palavra-passe',     value: '••••••••',      note: 'Contacte o admin para alterar' },
-                        { icon: <Smartphone size={13} />, label: 'Autenticação 2FA',  value: 'Indisponível',  note: 'Não configurado nesta versão' },
-                        { icon: <Mail size={13} />,       label: 'Email verificado',  value: authUser?.email ? 'Verificado' : 'Pendente', note: authUser?.email ?? '' },
+                        { icon: <KeyRound size={13} />,   label: 'Palavra-passe',    value: '••••••••',     note: 'Contacte o admin para alterar' },
+                        { icon: <Smartphone size={13} />, label: 'Autenticação 2FA', value: 'Indisponível', note: 'Não configurado nesta versão' },
+                        { icon: <Mail size={13} />,       label: 'Email verificado', value: authUser?.email ? 'Verificado' : 'Pendente', note: authUser?.email ?? '' },
                       ].map((item, i) => (
                         <div key={i} className="flex items-center gap-3 px-4 py-3">
-                          <div className="w-7 h-7 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0 text-white">
+                          <div className="w-7 h-7 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0 text-amber-400">
                             {item.icon}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-xs text-white font-medium">{item.label}</div>
-                            <div className="text-[10px] text-white mt-0.5 truncate">{item.note}</div>
+                            <div className="text-xs font-black text-amber-400 uppercase tracking-widest">{item.label}</div>
+                            <div className="text-xs text-white mt-0.5 truncate">{item.note}</div>
                           </div>
-                          <span className={`text-[10px] font-bold shrink-0 ${
+                          <span className={`text-sm font-black shrink-0 ${
                             item.value === 'Verificado' ? 'text-emerald-400' : 'text-white'
                           }`}>{item.value}</span>
                         </div>
@@ -916,20 +934,18 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                 const hasAnyDoc  = fullUser?.bi || fullUser?.nuit || fullUser?.documentos;
 
                 return (
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                  <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
                     <button
                       onClick={() => toggleSec('docs')}
-                      className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-zinc-800/40 transition-colors"
+                      className="w-full flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-zinc-800/40 transition-colors"
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="text-emerald-400">
-                          <FileText size={12} />
-                        </span>
-                        <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Documentos</span>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-1 h-4 bg-amber-500 rounded-full shrink-0" />
+                        <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Documentos</p>
                         {hasAnyDoc && (
                           <div className="flex items-center gap-1">
-                            {entregues > 0 && <span className="text-[10px] bg-emerald-400/15 text-emerald-400 border border-emerald-400/20 rounded-md px-1.5 py-0.5 font-black">{entregues} ok</span>}
-                            {emFalta > 0   && <span className="text-[10px] bg-red-400/15 text-red-400 border border-red-400/20 rounded-md px-1.5 py-0.5 font-black">{emFalta} em falta</span>}
+                            {entregues > 0 && <span className="text-xs bg-emerald-400/15 text-emerald-400 border border-emerald-400/20 rounded-md px-1.5 py-0.5 font-black">{entregues} ok</span>}
+                            {emFalta > 0   && <span className="text-xs bg-red-400/15 text-red-400 border border-red-400/20 rounded-md px-1.5 py-0.5 font-black">{emFalta} em falta</span>}
                           </div>
                         )}
                       </div>
@@ -954,9 +970,9 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                       : <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                                     }
                                   </div>
-                                  <span className="text-xs text-white truncate">{d.label}</span>
+                                  <span className="text-sm text-white truncate">{d.label}</span>
                                 </div>
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${presente ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' : 'bg-red-400/10 text-red-400 border-red-400/20'}`}>
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded-md border shrink-0 ${presente ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' : 'bg-red-400/10 text-red-400 border-red-400/20'}`}>
                                   {presente ? 'Entregue' : 'Em falta'}
                                 </span>
                               </div>
@@ -964,8 +980,8 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                           })}
                           {conhecidos.length > 0 && (
                             <div className="flex items-center justify-between px-4 py-2.5 bg-zinc-800/30">
-                              <span className="text-[10px] text-white font-bold">Total registados</span>
-                              <span className="text-[10px] text-white font-black">{entregues} / {conhecidos.length}</span>
+                              <span className="text-xs text-amber-400 font-black uppercase tracking-widest">Total registados</span>
+                              <span className="text-sm font-black text-white">{entregues} / {conhecidos.length}</span>
                             </div>
                           )}
                         </div>
@@ -984,25 +1000,25 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
 
               {/* KPI grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-center">
-                  <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Reservas</div>
+                <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4 text-center">
+                  <div className="text-xs text-amber-400 uppercase font-bold tracking-wider mb-1">Reservas</div>
                   <div className="text-3xl font-black text-white">{alugueres.length}</div>
-                  <div className="text-[10px] text-white mt-0.5">{alugueres.filter(a => a.status === 'concluida').length} concluída{alugueres.filter(a => a.status === 'concluida').length !== 1 ? 's' : ''}</div>
-                </div>
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-center">
-                  <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Compras</div>
-                  <div className="text-3xl font-black text-white">{compras.length}</div>
-                  <div className="text-[10px] text-white mt-0.5">{compras.filter(c => c.status === 'liquidada').length} liquidada{compras.filter(c => c.status === 'liquidada').length !== 1 ? 's' : ''}</div>
+                  <div className="text-xs text-white mt-0.5">{alugueres.filter(a => a.status === 'concluida').length} concluída{alugueres.filter(a => a.status === 'concluida').length !== 1 ? 's' : ''}</div>
                 </div>
                 <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4 text-center">
-                  <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Total Investido</div>
+                  <div className="text-xs text-amber-400 uppercase font-bold tracking-wider mb-1">Compras</div>
+                  <div className="text-3xl font-black text-white">{compras.length}</div>
+                  <div className="text-xs text-white mt-0.5">{compras.filter(c => c.status === 'liquidada').length} liquidada{compras.filter(c => c.status === 'liquidada').length !== 1 ? 's' : ''}</div>
+                </div>
+                <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4 text-center">
+                  <div className="text-xs text-amber-400 uppercase font-bold tracking-wider mb-1">Total Investido</div>
                   <div className="text-sm font-black text-amber-400 leading-tight mt-1">{totalInvestido > 0 ? fmt(totalInvestido) : '—'}</div>
                 </div>
                 <div className={`rounded-2xl p-4 text-center border ${
                   membro?.estado === 'Sorteado' ? 'bg-emerald-400/10 border-emerald-400/20' :
-                  membro?.estado === 'Aceite'   ? 'bg-amber-400/10 border-amber-400/20' : 'bg-zinc-900 border-zinc-800'
+                  membro?.estado === 'Aceite'   ? 'bg-amber-400/10 border-amber-400/20' : 'bg-zinc-900 border-amber-500/20'
                 }`}>
-                  <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">Xitique</div>
+                  <div className="text-xs text-amber-400 uppercase font-bold tracking-wider mb-1">Xitique</div>
                   <div className={`text-sm font-black leading-tight mt-1 ${
                     membro?.estado === 'Sorteado' ? 'text-emerald-400' :
                     membro?.estado === 'Aceite'   ? 'text-amber-400' : 'text-white'
@@ -1016,10 +1032,10 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
               </div>
 
               {/* Resumo financeiro */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+              <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl overflow-hidden">
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
                   <span className="text-amber-400"><IcoBarChart /></span>
-                  <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Resumo Financeiro</span>
+                  <span className="text-xs font-black text-amber-400 uppercase tracking-widest">Resumo Financeiro</span>
                 </div>
                 <div className="divide-y divide-zinc-800/50">
                   <div className="flex items-center justify-between px-4 py-3">
@@ -1045,10 +1061,10 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
 
               {/* Distribuição de reservas por estado */}
               {alugueres.length > 0 && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl overflow-hidden">
                   <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
                     <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
-                    <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Reservas por Estado</span>
+                    <span className="text-xs font-black text-amber-400 uppercase tracking-widest">Reservas por Estado</span>
                   </div>
                   <div className="divide-y divide-zinc-800/50">
                     {Object.entries(
@@ -1060,7 +1076,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                       const st = RES_STATUS[status as ReservationStatus];
                       return (
                         <div key={status} className="flex items-center justify-between px-4 py-2.5">
-                          <span className={`text-[10px] border rounded-md px-2 py-0.5 font-bold ${st.cls}`}>{st.label}</span>
+                          <span className={`text-xs border rounded-md px-2 py-0.5 font-bold ${st.cls}`}>{st.label}</span>
                           <span className="text-xs font-black text-white">{count}</span>
                         </div>
                       );
@@ -1107,9 +1123,9 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                 : 0;
 
               return (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                <div className="bg-zinc-900 border border-amber-500/20 rounded-xl overflow-hidden">
                   {/* ── Linha principal ── */}
-                  <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-0 items-center">
+                  <div className="grid grid-cols-[1fr_auto_auto_auto] gap-0 items-center">
 
                     {/* Carro + datas + estado + obs */}
                     <div className="px-4 py-3 min-w-0">
@@ -1120,21 +1136,18 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                         {r.horaDevolucao && <span className="text-xs text-white">Dev: <span className="text-white font-bold">{r.horaDevolucao}</span></span>}
                       </div>
                       {r.notas && <p className="text-xs text-white mt-0.5 truncate">{r.notas}</p>}
+                      {r.status === 'cancelada' && r.motivoCancelamento && (
+                        <p className="text-xs text-red-400 mt-1 flex items-start gap-1">
+                          <span className="shrink-0 font-bold">Motivo:</span>
+                          <span className="truncate">{r.motivoCancelamento}</span>
+                        </p>
+                      )}
                     </div>
 
                     {/* Estado */}
                     <div className="px-3 py-3 shrink-0">
-                      <span className={`text-[10px] border rounded-md px-2 py-0.5 font-bold whitespace-nowrap ${st.cls}`}>{st.label}</span>
+                      <span className={`text-xs border rounded-md px-2 py-0.5 font-bold whitespace-nowrap ${st.cls}`}>{st.label}</span>
                     </div>
-
-                    {/* Btn: Detalhes */}
-                    <button
-                      onClick={() => setDetalheId(expanded ? null : r.id)}
-                      title="Ver detalhes"
-                      className={`px-3 py-3 h-full border-l border-zinc-800 transition-colors ${expanded ? 'text-amber-400 bg-amber-500/10' : 'text-white hover:text-white hover:bg-zinc-800/60'}`}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    </button>
 
                     {/* Btn: Download */}
                     <button
@@ -1145,19 +1158,14 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     </button>
 
-                    {/* Btn: Extensão */}
-                    <div className="flex border-l border-zinc-800 h-full">
-                      {podeEstender && (
-                        <button
-                          onClick={() => handleExtensao(r)}
-                          title="Solicitar extensão"
-                          className="px-3 py-3 text-amber-400/70 hover:text-amber-400 hover:bg-amber-500/10 transition-colors"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="17" y1="14" x2="17" y2="20"/><line x1="14" y1="17" x2="20" y2="17"/></svg>
-                        </button>
-                      )}
-                      {!podeEstender && <div className="px-3 py-3 w-10" />}
-                    </div>
+                    {/* Btn: Expandir (mesmo estilo das Compras) */}
+                    <button
+                      onClick={() => setDetalheId(expanded ? null : r.id)}
+                      title="Ver detalhes"
+                      className={`px-4 py-3 h-full border-l border-zinc-800 transition-colors ${expanded ? 'text-amber-400 bg-amber-500/10' : 'text-white hover:text-white hover:bg-zinc-800/60'}`}
+                    >
+                      <IcoChevron open={expanded} />
+                    </button>
                   </div>
 
                   {/* ── Painel de detalhes expandido ── */}
@@ -1170,29 +1178,19 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                     return (
                       <div className="border-t border-zinc-800 bg-zinc-950/50 divide-y divide-zinc-800">
 
-                        {/* ── 1. Header: imagem + nome + datas + estado ── */}
-                        <div className="flex items-center gap-4 px-4 py-3">
-                          {vehicle?.img && (
-                            <div className="w-28 h-[72px] shrink-0 rounded-xl overflow-hidden border border-zinc-700">
-                              <img src={vehicle.img} alt={vehicle.name} className="w-full h-full object-cover" />
+                        {/* ── 1. Estado do Processo ── */}
+                        <div className="px-5 py-5">
+                          <p className="text-xs font-black text-amber-400 uppercase tracking-widest mb-4">Estado do Processo</p>
+                          <ReservationTracker status={r.status} readonly clientView />
+                          {r.status === 'cancelada' && r.motivoCancelamento && (
+                            <div className="mt-4 flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2.5" strokeLinecap="round" className="shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                              <div>
+                                <p className="text-xs font-black text-red-400 uppercase tracking-wider mb-0.5">Motivo do Cancelamento</p>
+                                <p className="text-sm text-white leading-snug">{r.motivoCancelamento}</p>
+                              </div>
                             </div>
                           )}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-base font-black text-white truncate">{vehicle?.name ?? getVehicleName(r.vehicleId)}</p>
-                            <p className="text-xs text-white mt-1">
-                              Início: <span className="font-bold">{fmtData(r.dataInicio)}</span>
-                              {' · '}
-                              Fon: <span className="font-bold">{fmtData(r.dataFim)}</span>
-                              {r.horaDevolucao && <> · Dev: <span className="font-bold">{r.horaDevolucao}</span></>}
-                            </p>
-                          </div>
-                          <span className={`text-xs border rounded-lg px-3 py-1.5 font-bold shrink-0 whitespace-nowrap ${st.cls}`}>{st.label}</span>
-                        </div>
-
-                        {/* ── 2. Estado do Processo ── */}
-                        <div className="px-5 py-5">
-                          <p className="text-[11px] font-black text-amber-400 uppercase tracking-widest mb-4">Estado do Processo</p>
-                          <ReservationTracker status={r.status} readonly />
                         </div>
 
                         {/* ── 3. Grid: Período | Locais | Financeiro ── */}
@@ -1200,15 +1198,15 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
 
                           {/* PERÍODO */}
                           <div className="px-5 py-5 space-y-4">
-                            <p className="text-[11px] font-black text-amber-400 uppercase tracking-widest">Período</p>
+                            <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Período</p>
                             <div className="space-y-4">
                               <div>
-                                <p className="text-[11px] font-bold uppercase tracking-widest text-white">Pick-up</p>
+                                <p className="text-xs font-bold uppercase tracking-widest text-white">Pick-up</p>
                                 <p className="text-3xl font-black text-white leading-none mt-1">{d(r.dataInicio)}</p>
                                 {r.horaLevantamento && <p className="text-sm text-white mt-1.5">{r.horaLevantamento}</p>}
                               </div>
                               <div>
-                                <p className="text-[11px] font-bold uppercase tracking-widest text-amber-400">Return</p>
+                                <p className="text-xs font-bold uppercase tracking-widest text-amber-400">Return</p>
                                 <p className="text-3xl font-black text-amber-400 leading-none mt-1">{d(r.dataFim)}</p>
                                 {r.horaDevolucao && <p className="text-sm text-amber-400 mt-1.5">{r.horaDevolucao}</p>}
                               </div>
@@ -1217,17 +1215,17 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
 
                           {/* LOCAIS */}
                           <div className="px-5 py-5 space-y-4">
-                            <p className="text-[11px] font-black text-amber-400 uppercase tracking-widest">Locais</p>
+                            <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Locais</p>
                             <div className="space-y-4">
                               {r.localLevantamento && (
                                 <div>
-                                  <p className="text-[11px] font-bold uppercase tracking-widest text-white mb-1">Levantamento</p>
+                                  <p className="text-xs font-bold uppercase tracking-widest text-white mb-1">Levantamento</p>
                                   <p className="text-sm font-semibold text-white leading-snug">{r.localLevantamento}</p>
                                 </div>
                               )}
                               {r.localDevolucao && (
                                 <div>
-                                  <p className="text-[11px] font-bold uppercase tracking-widest text-white mb-1">Devolução</p>
+                                  <p className="text-xs font-bold uppercase tracking-widest text-white mb-1">Devolução</p>
                                   <p className="text-sm font-semibold text-white leading-snug">{r.localDevolucao}</p>
                                 </div>
                               )}
@@ -1239,7 +1237,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
 
                           {/* FINANCEIRO */}
                           <div className="px-5 py-5 space-y-4">
-                            <p className="text-[11px] font-black text-amber-400 uppercase tracking-widest">Financeiro</p>
+                            <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Financeiro</p>
                             <div className="flex items-center gap-4">
                               <div className="relative shrink-0 w-[72px] h-[72px]">
                                 <svg viewBox="0 0 76 76" className="w-full h-full">
@@ -1254,7 +1252,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                   />
                                 </svg>
                                 <div className="absolute inset-0 flex items-center justify-center">
-                                  <span className="text-[11px] font-black text-white">{pct}%</span>
+                                  <span className="text-xs font-black text-white">{pct}%</span>
                                 </div>
                               </div>
                               <div className="min-w-0">
@@ -1346,21 +1344,21 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                 {/* Header com contadores e toggle */}
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Activos</span>
-                    <span className="text-[10px] font-black bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-md px-2 py-0.5">{ativos.length}</span>
+                    <span className="text-xs font-black text-amber-400 uppercase tracking-widest">Activos</span>
+                    <span className="text-xs font-black bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-md px-2 py-0.5">{ativos.length}</span>
                     {inativos.length > 0 && <>
                       <span className="text-white">·</span>
-                      <span className="text-[10px] font-black text-white uppercase tracking-widest">Concluídos/Cancelados</span>
-                      <span className="text-[10px] font-black bg-zinc-800 text-white border border-zinc-700 rounded-md px-2 py-0.5">{inativos.length}</span>
+                      <span className="text-xs font-black text-amber-400 uppercase tracking-widest">Concluídos/Cancelados</span>
+                      <span className="text-xs font-black bg-zinc-800 text-white border border-zinc-700 rounded-md px-2 py-0.5">{inativos.length}</span>
                     </>}
                   </div>
                   {inativos.length > 0 && (
                     <button
                       onClick={() => { setShowInativos(v => !v); setDetalheId(null); }}
-                      className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors ${
+                      className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors ${
                         showInativos
                           ? 'bg-zinc-700 border-zinc-600 text-white'
-                          : 'bg-zinc-900 border-zinc-800 text-white hover:text-white hover:border-zinc-700'
+                          : 'bg-zinc-900 border-amber-500/20 text-white hover:text-white hover:border-amber-500/40'
                       }`}
                     >
                       {showInativos ? 'Ver activos' : 'Ver histórico'}
@@ -1370,7 +1368,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
 
                 {/* Lista */}
                 {lista.length === 0 ? (
-                  <div className="text-center text-white text-sm py-10 bg-zinc-900 rounded-xl border border-zinc-800">
+                  <div className="text-center text-white text-sm py-10 bg-zinc-900 rounded-xl border border-amber-500/20">
                     {showInativos ? 'Nenhum aluguer concluído ou cancelado.' : 'Não tem alugueres activos de momento.'}
                   </div>
                 ) : (
@@ -1436,12 +1434,12 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
               <div className="space-y-3">
                 {/* Contagem */}
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Histórico de Compras</span>
-                  <span className="text-[10px] font-black bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-md px-2 py-0.5">{compras.length}</span>
+                  <span className="text-xs font-black text-amber-400 uppercase tracking-widest">Histórico de Compras</span>
+                  <span className="text-xs font-black bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-md px-2 py-0.5">{compras.length}</span>
                 </div>
 
                 {compras.length === 0 ? (
-                  <div className="text-center text-white text-sm py-10 bg-zinc-900 rounded-xl border border-zinc-800">
+                  <div className="text-center text-white text-sm py-10 bg-zinc-900 rounded-xl border border-amber-500/20">
                     Nenhuma compra registada.
                   </div>
                 ) : compras.map(c => {
@@ -1471,7 +1469,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                   ];
 
                   return (
-                    <div key={c.id} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                    <div key={c.id} className="bg-zinc-900 border border-amber-500/20 rounded-xl overflow-hidden">
 
                       {/* ── Linha de tabela ── */}
                       <div className="grid grid-cols-[1fr_auto_auto] items-center gap-0">
@@ -1479,7 +1477,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-sm font-black text-white">{veh?.name ?? getVehicleName(c.vehicleId)}</p>
                             {veh?.cat && (
-                              <span className="text-[9px] font-bold bg-zinc-800 border border-zinc-700 text-white rounded-md px-2 py-0.5 uppercase">
+                              <span className="text-xs font-bold bg-zinc-800 border border-zinc-700 text-white rounded-md px-2 py-0.5 uppercase">
                                 {CAT_LABEL[veh.cat] ?? veh.cat}
                               </span>
                             )}
@@ -1494,7 +1492,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                         </div>
 
                         <div className="px-3 py-3 shrink-0">
-                          <span className={`text-[10px] border rounded-md px-2 py-0.5 font-bold whitespace-nowrap ${st.cls}`}>{st.label}</span>
+                          <span className={`text-xs border rounded-md px-2 py-0.5 font-bold whitespace-nowrap ${st.cls}`}>{st.label}</span>
                         </div>
 
                         <button
@@ -1516,7 +1514,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                             onClick={() => toggleClosed(sk(id))}
                             className="w-full flex items-center justify-between px-4 py-3 hover:bg-zinc-800/40 transition-colors"
                           >
-                            <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">{label}</span>
+                            <span className="text-xs font-black text-amber-400 uppercase tracking-widest">{label}</span>
                             <svg
                               width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b"
                               strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
@@ -1540,14 +1538,24 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                 <p className="text-sm font-black text-white truncate">{veh?.name ?? getVehicleName(c.vehicleId)}</p>
                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                                   {veh?.cat && (
-                                    <span className="text-[9px] font-bold bg-zinc-800 border border-zinc-700 text-white rounded-md px-2 py-0.5 uppercase">
+                                    <span className="text-xs font-bold bg-zinc-800 border border-zinc-700 text-white rounded-md px-2 py-0.5 uppercase">
                                       {CAT_LABEL[veh.cat] ?? veh.cat}
                                     </span>
                                   )}
-                                  <span className={`text-[9px] font-black border rounded-md px-2 py-0.5 ${st.cls}`}>{st.label}</span>
+                                  <span className={`text-xs font-black border rounded-md px-2 py-0.5 ${st.cls}`}>{st.label}</span>
                                 </div>
                               </div>
                             </div>
+
+                            {c.status === 'cancelada' && c.motivoCancelamento && (
+                              <div className="mx-4 mt-4 mb-0 flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2.5" strokeLinecap="round" className="shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                <div>
+                                  <p className="text-xs font-black text-red-400 uppercase tracking-wider mb-0.5">Motivo do Cancelamento</p>
+                                  <p className="text-sm text-white leading-snug">{c.motivoCancelamento}</p>
+                                </div>
+                              </div>
+                            )}
 
                             <div className="divide-y divide-zinc-800">
 
@@ -1557,20 +1565,20 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                 {isOpen('det') && (
                                   <div className="px-4 pb-4">
                                     <div className="bg-zinc-900 rounded-xl overflow-hidden divide-y divide-zinc-800">
-                                      <div className="flex items-center justify-between px-4 py-3 gap-3">
-                                        <span className="text-xs text-white">Veículo</span>
-                                        <span className="text-xs font-bold text-white text-right">{veh?.name ?? getVehicleName(c.vehicleId)}</span>
+                                      <div className="flex items-center justify-between px-5 py-4 gap-4">
+                                        <span className="text-sm text-white">Veículo</span>
+                                        <span className="text-sm font-bold text-white text-right">{veh?.name ?? getVehicleName(c.vehicleId)}</span>
                                       </div>
-                                      <div className="flex items-center justify-between px-4 py-3 gap-3">
-                                        <span className="text-xs text-white">Data da Compra</span>
-                                        <span className="text-xs font-semibold text-white">{fmtData(c.dataInicio)}</span>
+                                      <div className="flex items-center justify-between px-5 py-4 gap-4">
+                                        <span className="text-sm text-white">Data da Compra</span>
+                                        <span className="text-sm font-semibold text-white">{fmtData(c.dataInicio)}</span>
                                       </div>
-                                      <div className="flex items-center justify-between px-4 py-3 gap-3">
-                                        <span className="text-xs text-white">Estado</span>
-                                        <span className={`text-[10px] font-black border rounded-lg px-2.5 py-1 ${st.cls}`}>{st.label}</span>
+                                      <div className="flex items-center justify-between px-5 py-4 gap-4">
+                                        <span className="text-sm text-white">Estado</span>
+                                        <span className={`text-xs font-black border rounded-lg px-2.5 py-1 ${st.cls}`}>{st.label}</span>
                                       </div>
-                                      <div className="flex items-center justify-between px-4 py-3 gap-3">
-                                        <span className="text-xs text-white">Valor Total</span>
+                                      <div className="flex items-center justify-between px-5 py-4 gap-4">
+                                        <span className="text-sm text-white">Valor Total</span>
                                         <span className="text-lg font-black text-amber-400">{fmt(c.valorTotal)}</span>
                                       </div>
                                     </div>
@@ -1585,25 +1593,25 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                   {isOpen('pag') && (
                                     <div className="px-4 pb-4">
                                       <div className="bg-zinc-900 rounded-xl overflow-hidden divide-y divide-zinc-800">
-                                        <div className="flex items-center justify-between px-4 py-3 gap-3">
-                                          <span className="text-xs text-white">Prestações pagas</span>
+                                        <div className="flex items-center justify-between px-5 py-4 gap-4">
+                                          <span className="text-sm text-white">Prestações pagas</span>
                                           <span className="text-sm font-black text-emerald-400">{prestacoesPagas} / {totalPrestacoes}</span>
                                         </div>
-                                        <div className="flex items-center justify-between px-4 py-3 gap-3">
-                                          <span className="text-xs text-white">Faltam</span>
+                                        <div className="flex items-center justify-between px-5 py-4 gap-4">
+                                          <span className="text-sm text-white">Faltam</span>
                                           <span className={`text-sm font-black ${prestRestantes > 0 ? 'text-amber-400' : 'text-white'}`}>{prestRestantes}</span>
                                         </div>
-                                        <div className="flex items-center justify-between px-4 py-3 gap-3">
-                                          <span className="text-xs text-white">Valor mensal</span>
+                                        <div className="flex items-center justify-between px-5 py-4 gap-4">
+                                          <span className="text-sm text-white">Valor mensal</span>
                                           <span className="text-sm font-bold text-white">{fmt(prestacoes.find(p => !p.paga)?.valor ?? c.deposito)}</span>
                                         </div>
-                                        <div className="flex items-center justify-between px-4 py-3 gap-3">
-                                          <span className="text-xs text-white">Total pago</span>
+                                        <div className="flex items-center justify-between px-5 py-4 gap-4">
+                                          <span className="text-sm text-white">Total pago</span>
                                           <span className="text-sm font-black text-emerald-400">{fmt(totalPago)}</span>
                                         </div>
                                         {totalEmFalta > 0 && (
-                                          <div className="flex items-center justify-between px-4 py-3 gap-3">
-                                            <span className="text-xs text-white">Total em dívida</span>
+                                          <div className="flex items-center justify-between px-5 py-4 gap-4">
+                                            <span className="text-sm text-white">Total em dívida</span>
                                             <span className="text-lg font-black text-red-400">{fmt(totalEmFalta)}</span>
                                           </div>
                                         )}
@@ -1613,9 +1621,9 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                           </div>
                                         )}
                                         {proximaNumero !== null && prestRestantes > 0 && (
-                                          <div className="flex items-center justify-between px-4 py-3 gap-3">
-                                            <span className="text-xs text-white">Próxima prestação</span>
-                                            <span className="text-xs font-bold text-amber-400">
+                                          <div className="flex items-center justify-between px-5 py-4 gap-4">
+                                            <span className="text-sm text-white">Próxima prestação</span>
+                                            <span className="text-sm font-bold text-amber-400">
                                               #{proximaNumero} · {fmt(prestacoes.find(p => p.numero === proximaNumero)?.valor ?? c.deposito)}
                                             </span>
                                           </div>
@@ -1643,7 +1651,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                             <span className="flex items-center gap-2 text-xs font-black text-white">
                                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                                               Detalhe das Prestações
-                                              <span className="text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/20 rounded-md px-2 py-0.5">{prestacoesPagas}/{totalPrestacoes}</span>
+                                              <span className="text-xs bg-amber-500/15 text-amber-400 border border-amber-500/20 rounded-md px-2 py-0.5">{prestacoesPagas}/{totalPrestacoes}</span>
                                             </span>
                                             <IcoChevron open={prestOpen.has(c.id)} />
                                           </button>
@@ -1666,8 +1674,8 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                                     <div className="flex-1 min-w-0">
                                                       <p className={`text-xs font-bold ${p.paga ? 'text-emerald-300' : isProxima ? 'text-amber-300' : 'text-white'}`}>
                                                         Prestação {p.numero}
-                                                        {isProxima && <span className="ml-1.5 text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-full">Próxima</span>}
-                                                        {emAtraso  && <span className="ml-1.5 text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-md">Em atraso</span>}
+                                                        {isProxima && <span className="ml-1.5 text-xs bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-full">Próxima</span>}
+                                                        {emAtraso  && <span className="ml-1.5 text-xs bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-md">Em atraso</span>}
                                                       </p>
                                                       <p className="text-xs text-white tabular-nums mt-0.5">
                                                         {p.paga && p.dataPagamento ? `Pago a ${fmtData(p.dataPagamento)}` : `Vence a ${fmtData(p.dataVencimento)}`}
@@ -1702,8 +1710,8 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                   {isOpen('pag') && (
                                     <div className="px-4 pb-4">
                                       <div className="bg-zinc-900 rounded-xl overflow-hidden">
-                                        <div className="flex items-center justify-between px-4 py-3 gap-3">
-                                          <span className="text-xs text-white">Valor pago (pronto pagamento)</span>
+                                        <div className="flex items-center justify-between px-5 py-4 gap-4">
+                                          <span className="text-sm text-white">Valor pago (pronto pagamento)</span>
                                           <span className="text-lg font-black text-emerald-400">{fmt(c.deposito)}</span>
                                         </div>
                                       </div>
@@ -1718,25 +1726,25 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                 {isOpen('gar') && (
                                   <div className="px-4 pb-4">
                                     <div className="bg-zinc-900 rounded-xl overflow-hidden divide-y divide-zinc-800">
-                                      <div className="flex items-center justify-between px-4 py-3 gap-3">
-                                        <span className="text-xs text-white">Estado</span>
-                                        <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg border ${gar.ativa ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-red-500/15 border-red-500/30 text-red-400'}`}>
+                                      <div className="flex items-center justify-between px-5 py-4 gap-4">
+                                        <span className="text-sm text-white">Estado</span>
+                                        <span className={`text-xs font-black px-2.5 py-1 rounded-lg border ${gar.ativa ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-red-500/15 border-red-500/30 text-red-400'}`}>
                                           {gar.ativa ? 'Activa' : 'Expirada'}
                                         </span>
                                       </div>
                                       {gar.ativa && (
-                                        <div className="flex items-center justify-between px-4 py-3 gap-3">
-                                          <span className="text-xs text-white">Tempo restante</span>
+                                        <div className="flex items-center justify-between px-5 py-4 gap-4">
+                                          <span className="text-sm text-white">Tempo restante</span>
                                           <span className="text-sm font-black text-emerald-400">{gar.mesesRestantes} meses</span>
                                         </div>
                                       )}
-                                      <div className="flex items-center justify-between px-4 py-3 gap-3">
-                                        <span className="text-xs text-white">Válida até</span>
-                                        <span className="text-xs font-bold text-white">{fmtData(gar.expira)}</span>
+                                      <div className="flex items-center justify-between px-5 py-4 gap-4">
+                                        <span className="text-sm text-white">Válida até</span>
+                                        <span className="text-sm font-bold text-white">{fmtData(gar.expira)}</span>
                                       </div>
-                                      <div className="flex items-start justify-between px-4 py-3 gap-3">
-                                        <span className="text-xs text-white shrink-0">Cobertura</span>
-                                        <span className="text-xs text-white text-right">Motor, transmissão e componentes estruturais</span>
+                                      <div className="flex items-start justify-between px-5 py-4 gap-4">
+                                        <span className="text-sm text-white shrink-0">Cobertura</span>
+                                        <span className="text-sm text-white text-right">Motor, transmissão e componentes estruturais</span>
                                       </div>
                                     </div>
                                   </div>
@@ -1750,9 +1758,9 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                   <div className="px-4 pb-4">
                                     <div className="bg-zinc-900 rounded-xl overflow-hidden divide-y divide-zinc-800">
                                       {docs.map(doc => (
-                                        <div key={doc.label} className="flex items-center justify-between px-4 py-3 gap-3">
-                                          <span className="text-xs text-white">{doc.label}</span>
-                                          <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg border ${doc.ok ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-amber-500/15 border-amber-500/30 text-amber-400'}`}>
+                                        <div key={doc.label} className="flex items-center justify-between px-5 py-4 gap-4">
+                                          <span className="text-sm text-white">{doc.label}</span>
+                                          <span className={`text-xs font-black px-2.5 py-1 rounded-lg border ${doc.ok ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-amber-500/15 border-amber-500/30 text-amber-400'}`}>
                                             {doc.ok ? doc.valor : 'Pendente'}
                                           </span>
                                         </div>
@@ -1973,8 +1981,8 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                       sub:   totalDivida > 0
                                ? (compras.some(c => c.status === 'prestacao_atraso') ? 'Em atraso' : 'Em aberto')
                                : 'Conta regularizada',
-                      bar:   totalDivida > 0 ? 'bg-red-400' : 'bg-emerald-400',
-                      valueColor: totalDivida > 0 ? 'text-red-400' : 'text-emerald-400',
+                      bar:   totalDivida > 0 ? 'bg-red-400' : 'bg-amber-400',
+                      valueColor: totalDivida > 0 ? 'text-red-400' : 'text-amber-400',
                     },
                     {
                       label: 'Contratos Ativos',
@@ -1982,8 +1990,8 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                       sub:   contratosAtivos > 0
                                ? `${alugueres.filter(a => ACTIVE_STATUSES.includes(a.status)).length} aluguer · ${compras.filter(c => c.status !== 'cancelada' && c.status !== 'liquidada').length} compra`
                                : 'Nenhum em curso',
-                      bar:   contratosAtivos > 0 ? 'bg-emerald-400' : 'bg-zinc-600',
-                      valueColor: contratosAtivos > 0 ? 'text-emerald-400' : 'text-white',
+                      bar:   contratosAtivos > 0 ? 'bg-amber-400' : 'bg-zinc-600',
+                      valueColor: contratosAtivos > 0 ? 'text-amber-400' : 'text-white',
                     },
                     {
                       label: 'Próxima Prestação',
@@ -1998,8 +2006,8 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                       sub:   totalPago > 0
                                ? [totalPagoAlugueres > 0 && 'Alu.', totalPagoCompras > 0 && 'Compra', totalPagoXitique > 0 && 'Xit.'].filter(Boolean).join(' · ')
                                : 'Sem pagamentos',
-                      bar:   totalPago > 0 ? 'bg-emerald-400' : 'bg-zinc-600',
-                      valueColor: totalPago > 0 ? 'text-emerald-400' : 'text-white',
+                      bar:   totalPago > 0 ? 'bg-amber-400' : 'bg-zinc-600',
+                      valueColor: totalPago > 0 ? 'text-amber-400' : 'text-white',
                     },
                     {
                       label: 'Prestações Pagas',
@@ -2018,12 +2026,11 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                             <div
                               key={i}
                               onClick={isDiv ? () => setShowDividaDetail(v => !v) : undefined}
-                              className={`bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden transition-all duration-200 ${isDiv ? 'cursor-pointer hover:border-zinc-700 hover:-translate-y-0.5 select-none' : 'hover:border-zinc-700 hover:-translate-y-0.5'}`}
+                              className={`bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden transition-all duration-200 ${isDiv ? 'cursor-pointer hover:border-amber-500/50 hover:-translate-y-0.5 select-none' : 'hover:border-amber-500/50 hover:-translate-y-0.5'}`}
                             >
-                              <div className={`h-0.5 w-full ${k.bar}`} />
                               <div className="p-3.5">
                                 <div className="flex items-center justify-between mb-2">
-                                  <p className="text-[10px] font-bold text-white uppercase tracking-widest leading-tight">{k.label}</p>
+                                  <p className="text-xs font-black text-amber-400 uppercase tracking-widest leading-tight">{k.label}</p>
                                   {isDiv && (
                                     <svg
                                       width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"
@@ -2034,8 +2041,8 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                     </svg>
                                   )}
                                 </div>
-                                <p className={`text-base font-black leading-none tabular-nums mb-1.5 ${k.valueColor}`}>{k.value}</p>
-                                <p className="text-[10px] text-white leading-tight truncate">{k.sub}</p>
+                                <p className={`text-xl font-black leading-none tabular-nums mb-1.5 ${k.valueColor}`}>{k.value}</p>
+                                <p className="text-xs text-white leading-tight truncate">{k.sub}</p>
                               </div>
                             </div>
                           );
@@ -2044,11 +2051,11 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
 
                       {/* ── Painel de detalhe da dívida ────────────────────────── */}
                       {showDividaDetail && (
-                        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-                          <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-800 bg-zinc-800/40">
-                            <div className="flex items-center gap-2">
-                              <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
-                              <span className="text-[10px] font-black text-red-400 uppercase tracking-widest">Detalhe da Dívida</span>
+                        <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
+                          <div className="flex items-center justify-between gap-2.5 px-5 py-3.5 border-b border-zinc-800/70">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-1 h-4 bg-red-500 rounded-full" />
+                              <span className="text-xs font-black text-red-400 uppercase tracking-widest">Detalhe da Dívida</span>
                             </div>
                             <button
                               onClick={() => setShowDividaDetail(false)}
@@ -2082,7 +2089,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                             <span className="text-[8px] font-black bg-red-500/15 text-red-400 border border-red-500/25 rounded-md px-1.5 py-0.5 shrink-0">Atraso</span>
                                           )}
                                         </div>
-                                        <p className="text-[10px] text-white">
+                                        <p className="text-xs text-white">
                                           {restam} prestação{restam !== 1 ? 'ões' : ''} em falta
                                           {proxPrest?.dataVencimento ? ` · Próxima: ${fmtData(proxPrest.dataVencimento)}` : ''}
                                         </p>
@@ -2096,7 +2103,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                       </div>
                                       <div className="text-right shrink-0">
                                         <p className={`text-sm font-black tabular-nums ${emAtraso ? 'text-red-400' : 'text-amber-400'}`}>{fmt(montante)}</p>
-                                        <p className="text-[9px] text-white">{fmt(proxPrest?.valor ?? c.deposito)}/mês</p>
+                                        <p className="text-xs text-white">{fmt(proxPrest?.valor ?? c.deposito)}/mês</p>
                                       </div>
                                     </div>
                                   );
@@ -2109,7 +2116,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                     <div key={d.id} className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-zinc-800/20 transition-colors">
                                       <div className="min-w-0 flex-1">
                                         <p className="text-xs font-bold text-white truncate">{d.descricao}</p>
-                                        <p className="text-[10px] text-white">
+                                        <p className="text-xs text-white">
                                           {d.dataVencimento ? `Vence ${d.dataVencimento}` : 'Sem data de vencimento'}
                                           {d.valorPago > 0 && ` · Pago: ${fmt(d.valorPago)}`}
                                         </p>
@@ -2124,18 +2131,18 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                               <div className="border-t border-zinc-800 bg-zinc-800/30">
                                 {totalDividaCompras > 0 && (
                                   <div className="flex items-center justify-between px-4 py-2">
-                                    <span className="text-[10px] text-white">Prestações em aberto</span>
-                                    <span className="text-[10px] font-black text-amber-400 tabular-nums">{fmt(totalDividaCompras)}</span>
+                                    <span className="text-xs text-white">Prestações em aberto</span>
+                                    <span className="text-xs font-black text-amber-400 tabular-nums">{fmt(totalDividaCompras)}</span>
                                   </div>
                                 )}
                                 {totalDividaOutras > 0 && (
                                   <div className="flex items-center justify-between px-4 py-2 border-t border-zinc-800/50">
-                                    <span className="text-[10px] text-white">Outras dívidas</span>
-                                    <span className="text-[10px] font-black text-red-400 tabular-nums">{fmt(totalDividaOutras)}</span>
+                                    <span className="text-xs text-white">Outras dívidas</span>
+                                    <span className="text-xs font-black text-red-400 tabular-nums">{fmt(totalDividaOutras)}</span>
                                   </div>
                                 )}
                                 <div className="flex items-center justify-between px-4 py-2.5 border-t border-zinc-800">
-                                  <span className="text-[10px] font-black text-white uppercase tracking-wide">Total em Dívida</span>
+                                  <span className="text-xs font-black text-white uppercase tracking-wide">Total em Dívida</span>
                                   <span className="text-base font-black text-red-400 tabular-nums">{fmt(totalDivida)}</span>
                                 </div>
                               </div>
@@ -2151,20 +2158,22 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                 <div className="grid lg:grid-cols-2 gap-3">
 
                   {/* Evolução de Pagamentos — compacto */}
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-                    <div className="flex items-center gap-2 px-3 py-2.5 border-b border-zinc-800 bg-zinc-800/40">
-                      <span className="text-amber-400"><IcoBarChart /></span>
-                      <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Evolução</span>
-                      <span className="text-[9px] text-white ml-auto">12 meses</span>
+                  <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
+                    <div className="flex items-center justify-between gap-2.5 px-5 py-3.5 border-b border-zinc-800/70">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                        <span className="text-xs font-black text-amber-400 uppercase tracking-widest">Evolução</span>
+                      </div>
+                      <span className="text-xs text-white">12 meses</span>
                     </div>
-                    <div className="px-3 pt-3 pb-2.5">
+                    <div className="px-4 pt-4 pb-3">
                       {mesesEvol.every(m => m.valor === 0) ? (
                         <div className="flex items-center justify-center py-5">
                           <span className="text-xs text-white">Sem pagamentos registados</span>
                         </div>
                       ) : (
                         <>
-                          <div className="flex items-end gap-0.5 h-14">
+                          <div className="flex items-end gap-0.5 h-20">
                             {mesesEvol.map((m, i) => {
                               const pct = maxEvol > 0 ? (m.valor / maxEvol) * 100 : 0;
                               return (
@@ -2174,18 +2183,18 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                       <div className="bg-zinc-800 border border-zinc-700 rounded px-1 py-0.5 text-[8px] text-white whitespace-nowrap -translate-y-5 mx-auto w-fit">{fmt(m.valor)}</div>
                                     </div>
                                   )}
-                                  <div className="w-full flex flex-col justify-end" style={{ height: '46px' }}>
+                                  <div className="w-full flex flex-col justify-end" style={{ height: '62px' }}>
                                     {m.valor > 0
                                       ? <div className={`w-full rounded-t ${m.isNow ? 'bg-amber-500' : 'bg-zinc-700 group-hover:bg-zinc-600'}`} style={{ height: `${Math.max(pct, 8)}%` }} />
                                       : <div className="w-full h-px bg-zinc-800/60 mt-auto" />
                                     }
                                   </div>
-                                  <span className={`text-[7px] font-bold leading-none ${m.isNow ? 'text-amber-400' : 'text-white'}`}>{m.label}</span>
+                                  <span className={`text-[10px] font-bold leading-none ${m.isNow ? 'text-amber-400' : 'text-white'}`}>{m.label}</span>
                                 </div>
                               );
                             })}
                           </div>
-                          <p className="text-[9px] text-white text-right mt-2">
+                          <p className="text-sm text-white text-right mt-2">
                             Total: <span className="text-white font-black">{fmt(mesesEvol.reduce((s, m) => s + m.valor, 0))}</span>
                           </p>
                         </>
@@ -2195,11 +2204,13 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
 
                   {/* Compras em Prestação — Prestação Mensal + Pendentes fundidos */}
                   {compras.filter(c => (c.totalPrestacoes ?? 0) > 0).length > 0 ? (
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-                      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-zinc-800 bg-zinc-800/40">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-                        <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Compras em Prestação</span>
-                        <span className="text-[9px] text-white ml-auto">{compras.filter(c => (c.totalPrestacoes ?? 0) > 0).length}</span>
+                    <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
+                      <div className="flex items-center justify-between gap-2.5 px-5 py-3.5 border-b border-zinc-800/70">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                          <span className="text-xs font-black text-amber-400 uppercase tracking-widest">Compras em Prestação</span>
+                        </div>
+                        <span className="text-xs text-white">{compras.filter(c => (c.totalPrestacoes ?? 0) > 0).length}</span>
                       </div>
                       <div className="divide-y divide-zinc-800/50">
                         {compras.filter(c => (c.totalPrestacoes ?? 0) > 0).map(c => {
@@ -2218,7 +2229,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                     <p className="text-xs font-bold text-white truncate">{getVehicleName(c.vehicleId)}</p>
                                     <span className={`text-[8px] font-black border rounded-md px-1.5 py-0.5 shrink-0 ${st.cls}`}>{st.label}</span>
                                   </div>
-                                  <p className="text-[10px] text-white">
+                                  <p className="text-xs text-white">
                                     {pagas}/{total} prestações
                                     {proxP?.dataVencimento && !liquid ? ` · Próxima: ${fmtData(proxP.dataVencimento)}` : ''}
                                   </p>
@@ -2227,14 +2238,14 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                   <p className={`text-sm font-black tabular-nums ${liquid ? 'text-emerald-400' : emAtr ? 'text-red-400' : 'text-amber-400'}`}>
                                     {fmt(proxP?.valor ?? c.deposito)}
                                   </p>
-                                  {!liquid && <p className="text-[9px] text-white">/mês</p>}
+                                  {!liquid && <p className="text-xs text-white">/mês</p>}
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
                                 <div className="flex-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
                                   <div className={`h-full rounded-full transition-all ${liquid ? 'bg-emerald-500' : emAtr ? 'bg-red-500' : 'bg-amber-500'}`} style={{ width: `${pct}%` }} />
                                 </div>
-                                <span className="text-[9px] text-white tabular-nums shrink-0">{Math.round(pct)}%</span>
+                                <span className="text-xs text-white tabular-nums shrink-0">{Math.round(pct)}%</span>
                               </div>
                             </div>
                           );
@@ -2242,7 +2253,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center p-6">
+                    <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl flex items-center justify-center p-6">
                       <p className="text-xs text-white text-center">Sem planos de prestação activos</p>
                     </div>
                   )}
@@ -2250,18 +2261,20 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
 
                 {/* ── Outras Dívidas (Finance context) — só aparece se existirem ── */}
                 {minhasDividas.length > 0 && (
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-                    <div className="flex items-center gap-2 px-3 py-2.5 border-b border-zinc-800 bg-zinc-800/40">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
-                      <span className="text-[10px] font-black text-red-400 uppercase tracking-widest">Outras Dívidas</span>
-                      <span className="text-[9px] font-bold text-white ml-auto">{minhasDividas.length}</span>
+                  <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
+                    <div className="flex items-center justify-between gap-2.5 px-5 py-3.5 border-b border-zinc-800/70">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-1 h-4 bg-red-500 rounded-full" />
+                        <span className="text-xs font-black text-red-400 uppercase tracking-widest">Outras Dívidas</span>
+                      </div>
+                      <span className="text-xs font-black text-white">{minhasDividas.length}</span>
                     </div>
                     <div className="divide-y divide-zinc-800/50">
                       {minhasDividas.map(d => (
                         <div key={d.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
                           <div className="min-w-0">
                             <p className="text-xs font-bold text-white truncate">{d.descricao}</p>
-                            <p className="text-[10px] text-white">
+                            <p className="text-xs text-white">
                               {d.dataVencimento ? `Vence ${d.dataVencimento}` : 'Sem data'}
                               {d.valorPago > 0 ? ` · Pago: ${fmt(d.valorPago)}` : ''}
                             </p>
@@ -2388,18 +2401,18 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                       {/* Título da secção */}
                       <div className="flex items-center gap-2 pt-1">
                         <div className="w-1 h-4 rounded-full bg-amber-500" />
-                        <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Tabela Detalhada de Pagamentos</span>
+                        <span className="text-xs font-black text-amber-400 uppercase tracking-widest">Tabela Detalhada de Pagamentos</span>
                       </div>
 
                       {/* Barra de pesquisa + filtro */}
                       <div className="flex gap-2 flex-wrap">
                         <div className="relative flex-1 min-w-[140px]">
-                          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-white" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                           <input
                             value={faturaSearch}
                             onChange={e => setFaturaSearch(e.target.value)}
-                            placeholder="Pesquisar fatura..."
-                            className="w-full rounded-xl bg-zinc-900 border border-zinc-800 pl-8 pr-3 py-2 text-xs text-white placeholder:text-white/30 outline-none focus:border-amber-500/50"
+                            placeholder="Pesquisa..."
+                            className="w-full rounded-xl bg-zinc-900 border border-amber-500/20 pl-9 pr-3 py-2 text-xs text-white placeholder:text-white/40 outline-none focus:border-amber-500/60"
                           />
                         </div>
                         <select
@@ -2420,14 +2433,14 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                       <div className="grid lg:grid-cols-[1fr_200px] gap-3 items-start">
 
                         {/* Tabela */}
-                        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                        <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
                           {/* Cabeçalho */}
-                          <div className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-2 px-4 py-2.5 border-b border-zinc-800 bg-zinc-800/50">
-                            <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest w-[72px]">Fatura ID</span>
-                            <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest">Data Vencimento</span>
-                            <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest text-right">Valor</span>
-                            <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest text-center w-20">Status</span>
-                            <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest text-center">PDF</span>
+                          <div className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-2 px-4 py-2.5 border-b border-zinc-800/70 bg-zinc-800/30">
+                            <span className="text-xs font-black text-amber-400 uppercase tracking-widest w-[72px]">Fatura ID</span>
+                            <span className="text-xs font-black text-amber-400 uppercase tracking-widest">Data Vencimento</span>
+                            <span className="text-xs font-black text-amber-400 uppercase tracking-widest text-right">Valor</span>
+                            <span className="text-xs font-black text-amber-400 uppercase tracking-widest text-center w-20">Status</span>
+                            <span className="text-xs font-black text-amber-400 uppercase tracking-widest text-center">PDF</span>
                           </div>
 
                           {fatFiltradas.length === 0 ? (
@@ -2660,13 +2673,13 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
                                 };
                                 return (
                                   <div key={f.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-2 px-4 py-3 hover:bg-zinc-800/30 transition-colors">
-                                    <span className="text-[10px] font-black text-amber-400 tabular-nums w-[72px] shrink-0">{f.id}</span>
+                                    <span className="text-xs font-black text-amber-400 tabular-nums w-[72px] shrink-0">{f.id}</span>
                                     <div className="min-w-0">
-                                      <p className="text-[11px] font-bold text-white truncate">{f.descricao}</p>
-                                      <p className="text-[10px] text-white">{fmtData(f.dataVencimento)}</p>
+                                      <p className="text-xs font-bold text-white truncate">{f.descricao}</p>
+                                      <p className="text-xs text-white">{fmtData(f.dataVencimento)}</p>
                                     </div>
                                     <span className="text-xs font-black text-white tabular-nums text-right whitespace-nowrap shrink-0">{fmt(f.valor)}</span>
-                                    <span className={`text-[9px] font-black border rounded-md px-2 py-0.5 whitespace-nowrap w-20 text-center shrink-0 ${st.cls}`}>
+                                    <span className={`text-xs font-black border rounded-md px-2 py-0.5 whitespace-nowrap w-20 text-center shrink-0 ${st.cls}`}>
                                       {st.label}
                                     </span>
                                     <button
@@ -2684,10 +2697,10 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
                         </div>
 
                         {/* Centro de Descargas */}
-                        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                          <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                            <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest">Descargas</span>
+                        <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
+                          <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-zinc-800/70">
+                            <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                            <span className="text-xs font-black text-amber-400 uppercase tracking-widest">Descargas</span>
                           </div>
                           <div className="p-3 space-y-2">
                             <button
@@ -2695,21 +2708,21 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
                               className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-amber-500/30 transition-all text-left group"
                             >
                               <svg width="14" height="14" className="text-amber-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                              <span className="text-[10px] font-bold text-white group-hover:text-amber-400 transition-colors leading-tight">Resumo de Dívida<br/><span className="text-white font-normal">PDF</span></span>
+                              <span className="text-xs font-bold text-white group-hover:text-amber-400 transition-colors leading-tight">Resumo de Dívida<br/><span className="text-white font-normal">PDF</span></span>
                             </button>
                             <button
                               onClick={downloadContratos}
                               className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-amber-500/30 transition-all text-left group"
                             >
                               <svg width="14" height="14" className="text-amber-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-                              <span className="text-[10px] font-bold text-white group-hover:text-amber-400 transition-colors leading-tight">Comprovativo<br/><span className="text-white font-normal">PDF</span></span>
+                              <span className="text-xs font-bold text-white group-hover:text-amber-400 transition-colors leading-tight">Comprovativo<br/><span className="text-white font-normal">PDF</span></span>
                             </button>
                             <button
                               onClick={downloadExtrato}
                               className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-amber-500/30 transition-all text-left group"
                             >
                               <svg width="14" height="14" className="text-amber-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"/></svg>
-                              <span className="text-[10px] font-bold text-white group-hover:text-amber-400 transition-colors leading-tight">Histórico de Faturas<br/><span className="text-white font-normal">PDF</span></span>
+                              <span className="text-xs font-bold text-white group-hover:text-amber-400 transition-colors leading-tight">Histórico de Faturas<br/><span className="text-white font-normal">PDF</span></span>
                             </button>
                           </div>
                         </div>
@@ -2720,11 +2733,13 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
                 })()}
 
                 {/* ── Histórico de pagamentos ────────────────────────────────── */}
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-800/40">
-                    <IcoHistory />
-                    <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Histórico</span>
-                    <span className="ml-auto text-[10px] font-black bg-zinc-800 border border-zinc-700 text-white rounded-full px-2 py-0.5">{historico.length}</span>
+                <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
+                  <div className="flex items-center justify-between gap-2.5 px-5 py-3.5 border-b border-zinc-800/70">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                      <span className="text-xs font-black text-amber-400 uppercase tracking-widest">Histórico</span>
+                    </div>
+                    <span className="text-xs font-black bg-zinc-800 border border-zinc-700 text-white rounded-full px-2 py-0.5">{historico.length}</span>
                   </div>
 
                   {historico.length === 0 ? (
@@ -2736,26 +2751,44 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
                     <>
                       {/* Column headers */}
                       <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 px-4 py-2 border-b border-zinc-800 bg-zinc-800/25">
-                        <span className="text-[9px] font-black text-white uppercase tracking-widest">Data / Item</span>
-                        <span className="text-[9px] font-black text-white uppercase tracking-widest text-right">Valor</span>
-                        <span className="text-[9px] font-black text-white uppercase tracking-widest text-center">Tipo</span>
-                        <span className="text-[9px] font-black text-white uppercase tracking-widest text-center">Recibo</span>
+                        <span className="text-xs font-black text-white uppercase tracking-widest">Data / Item</span>
+                        <span className="text-xs font-black text-white uppercase tracking-widest text-right">Valor</span>
+                        <span className="text-xs font-black text-white uppercase tracking-widest text-center">Tipo</span>
+                        <span className="text-xs font-black text-white uppercase tracking-widest text-center">Recibo</span>
                       </div>
 
                       {/* Rows */}
                       <div className="divide-y divide-zinc-800/50 max-h-80 overflow-y-auto">
                         {historico.map((ev, i) => {
                           const downloadRecibo = () => {
+                            const FORMA_LABEL_R: Record<string, string> = { mpesa: 'M-Pesa', emola: 'e-Mola', dinheiro: 'Dinheiro', transferencia: 'Transferência Bancária', cheque: 'Cheque', outros: 'Outros' };
                             const body = `
                               <div class="doc-title">Recibo de Pagamento</div>
                               <div class="doc-sub">Recibo Nº ${i + 1}</div>
-                              <div class="section-title">Detalhes</div>
+                              <div class="info-grid">
+                                <div class="info-box">
+                                  <div class="info-label">Emitido por</div>
+                                  <div class="info-value">SOS Motors</div>
+                                  <div class="info-sub">geral@sosmotors.co.mz</div>
+                                </div>
+                                <div class="info-box">
+                                  <div class="info-label">Titular</div>
+                                  <div class="info-value">${ev.clientName ?? fullUser?.nome ?? '—'}</div>
+                                  ${ev.clientEmail ? `<div class="info-sub">${ev.clientEmail}</div>` : ''}
+                                  ${ev.clientPhone ? `<div class="info-sub">${ev.clientPhone}</div>` : ''}
+                                </div>
+                              </div>
+                              <div class="section-title">Detalhes do Pagamento</div>
                               <div class="summary-box">
                                 <div class="summary-row"><span>Item</span><span><b>${ev.sub}</b></span></div>
-                                <div class="summary-row"><span>Viatura / Origem</span><span>${ev.label}</span></div>
-                                <div class="summary-row"><span>Data</span><span>${ev.data.length === 10 ? fmtData(ev.data) : (ev.data || '—')}</span></div>
+                                <div class="summary-row"><span>Viatura</span><span>${ev.label}${ev.matricula ? ` · ${ev.matricula}` : ''}</span></div>
+                                ${ev.dataInicio ? `<div class="summary-row"><span>Período</span><span>${fmtData(ev.dataInicio)}${ev.dataFim ? ` → ${fmtData(ev.dataFim)}` : ''}</span></div>` : ''}
+                                ${ev.diasAluguer ? `<div class="summary-row"><span>Duração / Taxa</span><span>${ev.diasAluguer} dia${ev.diasAluguer !== 1 ? 's' : ''} · ${fmt(ev.valorDiario ?? 0)}/dia</span></div>` : ''}
+                                <div class="summary-row"><span>Data de Pagamento</span><span>${ev.data.length === 10 ? fmtData(ev.data) : (ev.data || '—')}${ev.horaPagamento ? ` · ${ev.horaPagamento}` : ''}</span></div>
+                                ${ev.formaPagamento ? `<div class="summary-row"><span>Método</span><span>${FORMA_LABEL_R[ev.formaPagamento] ?? ev.formaPagamento}</span></div>` : ''}
+                                ${ev.referenciaPagamento ? `<div class="summary-row"><span>Referência</span><span>${ev.referenciaPagamento}</span></div>` : ''}
                                 <div class="summary-row"><span>Tipo</span><span><span class="badge badge-${ev.tipo}">${tipoLabel[ev.tipo]}</span></span></div>
-                                <div class="summary-row total"><span>Valor Pago</span><span class="val-green">${fmt(ev.valor)}</span></div>
+                                <div class="summary-row total"><span>Valor Pago</span><span class="val-green">${fmt(ev.valor)} MT</span></div>
                               </div>
                             `;
                             printAsPDF(body, `Recibo ${i + 1}`);
@@ -2763,11 +2796,11 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
                           return (
                             <div key={i} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 px-4 py-3 hover:bg-zinc-800/30 transition-colors">
                               <div className="min-w-0">
-                                <p className="text-xs font-bold text-white truncate">{ev.sub}</p>
-                                <p className="text-[10px] text-white truncate">{ev.data ? (ev.data.length === 10 ? fmtData(ev.data) : ev.data) : '—'}</p>
+                                <p className="text-sm font-bold text-white truncate">{ev.sub}</p>
+                                <p className="text-sm text-white truncate">{ev.data ? (ev.data.length === 10 ? fmtData(ev.data) : ev.data) : '—'}</p>
                               </div>
-                              <span className="text-xs font-black text-emerald-400 tabular-nums text-right whitespace-nowrap">{fmt(ev.valor)}</span>
-                              <span className={`text-[9px] font-black border rounded-md px-2 py-0.5 whitespace-nowrap ${tipoCls[ev.tipo]}`}>
+                              <span className="text-sm font-black text-amber-400 tabular-nums text-right whitespace-nowrap">{fmt(ev.valor)}</span>
+                              <span className={`text-xs font-black border rounded-md px-2 py-0.5 whitespace-nowrap ${tipoCls[ev.tipo]}`}>
                                 {tipoLabel[ev.tipo].toUpperCase()}
                               </span>
                               <button
@@ -2784,8 +2817,8 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
 
                       {/* Footer total */}
                       <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-800 bg-zinc-800/30">
-                        <span className="text-[10px] text-white font-bold">Total do histórico</span>
-                        <span className="text-sm font-black text-emerald-400">{fmt(historico.reduce((s, e) => s + e.valor, 0))}</span>
+                        <span className="text-sm text-white font-bold">Total do histórico</span>
+                        <span className="text-sm font-black text-amber-400">{fmt(historico.reduce((s, e) => s + e.valor, 0))}</span>
                       </div>
                     </>
                   )}
@@ -2793,8 +2826,8 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
 
                 {/* ── Estado vazio ───────────────────────────────────────────── */}
                 {totalPago === 0 && totalDivida === 0 && historico.length === 0 && (
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center">
-                    <div className="text-emerald-400 text-2xl mb-2">✅</div>
+                  <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl p-8 text-center">
+                    <div className="text-amber-400 text-2xl mb-2">✅</div>
                     <p className="text-white text-sm font-bold">Sem movimentos financeiros</p>
                     <p className="text-white text-xs mt-1">As suas reservas e compras aparecem aqui após registo.</p>
                   </div>
@@ -2821,17 +2854,17 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
                           : { label: 'Mês Actual', value: `${mesAtual} / ${numMembros}` },
                         { label: 'Prémio Mensal', value: fmt(premioMT) },
                       ].map(s => (
-                        <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
-                          <div className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">{s.label}</div>
+                        <div key={s.label} className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-3 text-center">
+                          <div className="text-xs text-amber-400 uppercase font-bold tracking-wider mb-1">{s.label}</div>
                           <div className="text-sm font-black text-white leading-tight">{s.value}</div>
                         </div>
                       ))}
                     </div>
                     {dataInicio && (
-                      <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5">
+                      <div className="flex items-center gap-2 bg-zinc-900 border border-amber-500/20 rounded-xl px-4 py-2.5">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        <span className="text-[10px] text-white">Início do ciclo:</span>
-                        <span className="text-[10px] font-black text-amber-400">{fmtData(dataInicio)}</span>
+                        <span className="text-xs text-white">Início do ciclo:</span>
+                        <span className="text-xs font-black text-amber-400">{fmtData(dataInicio)}</span>
                       </div>
                     )}
                   </div>
@@ -2839,7 +2872,7 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
               })()}
 
               {membro && (
-                <div className={`rounded-2xl border p-5 space-y-4 ${membro.estado === 'Sorteado' ? 'bg-emerald-400/10 border-emerald-400/20' : membro.estado === 'Aceite' ? 'bg-amber-400/10 border-amber-400/20' : 'bg-zinc-900 border-zinc-800'}`}>
+                <div className={`rounded-2xl border p-5 space-y-4 ${membro.estado === 'Sorteado' ? 'bg-emerald-400/10 border-emerald-400/20' : membro.estado === 'Aceite' ? 'bg-amber-400/10 border-amber-400/20' : 'bg-zinc-900 border-amber-500/20'}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <div className={`w-2.5 h-2.5 rounded-full ${membro.estado === 'Sorteado' ? 'bg-emerald-400' : membro.estado === 'Aceite' ? 'bg-amber-400 animate-pulse' : 'bg-zinc-500 animate-pulse'}`} />
@@ -2856,7 +2889,7 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
                     {membro.estado === 'Sorteado' && `Parabéns! Foi contemplado e receberá ${fmt(premioMT)}.`}
                   </p>
                   <div>
-                    <div className="flex justify-between text-[10px] text-white mb-1.5">
+                    <div className="flex justify-between text-xs text-white mb-1.5">
                       <span>Progresso do Ciclo</span>
                       <span>{sorteios.length} / {numMembros} sorteios</span>
                     </div>
@@ -2888,7 +2921,7 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
               )}
 
               {membro && (membro.mesesPagos.length > 0 || sorteios.length > 0) && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+                <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4">
                   <h3 className="text-xs font-black text-white uppercase tracking-wider mb-3">O Meu Histórico de Pagamentos</h3>
                   <div className="space-y-2">
                     {Array.from({ length: Math.max(sorteios.length, membro.mesesPagos.length, mesAtual - 1) }, (_, i) => i + 1).map(mes => {
@@ -2900,25 +2933,25 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
                         <div key={mes} className={`rounded-xl overflow-hidden border ${ganhou ? 'border-emerald-400/20' : 'border-transparent'}`}>
                           <div className={`flex items-center justify-between gap-2 px-3 py-2.5 ${ganhou ? 'bg-emerald-400/10' : 'bg-zinc-800/50'}`}>
                             <div className="flex items-center gap-3 min-w-0">
-                              <span className="w-6 h-6 rounded-full bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-[10px] font-black text-amber-400 shrink-0">{mes}</span>
+                              <span className="w-6 h-6 rounded-full bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-xs font-black text-amber-400 shrink-0">{mes}</span>
                               <div>
                                 <span className="text-xs text-white">Mês {mes}</span>
-                                {ganhou && <p className="text-[10px] text-emerald-400 font-black">🏆 Contemplado</p>}
+                                {ganhou && <p className="text-xs text-emerald-400 font-black">🏆 Contemplado</p>}
                               </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                               {pagou
-                                ? <span className="text-[10px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 rounded-full">Pago</span>
-                                : <span className="text-[10px] font-bold text-white bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded-full">Pendente</span>
+                                ? <span className="text-xs font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 rounded-full">Pago</span>
+                                : <span className="text-xs font-bold text-white bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded-full">Pendente</span>
                               }
                               {ganhou && sorteio && <span className="text-xs text-amber-400 font-black">{fmt(sorteio.valorPremio)}</span>}
                             </div>
                           </div>
                           {pagou && registo && (
                             <div className="flex flex-wrap gap-x-4 gap-y-0.5 px-3 py-1.5 bg-zinc-900/60 border-t border-zinc-700/40">
-                              <span className="text-[10px] text-white">Via <span className="text-white font-bold">{registo.metodo}</span></span>
-                              {registo.referencia && <span className="text-[10px] text-white">Ref: <span className="text-white font-mono">{registo.referencia}</span></span>}
-                              <span className="text-[10px] text-white">{registo.data}</span>
+                              <span className="text-xs text-white">Via <span className="text-white font-bold">{registo.metodo}</span></span>
+                              {registo.referencia && <span className="text-xs text-white">Ref: <span className="text-white font-bold">{registo.referencia}</span></span>}
+                              <span className="text-xs text-white">{registo.data}</span>
                             </div>
                           )}
                         </div>
@@ -2933,13 +2966,13 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
               )}
 
               {sorteios.length > 0 && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+                <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4">
                   <h3 className="text-xs font-black text-white uppercase tracking-wider mb-3">Sorteios do Grupo</h3>
                   <div className="space-y-2">
                     {[...sorteios].reverse().map(s => (
                       <div key={s.mes} className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 ${s.vencedor === membro?.nome ? 'bg-emerald-400/10 border border-emerald-400/20' : 'bg-zinc-800/50'}`}>
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="w-6 h-6 rounded-full bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-[10px] font-black text-amber-400 shrink-0">{s.mes}</span>
+                          <span className="w-6 h-6 rounded-full bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-xs font-black text-amber-400 shrink-0">{s.mes}</span>
                           <span className={`text-sm font-semibold truncate ${s.vencedor === membro?.nome ? 'text-emerald-400 font-black' : 'text-white'}`}>
                             {s.vencedor === membro?.nome ? `${s.vencedor} (você)` : s.vencedor}
                           </span>
@@ -2971,11 +3004,11 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
                     <div className="px-5 py-4 flex flex-col items-center justify-center gap-2">
                       <button
                         onClick={() => setShowXitiqueModal(true)}
-                        className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-zinc-950 font-black text-[10px] uppercase tracking-widest transition-all shadow-md shadow-amber-500/20"
+                        className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-zinc-950 font-black text-xs uppercase tracking-widest transition-all shadow-md shadow-amber-500/20"
                       >
                         Participar no Xitique
                       </button>
-                      <p className="text-[10px] text-white text-center">Comece agora!</p>
+                      <p className="text-xs text-white text-center">Comece agora!</p>
                     </div>
                   </div>
                 </div>
@@ -2994,16 +3027,34 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
             });
 
             const downloadRecibo = (ev: PagEvt, idx: number) => {
+              const FORMA_LABEL_H: Record<string, string> = { mpesa: 'M-Pesa', emola: 'e-Mola', dinheiro: 'Dinheiro', transferencia: 'Transferência Bancária', cheque: 'Cheque', outros: 'Outros' };
               const body = `
                 <div class="doc-title">Recibo de Pagamento</div>
                 <div class="doc-sub">Recibo Nº ${idx + 1}</div>
-                <div class="section-title">Detalhes</div>
+                <div class="info-grid">
+                  <div class="info-box">
+                    <div class="info-label">Emitido por</div>
+                    <div class="info-value">SOS Motors</div>
+                    <div class="info-sub">geral@sosmotors.co.mz</div>
+                  </div>
+                  <div class="info-box">
+                    <div class="info-label">Titular</div>
+                    <div class="info-value">${ev.clientName ?? authUser?.nome ?? '—'}</div>
+                    ${ev.clientEmail ? `<div class="info-sub">${ev.clientEmail}</div>` : ''}
+                    ${ev.clientPhone ? `<div class="info-sub">${ev.clientPhone}</div>` : ''}
+                  </div>
+                </div>
+                <div class="section-title">Detalhes do Pagamento</div>
                 <div class="summary-box">
                   <div class="summary-row"><span>Item</span><span><b>${ev.sub}</b></span></div>
-                  <div class="summary-row"><span>Viatura / Origem</span><span>${ev.label}</span></div>
-                  <div class="summary-row"><span>Data</span><span>${ev.data.length === 10 ? fmtData(ev.data) : (ev.data || '—')}</span></div>
+                  <div class="summary-row"><span>Viatura</span><span>${ev.label}${ev.matricula ? ` · ${ev.matricula}` : ''}</span></div>
+                  ${ev.dataInicio ? `<div class="summary-row"><span>Período</span><span>${fmtData(ev.dataInicio)}${ev.dataFim ? ` → ${fmtData(ev.dataFim)}` : ''}</span></div>` : ''}
+                  ${ev.diasAluguer ? `<div class="summary-row"><span>Duração / Taxa</span><span>${ev.diasAluguer} dia${ev.diasAluguer !== 1 ? 's' : ''} · ${fmt(ev.valorDiario ?? 0)}/dia</span></div>` : ''}
+                  <div class="summary-row"><span>Data de Pagamento</span><span>${ev.data.length === 10 ? fmtData(ev.data) : (ev.data || '—')}${ev.horaPagamento ? ` · ${ev.horaPagamento}` : ''}</span></div>
+                  ${ev.formaPagamento ? `<div class="summary-row"><span>Método</span><span>${FORMA_LABEL_H[ev.formaPagamento] ?? ev.formaPagamento}</span></div>` : ''}
+                  ${ev.referenciaPagamento ? `<div class="summary-row"><span>Referência</span><span>${ev.referenciaPagamento}</span></div>` : ''}
                   <div class="summary-row"><span>Tipo</span><span><span class="badge badge-${ev.tipo}">${TIPO_LABEL[ev.tipo]}</span></span></div>
-                  <div class="summary-row total"><span>Valor Pago</span><span class="val-green">${fmt(ev.valor)}</span></div>
+                  <div class="summary-row total"><span>Valor Pago</span><span class="val-green">${fmt(ev.valor)} MT</span></div>
                 </div>
               `;
               printAsPDF(body, `Recibo ${idx + 1}`);
@@ -3048,51 +3099,51 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
 
                 {/* KPI cards */}
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-                    <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-1">Total Pago</p>
-                    <p className="text-lg font-black text-emerald-400 tabular-nums">{fmt(totalHist)}</p>
+                  <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4">
+                    <p className="text-xs font-black text-amber-400 uppercase tracking-widest mb-1">Total Pago</p>
+                    <p className="text-lg font-black text-amber-400 tabular-nums">{fmt(totalHist)}</p>
                   </div>
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-                    <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-1">Transações</p>
+                  <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4">
+                    <p className="text-xs font-black text-amber-400 uppercase tracking-widest mb-1">Transações</p>
                     <p className="text-lg font-black text-white tabular-nums">{historicoPag.length}</p>
                   </div>
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-                    <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-1">Contratos</p>
+                  <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4">
+                    <p className="text-xs font-black text-amber-400 uppercase tracking-widest mb-1">Contratos</p>
                     <p className="text-lg font-black text-white tabular-nums">{alugueres.length + compras.length}</p>
                   </div>
                 </div>
 
                 {/* Search + extrato */}
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                   <div className="relative flex-1">
-                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     <input
                       value={histSearch}
                       onChange={e => setHistSearch(e.target.value)}
                       placeholder="Pesquisar pagamento..."
-                      className="w-full rounded-xl bg-zinc-900 border border-zinc-800 pl-9 pr-3 py-2.5 text-sm text-white placeholder:text-white/30 outline-none focus:border-amber-500/50"
+                      className="w-full rounded-xl bg-zinc-900 border border-amber-500/20 pl-10 pr-4 py-3 text-sm text-white placeholder:text-white/40 outline-none focus:border-amber-500/60"
                     />
                   </div>
                   <button
                     onClick={downloadExtrato}
                     title="Baixar extrato completo"
-                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-amber-500/30 hover:text-amber-400 text-white text-xs font-bold transition-colors shrink-0"
+                    className="flex items-center gap-2 px-4 py-3 rounded-xl bg-zinc-900 border border-amber-500/20 hover:border-amber-500/40 hover:text-amber-400 text-white text-sm font-bold transition-colors shrink-0"
                   >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     Extrato
                   </button>
                 </div>
 
                 {/* Filter tabs */}
-                <div className="flex gap-1.5 flex-wrap">
+                <div className="flex gap-2 flex-wrap">
                   {(['todos', 'aluguer', 'compra', 'xitique'] as const).map(f => (
                     <button
                       key={f}
                       onClick={() => setHistFiltro(f)}
-                      className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wide border transition-colors ${
+                      className={`px-4 py-2 rounded-full text-sm font-black uppercase tracking-wide border transition-colors ${
                         histFiltro === f
                           ? 'bg-amber-500 text-zinc-950 border-amber-400'
-                          : 'bg-zinc-900 border-zinc-700 text-white hover:border-zinc-600'
+                          : 'bg-zinc-900 border-zinc-700 text-white hover:border-amber-500/30 hover:text-amber-400'
                       }`}
                     >
                       {f === 'todos' ? `Todos (${historicoPag.length})` : `${TIPO_LABEL[f]} (${historicoPag.filter(e => e.tipo === f).length})`}
@@ -3101,7 +3152,7 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
                 </div>
 
                 {/* Tabela */}
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl overflow-hidden">
                   {filtrado.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 gap-2">
                       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#52525b" strokeWidth="1.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -3112,31 +3163,31 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
                   ) : (
                     <>
                       {/* Cabeçalho */}
-                      <div className="grid grid-cols-[80px_1fr_auto_auto_auto] items-center gap-3 px-4 py-2.5 border-b border-zinc-800 bg-zinc-800/40">
-                        <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Data</span>
-                        <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Item</span>
-                        <span className="text-[9px] font-black text-white/40 uppercase tracking-widest text-right">Valor</span>
-                        <span className="text-[9px] font-black text-white/40 uppercase tracking-widest text-center">Tipo</span>
-                        <span className="text-[9px] font-black text-white/40 uppercase tracking-widest text-center">Recibo</span>
+                      <div className="grid grid-cols-[110px_1fr_auto_auto_auto] items-center gap-4 px-5 py-3 border-b border-zinc-800 bg-zinc-800/40">
+                        <span className="text-xs font-black text-amber-400 uppercase tracking-widest">Data</span>
+                        <span className="text-xs font-black text-amber-400 uppercase tracking-widest">Item</span>
+                        <span className="text-xs font-black text-amber-400 uppercase tracking-widest text-right">Valor</span>
+                        <span className="text-xs font-black text-amber-400 uppercase tracking-widest text-center">Tipo</span>
+                        <span className="text-xs font-black text-amber-400 uppercase tracking-widest text-center">Recibo</span>
                       </div>
 
                       {/* Linhas */}
                       <div className="divide-y divide-zinc-800/50">
                         {filtrado.map((ev, i) => (
-                          <div key={i} className="grid grid-cols-[80px_1fr_auto_auto_auto] items-center gap-3 px-4 py-3 hover:bg-zinc-800/30 transition-colors">
+                          <div key={i} className="grid grid-cols-[110px_1fr_auto_auto_auto] items-center gap-4 px-5 py-4 hover:bg-zinc-800/30 transition-colors">
                             <div className="shrink-0">
-                              <p className="text-[10px] text-white/50 whitespace-nowrap">
+                              <p className="text-sm text-white whitespace-nowrap">
                                 {ev.data.length === 10 ? fmtData(ev.data) : (ev.data || '—')}
                               </p>
                             </div>
                             <div className="min-w-0">
-                              <p className="text-xs font-bold text-white truncate">{ev.sub}</p>
-                              <p className="text-[10px] text-white/40 truncate">{ev.label}</p>
+                              <p className="text-sm font-bold text-white truncate">{ev.sub}</p>
+                              <p className="text-xs text-white truncate">{ev.label}</p>
                             </div>
-                            <span className="text-xs font-black text-emerald-400 tabular-nums text-right whitespace-nowrap shrink-0">
+                            <span className="text-sm font-black text-amber-400 tabular-nums text-right whitespace-nowrap shrink-0">
                               {fmt(ev.valor)}
                             </span>
-                            <span className={`text-[9px] font-black border rounded-md px-2 py-0.5 whitespace-nowrap shrink-0 ${TIPO_CLS[ev.tipo]}`}>
+                            <span className={`text-xs font-black border rounded-md px-2 py-0.5 whitespace-nowrap shrink-0 ${TIPO_CLS[ev.tipo]}`}>
                               {TIPO_LABEL[ev.tipo]}
                             </span>
                             <button
@@ -3151,13 +3202,13 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
                       </div>
 
                       {/* Footer total */}
-                      <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-800 bg-zinc-800/30">
-                        <span className="text-[10px] text-white/40 font-bold">
+                      <div className="flex items-center justify-between px-5 py-4 border-t border-zinc-800 bg-zinc-800/30">
+                        <span className="text-sm text-white font-bold">
                           {filtrado.length === historicoPag.length
                             ? `${historicoPag.length} transações`
                             : `${filtrado.length} de ${historicoPag.length} transações`}
                         </span>
-                        <span className="text-sm font-black text-emerald-400">
+                        <span className="text-sm font-black text-amber-400">
                           {fmt(filtrado.reduce((s, e) => s + e.valor, 0))}
                         </span>
                       </div>

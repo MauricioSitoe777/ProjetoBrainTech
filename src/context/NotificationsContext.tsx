@@ -48,6 +48,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   });
 
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const allNotificationsRef = useRef(allNotifications);
+  useEffect(() => { allNotificationsRef.current = allNotifications; }, [allNotifications]);
 
   // IDs já mostrados como toast — persiste no localStorage para não repetir após refresh
   const SHOWN_KEY = 'rentcar:shown-toasts:v1';
@@ -129,19 +131,18 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       reservationId,
       link,
     };
-    setAllNotifications(prev => {
-      const recent = prev[0];
-      if (recent && recent.title === title && recent.message === message &&
-          Date.now() - new Date(recent.createdAt).getTime() < 2000) {
-        return prev;
-      }
-      return [newNotif, ...prev];
-    });
-    // Só mostra toast se a notificação for para o utilizador actualmente logado
+    const recent = allNotificationsRef.current[0];
+    const isDuplicate = !!(recent && recent.title === title && recent.message === message &&
+        Date.now() - new Date(recent.createdAt).getTime() < 2000);
+
+    if (!isDuplicate) {
+      setAllNotifications(prev => [newNotif, ...prev]);
+    }
+
     const isForCurrentUser = user?.role === 'admin'
       ? userId === 'admin'
       : userId === user?.id;
-    if (isForCurrentUser) {
+    if (!isDuplicate && isForCurrentUser) {
       showToast(title, message, type, link);
       markToastShown(newNotif.id);
     }

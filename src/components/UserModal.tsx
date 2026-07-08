@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import type { User, UserRole, UserStatus, UserCategory, UserRegularity, UserRestriction } from '../types/user';
 import { CATEGORY_LABEL, DOC_LABEL } from '../data/constants';
 
@@ -166,7 +166,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg shadow-2xl">
+      <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl w-full max-w-lg shadow-2xl">
         <div className="flex items-center justify-between p-6 border-b border-zinc-800">
           <h2 className="text-lg font-semibold text-white">
             {user ? 'Editar utilizador' : 'Novo utilizador'}
@@ -278,7 +278,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
             </div>
 
             <div className="col-span-2">
-              <label className="block text-xs text-white mb-1">Endereço</label>
+              <label className="block text-xs text-white mb-1">Morada</label>
               <input {...field('endereco')} placeholder="Av. ..., Maputo" className={inputClass} />
             </div>
 

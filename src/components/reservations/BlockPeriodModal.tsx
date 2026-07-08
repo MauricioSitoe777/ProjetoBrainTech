@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { VEHICLES } from '../../data/constants';
 import type { BlockReason } from '../../types/reservation';
 import { useReservations } from '../../context/ReservationsContext';
@@ -38,7 +38,7 @@ export function BlockPeriodModal({ onClose, defaultVehicleId = null }: BlockPeri
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl">
+      <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl w-full max-w-md shadow-2xl">
         <div className="flex items-center justify-between p-6 border-b border-zinc-800">
           <h2 className="text-lg font-semibold text-white">Bloquear período</h2>
           <button type="button" onClick={onClose} className="text-white hover:text-white">×</button>

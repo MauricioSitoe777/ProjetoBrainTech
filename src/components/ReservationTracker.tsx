@@ -111,18 +111,91 @@ function fmtStepDate(dateStr: string, isCurrent: boolean): string {
   return `${String(d.getDate()).padStart(2, '0')} ${MONTHS[d.getMonth()]}`;
 }
 
+// Mensagens por estado — orientadas ao admin
+const ADMIN_MSG: Partial<Record<ReservationStatus, { title: string; body: string; variant: 'warning' | 'info' | 'success' | 'danger' }>> = {
+  pendente: {
+    title: 'Aguarda Confirmação',
+    body: 'Valide o pagamento do depósito e confirme a reserva para avançar para a próxima etapa.',
+    variant: 'warning',
+  },
+  confirmada: {
+    title: 'Viatura em Preparação',
+    body: 'Prepare a viatura para entrega: vistoria de saída, combustível e documentação. Quando pronta, marque como entregue.',
+    variant: 'info',
+  },
+  pronta_levantamento: {
+    title: 'Aguarda Levantamento pelo Cliente',
+    body: 'O cliente foi notificado. Confirme a entrega das chaves e registe a vistoria de saída antes de iniciar o aluguer.',
+    variant: 'info',
+  },
+  ativa: {
+    title: 'Aluguer em Curso — Monitorize',
+    body: 'Viatura em uso. Verifique a data de devolução prevista e contacte o cliente se o prazo se aproximar sem retorno.',
+    variant: 'info',
+  },
+  devolucao_pendente: {
+    title: 'Devolução Pendente — Acção Necessária',
+    body: 'O cliente devolveu a viatura. Realize a vistoria de regresso, registe eventuais danos e conclua a reserva.',
+    variant: 'warning',
+  },
+  concluida: {
+    title: 'Reserva Concluída',
+    body: 'Aluguer encerrado com sucesso. Pagamento e vistoria final processados.',
+    variant: 'success',
+  },
+  cancelada: {
+    title: 'Reserva Cancelada',
+    body: 'Esta reserva foi cancelada. Verifique o estado do pagamento e processe o reembolso se aplicável.',
+    variant: 'danger',
+  },
+};
+
+// Mensagens por estado — visíveis ao cliente
+const CLIENT_MSG: Partial<Record<ReservationStatus, { title: string; body: string }>> = {
+  pendente: {
+    title: 'Reserva recebida com sucesso',
+    body: 'Estamos a processar a sua solicitação. Em breve receberá a confirmação após validação do pagamento.',
+  },
+  confirmada: {
+    title: 'Reserva Confirmada',
+    body: 'O seu pagamento inicial foi registado. A viatura está a ser preparada para o levantamento.',
+  },
+  pronta_levantamento: {
+    title: 'Viatura Pronta para Levantamento',
+    body: 'A sua viatura encontra-se disponível nas nossas instalações. Dirija-se à receção com o seu documento de identificação.',
+  },
+  ativa: {
+    title: 'Aluguer em Curso',
+    body: 'A viatura está activa e a ser utilizada. Desfrute da viagem com segurança. Em caso de emergência, contacte-nos.',
+  },
+  devolucao_pendente: {
+    title: 'Devolução Solicitada',
+    body: 'Estamos a aguardar a devolução da viatura. Por favor dirija-se às instalações até à data acordada.',
+  },
+  concluida: {
+    title: 'Aluguer Concluído',
+    body: 'Obrigado por escolher a SOS Motors! O seu aluguer foi concluído com sucesso. Esperamos vê-lo novamente em breve.',
+  },
+  cancelada: {
+    title: 'Reserva Cancelada',
+    body: 'A sua reserva foi cancelada. Para mais informações contacte a nossa equipa.',
+  },
+};
+
 interface Props {
   status: ReservationStatus;
   onAdvance?: (next: ReservationStatus) => void;
-  onCancel?: () => void;
+  onCancel?: (motivo: string) => void;
   onEdit?: () => void;
   onContract?: () => void;
   readonly?: boolean;
+  clientView?: boolean;
   stepDates?: Partial<Record<ReservationStatus, string>>;
 }
 
-export function ReservationTracker({ status, onAdvance, onCancel, onEdit, onContract, readonly, stepDates }: Props) {
+export function ReservationTracker({ status, onAdvance, onCancel, onEdit, onContract, readonly, clientView, stepDates }: Props) {
   const [confirming, setConfirming] = useState<'advance' | 'cancel' | null>(null);
+  const [cancelMotivo, setCancelMotivo] = useState('');
 
   const currentIdx     = STEPS.findIndex(s => s.status === status);
   const nextStatus     = NEXT_STATUS[status];
@@ -135,9 +208,10 @@ export function ReservationTracker({ status, onAdvance, onCancel, onEdit, onCont
     if (confirming === 'advance' && nextStatus && onAdvance) {
       onAdvance(nextStatus);
     } else if (confirming === 'cancel' && onCancel) {
-      onCancel();
+      onCancel(cancelMotivo.trim());
     }
     setConfirming(null);
+    setCancelMotivo('');
   };
 
   return (
@@ -176,7 +250,9 @@ export function ReservationTracker({ status, onAdvance, onCancel, onEdit, onCont
 
                     <div className={`absolute inset-0 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${
                       isDone
-                        ? 'bg-emerald-500/20 border-emerald-400 text-emerald-400'
+                        ? clientView
+                          ? 'bg-amber-500/20 border-amber-400 text-amber-400'
+                          : 'bg-emerald-500/20 border-emerald-400 text-emerald-400'
                         : isCurrent
                           ? 'bg-amber-400 border-amber-300 text-zinc-950 shadow-[0_0_28px_rgba(251,191,36,0.75)]'
                           : 'bg-zinc-800 border-zinc-600 text-zinc-400'
@@ -193,9 +269,11 @@ export function ReservationTracker({ status, onAdvance, onCancel, onEdit, onCont
 
                   {/* Label */}
                   <span className={`text-xs text-center leading-tight px-1 transition-colors duration-300 ${
-                    isDone    ? 'text-emerald-400 font-semibold' :
-                    isCurrent ? 'text-amber-400 font-black' :
-                                'text-zinc-400 font-medium'
+                    isDone
+                      ? clientView ? 'text-amber-400 font-semibold' : 'text-emerald-400 font-semibold'
+                      : isCurrent
+                        ? 'text-amber-400 font-black'
+                        : 'text-zinc-400 font-medium'
                   }`}>
                     {step.short}
                   </span>
@@ -203,7 +281,9 @@ export function ReservationTracker({ status, onAdvance, onCancel, onEdit, onCont
                   {/* Timestamp */}
                   {dateStr && (isDone || isCurrent) && (
                     <span className={`text-[9px] text-center leading-tight tabular-nums ${
-                      isDone ? 'text-emerald-400/60' : 'text-amber-300/80'
+                      isDone
+                        ? clientView ? 'text-amber-400/60' : 'text-emerald-400/60'
+                        : 'text-amber-300/80'
                     }`}>
                       {fmtStepDate(dateStr, isCurrent)}
                     </span>
@@ -214,11 +294,13 @@ export function ReservationTracker({ status, onAdvance, onCancel, onEdit, onCont
                 {idx < STEPS.length - 1 && (
                   <div className="flex items-center mt-[40px] shrink-0">
                     <div className={`h-px w-6 transition-colors duration-500 ${
-                      isDone ? 'bg-emerald-400' : 'bg-zinc-600'
+                      isDone
+                        ? clientView ? 'bg-amber-400' : 'bg-emerald-400'
+                        : 'bg-zinc-600'
                     }`} />
                     <svg
                       width="12" height="12" viewBox="0 0 24 24" fill="none"
-                      stroke={isDone ? '#34d399' : '#52525b'}
+                      stroke={isDone ? (clientView ? '#fbbf24' : '#34d399') : '#52525b'}
                       strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                       className="-ml-px transition-all duration-500"
                     >
@@ -233,22 +315,109 @@ export function ReservationTracker({ status, onAdvance, onCancel, onEdit, onCont
         </div>
       </div>
 
+      {/* ── Cartão de estado — vista admin ── */}
+      {!clientView && (() => {
+        const msg = ADMIN_MSG[status];
+        if (!msg) return null;
+
+        const variantCfg = {
+          warning: { border: 'border-amber-500/40', bar: 'bg-amber-500',  icon: 'bg-zinc-900 border-2 border-amber-500 text-amber-400',                          title: 'text-amber-300', body: 'text-white', dot: 'bg-amber-400' },
+          info:    { border: 'border-zinc-600/60',  bar: 'bg-zinc-500',   icon: 'bg-zinc-900 border-2 border-zinc-500 text-zinc-300',                             title: 'text-white',     body: 'text-white', dot: null },
+          success: { border: 'border-emerald-500/40', bar: 'bg-emerald-500', icon: 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400',               title: 'text-emerald-300', body: 'text-white', dot: null },
+          danger:  { border: 'border-red-500/40',   bar: 'bg-red-500',    icon: 'bg-zinc-900 border-2 border-red-500/60 text-red-400',                            title: 'text-red-300',   body: 'text-red-200/70', dot: null },
+        }[msg.variant];
+
+        const currentStep = STEPS.find(s => s.status === status);
+
+        return (
+          <div className={`bg-zinc-900 border rounded-2xl overflow-hidden ${variantCfg.border}`}>
+            {/* Barra topo */}
+            <div className={`h-0.5 w-full ${variantCfg.bar} opacity-60`} />
+            <div className="px-5 py-4 flex items-center gap-4">
+              {/* Ícone */}
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 [&_svg]:w-5 [&_svg]:h-5 ${variantCfg.icon}`}>
+                {currentStep?.icon ?? (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                )}
+              </div>
+
+              {/* Texto */}
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-black leading-snug ${variantCfg.title}`}>{msg.title}</p>
+                <p className={`text-xs leading-relaxed mt-1 ${variantCfg.body}`}>{msg.body}</p>
+              </div>
+
+              {/* Ponto animado — estados que requerem atenção */}
+              {(msg.variant === 'warning') && (
+                <div className="shrink-0 relative w-2.5 h-2.5">
+                  <span className="absolute inset-0 rounded-full bg-amber-400/50 animate-ping" />
+                  <span className="relative w-2.5 h-2.5 rounded-full bg-amber-400 flex" />
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Cartão de estado — só na vista de cliente ── */}
+      {clientView && (() => {
+        const msg = CLIENT_MSG[status];
+        if (!msg) return null;
+        const isCancelled = status === 'cancelada';
+        const isDone      = status === 'concluida';
+        const currentStep = STEPS.find(s => s.status === status);
+
+        const cardBorder = isCancelled ? 'border-red-500/40' : 'border-amber-500/40';
+        const iconRing   = isCancelled
+          ? 'bg-zinc-900 border-2 border-red-500/60 text-red-400'
+          : isDone
+            ? 'bg-amber-500 border-2 border-amber-400 text-zinc-950 shadow-lg shadow-amber-500/40'
+            : 'bg-zinc-900 border-2 border-amber-500 text-amber-400';
+        const titleCls   = isCancelled ? 'text-red-300' : 'text-white';
+        const bodyCls    = isCancelled ? 'text-red-200/70' : 'text-white';
+
+        return (
+          <div className={`bg-zinc-900 border rounded-2xl px-6 py-5 flex items-center gap-5 ${cardBorder}`}>
+            {/* Ícone */}
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center shrink-0 [&_svg]:w-7 [&_svg]:h-7 ${iconRing}`}>
+              {currentStep?.icon ?? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+              )}
+            </div>
+
+            {/* Texto */}
+            <div className="flex-1 min-w-0">
+              <p className={`text-lg font-black leading-snug ${titleCls}`}>
+                {msg.title}
+              </p>
+              <p className={`text-sm leading-relaxed mt-1.5 ${bodyCls}`}>
+                {msg.body}
+              </p>
+            </div>
+
+            {/* Ponto animado — estados activos */}
+            {!isCancelled && !isDone && (
+              <div className="shrink-0 relative w-3 h-3">
+                <span className="absolute inset-0 rounded-full bg-amber-400/50 animate-ping" />
+                <span className="relative w-3 h-3 rounded-full bg-amber-400 flex" />
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── Botões (admin / non-readonly) ── */}
       {!readonly && (nextStatus || onCancel) && (
-        confirming ? (
+        confirming === 'advance' ? (
           <div className="flex items-center gap-3 bg-zinc-800/60 border border-zinc-700 rounded-xl px-4 py-3">
-            <span className="text-xs text-white font-semibold flex-1">
-              {confirming === 'cancel'
-                ? 'Cancelar esta reserva. Tem a certeza?'
-                : `${nextLabel} — Tem a certeza?`}
-            </span>
+            <span className="text-xs text-white font-semibold flex-1">{nextLabel} — Tem a certeza?</span>
             <button
               onClick={handleConfirm}
-              className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all active:scale-95 ${
-                confirming === 'cancel'
-                  ? 'bg-red-500 text-white hover:bg-red-400'
-                  : 'bg-amber-400 text-zinc-950 hover:bg-amber-300'
-              }`}
+              className="px-4 py-1.5 rounded-lg text-xs font-black bg-amber-400 text-zinc-950 hover:bg-amber-300 transition-all active:scale-95"
             >
               Confirmar
             </button>
@@ -258,6 +427,32 @@ export function ReservationTracker({ status, onAdvance, onCancel, onEdit, onCont
             >
               Voltar
             </button>
+          </div>
+        ) : confirming === 'cancel' ? (
+          <div className="bg-zinc-800/60 border border-red-500/20 rounded-xl px-4 py-4 space-y-3">
+            <p className="text-xs font-semibold text-white">Cancelar esta reserva — indique o motivo:</p>
+            <textarea
+              value={cancelMotivo}
+              onChange={e => setCancelMotivo(e.target.value)}
+              placeholder="Descreva o motivo do cancelamento..."
+              rows={2}
+              className="w-full bg-zinc-900 border border-zinc-700 focus:border-red-500/50 rounded-lg px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none resize-none"
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => { setConfirming(null); setCancelMotivo(''); }}
+                className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-zinc-700 text-white hover:bg-zinc-600 transition-all"
+              >
+                Voltar
+              </button>
+              <button
+                onClick={handleConfirm}
+                disabled={!cancelMotivo.trim()}
+                className="px-4 py-1.5 rounded-lg text-xs font-black bg-red-500 text-white hover:bg-red-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                Confirmar Cancelamento
+              </button>
+            </div>
           </div>
         ) : (
           <div className="flex gap-2 flex-wrap items-center">

@@ -21,6 +21,7 @@ import {
 import { calculateRentalTotal, parseDailyRateFromPrice } from '../lib/rentalPricing';
 import { useAuth } from './AuthContext';
 import { VEHICLES } from '../data/constants';
+import { useVehicles } from './VehiclesContext';
 import { useNotifications } from './NotificationsContext';
 
 interface ReservationsContextType {
@@ -54,6 +55,7 @@ const ReservationsContext = createContext<ReservationsContextType | null>(null);
 export function ReservationsProvider({ children }: { children: ReactNode }) {
   const { user: authUser } = useAuth();
   const { addNotification } = useNotifications();
+  const { vehicles: allVehicles } = useVehicles();
   
   const [reservations, setReservations] = useState<Reservation[]>(() => {
     const saved = localStorage.getItem('rentcar:reservations:v2');
@@ -93,7 +95,7 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
     validateDateRange(start, end, rules, new Date(), horaLevantamento);
 
   const createReservation = (data: Omit<Reservation, 'id' | 'createdAt'>) => {
-    const vehicle = VEHICLES.find(v => v.id === data.vehicleId);
+    const vehicle = allVehicles.find(v => v.id === data.vehicleId) ?? VEHICLES.find(v => v.id === data.vehicleId);
     const isPurchase = vehicle?.mode === 'compra';
 
     if (!isPurchase) {
@@ -148,7 +150,7 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
 
     // Side effect fora do updater — nunca é duplicado pelo Strict Mode
     if (existing && data.status && data.status !== existing.status && existing.userId) {
-      const vehicle = VEHICLES.find(v => v.id === existing.vehicleId);
+      const vehicle = allVehicles.find(v => v.id === existing.vehicleId) ?? VEHICLES.find(v => v.id === existing.vehicleId);
       const isPurchase = vehicle?.mode === 'compra';
       const operacaoLabel = isPurchase ? 'Compra' : 'Aluguer';
       const vehicleName = vehicle?.name || `Viatura #${existing.vehicleId}`;
@@ -181,7 +183,7 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
     );
 
     if (existing?.userId) {
-      const vehicle = VEHICLES.find(v => v.id === existing.vehicleId);
+      const vehicle = allVehicles.find(v => v.id === existing.vehicleId) ?? VEHICLES.find(v => v.id === existing.vehicleId);
       const isPurchase = vehicle?.mode === 'compra';
       const operacaoLabel = isPurchase ? 'Compra' : 'Aluguer';
       const vehicleName = vehicle?.name || `Viatura #${existing.vehicleId}`;
@@ -262,7 +264,7 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
 
     // Notificar o cliente com o calendário de pagamentos
     if (existing?.userId) {
-      const vehicle = VEHICLES.find(v => v.id === existing.vehicleId);
+      const vehicle = allVehicles.find(v => v.id === existing.vehicleId) ?? VEHICLES.find(v => v.id === existing.vehicleId);
       const vehicleName = vehicle?.name || `Viatura #${existing.vehicleId}`;
       const primeiraData = startDate.toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' });
       addNotification(
@@ -346,7 +348,7 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
   };
 
   const quoteRental = (vehicleId: number, start: string, end: string) => {
-    const vehicle = VEHICLES.find(v => v.id === vehicleId);
+    const vehicle = allVehicles.find(v => v.id === vehicleId) ?? VEHICLES.find(v => v.id === vehicleId);
     if (!vehicle || vehicle.mode !== 'aluguer') return null;
     const dateCheck = validateDates(start, end);
     if (!dateCheck.valid) return null;

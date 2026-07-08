@@ -54,6 +54,9 @@ export interface Reservation {
   totalPrestacoes?: number;
   prestacoesPagas?: number;
   prestacoes?: Prestacao[];  // plano detalhado de prestações
+  horaPagamento?: string;
+  formaPagamento?: string;
+  referenciaPagamento?: string;
 }
 
 export interface BlockedPeriod {

@@ -1,4 +1,4 @@
-import type { User } from '../types/user';
+﻿import type { User } from '../types/user';
 import { UserProfileContent } from './UserProfileContent';
 
 interface UserDetailProps {
@@ -10,7 +10,7 @@ interface UserDetailProps {
 export function UserDetail({ user, onClose, onEdit }: UserDetailProps) {
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl shadow-2xl max-h-[90vh] flex flex-col">
+      <div className="bg-zinc-900 border border-amber-500/20 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl shadow-2xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-end p-4 border-b border-zinc-800 sm:hidden">
           <button onClick={onClose} className="text-white hover:text-white transition-colors">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

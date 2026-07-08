@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useMotoristas } from '../context/MotoristasContext';
 import type { Motorista, MotoristaSatus } from '../types/motorista';
 
@@ -37,7 +37,7 @@ function Modal({ initial, onSave, onClose }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl">
+      <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl w-full max-w-md shadow-2xl">
         <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
           <h2 className="text-base font-black text-white">{initial?.id ? 'Editar Motorista' : 'Novo Motorista'}</h2>
           <button type="button" onClick={onClose} className="text-white hover:text-white text-xl leading-none">×</button>
@@ -109,7 +109,7 @@ export function MotoristasPage({ onExit }: { onExit?: () => void }) {
 
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-sm w-full text-center space-y-4">
+          <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-6 max-w-sm w-full text-center space-y-4">
             <p className="text-white font-bold text-sm">Remover motorista?</p>
             <p className="text-white text-xs">Esta acção não pode ser desfeita.</p>
             <div className="flex gap-3">
@@ -130,10 +130,10 @@ export function MotoristasPage({ onExit }: { onExit?: () => void }) {
             { label: 'Disponíveis',  value: disponiveis,       color: 'text-emerald-400',  dot: 'bg-emerald-400' },
             { label: 'Em Serviço',   value: emServico,         color: 'text-blue-400',     dot: 'bg-blue-400' },
           ].map(k => (
-            <div key={k.label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex flex-col gap-2">
+            <div key={k.label} className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4 flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${k.dot}`} />
-                <span className="text-xs text-white uppercase font-bold tracking-wide">{k.label}</span>
+                <span className="text-xs text-amber-400 uppercase font-bold tracking-wide">{k.label}</span>
               </div>
               <p className={`text-3xl font-black ${k.color}`}>{k.value}</p>
             </div>
@@ -150,26 +150,32 @@ export function MotoristasPage({ onExit }: { onExit?: () => void }) {
         </div>
 
         {/* Table */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+        <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
+          <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-zinc-800/70">
+            <div className="w-1 h-4 bg-amber-500 rounded-full" />
+            <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Lista de Motoristas</p>
+          </div>
           <table className="w-full">
             <thead>
               <tr className="border-b border-zinc-800 bg-zinc-800/40">
-                <th className="text-left px-5 py-4 text-xs text-white font-bold uppercase tracking-wider">Motorista</th>
-                <th className="text-left px-5 py-4 text-xs text-white font-bold uppercase tracking-wider hidden sm:table-cell">Documentos</th>
-                <th className="text-left px-5 py-4 text-xs text-white font-bold uppercase tracking-wider">Estado</th>
-                <th className="px-5 py-4 text-xs text-white font-bold uppercase tracking-wider text-right">Acções</th>
+                <th className="text-left px-5 py-4 text-xs text-white/40 font-black uppercase tracking-widest w-10">#</th>
+                <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest">Motorista</th>
+                <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest hidden sm:table-cell">Documentos</th>
+                <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest">Estado</th>
+                <th className="px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest text-right">Acções</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800">
               {motoristas.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="text-center py-12 text-white text-sm">Sem motoristas registados</td>
+                  <td colSpan={5} className="text-center py-12 text-white text-sm">Sem motoristas registados</td>
                 </tr>
               )}
-              {motoristas.map(m => {
+              {motoristas.map((m, idx) => {
                 const st = STATUS_CFG[m.status];
                 return (
                   <tr key={m.id} className="hover:bg-zinc-800/30 transition-colors">
+                    <td className="px-5 py-4 text-xs font-black text-white/30 tabular-nums w-10">{idx + 1}</td>
                     <td className="px-5 py-4">
                       <p className="text-sm font-semibold text-white">{m.nome}</p>
                       <p className="text-xs text-white">{m.telefone}</p>

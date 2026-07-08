@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+﻿import { useEffect } from "react";
 
 export default function AboutModal({ onClose }: { onClose: () => void }) {
   useEffect(() => {
@@ -20,7 +20,7 @@ export default function AboutModal({ onClose }: { onClose: () => void }) {
       />
 
       {/* Panel */}
-      <div className="relative z-10 w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl">
+      <div className="relative z-10 w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-zinc-950 border border-amber-500/20 rounded-3xl shadow-2xl">
 
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-zinc-800 bg-zinc-950/95 backdrop-blur-xl">
@@ -88,7 +88,7 @@ export default function AboutModal({ onClose }: { onClose: () => void }) {
                 texto: "Ser a empresa de referência em serviços de mobilidade automóvel em Moçambique, expandindo a nossa rede de balcões a todas as províncias.",
               },
             ].map((c) => (
-              <div key={c.titulo} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 hover:border-amber-500/30 transition-colors group">
+              <div key={c.titulo} className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-5 hover:border-amber-500/30 transition-colors group">
                 <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 mb-4 group-hover:bg-amber-500/15 transition-colors">
                   {c.icon}
                 </div>
@@ -106,7 +106,7 @@ export default function AboutModal({ onClose }: { onClose: () => void }) {
               { valor: "15",  label: "Viaturas disponíveis" },
               { valor: "3",   label: "Modalidades de acesso" },
             ].map((s) => (
-              <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 text-center hover:border-amber-500/20 transition-colors">
+              <div key={s.label} className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-5 text-center hover:border-amber-500/20 transition-colors">
                 <div className="text-3xl font-black text-amber-500 mb-1">{s.valor}</div>
                 <div className="text-zinc-400 text-xs font-semibold leading-tight">{s.label}</div>
               </div>
@@ -114,7 +114,7 @@ export default function AboutModal({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* Equipa / Contactos */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+          <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-6">
             <h3 className="text-white font-black text-lg mb-4">Contacte-nos</h3>
             <div className="grid sm:grid-cols-2 gap-4">
               {[

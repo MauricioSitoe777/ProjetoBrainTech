@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import { useReservations } from '../context/ReservationsContext';
 import { useVehicles } from '../context/VehiclesContext';
 import { useXitique } from '../context/XitiqueContext';
@@ -63,8 +63,8 @@ function Bar({ pct, color = 'bg-amber-500', thin }: { pct: number; color?: strin
 // ── KPI Card ──────────────────────────────────────────────────────────────────
 function KpiCard({ label, value, sub, color = 'text-white', accent }: { label: string; value: string; sub?: string; color?: string; accent?: string }) {
   return (
-    <div className={`bg-zinc-900 border rounded-2xl p-4 space-y-1 ${accent ?? 'border-zinc-800'}`}>
-      <p className="text-[10px] text-white uppercase font-bold tracking-wider">{label}</p>
+    <div className={`bg-zinc-900 border rounded-2xl p-4 space-y-1 ${accent ?? 'border-amber-500/20'}`}>
+      <p className="text-[10px] text-amber-400 uppercase font-bold tracking-wider">{label}</p>
       <p className={`text-xl font-black leading-tight ${color}`}>{value}</p>
       {sub && <p className="text-[10px] text-white">{sub}</p>}
     </div>
@@ -143,6 +143,14 @@ export function FinancePage() {
   });
   const variacaoMes = dadosMesAnterior && dadosMesAnterior.total > 0
     ? Math.round(((dadosMesAtual?.total ?? 0) - dadosMesAnterior.total) / dadosMesAnterior.total * 100)
+    : null;
+
+  const dadosMesAnteAnterior = dadosMensais.find(d => {
+    const prev2 = new Date(anoAtual, mesAtual - 2, 1);
+    return d.year === prev2.getFullYear() && d.month === prev2.getMonth();
+  });
+  const variacaoMesAnterior = dadosMesAnteAnterior && dadosMesAnteAnterior.total > 0
+    ? Math.round(((dadosMesAnterior?.total ?? 0) - dadosMesAnteAnterior.total) / dadosMesAnteAnterior.total * 100)
     : null;
 
   // Melhor mês
@@ -324,7 +332,7 @@ export function FinancePage() {
               const areaPath = `${linePath} L ${SVG_W},${SVG_H} L 0,${SVG_H} Z`;
               const yLabels = [1, 0.75, 0.5, 0.25, 0].map(f => fmtK(maxTotal * f));
               return (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+                <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-5">
                   <h2 className="text-white font-black text-base mb-4">Receita Total</h2>
                   <div className="flex gap-3">
                     <div className="flex flex-col justify-between text-right shrink-0" style={{ height: SVG_H }}>
@@ -361,9 +369,9 @@ export function FinancePage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
               {/* Breakdown */}
-              <div className="lg:col-span-2 bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+              <div className="lg:col-span-2 bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
                 <div className="px-5 py-4 border-b border-zinc-800">
-                  <h2 className="text-white font-black text-base">Channel Revenue Breakdown</h2>
+                  <h2 className="text-amber-400 font-black text-base">Distribuição de Receita por Canal</h2>
                 </div>
                 <div className="p-5 space-y-5">
                   {[
@@ -393,32 +401,45 @@ export function FinancePage() {
               </div>
 
               {/* Totais */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
-                <h2 className="text-white font-black text-base mb-4">Totais</h2>
+              <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-5">
+                <h2 className="text-amber-400 font-black text-base mb-1">Resumo Mensal</h2>
+                <p className="text-xs text-white mb-4">Receita por período</p>
                 <div className="space-y-0">
                   <div className="flex items-center justify-between py-3 border-b border-zinc-800/70">
                     <div>
+                      <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider mb-0.5">Mês Actual</p>
                       <p className="text-sm font-bold text-white">{MESES_FULL[mesAtual]}</p>
                       <p className="text-base font-black text-white mt-0.5">{fmt(dadosMesAtual?.total ?? 0)}</p>
                     </div>
                     {variacaoMes !== null && (
-                      <span className={`text-base font-black px-2.5 py-1 rounded-lg ${variacaoMes >= 0 ? 'bg-amber-500/10 text-amber-400' : 'bg-red-500/10 text-red-400'}`}>
-                        {variacaoMes >= 0 ? '+' : ''}{variacaoMes}%
-                      </span>
+                      <div className="text-right">
+                        <p className="text-[10px] text-white mb-1">vs. mês anterior</p>
+                        <span className={`text-sm font-black px-2.5 py-1 rounded-lg ${variacaoMes >= 0 ? 'bg-amber-500/10 text-amber-400' : 'bg-red-500/10 text-red-400'}`}>
+                          {variacaoMes >= 0 ? '+' : ''}{variacaoMes}%
+                        </span>
+                      </div>
                     )}
                   </div>
                   <div className="flex items-center justify-between py-3 border-b border-zinc-800/70">
                     <div>
-                      <p className="text-sm font-bold text-white">{MESES_FULL[(mesAtual + 11) % 12]} (últ.)</p>
+                      <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider mb-0.5">Mês Anterior</p>
+                      <p className="text-sm font-bold text-white">{MESES_FULL[(mesAtual + 11) % 12]}</p>
                       <p className="text-base font-black text-white mt-0.5">{fmt(dadosMesAnterior?.total ?? 0)}</p>
                     </div>
-                    <span className="text-base font-black px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400">0,0%</span>
+                    {variacaoMesAnterior !== null && (
+                      <div className="text-right">
+                        <p className="text-[10px] text-white mb-1">vs. mês precedente</p>
+                        <span className={`text-sm font-black px-2.5 py-1 rounded-lg ${variacaoMesAnterior >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                          {variacaoMesAnterior >= 0 ? '+' : ''}{variacaoMesAnterior}%
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center justify-between pt-3">
                     <div>
-                      <p className="text-sm font-bold text-white">Melhor</p>
+                      <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider mb-0.5">Melhor Mês de Sempre</p>
+                      <p className="text-sm font-bold text-white">{melhorMes ? `${MESES_FULL[melhorMes.month]} ${melhorMes.year}` : '—'}</p>
                       <p className="text-base font-black text-amber-400 mt-0.5">{melhorMes ? fmt(melhorMes.total) : fmt(0)}</p>
-                      {melhorMes && <p className="text-xs text-white mt-0.5">{MESES_ABR[melhorMes.month]} {melhorMes.year}</p>}
                     </div>
                   </div>
                 </div>
@@ -429,7 +450,7 @@ export function FinancePage() {
             <div>
               <h2 className="text-white font-black text-base mb-3">Melhores do Mês ({MESES_ABR[mesAtual]})</h2>
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center gap-4">
+                <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4 flex items-center gap-4">
                   <div className="w-11 h-11 rounded-xl bg-amber-400/10 flex items-center justify-center shrink-0">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F0CD49" strokeWidth="2" strokeLinecap="round">
                       <rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
@@ -458,7 +479,7 @@ export function FinancePage() {
 
             {/* 5. Lucratividade por Categoria */}
             {porCategoria.length > 0 && (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+              <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
                 <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
                   <h2 className="text-white font-black text-sm uppercase tracking-wider">Lucratividade por Categoria</h2>
                   <span className="text-[10px] text-white">Transações manuais</span>
@@ -525,22 +546,22 @@ export function FinancePage() {
                   const dPrev = dadosAno.find(d => d.month === (mesAtual > 0 ? mesAtual - 1 : 11));
                   return (
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+                      <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4">
                         <p className="text-[10px] text-white uppercase font-bold tracking-wider mb-1">{MESES_ABR[mesAtual]} — Alug.</p>
                         <p className="text-xl font-black leading-tight" style={{ color: '#F0CD49' }}>{fmtK(dCurr?.aluguerVal ?? 0)}</p>
                         <p className="text-[10px] text-white mt-0.5">Mês actual</p>
                       </div>
-                      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+                      <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4">
                         <p className="text-[10px] text-white uppercase font-bold tracking-wider mb-1">{MESES_ABR[mesAtual > 0 ? mesAtual - 1 : 11]} — Alug.</p>
                         <p className="text-xl font-black leading-tight" style={{ color: '#F0CD49' }}>{fmtK(dPrev?.aluguerVal ?? 0)}</p>
                         <p className="text-[10px] text-white mt-0.5">Mês anterior</p>
                       </div>
-                      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+                      <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4">
                         <p className="text-[10px] text-white uppercase font-bold tracking-wider mb-1">Vendas {anoSel}</p>
                         <p className="text-xl font-black text-white leading-tight">{totalAnoVendasQ}</p>
                         <p className="text-[10px] text-white mt-0.5">Contratos compra</p>
                       </div>
-                      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+                      <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4">
                         <p className="text-[10px] text-white uppercase font-bold tracking-wider mb-1">Rec. Venda</p>
                         <p className="text-xl font-black leading-tight" style={{ color: '#C28A18' }}>{fmtK(totalAnoVendasV)}</p>
                         <p className="text-[10px] text-white mt-0.5">Receita compra {anoSel}</p>
@@ -565,7 +586,7 @@ export function FinancePage() {
                   return (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Left: Monthly Revenue */}
-                      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+                      <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-5">
                         <h2 className="text-white font-black text-sm uppercase tracking-wider mb-4">Receita Mensal — {anoSel}</h2>
                         <div className="flex items-end gap-1" style={{ height: `${BAR_H + 18}px` }}>
                           {Array.from({ length: 12 }, (_, i) => {
@@ -600,7 +621,7 @@ export function FinancePage() {
                       </div>
 
                       {/* Right: Revenue vs Projections */}
-                      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+                      <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-5">
                         <h2 className="text-white font-black text-sm uppercase tracking-wider mb-4">Receita vs. Projeções</h2>
                         <div className="flex items-end gap-1" style={{ height: `${BAR_H + 18}px` }}>
                           {Array.from({ length: 12 }, (_, i) => {
@@ -655,7 +676,7 @@ export function FinancePage() {
                 })()}
 
                 {/* Tabela mensal */}
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
                   <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
                     <h2 className="text-white font-black text-sm uppercase tracking-wider">
                       {mesSel !== null ? `Detalhe — ${MESES_FULL[mesSel]} ${anoSel}` : `Todos os Meses — ${anoSel}`}
@@ -671,7 +692,7 @@ export function FinancePage() {
                       <thead>
                         <tr className="border-b border-zinc-800/50 bg-zinc-800/20">
                           {['Mês', 'Alugueres', 'Rec. Aluguer', 'Vendas', 'Rec. Venda', 'Total', 'Var.'].map(h => (
-                            <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-white uppercase tracking-wider whitespace-nowrap">{h}</th>
+                            <th key={h} className="text-left px-4 py-2.5 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap">{h}</th>
                           ))}
                         </tr>
                       </thead>
@@ -736,7 +757,7 @@ export function FinancePage() {
                     return y === anoSel && (m - 1) === mesSel;
                   }).sort((a, b) => b.dataInicio.localeCompare(a.dataInicio));
                   return (
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                    <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
                       <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30">
                         <h3 className="text-white font-black text-sm uppercase tracking-wider">
                           Contratos de {MESES_FULL[mesSel]} {anoSel} · {resDoMes.length} total
@@ -746,16 +767,17 @@ export function FinancePage() {
                         <table className="w-full">
                           <thead>
                             <tr className="border-b border-zinc-800/50">
-                              {['Data','Viatura','Cliente','Tipo','Valor','Estado'].map(h => (
-                                <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-white uppercase tracking-wider">{h}</th>
+                              {['#','Data','Viatura','Cliente','Tipo','Valor','Estado'].map(h => (
+                                <th key={h} className={`text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider ${h === '#' ? 'text-white/40 w-10' : 'text-white'}`}>{h}</th>
                               ))}
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-zinc-800/40">
-                            {resDoMes.map(r => {
+                            {resDoMes.map((r, idx) => {
                               const isCompra = compraIds.has(r.vehicleId);
                               return (
                                 <tr key={r.id} className="hover:bg-zinc-800/30 transition-colors">
+                                  <td className="px-4 py-2.5 text-xs font-black text-white/30 tabular-nums w-10">{idx + 1}</td>
                                   <td className="px-5 py-4 text-xs text-white whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
                                   <td className="px-5 py-4 text-sm font-semibold text-white truncate max-w-[140px]">{getVehicleName(r.vehicleId)}</td>
                                   <td className="px-5 py-4 text-xs text-white truncate max-w-[120px]">{r.clientName ?? '—'}</td>
@@ -794,7 +816,7 @@ export function FinancePage() {
               <KpiCard label="Dívidas Activas" value={fmt(totalDividasPendentes)} color="text-amber-400" />
             </div>
 
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+            <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
               <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
                 <h2 className="text-white font-black text-sm uppercase tracking-wider">Transações Manuais</h2>
                 <span className="text-[10px] text-white">{transacoes.length} registos</span>
@@ -806,14 +828,15 @@ export function FinancePage() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-zinc-800/50">
-                        {['Data','Descrição','Categoria','Tipo','Valor'].map(h => (
-                          <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-white uppercase tracking-wider">{h}</th>
+                        {['#','Data','Descrição','Categoria','Tipo','Valor'].map(h => (
+                          <th key={h} className={`text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider ${h === '#' ? 'text-white/40 w-10' : 'text-white'}`}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-800/40">
-                      {[...transacoes].sort((a, b) => b.data.localeCompare(a.data)).map(t => (
+                      {[...transacoes].sort((a, b) => b.data.localeCompare(a.data)).map((t, idx) => (
                         <tr key={t.id} className="hover:bg-zinc-800/20 transition-colors">
+                          <td className="px-4 py-2.5 text-xs font-black text-white/30 tabular-nums w-10">{idx + 1}</td>
                           <td className="px-5 py-4 text-xs text-white whitespace-nowrap">{new Date(t.data).toLocaleDateString('pt-PT')}</td>
                           <td className="px-5 py-4 text-sm text-white font-medium truncate max-w-[200px]">{t.descricao}</td>
                           <td className="px-5 py-4 text-xs text-white">{CATEGORIA_LABEL[t.categoria] ?? t.categoria}</td>
@@ -851,7 +874,7 @@ export function FinancePage() {
 
             {/* Distribuição por estado */}
             {aluguerRes.length > 0 && (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-3">
+              <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-5 space-y-3">
                 <h2 className="text-white font-black text-sm uppercase tracking-wider">Estado dos Contratos</h2>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(aluguerByStatus).sort((a, b) => b[1] - a[1]).map(([status, qty]) => {
@@ -868,7 +891,7 @@ export function FinancePage() {
             )}
 
             {/* Tabela de contratos */}
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+            <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
               <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
                 <h2 className="text-white font-black text-sm uppercase tracking-wider">Contratos de Aluguer</h2>
                 <span className="text-[10px] text-white">{aluguerRes.length} contrato{aluguerRes.length !== 1 ? 's' : ''}</span>
@@ -880,17 +903,18 @@ export function FinancePage() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-zinc-800/50 bg-zinc-800/20">
-                        {['Data Início','Data Fim','Viatura','Cliente','Duração','Valor','Estado'].map(h => (
-                          <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-white uppercase tracking-wider whitespace-nowrap">{h}</th>
+                        {['#','Data Início','Data Fim','Viatura','Cliente','Duração','Valor','Estado'].map(h => (
+                          <th key={h} className={`text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ${h === '#' ? 'text-white/40 w-10' : 'text-white'}`}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-800/40">
-                      {aluguerSorted.map(r => {
+                      {aluguerSorted.map((r, idx) => {
                         const dias = Math.max(1, Math.round((new Date(r.dataFim).getTime() - new Date(r.dataInicio).getTime()) / 86_400_000));
                         const s = STATUS_ALUGUER[r.status] ?? { label: r.status, color: 'text-white', bg: 'bg-zinc-800 border-zinc-700' };
                         return (
                           <tr key={r.id} className="hover:bg-zinc-800/30 transition-colors">
+                            <td className="px-4 py-2.5 text-xs font-black text-white/30 tabular-nums w-10">{idx + 1}</td>
                             <td className="px-5 py-4 text-xs text-white whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
                             <td className="px-5 py-4 text-xs text-white whitespace-nowrap">{new Date(r.dataFim).toLocaleDateString('pt-PT')}</td>
                             <td className="px-5 py-4 text-sm font-semibold text-white truncate max-w-[140px]">{getVehicleName(r.vehicleId)}</td>
@@ -906,7 +930,7 @@ export function FinancePage() {
                     </tbody>
                     <tfoot>
                       <tr className="bg-zinc-800/40 border-t border-zinc-700">
-                        <td colSpan={5} className="px-5 py-4 text-xs font-black text-white uppercase">Total</td>
+                        <td colSpan={6} className="px-5 py-4 text-xs font-black text-white uppercase">Total</td>
                         <td className="px-5 py-4 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(receitaAluguer)}</td>
                         <td />
                       </tr>
@@ -918,7 +942,7 @@ export function FinancePage() {
 
             {/* Viaturas com mais saída */}
             {rankingAluguer.length > 0 && (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+              <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
                 <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
                   <h2 className="text-white font-black text-sm uppercase tracking-wider">Viaturas com Mais Saída</h2>
                   <span className="text-[10px] text-white">{rankingAluguer.length} viatura{rankingAluguer.length !== 1 ? 's' : ''}</span>
@@ -978,7 +1002,7 @@ export function FinancePage() {
 
             {/* Distribuição por estado */}
             {compraRes.length > 0 && (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-3">
+              <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-5 space-y-3">
                 <h2 className="text-white font-black text-sm uppercase tracking-wider">Estado dos Contratos</h2>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(compraByStatus).sort((a, b) => b[1] - a[1]).map(([status, qty]) => {
@@ -995,7 +1019,7 @@ export function FinancePage() {
             )}
 
             {/* Tabela de contratos */}
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+            <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
               <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
                 <h2 className="text-white font-black text-sm uppercase tracking-wider">Contratos de Compra & Venda</h2>
                 <span className="text-[10px] text-white">{compraRes.length} contrato{compraRes.length !== 1 ? 's' : ''}</span>
@@ -1008,7 +1032,7 @@ export function FinancePage() {
                     <thead>
                       <tr className="border-b border-zinc-800/50 bg-zinc-800/20">
                         {['Data','Viatura','Cliente','Prestações','Valor Total','Estado'].map(h => (
-                          <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold text-white uppercase tracking-wider whitespace-nowrap">{h}</th>
+                          <th key={h} className="text-left px-4 py-2.5 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -1046,7 +1070,7 @@ export function FinancePage() {
 
             {/* Viaturas mais vendidas */}
             {rankingCompra.length > 0 && (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+              <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
                 <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
                   <h2 className="text-white font-black text-sm uppercase tracking-wider">Viaturas Mais Vendidas</h2>
                   <span className="text-[10px] text-white">{rankingCompra.length} viatura{rankingCompra.length !== 1 ? 's' : ''}</span>

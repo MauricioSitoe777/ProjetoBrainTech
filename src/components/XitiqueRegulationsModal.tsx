@@ -1,4 +1,4 @@
-import { AlertTriangle, Lock, FileText, Shield, UserCheck, Landmark } from "lucide-react";
+﻿import { AlertTriangle, Lock, FileText, Shield, UserCheck, Landmark } from "lucide-react";
 
 interface XitiqueRegulationsModalProps {
   onClose: () => void;
@@ -9,7 +9,7 @@ export default function XitiqueRegulationsModal({ onClose }: XitiqueRegulationsM
     <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={onClose} />
       
-      <div className="relative bg-zinc-900 border border-zinc-800 rounded-[32px] w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      <div className="relative bg-zinc-900 border border-amber-500/20 rounded-[32px] w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-8 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50 backdrop-blur-xl sticky top-0 z-10">
           <div>

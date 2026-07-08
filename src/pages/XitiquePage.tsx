@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import { FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import { useXitique } from '../context/XitiqueContext';
 import { useAuth } from '../context/AuthContext';
@@ -103,7 +103,7 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
   };
 
   const copiarTudo = (c: Credencial) => {
-    const msg = `🔑 Acesso Xitique — SOS Motors\nNome: ${c.nome}\nUtilizador: ${c.utilizador}\nEmail de login: ${c.email}\nSenha temporária: ${c.senha}\n\nAceda em: ${window.location.origin}`;
+    const msg = `🔑 Acesso Xitique — SOS Motors\nNome: ${c.nome}\nUtilizador: ${c.utilizador}\nE-mail de acesso: ${c.email}\nPalavra-passe temporária: ${c.senha}\n\nAceda em: ${window.location.origin}`;
     navigator.clipboard?.writeText(msg).catch(() => fallbackCopy(msg)) ?? fallbackCopy(msg);
     setCopiado('tudo'); setTimeout(() => setCopiado(null), 2500);
   };
@@ -138,7 +138,7 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
           </button>
           <span className="text-zinc-700">·</span>
           <div>
-            <h1 className="text-2xl font-black text-white">{grupo.nome}</h1>
+            <h1 className="text-2xl font-black text-amber-400">{grupo.nome}</h1>
             <p className="text-white text-sm mt-0.5">{maxMembros} membros · {fmt(quotaMT)}/mês · Prémio {fmt(premioMT)}</p>
           </div>
         </div>
@@ -279,8 +279,8 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
             { label: 'Total arrecadado', value: fmt(totalPagoMes) },
             { label: 'Ainda p/ sortear', value: String(membrosRestantes) },
           ].map(m => (
-            <div key={m.label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-              <div className="text-xs text-white mb-1">{m.label}</div>
+            <div key={m.label} className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4">
+              <div className="text-xs text-amber-400 mb-1">{m.label}</div>
               <div className="text-lg font-black text-white">{m.value}</div>
             </div>
           ))}
@@ -290,7 +290,7 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
           {/* Membros */}
           <div className="lg:col-span-3 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-white font-black text-base uppercase tracking-wider">Membros</h2>
+              <h2 className="text-amber-400 font-black text-base uppercase tracking-wider">Membros</h2>
               <span className="text-xs text-white">{membros.length} / {maxMembros}</span>
             </div>
             {estadoGrupo === 'Aberto' && (
@@ -412,7 +412,7 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
           {/* Sorteio + Histórico */}
           <div className="lg:col-span-2 space-y-4">
             {estadoGrupo === 'EmAndamento' && (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 text-center space-y-4">
+              <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-5 text-center space-y-4">
                 <div className="text-xs text-white uppercase tracking-widest font-bold">Sorteio do Mês {mesAtual}</div>
                 <div className="text-3xl font-black text-white">{fmt(premioMT)}</div>
                 <p className="text-xs text-white">
@@ -432,7 +432,7 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
                 <div className="text-sm text-emerald-400 mt-1">{fmt(premioMT)}</div>
               </div>
             )}
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+            <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4">
               <h3 className="text-white font-black text-sm uppercase tracking-wider mb-3">Histórico de Sorteios</h3>
               {sorteios.length === 0 ? (
                 <p className="text-white text-xs text-center py-4">Nenhum sorteio realizado.</p>
@@ -663,7 +663,7 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
       {credencial && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setCredencial(null)} />
-          <div className="relative w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden">
+          <div className="relative w-full max-w-sm bg-zinc-900 border border-amber-500/20 rounded-3xl shadow-2xl overflow-hidden">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-20 bg-emerald-500/10 blur-3xl pointer-events-none" />
             <div className="relative flex items-center justify-between px-5 pt-5 pb-4 border-b border-zinc-800">
               <div className="flex items-center gap-3">
@@ -687,7 +687,7 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
               {[
                 { chave: 'utilizador', label: 'Utilizador (Telemóvel)', valor: credencial.utilizador },
                 { chave: 'email',      label: 'Email de login',         valor: credencial.email },
-                { chave: 'senha',      label: 'Senha Temporária',       valor: credencial.senha },
+                { chave: 'senha',      label: 'Palavra-passe Temporária', valor: credencial.senha },
               ].map(row => (
                 <div key={row.chave} className="bg-zinc-800/60 border border-zinc-700 rounded-xl px-4 py-3">
                   <div className="text-[10px] text-white uppercase font-bold tracking-wider mb-1">{row.label}</div>
@@ -749,7 +749,7 @@ function CriarGrupoModal({ onClose, onCriar }: { onClose: () => void; onCriar: (
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-zinc-900 border border-zinc-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+      <div className="relative bg-zinc-900 border border-amber-500/20 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
         <h3 className="text-white font-black text-lg">Novo Grupo Xitique</h3>
 
         <div>
@@ -842,7 +842,7 @@ export function XitiquePage({ onExit }: { onExit?: () => void }) {
 
         {/* Lista de grupos */}
         {grupos.length === 0 ? (
-          <div className="text-center text-white text-sm py-16 bg-zinc-900 rounded-2xl border border-zinc-800 border-dashed space-y-4">
+          <div className="text-center text-white text-sm py-16 bg-zinc-900 rounded-2xl border border-amber-500/20 border-dashed space-y-4">
             <div className="w-14 h-14 rounded-full bg-zinc-800 flex items-center justify-center mx-auto">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#71717a" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             </div>
@@ -858,11 +858,11 @@ export function XitiquePage({ onExit }: { onExit?: () => void }) {
               const pendentesGrupo = inscricoes.filter(i => i.grupoId === g.id && i.status === 'aguarda_validacao').length;
               return (
                 <button key={g.id} onClick={() => setGrupoSelId(g.id)}
-                  className="text-left bg-zinc-900 border border-zinc-800 hover:border-zinc-600 rounded-2xl p-5 transition-all hover:bg-zinc-800/60 group space-y-4">
+                  className="text-left bg-zinc-900 border border-amber-500/20 hover:border-amber-500/40 rounded-2xl p-5 transition-all hover:bg-zinc-800/60 group space-y-4">
 
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-white font-black text-base group-hover:text-amber-400 transition-colors">{g.nome}</p>
+                      <p className="text-amber-400 font-black text-base">{g.nome}</p>
                       <span className={`mt-1 inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${estadoStyle[g.estadoGrupo]}`}>
                         {estadoLabel[g.estadoGrupo]}
                         {g.estadoGrupo === 'EmAndamento' && ` · Mês ${g.mesAtual}/${g.maxMembros}`}
@@ -877,7 +877,7 @@ export function XitiquePage({ onExit }: { onExit?: () => void }) {
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-white">Membros</span>
+                      <span className="text-amber-400">Membros</span>
                       <span className="text-white font-bold">{g.membros.length} / {g.maxMembros}</span>
                     </div>
                     <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
@@ -887,18 +887,18 @@ export function XitiquePage({ onExit }: { onExit?: () => void }) {
 
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="bg-zinc-800/60 rounded-xl px-3 py-2">
-                      <p className="text-white mb-0.5">Quota</p>
+                      <p className="text-amber-400 mb-0.5">Quota</p>
                       <p className="text-amber-400 font-black">{fmt(g.quotaMT)}</p>
                     </div>
                     <div className="bg-zinc-800/60 rounded-xl px-3 py-2">
-                      <p className="text-white mb-0.5">Prémio</p>
+                      <p className="text-amber-400 mb-0.5">Prémio</p>
                       <p className="text-white font-black">{fmt(g.premioMT)}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between text-xs text-white pt-1 border-t border-zinc-800">
                     <span>{g.sorteios.length} sorteio{g.sorteios.length !== 1 ? 's' : ''} realizados</span>
-                    <span className="group-hover:text-amber-400 font-bold transition-colors">Gerir →</span>
+                    <span className="text-amber-400 font-bold">Gerir →</span>
                   </div>
                 </button>
               );

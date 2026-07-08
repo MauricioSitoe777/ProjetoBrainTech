@@ -23,11 +23,11 @@ export function RedefinirSenhaPage({ token, onVoltar }: { token: string; onVolta
     setErro('');
 
     if (senha.length < 6) {
-      setErro('A senha deve ter pelo menos 6 caracteres.');
+      setErro('A palavra-passe deve ter pelo menos 6 caracteres.');
       return;
     }
     if (senha !== confirmar) {
-      setErro('As senhas não coincidem.');
+      setErro('As palavras-passe não coincidem.');
       return;
     }
 
@@ -82,18 +82,18 @@ export function RedefinirSenhaPage({ token, onVoltar }: { token: string; onVolta
             </div>
           )}
 
-          {/* ── Formulário nova senha ── */}
+          {/* ── Formulário nova palavra-passe ── */}
           {estado === 'form' && (
             <>
               <div>
-                <h2 className="text-xl font-black text-white">Nova Senha</h2>
-                <p className="text-zinc-400 text-sm mt-1">Escolha uma senha segura para a sua conta.</p>
+                <h2 className="text-xl font-black text-white">Nova Palavra-passe</h2>
+                <p className="text-zinc-400 text-sm mt-1">Escolha uma palavra-passe segura para a sua conta.</p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Campo senha */}
+                {/* Campo palavra-passe */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Nova Senha</label>
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Nova Palavra-passe</label>
                   <div className="relative">
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -138,9 +138,9 @@ export function RedefinirSenhaPage({ token, onVoltar }: { token: string; onVolta
                   </div>
                 )}
 
-                {/* Confirmar senha */}
+                {/* Confirmar palavra-passe */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Confirmar Senha</label>
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Confirmar Palavra-passe</label>
                   <div className="relative">
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -151,7 +151,7 @@ export function RedefinirSenhaPage({ token, onVoltar }: { token: string; onVolta
                       type={showS2 ? 'text' : 'password'}
                       value={confirmar}
                       onChange={e => setConfirmar(e.target.value)}
-                      placeholder="Repita a nova senha"
+                      placeholder="Repita a nova palavra-passe"
                       required
                       className={`w-full bg-zinc-950 border text-white rounded-xl pl-11 pr-12 py-3 text-sm placeholder-zinc-500 focus:outline-none focus:ring-1 transition-all ${
                         confirmar && confirmar !== senha
@@ -181,7 +181,7 @@ export function RedefinirSenhaPage({ token, onVoltar }: { token: string; onVolta
                   disabled={!senha || !confirmar}
                   className="w-full bg-amber-400 hover:bg-amber-300 text-zinc-950 font-black rounded-xl py-3.5 text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-amber-400/20 active:scale-[0.98]"
                 >
-                  Definir Nova Senha
+                  Definir Nova Palavra-passe
                 </button>
               </form>
             </>
@@ -196,9 +196,9 @@ export function RedefinirSenhaPage({ token, onVoltar }: { token: string; onVolta
                 </svg>
               </div>
               <div>
-                <h3 className="text-white font-black text-lg">Senha Redefinida!</h3>
+                <h3 className="text-white font-black text-lg">Palavra-passe Redefinida!</h3>
                 <p className="text-zinc-400 text-sm mt-2 leading-relaxed">
-                  A sua senha foi alterada com sucesso. Pode agora iniciar sessão com a nova senha.
+                  A sua palavra-passe foi alterada com sucesso. Pode agora iniciar sessão com a nova palavra-passe.
                 </p>
               </div>
               <button

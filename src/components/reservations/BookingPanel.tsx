@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+﻿import { useState, useMemo, useEffect } from 'react';
 import type { Vehicle } from '../../data/constants';
 import { useReservations } from '../../context/ReservationsContext';
 import { useAuth } from '../../context/AuthContext';
@@ -145,7 +145,7 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
   if (success) {
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 max-w-md w-full text-center">
+        <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-8 max-w-md w-full text-center">
           <div className="w-12 h-12 bg-emerald-400/10 rounded-xl flex items-center justify-center mx-auto mb-4 text-emerald-400 text-xl">✓</div>
           <h2 className="text-lg font-semibold text-white mb-2">Reserva submetida</h2>
           <p className="text-sm text-white mb-2">
@@ -167,7 +167,7 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-zinc-800 sticky top-0 bg-zinc-900 z-10">
           <div>
             <h2 className="text-lg font-semibold text-white">Reservar viatura</h2>
@@ -258,7 +258,7 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
           )}
 
           {quote && (
-            <div className="bg-zinc-800/50 border border-zinc-800 rounded-xl p-4 space-y-2 text-sm">
+            <div className="bg-zinc-800/50 border border-amber-500/20 rounded-xl p-4 space-y-2 text-sm">
               <div className="flex justify-between text-white">
                 <span>{quote.days} dia(s) × {fmtN(quote.dailyRate)} MT</span>
                 <span>{fmtN(quote.subtotal)} MT</span>
@@ -303,7 +303,7 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
               onFocus={() => setShowSuggestions(true)}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
               required
-              placeholder="Digite para pesquisar registos..."
+              placeholder="Escreva para pesquisar registos..."
               className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400"
             />
             {showSuggestions && suggestions.length > 0 && (

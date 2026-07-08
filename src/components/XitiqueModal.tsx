@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo } from 'react';
+﻿import { useRef, useState, useMemo } from 'react';
 import { useXitique } from '../context/XitiqueContext';
 import { useAuth } from '../context/AuthContext';
 import type { GrupoXitique } from '../types/xitique';
@@ -48,7 +48,7 @@ export default function XitiqueModal({ onClose }: { onClose: () => void }) {
     e.preventDefault();
     if (!nome.trim()) { setErro('Insira o nome completo.'); return; }
     if (!/^\d{8,9}$/.test(telefone.replace(/\s/g, ''))) { setErro('Número inválido — insira 8 ou 9 dígitos sem o prefixo +258.'); return; }
-    if (!email.includes('@') || !email.includes('.')) { setErro('Endereço de email inválido.'); return; }
+    if (!email.includes('@') || !email.includes('.')) { setErro('E-mail inválido.'); return; }
     setErro('');
     setStep('otp');
   };
@@ -93,7 +93,7 @@ export default function XitiqueModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-md bg-zinc-900 border border-amber-500/20 rounded-3xl shadow-2xl overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-72 h-28 bg-amber-500/8 blur-3xl pointer-events-none" />
 
         {/* Header */}

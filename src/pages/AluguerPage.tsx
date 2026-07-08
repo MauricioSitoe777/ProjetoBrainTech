@@ -1,7 +1,8 @@
-import { useMemo, useState, useEffect } from 'react';
+﻿import { useMemo, useState, useEffect } from 'react';
 import { VEHICLES } from '../data/constants';
 import { useReservations } from '../context/ReservationsContext';
 import { useMotoristas } from '../context/MotoristasContext';
+import { useVehicles } from '../context/VehiclesContext';
 import { AvailabilityCalendar } from '../components/reservations/AvailabilityCalendar';
 import { BlockPeriodModal } from '../components/reservations/BlockPeriodModal';
 import { BusinessRulesPanel } from '../components/reservations/BusinessRulesPanel';
@@ -46,12 +47,13 @@ const GRUPOS: Array<{
   { status: 'devolucao_pendente',  title: 'Devolução Pendente',      dot: 'bg-orange-400',  badge: 'bg-orange-400/10 text-orange-400 border-orange-400/20',  textColor: 'text-orange-400'  },
 ];
 
-const aluguerVehicles = VEHICLES.filter(v => v.mode === 'aluguer');
-const aluguerIds = new Set(aluguerVehicles.map(v => v.id));
-
 export function AluguerPage({ onExit }: { onExit?: () => void }) {
   const { reservations, blocks, updateReservation, cancelReservation, removeBlock, marcarPrestacao } = useReservations();
   const { motoristas } = useMotoristas();
+  const { vehicles: allVehicles } = useVehicles();
+
+  const aluguerVehicles = useMemo(() => allVehicles.filter(v => v.mode === 'aluguer'), [allVehicles]);
+  const aluguerIds = useMemo(() => new Set(aluguerVehicles.map(v => v.id)), [aluguerVehicles]);
 
   const getUrlParams = () => new URLSearchParams(window.location.search);
 
@@ -115,7 +117,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
     reservations
       .filter(r => aluguerIds.has(r.vehicleId))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    [reservations]
+    [reservations, aluguerIds]
   );
 
   const historico = useMemo(() =>
@@ -134,7 +136,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
     cancelamentos:     aluguerReservations.filter(r => r.status === 'cancelada').length,
   }), [aluguerReservations]);
 
-  const vehicleName = (id: number) => VEHICLES.find(v => v.id === id)?.name ?? `Viatura #${id}`;
+  const vehicleName = (id: number) => allVehicles.find(v => v.id === id)?.name ?? VEHICLES.find(v => v.id === id)?.name ?? `Viatura #${id}`;
 
   const accionaveisCount = aluguerReservations.filter(r => r.status !== 'cancelada' && r.status !== 'concluida').length;
 
@@ -237,7 +239,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                 </div>
                 <div className="min-w-0">
                   <p className={`text-2xl font-black leading-none tabular-nums ${k.numCol}`}>{k.value}</p>
-                  <p className="text-sm font-bold text-white mt-0.5 leading-tight">{k.label}</p>
+                  <p className="text-sm font-bold text-amber-400 mt-0.5 leading-tight">{k.label}</p>
                   <p className="text-xs text-white">{k.sub}</p>
                 </div>
               </div>
@@ -278,25 +280,31 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                 {aluguerVehicles.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
               </select>
             </div>
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+            <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
+              <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-zinc-800/70">
+                <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Histórico de Alugueres</p>
+              </div>
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-zinc-800 bg-zinc-800/40">
-                    <th className="text-left px-5 py-4 text-xs text-white font-bold uppercase tracking-wider">Cliente</th>
-                    <th className="text-left px-5 py-4 text-xs text-white font-bold uppercase tracking-wider hidden md:table-cell">Viatura</th>
-                    <th className="text-left px-5 py-4 text-xs text-white font-bold uppercase tracking-wider">Período</th>
-                    <th className="text-left px-5 py-4 text-xs text-white font-bold uppercase tracking-wider hidden sm:table-cell">Devolução</th>
-                    <th className="text-left px-5 py-4 text-xs text-white font-bold uppercase tracking-wider">Estado</th>
+                    <th className="text-left px-5 py-4 text-xs text-white/40 font-black uppercase tracking-widest w-10">#</th>
+                    <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest">Cliente</th>
+                    <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest hidden md:table-cell">Viatura</th>
+                    <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest">Período</th>
+                    <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest hidden sm:table-cell">Devolução</th>
+                    <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest">Estado</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800">
                   {historico.length === 0 && (
-                    <tr><td colSpan={5} className="text-center py-12 text-white text-sm">Sem histórico de alugueres ainda</td></tr>
+                    <tr><td colSpan={6} className="text-center py-12 text-white text-sm">Sem histórico de alugueres ainda</td></tr>
                   )}
-                  {historico.map(r => {
+                  {historico.map((r, idx) => {
                     const st = STATUS_CFG[r.status];
                     return (
                       <tr key={r.id} className="hover:bg-zinc-800/30 transition-colors">
+                        <td className="px-5 py-4 text-xs font-black text-white/30 tabular-nums w-10">{idx + 1}</td>
                         <td className="px-5 py-4">
                           <p className="text-sm font-semibold text-white">{r.clientName}</p>
                           <p className="text-xs text-white">{r.clientPhone ?? r.clientEmail ?? '—'}</p>
@@ -335,7 +343,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
             <div className="space-y-6">
 
               {/* Barra de filtros */}
-              <div className="flex flex-wrap gap-2 p-2 bg-zinc-900 border border-zinc-800 rounded-2xl">
+              <div className="flex flex-wrap gap-2 p-2 bg-zinc-900 border border-amber-500/20 rounded-2xl">
                 <button
                   onClick={() => setAcoesFilter('todos')}
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
@@ -374,7 +382,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
               </div>
 
               {totalAcionaveis === 0 && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl py-12 text-center text-white text-sm">
+                <div className="bg-zinc-900 border border-amber-500/20 rounded-xl py-12 text-center text-white text-sm">
                   Sem reservas com acções pendentes
                 </div>
               )}
@@ -502,7 +510,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                                   setLastActedId(r.id);
                                 }
                               }}
-                              onCancel={() => { cancelReservation(r.id); setLastActedId(r.id); }}
+                              onCancel={(motivo) => { cancelReservation(r.id, motivo); setLastActedId(r.id); }}
                               onEdit={() => setEditingReservation(r)}
                               onContract={() => setContractReservation(r)}
                               stepDates={{
@@ -531,7 +539,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                             <div className="px-5 py-4 border-b border-zinc-800/60">
                               <div className="flex items-start justify-between mb-3">
                                 <div className="flex items-center gap-2">
-                                  <p className="text-[10px] font-black text-white uppercase tracking-widest">Pagamento</p>
+                                  <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Pagamento</p>
                                   {ctx.label && (
                                     <span className={`text-[9px] font-black border rounded-md px-2 py-0.5 uppercase tracking-wider ${ctx.col} ${ctx.bg}`}>
                                       {ctx.label}
@@ -613,27 +621,9 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                                               <span className="text-xs font-black text-white">{p.numero}ª prestação</span>
                                               <span className={`text-[10px] ${p.paga ? 'text-emerald-400/70' : new Date(p.dataVencimento) < new Date() ? 'text-red-400' : 'text-white'}`}>
                                                 · {p.dataPagamento ?? p.dataVencimento}
-                                                {!p.paga && p.horaPagamento && ` ${p.horaPagamento}`}
-                                                {p.paga && p.horaPagamento && ` ${p.horaPagamento}`}
+                                                {p.horaPagamento && ` · ${p.horaPagamento}`}
                                               </span>
                                             </div>
-                                            {p.paga && (p.formaPagamento || p.referenciaPagamento) && (
-                                              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                                {p.formaPagamento && (
-                                                  <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1.5 py-0.5 uppercase">
-                                                    {p.formaPagamento}
-                                                  </span>
-                                                )}
-                                                {p.referenciaPagamento && (
-                                                  <span className="text-[9px] text-white font-mono">
-                                                    Ref: {p.referenciaPagamento}
-                                                  </span>
-                                                )}
-                                              </div>
-                                            )}
-                                            {p.notasPagamento && (
-                                              <p className="text-[9px] text-white italic mt-0.5">{p.notasPagamento}</p>
-                                            )}
                                           </div>
                                         </div>
                                         <div className="flex items-center gap-2 shrink-0 ml-2">
@@ -654,6 +644,49 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                                   </div>
                                 </div>
                               )}
+
+                              {/* Registo de Pagamentos — detalhes de cada transação */}
+                              {(() => {
+                                const FORMA_MAP: Record<string, string> = { mpesa: 'M-Pesa', emola: 'e-Mola', dinheiro: 'Dinheiro', transferencia: 'Transferência', cheque: 'Cheque', outros: 'Outros' };
+                                const pagos = (r.prestacoes ?? []).filter(p => p.paga && (p.formaPagamento || p.referenciaPagamento || p.notasPagamento || p.dataPagamento));
+                                if (pagos.length === 0) return null;
+                                return (
+                                  <div className="mt-4 pt-4 border-t border-zinc-800/60">
+                                    <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-2">Registo de Pagamentos</p>
+                                    <div className="space-y-2">
+                                      {pagos.map(p => (
+                                        <div key={p.numero} className="bg-zinc-800/50 border border-zinc-700/50 rounded-xl px-4 py-3 flex items-start gap-3">
+                                          {/* Ícone */}
+                                          <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                          </div>
+                                          {/* Detalhes */}
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between gap-2 mb-1">
+                                              <span className="text-xs font-black text-white">{p.numero}ª Prestação</span>
+                                              <span className="text-sm font-black text-emerald-400 tabular-nums">{fmt(p.valorPago ?? p.valor)}</span>
+                                            </div>
+                                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-white">
+                                              {p.dataPagamento && (
+                                                <span>{p.dataPagamento}{p.horaPagamento ? ` · ${p.horaPagamento}` : ''}</span>
+                                              )}
+                                              {p.formaPagamento && (
+                                                <span className="font-bold text-amber-400">{FORMA_MAP[p.formaPagamento] ?? p.formaPagamento}</span>
+                                              )}
+                                              {p.referenciaPagamento && (
+                                                <span className="font-mono text-white/70">Ref: {p.referenciaPagamento}</span>
+                                              )}
+                                            </div>
+                                            {p.notasPagamento && (
+                                              <p className="text-[11px] text-white/60 italic mt-1">{p.notasPagamento}</p>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                             </div>
                             );
                           })()}
@@ -778,7 +811,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
 
               {/* Left: selector + detail panel */}
               <div className="lg:col-span-1 space-y-4">
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+                <div className="bg-zinc-900 border border-amber-500/20 rounded-xl p-4">
                   <label className="block text-[10px] font-black text-white uppercase tracking-widest mb-2">Viatura</label>
                   <select
                     value={selectedVehicle ?? ''}
@@ -795,7 +828,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
 
                 {/* Date detail panel */}
                 {selectedCalDate ? (
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                  <div className="bg-zinc-900 border border-amber-500/20 rounded-xl overflow-hidden">
                     <div className="px-4 py-3 border-b border-zinc-800 flex items-start justify-between gap-2">
                       <p className="text-xs font-black text-white leading-snug capitalize">
                         {fmtCalDate(selectedCalDate)}
@@ -903,7 +936,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                     )}
                   </div>
                 ) : (
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-10 text-center">
+                  <div className="bg-zinc-900 border border-amber-500/20 rounded-xl px-4 py-10 text-center">
                     <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-3">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                     </div>
@@ -936,7 +969,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                 + Novo bloqueio
               </button>
             </div>
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden divide-y divide-zinc-800">
+            <div className="bg-zinc-900 border border-amber-500/20 rounded-xl overflow-hidden divide-y divide-zinc-800">
               {blocks.length === 0 && (
                 <p className="text-center py-12 text-white text-sm">Sem bloqueios activos</p>
               )}

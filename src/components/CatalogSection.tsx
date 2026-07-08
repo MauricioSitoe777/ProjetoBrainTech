@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+﻿import { useState, useEffect, useMemo } from "react";
 import type { Vehicle } from "../data/constants";
 import VehicleCard from "./VehicleCard";
 import { useScrollTo } from "../hooks";
@@ -124,6 +124,7 @@ export default function CatalogSection({
 
     try {
       sessionStorage.setItem("rentcar:selectedVehicle:v1", JSON.stringify(payload));
+      window.dispatchEvent(new CustomEvent("rentcar:vehicle-selected", { detail: payload }));
     } catch {
       // ignore
     }
@@ -172,7 +173,7 @@ export default function CatalogSection({
             ))}
 
             {/* Barra de pesquisa */}
-            <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-full px-3 py-1.5 min-w-[160px] focus-within:border-zinc-600 transition-colors">
+            <div className="flex items-center gap-2 bg-zinc-900 border border-amber-500/20 rounded-full px-3 py-1.5 min-w-[160px] focus-within:border-zinc-600 transition-colors">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-500 shrink-0">
                 <circle cx="11" cy="11" r="8" />
                 <path d="M21 21l-4.35-4.35" strokeLinecap="round" />

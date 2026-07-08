@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import type { User } from '../types/user';
 import { useReservations } from '../context/ReservationsContext';
 import { VEHICLES, CATEGORY_LABEL, DOC_LABEL } from '../data/constants';
@@ -174,7 +174,7 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
           { label: 'Total investido',value: `${Math.round(totalGasto).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')},00 MT`, color: 'text-amber-400', small: true },
         ].map(k => (
           <div key={k.label} className="bg-zinc-800/50 rounded-xl p-3 border border-zinc-800 text-center">
-            <p className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">{k.label}</p>
+            <p className="text-[9px] text-amber-400 uppercase font-bold tracking-wider mb-1">{k.label}</p>
             <p className={`font-black leading-tight ${k.small ? 'text-sm' : 'text-2xl'} ${k.color}`}>{k.value}</p>
           </div>
         ))}
@@ -184,7 +184,7 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
       <div>
         <p className="text-[10px] font-black text-white uppercase tracking-widest mb-3">Informações</p>
         {/* H6 — ícone + label para reconhecimento imediato do campo */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden divide-y divide-zinc-800">
+        <div className="bg-zinc-900 border border-amber-500/20 rounded-xl overflow-hidden divide-y divide-zinc-800">
           {[
             { icon: 'M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.99 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.92 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z', label: 'Telefone', value: user.telefone || '—' },
             { icon: 'M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM1 7l11 8 11-8', label: 'Categoria', value: user.category ? CATEGORY_LABEL[user.category] : 'Não definida' },
@@ -278,10 +278,10 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
                 </button>
               </div>
             )}
-            {/* Senha */}
+            {/* Palavra-passe */}
             <div className="flex items-center justify-between px-4 py-3 gap-3">
               <div className="min-w-0">
-                <p className="text-[9px] text-white uppercase font-bold tracking-wider mb-0.5">Senha</p>
+                <p className="text-[9px] text-white uppercase font-bold tracking-wider mb-0.5">Palavra-passe</p>
                 <div className="flex items-center gap-2">
                   <span className={`text-sm font-black tracking-widest ${user.password ? 'text-amber-400' : 'text-zinc-400'}`}>
                     {showPass ? (user.password || '123') : '••••••••'}
@@ -295,8 +295,8 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
                 {/* H4/H7 — título descritivo em todos os botões de ícone */}
                 <button
                   onClick={() => setShowPass(v => !v)}
-                  title={showPass ? 'Ocultar senha' : 'Mostrar senha'}
-                  aria-label={showPass ? 'Ocultar senha' : 'Mostrar senha'}
+                  title={showPass ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'}
+                  aria-label={showPass ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'}
                   className={`p-1.5 rounded-lg transition ${showPass ? 'text-amber-400 bg-amber-400/10' : 'text-white hover:text-white hover:bg-zinc-700'}`}
                 >
                   {showPass ? (
@@ -307,7 +307,7 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
                 </button>
                 <button
                   onClick={() => copiar(user.password || '123', 'pass')}
-                  title="Copiar senha"
+                  title="Copiar palavra-passe"
                   className={`text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all ${
                     copiado === 'pass'
                       ? 'bg-emerald-400/15 text-emerald-400 border border-emerald-400/30'
@@ -351,7 +351,7 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
               const isInstallment = (a.notas || '')?.includes('prestações');
 
               return (
-                <div key={a.id} className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 hover:border-zinc-700 transition-colors">
+                <div key={a.id} className="bg-zinc-900 border border-amber-500/20 rounded-xl px-4 py-3 hover:border-zinc-700 transition-colors">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       {/* H6 — badge de tipo + nome da viatura juntos */}
@@ -427,7 +427,7 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
           style={{ backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
           onClick={e => { if (e.target === e.currentTarget) setConfirmDelete(null); }}
         >
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+          <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-9 h-9 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2">

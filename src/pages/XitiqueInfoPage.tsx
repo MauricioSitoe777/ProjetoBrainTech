@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useXitique } from "../context/XitiqueContext";
 import { useRoute } from "../hooks/useRoute";
 import Footer from "../components/Footer";
@@ -317,7 +317,7 @@ export function XitiqueInfoPage() {
                   return (
                     <div
                       key={g.id}
-                      className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-amber-500/30 transition-all hover:-translate-y-0.5 duration-200"
+                      className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-6 hover:border-amber-500/30 transition-all hover:-translate-y-0.5 duration-200"
                     >
                       <div className="flex items-start justify-between gap-3 mb-5">
                         <h3 className="text-white font-black text-base">{g.nome}</h3>

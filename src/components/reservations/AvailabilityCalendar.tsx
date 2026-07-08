@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { VEHICLES } from '../../data/constants';
 import { useReservations } from '../../context/ReservationsContext';
 import {
@@ -56,7 +56,7 @@ export function AvailabilityCalendar({ vehicleId, onSelectDate, selectedDate }: 
   }, [vehicleId, dates, rentalVehicles, reservations, blocks]);
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden max-w-sm">
+    <div className="bg-zinc-900 border border-amber-500/20 rounded-xl overflow-hidden max-w-sm">
       {/* Header nav */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-800">
         <button type="button" onClick={prevMonth} className="p-1 text-white hover:text-white rounded-lg hover:bg-zinc-800 transition-colors">‹</button>

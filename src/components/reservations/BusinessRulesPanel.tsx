@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, type ReactElement } from 'react';
 import { useReservations } from '../../context/ReservationsContext';
 import type { BusinessRules } from '../../types/reservation';
 
@@ -23,7 +23,7 @@ interface SubSection {
 interface Tab {
   key: string;
   label: string;
-  icon: JSX.Element;
+  icon: ReactElement;
   subsections: SubSection[];
 }
 
@@ -184,7 +184,7 @@ export function BusinessRulesPanel() {
   const currentTab = TABS.find(t => t.key === activeTab)!;
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+    <div className="bg-zinc-900 border border-amber-500/20 rounded-xl overflow-hidden">
 
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">

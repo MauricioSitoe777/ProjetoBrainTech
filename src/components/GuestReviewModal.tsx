@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useGuests } from '../context/GuestsContext';
 import { useUsers } from '../context/UsersContext';
 import { useNotifications } from '../context/NotificationsContext';
@@ -110,7 +110,7 @@ export function GuestReviewModal({ guest, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] flex flex-col">
+      <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-zinc-800 shrink-0">
           <div className="flex items-center gap-3">
@@ -208,7 +208,7 @@ export function GuestReviewModal({ guest, onClose }: Props) {
             <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 space-y-3">
               <p className="text-emerald-400 font-black text-sm">✓ Conta criada — partilhe com o cliente:</p>
               <CredRow label="Email"    value={guest.email}                   field="email" onCopy={copy} copied={copied} />
-              <CredRow label="Password" value={guest.senhaGerada ?? senha}    field="senha" onCopy={copy} copied={copied} />
+              <CredRow label="Palavra-passe" value={guest.senhaGerada ?? senha}    field="senha" onCopy={copy} copied={copied} />
             </div>
           )}
 

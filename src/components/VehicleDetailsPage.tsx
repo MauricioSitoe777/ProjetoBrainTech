@@ -65,6 +65,7 @@ export default function VehicleDetailsPage({
 
     try {
       sessionStorage.setItem("rentcar:selectedVehicle:v1", JSON.stringify(payload));
+      window.dispatchEvent(new CustomEvent("rentcar:vehicle-selected", { detail: payload }));
     } catch {
       // ignore
     }

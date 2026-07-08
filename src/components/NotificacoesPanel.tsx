@@ -1,4 +1,4 @@
-import { Bell, CheckCheck, Trash2, Info, CheckCircle, AlertTriangle, AlertOctagon } from 'lucide-react';
+﻿import { Bell, CheckCheck, Trash2, Info, CheckCircle, AlertTriangle, AlertOctagon } from 'lucide-react';
 import { useNotifications } from '../context/NotificationsContext';
 import type { AppNotification } from '../context/NotificationsContext';
 
@@ -53,15 +53,15 @@ export function NotificacoesPanel() {
 
       {/* List */}
       {notifications.length === 0 ? (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-14 text-center">
+        <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl px-4 py-14 text-center">
           <Bell size={32} className="text-zinc-700 mx-auto mb-3" />
           <p className="text-sm font-semibold text-white">Sem notificações</p>
           <p className="text-xs text-white mt-1">Novas notificações aparecerão aqui.</p>
         </div>
       ) : (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden divide-y divide-zinc-800/60">
+        <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl overflow-hidden divide-y divide-zinc-800/60">
           {notifications.map(n => {
-            const meta = TYPE_META[n.type];
+            const meta = TYPE_META[n.type] ?? TYPE_META['info'];
             return (
               <div
                 key={n.id}

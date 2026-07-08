@@ -1,6 +1,10 @@
+import { useMemo } from 'react';
 import { useRoute } from '../hooks/useRoute';
 import { useGuests } from '../context/GuestsContext';
 import { useNotifications } from '../context/NotificationsContext';
+import { useReservations } from '../context/ReservationsContext';
+import { useVehicles } from '../context/VehiclesContext';
+import { useXitique } from '../context/XitiqueContext';
 
 interface Props {
   onClose?: () => void;
@@ -17,12 +21,58 @@ function Icon({ d, d2, extra }: { d: string; d2?: string; extra?: string }) {
   );
 }
 
+const ALUGUER_INACTIVE = new Set(['cancelada', 'concluida']);
+const COMPRA_INACTIVE  = new Set(['cancelada', 'concluida', 'liquidada']);
+const ALUGUER_URGENT   = new Set(['pendente', 'devolucao_pendente']);
+const COMPRA_URGENT    = new Set(['pendente', 'prestacao_atraso']);
+
 export function AdminSidebar({ onClose }: Props) {
   const { path, navigate } = useRoute();
   const { guests } = useGuests();
   const { unreadCount } = useNotifications();
+  const { reservations } = useReservations();
+  const { vehicles: allVehicles } = useVehicles();
+  const { grupos, inscricoes } = useXitique();
 
   const pendingCount = guests.filter(g => g.status !== 'aprovado' && g.status !== 'rejeitado').length;
+
+  // IDs dinâmicos dos veículos por modo
+  const aluguerIds = useMemo(
+    () => new Set(allVehicles.filter(v => v.mode === 'aluguer').map(v => v.id)),
+    [allVehicles],
+  );
+  const compraIds = useMemo(
+    () => new Set(allVehicles.filter(v => v.mode === 'compra').map(v => v.id)),
+    [allVehicles],
+  );
+
+  // Contadores de acções pendentes
+  const aluguerPending = useMemo(
+    () => reservations.filter(r => aluguerIds.has(r.vehicleId) && !ALUGUER_INACTIVE.has(r.status)).length,
+    [reservations, aluguerIds],
+  );
+  const compraPending = useMemo(
+    () => reservations.filter(r => compraIds.has(r.vehicleId) && !COMPRA_INACTIVE.has(r.status)).length,
+    [reservations, compraIds],
+  );
+  const aluguerUrgent = useMemo(
+    () => reservations.some(r => aluguerIds.has(r.vehicleId) && ALUGUER_URGENT.has(r.status)),
+    [reservations, aluguerIds],
+  );
+  const compraUrgent = useMemo(
+    () => reservations.some(r => compraIds.has(r.vehicleId) && COMPRA_URGENT.has(r.status)),
+    [reservations, compraIds],
+  );
+
+  // Xitique: inscrições a aguardar validação + membros com estado Pendente
+  const xitiquePending = useMemo(() => {
+    const inscPendentes = inscricoes.filter(i => i.status === 'aguarda_validacao').length;
+    const membrosPendentes = grupos.reduce(
+      (sum, g) => sum + g.membros.filter(m => m.estado === 'Pendente').length,
+      0,
+    );
+    return inscPendentes + membrosPendentes;
+  }, [inscricoes, grupos]);
 
   const go = (to: string) => {
     navigate(to);
@@ -64,6 +114,7 @@ export function AdminSidebar({ onClose }: Props) {
           label="Visitantes"
           icon={<Icon d="M20 21v-2a4 4 0 0 0-3-3.87" d2="M4 21v-2a4 4 0 0 1 3-3.87M16 3.13a4 4 0 0 1 0 7.75M8 7a4 4 0 1 0 8 0 4 4 0 0 0-8 0" />}
           badge={pendingCount > 0 ? pendingCount : undefined}
+          urgent={pendingCount > 0}
         />
 
         <div className="my-1.5 h-px bg-zinc-800/80" />
@@ -73,18 +124,24 @@ export function AdminSidebar({ onClose }: Props) {
           onClick={() => go('/admin/aluguer')}
           label="Aluguer"
           icon={<Icon d="M1 3h15v13H1z" d2="M16 8h4l3 3v5h-7V8z" extra="M5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" />}
+          badge={aluguerPending > 0 ? aluguerPending : undefined}
+          urgent={aluguerUrgent}
         />
         <NavLink
           active={isSectionActive('/admin/compra')}
           onClick={() => go('/admin/compra')}
           label="Compra"
           icon={<Icon d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" d2="M3 6h18M16 10a4 4 0 0 1-8 0" />}
+          badge={compraPending > 0 ? compraPending : undefined}
+          urgent={compraUrgent}
         />
         <NavLink
           active={isSectionActive('/admin/xitique')}
           onClick={() => go('/admin/xitique')}
           label="Xitique"
           icon={<Icon d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z" d2="M12 6v6l4 2" />}
+          badge={xitiquePending > 0 ? xitiquePending : undefined}
+          urgent={xitiquePending > 0}
         />
         <NavLink
           active={isSectionActive('/admin/financas')}
@@ -107,10 +164,10 @@ export function AdminSidebar({ onClose }: Props) {
           label="Notificações"
           icon={<Icon d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />}
           badge={unreadCount > 0 ? unreadCount : undefined}
+          urgent={unreadCount > 0}
         />
 
       </nav>
-
 
     </aside>
   );
@@ -118,12 +175,13 @@ export function AdminSidebar({ onClose }: Props) {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function NavLink({ active, onClick, label, icon, badge }: {
+function NavLink({ active, onClick, label, icon, badge, urgent }: {
   active: boolean;
   onClick: () => void;
   label: string;
   icon: React.ReactNode;
   badge?: number;
+  urgent?: boolean;
 }) {
   return (
     <button
@@ -137,8 +195,12 @@ function NavLink({ active, onClick, label, icon, badge }: {
       <span className={active ? 'text-amber-400' : 'text-white'}>{icon}</span>
       <span className="flex-1 text-left">{label}</span>
       {badge !== undefined && (
-        <span className="text-[10px] min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-amber-500/20 text-amber-400 font-black px-1">
-          {badge}
+        <span className={`text-[10px] min-w-[18px] h-[18px] flex items-center justify-center rounded-full font-black px-1 transition-colors ${
+          urgent
+            ? 'bg-red-500/20 text-red-400 ring-1 ring-red-500/30'
+            : 'bg-amber-500/20 text-amber-400'
+        }`}>
+          {badge > 99 ? '99+' : badge}
         </span>
       )}
     </button>

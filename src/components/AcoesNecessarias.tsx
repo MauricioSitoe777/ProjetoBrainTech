@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { useReservations } from '../context/ReservationsContext';
 import { useFinance } from '../context/FinanceContext';
 import { useVehicles } from '../context/VehiclesContext';
@@ -180,7 +180,7 @@ export function AcoesNecessarias() {
 
   if (acoes.length === 0) {
     return (
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 flex items-center gap-3">
+      <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl px-5 py-4 flex items-center gap-3">
         <IconCheckCircle size={18} className="text-emerald-400 shrink-0" />
         <div>
           <p className="text-white font-black text-sm uppercase tracking-wider">O Que Fazer Agora</p>
@@ -243,7 +243,7 @@ export function AcoesNecessarias() {
   };
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+    <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl overflow-hidden">
       <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
         <h2 className="text-white font-black text-sm uppercase tracking-wider">O Que Fazer Agora</h2>
         <div className="flex items-center gap-2">

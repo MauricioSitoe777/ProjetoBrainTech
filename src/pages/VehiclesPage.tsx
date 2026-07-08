@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+﻿import { useState, useMemo, useRef } from 'react';
 import { useVehicles, type VehicleData } from '../context/VehiclesContext';
 import { useReservations } from '../context/ReservationsContext';
 import { useRoute } from '../hooks/useRoute';
@@ -230,7 +230,7 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
               <div className="p-4 flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${k.dot}`} />
-                  <span className="text-xs text-white uppercase font-bold tracking-wide leading-tight">{k.label}</span>
+                  <span className="text-xs text-amber-400 uppercase font-bold tracking-wide leading-tight">{k.label}</span>
                 </div>
                 <p className={`text-3xl font-black mt-1 ${k.color}`}>{k.value}</p>
               </div>
@@ -261,7 +261,7 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
           <div className="flex-1 min-w-0">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filtered.map(v => {
-                const st = getVehicleStatus(v.id, v.available);
+                const st = getVehicleStatus(v.id, v.available ?? true);
                 const isSelected = selectedVehicleId === v.id;
                 return (
                   <div
@@ -323,9 +323,9 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
           {selectedVehicleId !== null && (() => {
             const sv = vehicles.find(v => v.id === selectedVehicleId);
             if (!sv) return null;
-            const st = getVehicleStatus(sv.id, sv.available);
+            const st = getVehicleStatus(sv.id, sv.available ?? true);
             return (
-              <div className="w-56 shrink-0 bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden sticky top-6">
+              <div className="w-56 shrink-0 bg-zinc-900 border border-amber-500/20 rounded-2xl overflow-hidden sticky top-6">
                 <div className="h-0.5 w-full bg-amber-500/40" />
                 <div className="p-4">
                   <div className="flex items-center justify-between mb-3">
@@ -376,7 +376,7 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
       {confirmDelete !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setConfirmDelete(null)} />
-          <div className="relative bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+          <div className="relative bg-zinc-900 border border-amber-500/20 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             <h3 className="text-white font-bold text-base mb-2">Remover veículo?</h3>
             <p className="text-white text-sm mb-5">Esta ação não pode ser revertida. O veículo será removido do catálogo.</p>
             <div className="flex gap-3">
@@ -395,7 +395,7 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowForm(false)} />
-          <div className="relative bg-zinc-900 border border-zinc-800 rounded-2xl max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="relative bg-zinc-900 border border-amber-500/20 rounded-2xl max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
             <form onSubmit={handleSubmit}>
               <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-6 py-4 flex items-center justify-between z-10">
                 <h3 className="text-white font-bold text-base">{editId ? 'Editar Veículo' : 'Novo Veículo'}</h3>
