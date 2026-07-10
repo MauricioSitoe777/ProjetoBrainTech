@@ -34,6 +34,7 @@ import { CompraPage } from "./pages/CompraPage";
 import { MotoristasProvider } from "./context/MotoristasContext";
 import { MotoristasPage } from "./pages/MotoristasPage";
 import { NotificacoesAdminPage } from "./pages/NotificacoesAdminPage";
+import { ViaturaEmUsoPage } from "./pages/ViaturaEmUsoPage";
 import { AdminSidebar } from "./components/AdminSidebar";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ChangePasswordModal } from "./components/ChangePasswordModal";
@@ -42,6 +43,8 @@ import { RecuperarSenhaPage } from "./pages/RecuperarSenhaPage";
 import { RedefinirSenhaPage } from "./pages/RedefinirSenhaPage";
 import { SectionReveal } from "./components/SectionReveal";
 import { XitiqueInfoPage } from "./pages/XitiqueInfoPage";
+import { useClientReminders } from "./hooks/useClientReminders";
+import { useAdminNotifier } from "./hooks/useAdminNotifier";
 
 type SimulatorFlow = "aluguer" | "compra";
 
@@ -58,6 +61,9 @@ function AppInner() {
   const { user, allUsers } = useAuth();
   const { path, navigate } = useRoute();
   const { showToast } = useNotifications();
+
+  useClientReminders();
+  useAdminNotifier();
 
   // Sidebar drawer (admin mobile)
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -169,6 +175,7 @@ function AppInner() {
           if (path.startsWith("/admin/financas"))   return <FinancePage />;
           if (path.startsWith("/admin/motoristas"))     return <MotoristasPage />;
           if (path.startsWith("/admin/notificacoes"))   return <NotificacoesAdminPage />;
+          if (path.startsWith("/admin/viaturas-em-uso")) return <ViaturaEmUsoPage />;
           return <DashboardPage />;
         };
         return (

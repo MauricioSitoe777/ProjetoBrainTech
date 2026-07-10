@@ -17,7 +17,7 @@ export function ChangePasswordModal({ onDone }: Props) {
     if (nova.length < 6) { setErro('A password deve ter pelo menos 6 caracteres.'); return; }
     if (nova !== confirmar) { setErro('As passwords não coincidem.'); return; }
     if (!user) return;
-    updateUser(user.id, { password: nova, mustChangePassword: false });
+    updateUser(user.id, { password: nova, mustChangePassword: false, passwordChangedByUser: true });
     onDone();
   };
 

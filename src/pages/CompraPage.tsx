@@ -15,7 +15,7 @@ const STATUS_CFG: Record<ReservationStatus, { label: string; className: string }
   cancelada:           { label: 'Cancelado',              className: 'bg-red-400/10 text-red-400 border-red-400/20' },
   confirmada:          { label: 'Reserva Confirmada',     className: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
   pronta_levantamento: { label: 'Pronta p/ Levantamento', className: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
-  ativa:               { label: 'Aluguer Ativo',          className: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
+  ativa:               { label: 'Aluguer Activo',         className: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
   devolucao_pendente:  { label: 'Devolução Pendente',     className: 'bg-orange-400/10 text-orange-400 border-orange-400/20' },
   concluida:           { label: 'Concluído',              className: 'bg-zinc-700 text-white border-zinc-600' },
 };
@@ -534,7 +534,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                 const pagas = prestacoes.filter(p => p.paga).length;
                 const total = prestacoes.length || (r.totalPrestacoes ?? 0);
                 return (
-                  <tr key={r.id} className="hover:bg-zinc-800/30 transition-colors">
+                  <tr key={r.id} className={`hover:bg-zinc-800/40 transition-colors ${idx % 2 !== 0 ? 'bg-zinc-800/50' : ''}`}>
                     <td className="px-5 py-4 text-xs font-black text-white/30 tabular-nums w-10">{idx + 1}</td>
                     <td className="px-5 py-4">
                       <p className="text-sm font-semibold text-white">{r.clientName}</p>

@@ -1,4 +1,4 @@
-﻿import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   Mail, Phone, MapPin, Briefcase, Calendar,
   Home, KeyRound, ShoppingCart, CreditCard,
@@ -11,6 +11,7 @@ import { useXitique } from '../context/XitiqueContext';
 import { useFinance } from '../context/FinanceContext';
 import { useNotifications } from '../context/NotificationsContext';
 import { VEHICLES } from '../data/constants';
+import { useVehicles } from '../context/VehiclesContext';
 import { ReservationTracker } from '../components/ReservationTracker';
 import XitiqueModal from '../components/XitiqueModal';
 import { NotificacoesPanel } from '../components/NotificacoesPanel';
@@ -37,7 +38,7 @@ const RES_STATUS: Record<ReservationStatus, { label: string; cls: string }> = {
   pendente:            { label: 'Aguarda Pagamento',      cls: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
   confirmada:          { label: 'Reserva Confirmada',     cls: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
   pronta_levantamento: { label: 'Pronta p/ Levantamento', cls: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
-  ativa:               { label: 'Aluguer Ativo',          cls: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
+  ativa:               { label: 'Aluguer Activo',         cls: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
   devolucao_pendente:  { label: 'Devolução Pendente',     cls: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
   concluida:           { label: 'Concluído',              cls: 'bg-zinc-700 text-white border-zinc-600' },
   cancelada:           { label: 'Cancelado',              cls: 'bg-red-400/10 text-red-400 border-red-400/20' },
@@ -205,10 +206,11 @@ const TIPO_LABEL: Record<PagEvt['tipo'], string> = {
 
 export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) {
   const { user: authUser, allUsers } = useAuth();
-  const { reservations, cancelReservation } = useReservations();
+  const { reservations, cancelReservation, updateReservation } = useReservations();
   const { grupos, inscricoes } = useXitique();
   const { dividas } = useFinance();
-  const { showToast, unreadCount } = useNotifications();
+  const { showToast, unreadCount, addNotification } = useNotifications();
+  const { vehicles: dynamicVehicles } = useVehicles();
 
   // ── Dados derivados ────────────────────────────────────────────────────────
   const userRes = reservations.filter(r => r.userId === authUser?.id);
@@ -291,6 +293,9 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
   const [detalheId,     setDetalheId]     = useState<string | null>(null);
   const [cancelConfirm, setCancelConfirm] = useState<string | null>(null);
   const [cancelMotivo,  setCancelMotivo]  = useState('');
+  const [extensaoModal, setExtensaoModal] = useState<Reservation | null>(null);
+  const [extensaoDias,  setExtensaoDias]  = useState('3');
+  const [extensaoNota,  setExtensaoNota]  = useState('');
   const [histSearch, setHistSearch] = useState('');
   const [histFiltro, setHistFiltro] = useState<'todos' | PagEvt['tipo']>('todos');
   const [faturaSearch, setFaturaSearch] = useState('');
@@ -300,28 +305,113 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
   const handleDownloadReserva = (r: Reservation) => {
     const veh = getVehicleName(r.vehicleId);
     const st  = RES_STATUS[r.status]?.label ?? r.status;
+
+    // Soma tudo o que foi pago (prestações ou depósito directo)
+    const totalPago = (r.prestacoes && r.prestacoes.length > 0)
+      ? r.prestacoes.filter(p => p.paga).reduce((s, p) => s + (p.valorPago ?? p.valor), 0)
+      : (r.deposito ?? 0);
+
+    const valorBase = r.valorTotal > 0 ? r.valorTotal : totalPago;
+    const restante  = Math.max(0, valorBase - totalPago);
+
+    const FORMA_MAP: Record<string, string> = {
+      mpesa: 'M-Pesa', emola: 'e-Mola', dinheiro: 'Dinheiro',
+      transferencia: 'Transferência', cheque: 'Cheque', outros: 'Outros',
+    };
+
+    const linhasPrestacoes = (r.prestacoes && r.prestacoes.length > 0)
+      ? `<tr style="background:#fafafa">
+           <td style="font-size:9px;font-weight:800;text-transform:uppercase;color:#71717a;padding:8px 10px;border-bottom:2px solid #e4e4e7;">Nº</td>
+           <td style="font-size:9px;font-weight:800;text-transform:uppercase;color:#71717a;padding:8px 10px;border-bottom:2px solid #e4e4e7;">Vencimento</td>
+           <td style="font-size:9px;font-weight:800;text-transform:uppercase;color:#71717a;padding:8px 10px;border-bottom:2px solid #e4e4e7;">Valor</td>
+           <td style="font-size:9px;font-weight:800;text-transform:uppercase;color:#71717a;padding:8px 10px;border-bottom:2px solid #e4e4e7;">Forma</td>
+           <td style="font-size:9px;font-weight:800;text-transform:uppercase;color:#71717a;padding:8px 10px;border-bottom:2px solid #e4e4e7;">Estado</td>
+         </tr>
+         ${r.prestacoes.map(p => `
+           <tr>
+             <td style="padding:8px 10px;border-bottom:1px solid #f4f4f5;font-size:12px;">${p.numero}ª</td>
+             <td style="padding:8px 10px;border-bottom:1px solid #f4f4f5;font-size:12px;">${p.dataPagamento ?? p.dataVencimento}</td>
+             <td style="padding:8px 10px;border-bottom:1px solid #f4f4f5;font-size:12px;font-weight:800;color:${p.paga ? '#059669' : '#18181b'};">${fmt(p.valorPago ?? p.valor)}</td>
+             <td style="padding:8px 10px;border-bottom:1px solid #f4f4f5;font-size:12px;color:#71717a;">${p.paga && (p as any).formaPagamento ? (FORMA_MAP[(p as any).formaPagamento] ?? (p as any).formaPagamento) : '—'}</td>
+             <td style="padding:8px 10px;border-bottom:1px solid #f4f4f5;">
+               <span style="display:inline-block;font-size:9px;font-weight:800;padding:2px 8px;border-radius:10px;background:${p.paga ? '#d1fae5' : '#fef3c7'};color:${p.paga ? '#065f46' : '#92400e'};">${p.paga ? 'PAGO' : 'PENDENTE'}</span>
+             </td>
+           </tr>`).join('')}`
+      : '';
+
     const body = `
       <div class="doc-title">Comprovativo de Reserva</div>
       <div class="doc-sub">Reserva Nº ${r.id}</div>
+
       <div class="section-title">Detalhes</div>
       <div class="summary-box">
         <div class="summary-row"><span>Viatura</span><span><b>${veh}</b></span></div>
         <div class="summary-row"><span>Estado</span><span><b>${st}</b></span></div>
         <div class="summary-row"><span>Início</span><span>${fmtData(r.dataInicio)}${r.horaLevantamento ? ' às ' + r.horaLevantamento : ''}</span></div>
         <div class="summary-row"><span>Fim</span><span>${fmtData(r.dataFim)}${r.horaDevolucao ? ' às ' + r.horaDevolucao : ''}</span></div>
-        ${r.deposito > 0 ? `<div class="summary-row"><span>Depositado</span><span class="val-green">${fmt(r.deposito)}</span></div>` : ''}
-        <div class="summary-row total"><span>Valor Total</span><span class="val-amber">${fmt(r.valorTotal)}</span></div>
+        ${diffDias(r.dataInicio, r.dataFim) > 0 ? `<div class="summary-row"><span>Duração</span><span>${diffDias(r.dataInicio, r.dataFim)} dia(s)</span></div>` : ''}
       </div>
+
+      <div class="section-title">Pagamento</div>
+      <div class="summary-box">
+        ${valorBase > 0 ? `<div class="summary-row"><span>Valor Total do Aluguer</span><span style="font-weight:800;">${fmt(valorBase)}</span></div>` : ''}
+        ${totalPago > 0 ? `<div class="summary-row"><span>Total Pago</span><span class="val-green">${fmt(totalPago)}</span></div>` : ''}
+        ${valorBase > 0
+          ? `<div class="summary-row total"><span>Restante a Pagar</span><span class="${restante > 0 ? 'val-red' : 'val-green'}">${fmt(restante)}</span></div>`
+          : `<div class="summary-row"><span>Valor</span><span style="color:#71717a;font-style:italic;">A confirmar com o administrador</span></div>`}
+      </div>
+
+      ${linhasPrestacoes ? `
+        <div class="section-title">Plano de Prestações</div>
+        <table>${linhasPrestacoes}</table>
+      ` : ''}
+
       ${r.notas ? `<div class="section-title">Observações</div><div class="summary-box"><div class="summary-row"><span>${r.notas}</span></div></div>` : ''}
     `;
     printAsPDF(body, `Reserva ${r.id}`);
   };
 
   const handleExtensao = (r: Reservation) => {
+    setExtensaoDias('3');
+    setExtensaoNota('');
+    setExtensaoModal(r);
+  };
+
+  const confirmarExtensao = () => {
+    if (!extensaoModal) return;
+    const r    = extensaoModal;
+    const dias = Math.max(1, parseInt(extensaoDias, 10) || 1);
+    const veh  = getVehicleName(r.vehicleId);
+    const nota = extensaoNota.trim();
+
+    const novaDataFimDate = new Date(r.dataFim + 'T00:00:00');
+    novaDataFimDate.setDate(novaDataFimDate.getDate() + dias);
+    const novaDataFim = novaDataFimDate.toISOString().split('T')[0];
+
+    updateReservation(r.id, {
+      pedidoExtensao: {
+        dias,
+        novaDataFim,
+        motivo: nota,
+        dataSubmissao: new Date().toISOString(),
+        status: 'pendente',
+      },
+    });
+
+    addNotification(
+      'admin',
+      `Pedido de Extensão — ${veh}`,
+      `${authUser?.nome ?? 'Cliente'} solicitou extensão de ${dias} dia(s) para a reserva de "${veh}" (data fim actual: ${r.dataFim} → sugerida: ${novaDataFim}). Motivo: "${nota}"`,
+      'warning',
+      r.id,
+      '/admin/aluguer?tab=acoes',
+    );
+
+    setExtensaoModal(null);
     showToast(
       'Pedido enviado',
-      `Extensão para "${getVehicleName(r.vehicleId)}" solicitada. O administrador entrará em contacto.`,
-      'info',
+      `Extensão de ${dias} dia(s) solicitada. O administrador analisará e responderá brevemente.`,
+      'success',
     );
   };
 
@@ -340,8 +430,8 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
     showToast('Compra cancelada', 'A sua compra foi cancelada. A equipa SOS Motors irá contactá-lo.', 'success');
   };
 
-  const getVehicleName = (id: number) => VEHICLES.find(v => v.id === id)?.name ?? `Viatura #${id}`;
-  const getVehicle     = (id: number) => VEHICLES.find(v => v.id === id);
+  const getVehicleName = (id: number) => dynamicVehicles.find(v => v.id === id)?.name ?? VEHICLES.find(v => v.id === id)?.name ?? `Viatura #${id}`;
+  const getVehicle     = (id: number) => dynamicVehicles.find(v => v.id === id) ?? VEHICLES.find(v => v.id === id);
 
   const pagamentosBadge = minhasDividas.length + prestacoesPendentes.length;
   const xitiqueBadge   = (membro?.estado === 'Pendente' && grupoDoUser?.estadoGrupo === 'EmAndamento') ? 1 : 0;
@@ -350,12 +440,16 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
   const historicoPag: PagEvt[] = [];
   alugueres.filter(a => a.status === 'concluida').forEach(a => {
     const dias = Math.max(1, Math.ceil((new Date(a.dataFim).getTime() - new Date(a.dataInicio).getTime()) / 86400000));
+    const lastPaid = a.prestacoes?.filter(p => p.paga).at(-1);
     historicoPag.push({
-      label: getVehicleName(a.vehicleId), sub: 'Aluguer concluído', valor: a.valorTotal, data: a.dataFim, tipo: 'aluguer',
+      label: getVehicleName(a.vehicleId), sub: 'Aluguer concluído', valor: a.valorTotal,
+      data: lastPaid?.dataPagamento ?? a.dataFim, tipo: 'aluguer',
       clientName: a.clientName, clientEmail: a.clientEmail, clientPhone: a.clientPhone,
       matricula: getVehicle(a.vehicleId)?.matricula,
       dataInicio: a.dataInicio, dataFim: a.dataFim,
-      formaPagamento: a.formaPagamento, referenciaPagamento: a.referenciaPagamento, horaPagamento: a.horaPagamento,
+      formaPagamento: lastPaid?.formaPagamento ?? a.formaPagamento,
+      referenciaPagamento: lastPaid?.referenciaPagamento ?? a.referenciaPagamento,
+      horaPagamento: lastPaid?.horaPagamento ?? a.horaPagamento,
       diasAluguer: dias, valorDiario: Math.round(a.valorTotal / dias),
     });
   });
@@ -535,20 +629,26 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
           {/* ══ RESUMO / HOME DASHBOARD ══════════════════════════════════════ */}
           {section === 'resumo' && (() => {
             // ── actividade recente ──────────────────────────────────────────
-            type ActEvt = { id: string; icon: React.ReactNode; iconBg: string; title: string; sub: string; status: string; statusCls: string };
+            type ActEvt = { id: string; icon: React.ReactNode; iconBg: string; title: string; sub: string; status: string; statusCls: string; tipo: 'aluguer' | 'compra' };
             const actFeed: ActEvt[] = [];
             [...alugueres].sort((a,b) => b.createdAt.localeCompare(a.createdAt)).slice(0,3).forEach(r => {
               const st = RES_STATUS[r.status];
-              actFeed.push({ id: r.id, icon: <KeyRound size={15} />, iconBg: 'bg-amber-500/12', title: `Reserva — ${getVehicleName(r.vehicleId)}`, sub: `${fmtData(r.dataInicio)} · ${fmt(r.valorTotal)}`, status: st.label, statusCls: st.cls });
+              actFeed.push({ id: r.id, tipo: 'aluguer', icon: <KeyRound size={15} />, iconBg: 'bg-amber-500/12', title: `Reserva — ${getVehicleName(r.vehicleId)}`, sub: `${fmtData(r.dataInicio)} · ${fmt(r.valorTotal)}`, status: st.label, statusCls: st.cls });
             });
             [...compras].sort((a,b) => b.createdAt.localeCompare(a.createdAt)).slice(0,2).forEach(r => {
               const st = RES_STATUS[r.status];
               const paga = (r.prestacoesPagas ?? 0);
               const total = (r.totalPrestacoes ?? 0);
-              actFeed.push({ id: r.id, icon: <ShoppingCart size={15} />, iconBg: 'bg-emerald-400/10', title: `Compra — ${getVehicleName(r.vehicleId)}`, sub: paga > 0 ? `${paga}/${total} prestações · ${fmt(r.valorTotal)}` : fmt(r.valorTotal), status: st.label, statusCls: st.cls });
+              actFeed.push({ id: r.id, tipo: 'compra', icon: <ShoppingCart size={15} />, iconBg: 'bg-emerald-400/10', title: `Compra — ${getVehicleName(r.vehicleId)}`, sub: paga > 0 ? `${paga}/${total} prestações · ${fmt(r.valorTotal)}` : fmt(r.valorTotal), status: st.label, statusCls: st.cls });
             });
             actFeed.sort((a,b) => b.id.localeCompare(a.id));
             const feedDisplay = actFeed.slice(0, 5);
+
+            // "Ver tudo" navega para onde estão as ações activas
+            const ACTIVE = ['pendente','confirmada','pronta_levantamento','ativa','devolucao_pendente','compra_aprovada','entrada_paga','em_prestacao','prestacao_atraso'];
+            const temAluguerActivo = alugueres.some(r => ACTIVE.includes(r.status));
+            const temCompraActiva  = compras.some(r => ACTIVE.includes(r.status));
+            const verTudoDest: Section = temAluguerActivo ? 'reservas' : temCompraActiva ? 'compras' : 'historico';
 
             // ── xitique progress ────────────────────────────────────────────
             const totalQuotas = grupoDoUser ? grupoDoUser.maxMembros * (grupoDoUser.quotaMT ?? 0) : 0;
@@ -664,14 +764,18 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                         <div className="w-1 h-4 bg-amber-500 rounded-full" />
                         <span className="text-xs font-black text-amber-400 uppercase tracking-widest">Actividade Recente</span>
                       </div>
-                      <button onClick={() => goto('historico')} className="text-xs text-amber-400/70 hover:text-amber-400 transition-colors">Ver tudo →</button>
+                      <button onClick={() => goto(verTudoDest)} className="text-xs text-amber-400/70 hover:text-amber-400 transition-colors">Ver tudo →</button>
                     </div>
                     {feedDisplay.length === 0 ? (
                       <div className="px-4 py-8 text-center text-xs text-white">Sem actividade registada.</div>
                     ) : (
                       <div className="divide-y divide-zinc-800/60">
                         {feedDisplay.map(evt => (
-                          <div key={evt.id} className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/30 transition-colors">
+                          <button
+                            key={evt.id}
+                            onClick={() => goto(evt.tipo === 'aluguer' ? 'reservas' : 'compras')}
+                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/30 transition-colors text-left"
+                          >
                             <div className={`w-8 h-8 rounded-xl ${evt.iconBg} flex items-center justify-center text-white shrink-0`}>
                               {evt.icon}
                             </div>
@@ -680,7 +784,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                               <p className="text-xs text-white mt-0.5">{evt.sub}</p>
                             </div>
                             <span className={`text-xs font-bold px-2 py-0.5 rounded-md border shrink-0 ${evt.statusCls}`}>{evt.status}</span>
-                          </div>
+                          </button>
                         ))}
                       </div>
                     )}
@@ -887,109 +991,72 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                     </div>
                   </div>
 
-                  {/* Segurança */}
-                  <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
-                    <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-zinc-800/70">
-                      <div className="w-1 h-4 bg-amber-500 rounded-full" />
-                      <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Segurança</p>
-                    </div>
-                    <div className="divide-y divide-zinc-800/50">
-                      {[
-                        { icon: <KeyRound size={13} />,   label: 'Palavra-passe',    value: '••••••••',     note: 'Contacte o admin para alterar' },
-                        { icon: <Smartphone size={13} />, label: 'Autenticação 2FA', value: 'Indisponível', note: 'Não configurado nesta versão' },
-                        { icon: <Mail size={13} />,       label: 'Email verificado', value: authUser?.email ? 'Verificado' : 'Pendente', note: authUser?.email ?? '' },
-                      ].map((item, i) => (
-                        <div key={i} className="flex items-center gap-3 px-4 py-3">
-                          <div className="w-7 h-7 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0 text-amber-400">
-                            {item.icon}
+                  {/* Documentos */}
+                  {(() => {
+                    const allDocs = [
+                      { key: 'bi',                   label: 'Bilhete de Identidade (BI)', value: fullUser?.documentos?.bi  ?? (fullUser?.bi   ? true : undefined) },
+                      { key: 'nuit',                  label: 'NUIT',                       value: fullUser?.documentos?.nuit ?? (fullUser?.nuit  ? true : undefined) },
+                      { key: 'declaracao_rendimento', label: 'Declaração de Rendimento',   value: fullUser?.documentos?.declaracao_rendimento },
+                      { key: 'contrato_trabalho',     label: 'Contrato de Trabalho',       value: fullUser?.documentos?.contrato_trabalho },
+                      { key: 'carta_conducao',        label: 'Carta de Condução',          value: fullUser?.documentos?.carta_conducao },
+                      { key: 'declaracao_bairro',     label: 'Declaração de Bairro',       value: fullUser?.documentos?.declaracao_bairro },
+                    ] as { key: string; label: string; value?: string | boolean }[];
+                    const conhecidos = allDocs.filter(d => d.value !== undefined);
+                    const entregues  = conhecidos.filter(d => !!d.value).length;
+                    const emFalta    = conhecidos.filter(d => !d.value).length;
+                    const hasAnyDoc  = fullUser?.bi || fullUser?.nuit || fullUser?.documentos;
+                    return (
+                      <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
+                        <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-zinc-800/70">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-1 h-4 bg-amber-500 rounded-full shrink-0" />
+                            <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Documentos</p>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs font-black text-amber-400 uppercase tracking-widest">{item.label}</div>
-                            <div className="text-xs text-white mt-0.5 truncate">{item.note}</div>
-                          </div>
-                          <span className={`text-sm font-black shrink-0 ${
-                            item.value === 'Verificado' ? 'text-emerald-400' : 'text-white'
-                          }`}>{item.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Documentos (expansível) */}
-              {(() => {
-                const allDocs = [
-                  { key: 'bi',                   label: 'Bilhete de Identidade (BI)',  value: fullUser?.documentos?.bi  ?? (fullUser?.bi   ? true : undefined) },
-                  { key: 'nuit',                  label: 'NUIT',                        value: fullUser?.documentos?.nuit ?? (fullUser?.nuit  ? true : undefined) },
-                  { key: 'declaracao_rendimento', label: 'Declaração de Rendimento',    value: fullUser?.documentos?.declaracao_rendimento },
-                  { key: 'contrato_trabalho',     label: 'Contrato de Trabalho',        value: fullUser?.documentos?.contrato_trabalho },
-                  { key: 'carta_conducao',        label: 'Carta de Condução',           value: fullUser?.documentos?.carta_conducao },
-                  { key: 'declaracao_bairro',     label: 'Declaração de Bairro',        value: fullUser?.documentos?.declaracao_bairro },
-                ] as { key: string; label: string; value?: string | boolean }[];
-
-                const conhecidos = allDocs.filter(d => d.value !== undefined);
-                const entregues  = conhecidos.filter(d => !!d.value).length;
-                const emFalta    = conhecidos.filter(d => !d.value).length;
-                const hasAnyDoc  = fullUser?.bi || fullUser?.nuit || fullUser?.documentos;
-
-                return (
-                  <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
-                    <button
-                      onClick={() => toggleSec('docs')}
-                      className="w-full flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-zinc-800/40 transition-colors"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-1 h-4 bg-amber-500 rounded-full shrink-0" />
-                        <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Documentos</p>
-                        {hasAnyDoc && (
-                          <div className="flex items-center gap-1">
-                            {entregues > 0 && <span className="text-xs bg-emerald-400/15 text-emerald-400 border border-emerald-400/20 rounded-md px-1.5 py-0.5 font-black">{entregues} ok</span>}
-                            {emFalta > 0   && <span className="text-xs bg-red-400/15 text-red-400 border border-red-400/20 rounded-md px-1.5 py-0.5 font-black">{emFalta} em falta</span>}
-                          </div>
-                        )}
-                      </div>
-                      <IcoChevron open={secOpen.has('docs')} />
-                    </button>
-
-                    {secOpen.has('docs') && (
-                      !hasAnyDoc ? (
-                        <div className="px-4 py-5 text-center text-xs text-white border-t border-zinc-800">
-                          Nenhum documento registado. Contacte o administrador.
-                        </div>
-                      ) : (
-                        <div className="divide-y divide-zinc-800/50 border-t border-zinc-800">
-                          {conhecidos.map(d => {
-                            const presente = !!d.value;
-                            return (
-                              <div key={d.key} className={`flex items-center justify-between gap-3 px-4 py-3 ${presente ? '' : 'opacity-70'}`}>
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border ${presente ? 'bg-emerald-400/10 border-emerald-400/20' : 'bg-red-400/10 border-red-400/20'}`}>
-                                    {presente
-                                      ? <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="3.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                      : <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                                    }
-                                  </div>
-                                  <span className="text-sm text-white truncate">{d.label}</span>
-                                </div>
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded-md border shrink-0 ${presente ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' : 'bg-red-400/10 text-red-400 border-red-400/20'}`}>
-                                  {presente ? 'Entregue' : 'Em falta'}
-                                </span>
-                              </div>
-                            );
-                          })}
-                          {conhecidos.length > 0 && (
-                            <div className="flex items-center justify-between px-4 py-2.5 bg-zinc-800/30">
-                              <span className="text-xs text-amber-400 font-black uppercase tracking-widest">Total registados</span>
-                              <span className="text-sm font-black text-white">{entregues} / {conhecidos.length}</span>
+                          {hasAnyDoc && (
+                            <div className="flex items-center gap-1">
+                              {entregues > 0 && <span className="text-xs bg-emerald-400/15 text-emerald-400 border border-emerald-400/20 rounded-md px-1.5 py-0.5 font-black">{entregues} ok</span>}
+                              {emFalta > 0   && <span className="text-xs bg-red-400/15 text-red-400 border border-red-400/20 rounded-md px-1.5 py-0.5 font-black">{emFalta} em falta</span>}
                             </div>
                           )}
                         </div>
-                      )
-                    )}
-                  </div>
-                );
-              })()}
+                        {!hasAnyDoc ? (
+                          <div className="px-4 py-5 text-center text-xs text-white">
+                            Nenhum documento registado. Contacte o administrador.
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-zinc-800/50">
+                            {conhecidos.map(d => {
+                              const presente = !!d.value;
+                              return (
+                                <div key={d.key} className={`flex items-center justify-between gap-3 px-4 py-2.5 ${presente ? '' : 'opacity-70'}`}>
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 border ${presente ? 'bg-emerald-400/10 border-emerald-400/20' : 'bg-red-400/10 border-red-400/20'}`}>
+                                      {presente
+                                        ? <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="3.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                        : <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                      }
+                                    </div>
+                                    <span className="text-xs text-white truncate">{d.label}</span>
+                                  </div>
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${presente ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' : 'bg-red-400/10 text-red-400 border-red-400/20'}`}>
+                                    {presente ? 'Entregue' : 'Em falta'}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                            {conhecidos.length > 0 && (
+                              <div className="flex items-center justify-between px-4 py-2.5 bg-zinc-800/30">
+                                <span className="text-xs text-amber-400 font-black uppercase tracking-widest">Total</span>
+                                <span className="text-xs font-black text-white">{entregues} / {conhecidos.length}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
 
             </div>
           )}
@@ -1107,8 +1174,9 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
 
           {/* ══ RESERVAS ══════════════════════════════════════════════════════ */}
           {section === 'reservas' && (() => {
-            const ativos   = alugueres.filter(r =>  ACTIVE_STATUSES.includes(r.status));
-            const inativos = alugueres.filter(r => !ACTIVE_STATUSES.includes(r.status));
+            const sortDesc = (a: Reservation, b: Reservation) => b.createdAt.localeCompare(a.createdAt);
+            const ativos   = alugueres.filter(r =>  ACTIVE_STATUSES.includes(r.status)).sort(sortDesc);
+            const inativos = alugueres.filter(r => !ACTIVE_STATUSES.includes(r.status)).sort(sortDesc);
             const lista    = showInativos ? inativos : ativos;
 
             const ReservaRow = ({ r }: { r: Reservation }) => {
@@ -1128,20 +1196,29 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                   <div className="grid grid-cols-[1fr_auto_auto_auto] gap-0 items-center">
 
                     {/* Carro + datas + estado + obs */}
-                    <div className="px-4 py-3 min-w-0">
-                      <p className="text-base font-black text-white truncate">{getVehicleName(r.vehicleId)}</p>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
-                        <span className="text-xs text-white">Início: <span className="text-white font-bold">{fmtData(r.dataInicio)}</span></span>
-                        <span className="text-xs text-white">Fim: <span className="text-white font-bold">{fmtData(r.dataFim)}</span></span>
-                        {r.horaDevolucao && <span className="text-xs text-white">Dev: <span className="text-white font-bold">{r.horaDevolucao}</span></span>}
+                    <div className="flex items-center gap-3 px-4 py-3 min-w-0">
+                      {/* Thumbnail do veículo */}
+                      <div className="shrink-0 w-16 h-12 rounded-lg overflow-hidden bg-zinc-800 border border-zinc-700/50">
+                        {getVehicle(r.vehicleId)?.img
+                          ? <img src={getVehicle(r.vehicleId)!.img} alt={getVehicleName(r.vehicleId)} className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center text-zinc-600 text-xl">🚗</div>
+                        }
                       </div>
-                      {r.notas && <p className="text-xs text-white mt-0.5 truncate">{r.notas}</p>}
-                      {r.status === 'cancelada' && r.motivoCancelamento && (
-                        <p className="text-xs text-red-400 mt-1 flex items-start gap-1">
-                          <span className="shrink-0 font-bold">Motivo:</span>
-                          <span className="truncate">{r.motivoCancelamento}</span>
-                        </p>
-                      )}
+                      <div className="min-w-0">
+                        <p className="text-base font-black text-white truncate">{getVehicleName(r.vehicleId)}</p>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
+                          <span className="text-xs text-white">Início: <span className="text-white font-bold">{fmtData(r.dataInicio)}</span></span>
+                          <span className="text-xs text-white">Fim: <span className="text-white font-bold">{fmtData(r.dataFim)}</span></span>
+                          {r.horaDevolucao && <span className="text-xs text-white">Dev: <span className="text-white font-bold">{r.horaDevolucao}</span></span>}
+                        </div>
+                        {r.notas && <p className="text-xs text-white mt-0.5 truncate">{r.notas}</p>}
+                        {r.status === 'cancelada' && r.motivoCancelamento && (
+                          <p className="text-xs text-red-400 mt-1 flex items-start gap-1">
+                            <span className="shrink-0 font-bold">Motivo:</span>
+                            <span className="truncate">{r.motivoCancelamento}</span>
+                          </p>
+                        )}
+                      </div>
                     </div>
 
                     {/* Estado */}
@@ -1277,7 +1354,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                             Comprovativo
                           </button>
-                          {podeEstender && (
+                          {podeEstender && !r.pedidoExtensao && (
                             <button
                               onClick={() => handleExtensao(r)}
                               className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-bold transition-colors"
@@ -1300,6 +1377,48 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                       </div>
                     );
                   })()}
+
+                  {/* ── Banner de estado do pedido de extensão ── */}
+                  {r.pedidoExtensao && (
+                    <div className={`border-t px-4 py-4 space-y-1 ${
+                      r.pedidoExtensao.status === 'pendente'  ? 'border-amber-500/20 bg-amber-500/5' :
+                      r.pedidoExtensao.status === 'aprovado'  ? 'border-emerald-500/20 bg-emerald-500/5' :
+                      'border-red-500/20 bg-red-500/5'
+                    }`}>
+                      <div className="flex items-center gap-2 mb-1">
+                        {r.pedidoExtensao.status === 'pendente' && (
+                          <>
+                            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                            <p className="text-xs font-black text-amber-400 uppercase tracking-wider">Pedido de extensão em análise</p>
+                          </>
+                        )}
+                        {r.pedidoExtensao.status === 'aprovado' && (
+                          <>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            <p className="text-xs font-black text-emerald-400 uppercase tracking-wider">Extensão aprovada!</p>
+                          </>
+                        )}
+                        {r.pedidoExtensao.status === 'rejeitado' && (
+                          <>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            <p className="text-xs font-black text-red-400 uppercase tracking-wider">Extensão não aprovada</p>
+                          </>
+                        )}
+                      </div>
+                      <p className="text-xs text-white/70">
+                        Pedido: <span className="text-white font-bold">+{r.pedidoExtensao.dias} dia(s)</span>
+                        {' '}· Nova data fim sugerida: <span className="text-white font-bold">{r.pedidoExtensao.novaDataFim}</span>
+                      </p>
+                      {r.pedidoExtensao.motivo && (
+                        <p className="text-xs text-white/70">Motivo: <span className="text-white">{r.pedidoExtensao.motivo}</span></p>
+                      )}
+                      {r.pedidoExtensao.respostaAdmin && (
+                        <p className={`text-xs font-bold mt-1 ${r.pedidoExtensao.status === 'aprovado' ? 'text-emerald-400' : 'text-red-400'}`}>
+                          Resposta do admin: {r.pedidoExtensao.respostaAdmin}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {/* ── Modal de confirmação de cancelamento ── */}
                   {cancelConfirm === r.id && (
@@ -1985,7 +2104,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                       valueColor: totalDivida > 0 ? 'text-red-400' : 'text-amber-400',
                     },
                     {
-                      label: 'Contratos Ativos',
+                      label: 'Contratos Activos',
                       value: String(contratosAtivos),
                       sub:   contratosAtivos > 0
                                ? `${alugueres.filter(a => ACTIVE_STATUSES.includes(a.status)).length} aluguer · ${compras.filter(c => c.status !== 'cancelada' && c.status !== 'liquidada').length} compra`
@@ -2081,7 +2200,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                   const montante    = (c.prestacoes ?? []).filter(p => !p.paga).reduce((s, p) => s + p.valor, 0) || restam * c.deposito;
                                   const emAtraso    = c.status === 'prestacao_atraso';
                                   return (
-                                    <div key={c.id} className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-zinc-800/20 transition-colors">
+                                    <div key={c.id} className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-zinc-800/50 transition-colors">
                                       <div className="min-w-0 flex-1">
                                         <div className="flex items-center gap-2 mb-0.5">
                                           <p className="text-xs font-bold text-white truncate">{getVehicleName(c.vehicleId)}</p>
@@ -2113,7 +2232,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                 {minhasDividas.map(d => {
                                   const emAberto = d.valorTotal - d.valorPago;
                                   return (
-                                    <div key={d.id} className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-zinc-800/20 transition-colors">
+                                    <div key={d.id} className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-zinc-800/50 transition-colors">
                                       <div className="min-w-0 flex-1">
                                         <p className="text-xs font-bold text-white truncate">{d.descricao}</p>
                                         <p className="text-xs text-white">
@@ -2374,8 +2493,8 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                         <div class="info-box"><div class="info-label">Titular</div><div class="info-value">${authUser?.nome ?? '—'}</div><div class="info-sub">${authUser?.email ?? '—'}</div></div>
                         <div class="info-box"><div class="info-label">Total em Dívida</div><div class="info-value val-red">${fmt(totalDivida)}</div></div>
                       </div>
-                      <div class="section-title">Faturas em Aberto</div>
-                      <table><thead><tr><th>Fatura</th><th>Descrição</th><th>Vencimento</th><th>Valor</th><th>Estado</th></tr></thead>
+                      <div class="section-title">Facturas em Aberto</div>
+                      <table><thead><tr><th>Factura</th><th>Descrição</th><th>Vencimento</th><th>Valor</th><th>Estado</th></tr></thead>
                       <tbody>${rows || '<tr><td colspan="5" style="text-align:center;color:#a1a1aa">Sem dívidas em aberto</td></tr>'}</tbody></table>
                     `;
                     printAsPDF(body, 'Resumo de Dívida');
@@ -2436,7 +2555,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                         <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
                           {/* Cabeçalho */}
                           <div className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-2 px-4 py-2.5 border-b border-zinc-800/70 bg-zinc-800/30">
-                            <span className="text-xs font-black text-amber-400 uppercase tracking-widest w-[72px]">Fatura ID</span>
+                            <span className="text-xs font-black text-amber-400 uppercase tracking-widest w-[72px]">Factura ID</span>
                             <span className="text-xs font-black text-amber-400 uppercase tracking-widest">Data Vencimento</span>
                             <span className="text-xs font-black text-amber-400 uppercase tracking-widest text-right">Valor</span>
                             <span className="text-xs font-black text-amber-400 uppercase tracking-widest text-center w-20">Status</span>
@@ -2446,7 +2565,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                           {fatFiltradas.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-10 gap-2">
                               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#52525b" strokeWidth="1.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                              <span className="text-xs text-white">Sem faturas encontradas</span>
+                              <span className="text-xs text-white">Sem facturas encontradas</span>
                             </div>
                           ) : (
                             <div className="divide-y divide-zinc-800/50 max-h-72 overflow-y-auto">
@@ -2614,8 +2733,8 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
       ${r.clientPhone ? `<div class="bill-row"><span class="bill-label">Telefone</span><span class="bill-val">${r.clientPhone}</span></div>` : ''}
     </div>
     <div class="inv-badge">
-      <div class="inv-badge-title">Fatura</div>
-      <div class="inv-badge-row">N.º Fatura: <span class="inv-badge-val">${f.id}</span></div>
+      <div class="inv-badge-title">Factura</div>
+      <div class="inv-badge-row">N.º Factura: <span class="inv-badge-val">${f.id}</span></div>
       <div class="inv-badge-row">Emitida a: <span class="inv-badge-val">${emitidoEm}</span></div>
       <div class="inv-badge-row">Vencimento: <span class="inv-badge-val">${fmtData(f.dataVencimento)}</span></div>
     </div>
@@ -2647,7 +2766,7 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
   <div class="inv-bottom">
     <div class="notes-text">
       Obrigado por escolher a SOS Motors para as suas necessidades.<br>
-      Para qualquer questão sobre esta fatura, contacte-nos em<br>
+      Para qualquer questão sobre esta factura, contacte-nos em<br>
       <b>+258 84 000 0000</b> ou <b>geral@sosmotors.co.mz</b>.
     </div>
     <div class="sig-block">
@@ -2722,7 +2841,7 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
                               className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-amber-500/30 transition-all text-left group"
                             >
                               <svg width="14" height="14" className="text-amber-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"/></svg>
-                              <span className="text-xs font-bold text-white group-hover:text-amber-400 transition-colors leading-tight">Histórico de Faturas<br/><span className="text-white font-normal">PDF</span></span>
+                              <span className="text-xs font-bold text-white group-hover:text-amber-400 transition-colors leading-tight">Histórico de Facturas<br/><span className="text-white font-normal">PDF</span></span>
                             </button>
                           </div>
                         </div>
@@ -2784,7 +2903,8 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
                                 <div class="summary-row"><span>Viatura</span><span>${ev.label}${ev.matricula ? ` · ${ev.matricula}` : ''}</span></div>
                                 ${ev.dataInicio ? `<div class="summary-row"><span>Período</span><span>${fmtData(ev.dataInicio)}${ev.dataFim ? ` → ${fmtData(ev.dataFim)}` : ''}</span></div>` : ''}
                                 ${ev.diasAluguer ? `<div class="summary-row"><span>Duração / Taxa</span><span>${ev.diasAluguer} dia${ev.diasAluguer !== 1 ? 's' : ''} · ${fmt(ev.valorDiario ?? 0)}/dia</span></div>` : ''}
-                                <div class="summary-row"><span>Data de Pagamento</span><span>${ev.data.length === 10 ? fmtData(ev.data) : (ev.data || '—')}${ev.horaPagamento ? ` · ${ev.horaPagamento}` : ''}</span></div>
+                                <div class="summary-row"><span>Data de Pagamento</span><span>${ev.data.length === 10 ? fmtData(ev.data) : (ev.data || '—')}</span></div>
+                                <div class="summary-row"><span>Hora de Pagamento</span><span>${ev.horaPagamento ?? '—'}</span></div>
                                 ${ev.formaPagamento ? `<div class="summary-row"><span>Método</span><span>${FORMA_LABEL_R[ev.formaPagamento] ?? ev.formaPagamento}</span></div>` : ''}
                                 ${ev.referenciaPagamento ? `<div class="summary-row"><span>Referência</span><span>${ev.referenciaPagamento}</span></div>` : ''}
                                 <div class="summary-row"><span>Tipo</span><span><span class="badge badge-${ev.tipo}">${tipoLabel[ev.tipo]}</span></span></div>
@@ -2989,9 +3109,9 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
                   <div className="grid grid-cols-2 divide-x divide-zinc-800">
                     {/* Esquerda: porquê participar */}
                     <div className="px-5 py-4">
-                      <p className="text-sm font-black text-white mb-3">Porquê Participar?</p>
+                      <p className="text-sm font-black text-amber-400 mb-3">Porquê Participar?</p>
                       <ul className="space-y-2">
-                        {['Poupança Colectiva', 'Sorteio Mensal', 'Grupo de confiança'].map(item => (
+                        {['Poupança Colectiva', 'Sorteio Mensal', 'Grupo de Confiança'].map(item => (
                           <li key={item} className="flex items-center gap-2">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                             <span className="text-xs text-white">{item}</span>
@@ -3008,7 +3128,6 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
                       >
                         Participar no Xitique
                       </button>
-                      <p className="text-xs text-white text-center">Comece agora!</p>
                     </div>
                   </div>
                 </div>
@@ -3050,7 +3169,8 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
                   <div class="summary-row"><span>Viatura</span><span>${ev.label}${ev.matricula ? ` · ${ev.matricula}` : ''}</span></div>
                   ${ev.dataInicio ? `<div class="summary-row"><span>Período</span><span>${fmtData(ev.dataInicio)}${ev.dataFim ? ` → ${fmtData(ev.dataFim)}` : ''}</span></div>` : ''}
                   ${ev.diasAluguer ? `<div class="summary-row"><span>Duração / Taxa</span><span>${ev.diasAluguer} dia${ev.diasAluguer !== 1 ? 's' : ''} · ${fmt(ev.valorDiario ?? 0)}/dia</span></div>` : ''}
-                  <div class="summary-row"><span>Data de Pagamento</span><span>${ev.data.length === 10 ? fmtData(ev.data) : (ev.data || '—')}${ev.horaPagamento ? ` · ${ev.horaPagamento}` : ''}</span></div>
+                  <div class="summary-row"><span>Data de Pagamento</span><span>${ev.data.length === 10 ? fmtData(ev.data) : (ev.data || '—')}</span></div>
+                  <div class="summary-row"><span>Hora de Pagamento</span><span>${ev.horaPagamento ?? '—'}</span></div>
                   ${ev.formaPagamento ? `<div class="summary-row"><span>Método</span><span>${FORMA_LABEL_H[ev.formaPagamento] ?? ev.formaPagamento}</span></div>` : ''}
                   ${ev.referenciaPagamento ? `<div class="summary-row"><span>Referência</span><span>${ev.referenciaPagamento}</span></div>` : ''}
                   <div class="summary-row"><span>Tipo</span><span><span class="badge badge-${ev.tipo}">${TIPO_LABEL[ev.tipo]}</span></span></div>
@@ -3174,7 +3294,7 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
                       {/* Linhas */}
                       <div className="divide-y divide-zinc-800/50">
                         {filtrado.map((ev, i) => (
-                          <div key={i} className="grid grid-cols-[110px_1fr_auto_auto_auto] items-center gap-4 px-5 py-4 hover:bg-zinc-800/30 transition-colors">
+                          <div key={i} className={`grid grid-cols-[110px_1fr_auto_auto_auto] items-center gap-4 px-5 py-4 hover:bg-zinc-800/40 transition-colors ${i % 2 !== 0 ? 'bg-zinc-800/50' : ''}`}>
                             <div className="shrink-0">
                               <p className="text-sm text-white whitespace-nowrap">
                                 {ev.data.length === 10 ? fmtData(ev.data) : (ev.data || '—')}
@@ -3230,6 +3350,64 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
       {/* ── Modal de inscrição no Xitique ── */}
       {showXitiqueModal && (
         <XitiqueModal onClose={() => setShowXitiqueModal(false)} />
+      )}
+
+      {/* ── Modal de pedido de extensão (overlay fixo) ── */}
+      {extensaoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-5">
+            <div>
+              <p className="text-base text-white font-black mb-1">Solicitar extensão de reserva</p>
+              <p className="text-xs text-white/60">
+                Viatura:{' '}
+                <span className="text-white font-bold">{getVehicleName(extensaoModal.vehicleId)}</span>
+                {' '}· Data fim actual:{' '}
+                <span className="text-amber-400 font-bold">{extensaoModal.dataFim}</span>
+              </p>
+            </div>
+
+            <div>
+              <label className="text-xs text-white font-bold block mb-1">Nº de dias</label>
+              <input
+                type="number"
+                min={1}
+                max={30}
+                value={extensaoDias}
+                onChange={e => setExtensaoDias(e.target.value)}
+                className="w-24 bg-zinc-800 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors text-center font-bold"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-white font-bold block mb-1">
+                Motivo do pedido <span className="text-amber-400">*</span>
+              </label>
+              <textarea
+                value={extensaoNota}
+                onChange={e => setExtensaoNota(e.target.value)}
+                placeholder="Ex: viagem prolongada, trabalho extra…"
+                rows={3}
+                className="w-full bg-zinc-800 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 resize-none outline-none transition-colors"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={confirmarExtensao}
+                disabled={!extensaoDias || parseInt(extensaoDias, 10) < 1 || !extensaoNota.trim()}
+                className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-black text-sm font-black transition-colors"
+              >
+                Enviar pedido
+              </button>
+              <button
+                onClick={() => setExtensaoModal(null)}
+                className="flex-1 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-sm font-bold transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

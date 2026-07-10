@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { GrupoXitique, MembroXitique, EstadoGrupo, InscricaoXitique, EstadoMembroXitique } from '../types/xitique';
+import { useNotifications } from './NotificationsContext';
 
 const GRUPOS_KEY     = 'rentcar:xitique:v2';
 const INSCRICOES_KEY = 'rentcar:xitique:inscricoes:v2';
@@ -98,6 +99,7 @@ interface XitiqueContextType {
 const XitiqueContext = createContext<XitiqueContextType | null>(null);
 
 export function XitiqueProvider({ children }: { children: ReactNode }) {
+  const { addNotification } = useNotifications();
   const [grupos,     setGrupos]     = useState<GrupoXitique[]>(loadGrupos);
   const [inscricoes, setInscricoes] = useState<InscricaoXitique[]>(loadInscricoes);
 
@@ -181,6 +183,15 @@ export function XitiqueProvider({ children }: { children: ReactNode }) {
       dataCriacao: new Date().toISOString().split('T')[0],
     };
     setInscricoes(prev => [...prev, nova]);
+    const grupo = grupos.find(g => g.id === dados.grupoId);
+    addNotification(
+      'admin',
+      'Nova inscrição Xitique',
+      `${dados.nome.trim()} solicitou entrada no grupo "${grupo?.nome ?? dados.grupoId}". Aguarda validação.`,
+      'info',
+      undefined,
+      '/admin/xitique'
+    );
   };
 
   const aprovarInscricao = (id: string, userId?: string) => {

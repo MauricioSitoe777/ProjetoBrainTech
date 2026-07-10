@@ -118,13 +118,18 @@ export function RegistarPagamentoModal({ reservationId, prestacao: p, onClose, o
               </svg>
             </button>
           </div>
-          {valorValido && diferenca !== 0 && (
-            <p className={`text-[10px] mt-2 font-semibold ${diferenca > 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
-              {diferenca > 0
-                ? `+${fmtNum(diferenca)} MT acima do previsto — excedente distribuído pelas restantes`
-                : `${fmtNum(-diferenca)} MT abaixo do previsto`}
+          <div className="mt-2 space-y-1">
+            <p className="text-[10px] text-white/40">
+              Valor previsto: <span className="text-white font-bold">{fmtNum(p.valor)} MT</span>
             </p>
-          )}
+            {valorValido && diferenca !== 0 && (
+              <p className={`text-[10px] font-semibold ${diferenca > 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                {diferenca > 0
+                  ? `+${fmtNum(diferenca)} MT acima do previsto — excedente distribuído pelas restantes`
+                  : `Faltam ${fmtNum(-diferenca)} MT para atingir o valor previsto`}
+              </p>
+            )}
+          </div>
           {error && <p className="text-[10px] text-red-400 mt-1.5">{error}</p>}
         </div>
 

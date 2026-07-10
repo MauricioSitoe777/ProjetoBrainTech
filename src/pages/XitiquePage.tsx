@@ -1,5 +1,4 @@
 ﻿import { useState, useMemo } from 'react';
-import { FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import { useXitique } from '../context/XitiqueContext';
 import { useAuth } from '../context/AuthContext';
 import type { EstadoGrupo, EstadoMembroXitique, InscricaoXitique, GrupoXitique } from '../types/xitique';
@@ -60,9 +59,8 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
   const [confirmRein,   setConfirmRein]   = useState(false);
   const [credencial,    setCredencial]    = useState<Credencial | null>(null);
   const [copiado,       setCopiado]       = useState<string | null>(null);
-  const [docPanelUser,  setDocPanelUser]  = useState<string | null>(null);
-  const [docOp,         setDocOp]         = useState<'aluguer' | 'compra'>('aluguer');
-  const [confirmando,   setConfirmando]   = useState<string | null>(null);
+  const [confirmando,      setConfirmando]      = useState<string | null>(null);
+  const [confirmDelCliente, setConfirmDelCliente] = useState<string | null>(null);
   const [metodoTemp,    setMetodoTemp]    = useState('');
   const [refTemp,       setRefTemp]       = useState('');
   const [editandoData,  setEditandoData]  = useState(false);
@@ -78,7 +76,12 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
   const membrosRestantes = membrosElegiveis.length;
   const porConfirmar     = membros.filter(m => !m.pagamentoMes).length;
 
-  const xitiqueUsers = useMemo(() => allUsers.filter(u => u.xitique), [allUsers]);
+  const xitiqueUsers = useMemo(() =>
+    allUsers.filter(u =>
+      u.xitique &&
+      membros.some(m => (u.id && m.userId === u.id) || m.nome.toLowerCase().trim() === u.nome.toLowerCase().trim())
+    ),
+  [allUsers, membros]);
 
   const handleAddMembro = () => {
     if (!novoNome.trim()) return;
@@ -214,10 +217,10 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
               </div>
             </div>
           )}
-          {inscricoesGrupo.length === 0 && (
-            <div className="text-center text-white text-sm py-12 bg-zinc-900 rounded-2xl border border-zinc-800">Nenhuma inscrição recebida para este grupo.</div>
+          {pendentes.length === 0 && (
+            <div className="text-center text-white text-sm py-12 bg-zinc-900 rounded-2xl border border-zinc-800">Nenhuma inscrição pendente para este grupo.</div>
           )}
-          {inscricoesGrupo.map(insc => (
+          {pendentes.map(insc => (
             <div key={insc.id} className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 rounded-2xl border transition ${
               insc.status === 'aprovado' ? 'bg-emerald-400/5 border-emerald-400/20' : insc.status === 'rejeitado' ? 'bg-zinc-800/30 border-zinc-700/50 opacity-60' : 'bg-zinc-900 border-zinc-800'
             }`}>
@@ -479,7 +482,7 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
                 membro?.estado === 'Aceite'   ? 'bg-amber-400/5 border-amber-400/20' : 'bg-zinc-900 border-zinc-800'
               }`}>
                 <div className="flex items-start justify-between gap-3 flex-wrap">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-black text-white">{u.nome}</span>
                       {membro && (
@@ -491,12 +494,37 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
                     </div>
                     <div className="text-xs text-white mt-0.5">{u.telefone} · {u.email}</div>
                   </div>
-                  {membro && (
-                    <div className="text-right shrink-0">
-                      <div className="text-[10px] text-white uppercase tracking-wider">Meses pagos</div>
-                      <div className="text-lg font-black text-amber-400">{membro.mesesPagos.length} <span className="text-white text-sm font-semibold">/ {maxMembros}</span></div>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-3 shrink-0">
+                    {membro && (
+                      <div className="text-right">
+                        <div className="text-[10px] text-white uppercase tracking-wider">Meses pagos</div>
+                        <div className="text-lg font-black text-amber-400">{membro.mesesPagos.length} <span className="text-white text-sm font-semibold">/ {maxMembros}</span></div>
+                      </div>
+                    )}
+                    {confirmDelCliente === u.id ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-white font-medium">Confirmar?</span>
+                        <button
+                          onClick={() => { updateUser(u.id, { xitique: false }); setConfirmDelCliente(null); }}
+                          className="px-2 py-1 rounded-lg bg-red-500 hover:bg-red-400 text-white text-xs font-black transition"
+                        >Sim</button>
+                        <button
+                          onClick={() => setConfirmDelCliente(null)}
+                          className="px-2 py-1 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white text-xs font-black transition"
+                        >Não</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDelCliente(u.id)}
+                        className="w-7 h-7 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 flex items-center justify-center transition"
+                        title="Remover cliente"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 </div>
                 {membro && (
                   <div className="flex gap-1 flex-wrap">
@@ -527,132 +555,6 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
                   </div>
                 )}
 
-                {/* ── Documentos para Operação ── */}
-                {(() => {
-                  const isDocOpen = docPanelUser === u.id;
-                  const docs = u.documentos ?? {};
-
-                  const docsAluguer = [
-                    { key: 'bi' as const,            label: 'Bilhete de Identidade (BI)' },
-                    { key: 'carta_conducao' as const, label: 'Carta de Condução' },
-                  ];
-
-                  const docsCompra = [
-                    { key: 'bi' as const,                     label: 'Bilhete de Identidade (BI)' },
-                    { key: 'nuit' as const,                   label: 'NUIT' },
-                    { key: 'declaracao_rendimento' as const,   label: 'Declaração de Rendimento' },
-                    ...(!u.category || u.category === 'func_publico' || u.category === 'func_privado'
-                      ? [{ key: 'contrato_trabalho' as const,  label: 'Contrato de Trabalho' }]
-                      : []),
-                    ...(!u.category || u.category === 'empreendedor'
-                      ? [{ key: 'declaracao_bairro' as const,  label: 'Declaração de Bairro' }]
-                      : []),
-                  ];
-
-                  const docList = docOp === 'aluguer' ? docsAluguer : docsCompra;
-                  const complete = docList.filter(d => !!u.documentos?.[d.key]).length;
-                  const total    = docList.length;
-                  const allOk   = complete === total;
-
-                  const categoryLabel =
-                    u.category === 'func_publico'  ? 'Funcionário Público'  :
-                    u.category === 'func_privado'   ? 'Funcionário Privado'  :
-                    u.category === 'empreendedor'   ? 'Empreendedor'         : null;
-
-                  return (
-                    <div className="border-t border-zinc-800/60 pt-2.5">
-                      <button
-                        onClick={() => setDocPanelUser(isDocOpen ? null : u.id)}
-                        className="w-full flex items-center justify-between gap-2 text-xs transition"
-                      >
-                        <span className="font-black text-white uppercase tracking-wider flex items-center gap-1.5">
-                          <FileText size={12} strokeWidth={2.5} className="text-amber-500" />
-                          Documentos para Operação
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] border ${
-                            allOk
-                              ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20'
-                              : complete > 0
-                              ? 'bg-amber-400/10 text-amber-400 border-amber-400/20'
-                              : 'bg-red-400/10 text-red-400 border-red-400/20'
-                          }`}>{complete}/{total}</span>
-                          {isDocOpen
-                            ? <ChevronUp size={13} className="text-white" />
-                            : <ChevronDown size={13} className="text-white" />}
-                        </div>
-                      </button>
-
-                      {isDocOpen && (
-                        <div className="mt-3 space-y-3">
-                          {/* Operation type tabs */}
-                          <div className="flex gap-1 bg-zinc-800/60 p-1 rounded-xl">
-                            {(['aluguer', 'compra'] as const).map(op => (
-                              <button
-                                key={op}
-                                onClick={() => setDocOp(op)}
-                                className={`flex-1 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition ${
-                                  docOp === op ? 'bg-amber-500 text-zinc-950' : 'text-white hover:text-white'
-                                }`}
-                              >{op}</button>
-                            ))}
-                          </div>
-
-                          {categoryLabel && (
-                            <div className="text-[10px] text-amber-500/80 font-bold uppercase tracking-widest">
-                              Perfil: {categoryLabel}
-                            </div>
-                          )}
-
-                          {/* Document checklist */}
-                          <div className="space-y-1.5">
-                            {docList.map(doc => {
-                              const hasDoc = !!u.documentos?.[doc.key];
-                              return (
-                                <button
-                                  key={doc.key}
-                                  onClick={() => updateUser(u.id, {
-                                    documentos: { ...docs, [doc.key]: !hasDoc },
-                                  })}
-                                  className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border transition text-left ${
-                                    hasDoc
-                                      ? 'bg-emerald-400/5 border-emerald-400/20 hover:bg-emerald-400/10'
-                                      : 'bg-zinc-800/50 border-zinc-700 hover:border-amber-500/30'
-                                  }`}
-                                >
-                                  <span className="text-xs font-bold text-white">{doc.label}</span>
-                                  <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 border transition ${
-                                    hasDoc ? 'bg-emerald-400 border-emerald-400' : 'bg-zinc-800 border-zinc-600'
-                                  }`}>
-                                    {hasDoc && (
-                                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#09090b" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-                                        <polyline points="20 6 9 17 4 12" />
-                                      </svg>
-                                    )}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-
-                          {/* Status summary */}
-                          {allOk ? (
-                            <div className="bg-emerald-400/10 border border-emerald-400/20 rounded-xl px-3 py-2 flex items-center gap-2">
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
-                              </svg>
-                              <span className="text-xs text-emerald-400 font-black">Documentação completa — pode prosseguir para {docOp}.</span>
-                            </div>
-                          ) : (
-                            <div className="bg-red-400/5 border border-red-400/20 rounded-xl px-3 py-2 text-xs text-red-400 font-bold">
-                              Faltam {total - complete} documento(s) obrigatório(s) para {docOp}.
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
               </div>
             );
           })}
@@ -869,7 +771,7 @@ export function XitiquePage({ onExit }: { onExit?: () => void }) {
                       </span>
                     </div>
                     {pendentesGrupo > 0 && (
-                      <span className="bg-amber-500 text-zinc-950 text-[10px] font-black rounded-full px-2 py-0.5 shrink-0">
+                      <span className="animate-pulse bg-amber-500 text-zinc-950 text-[10px] font-black rounded-full px-2 py-0.5 shrink-0">
                         {pendentesGrupo} pendente{pendentesGrupo !== 1 ? 's' : ''}
                       </span>
                     )}

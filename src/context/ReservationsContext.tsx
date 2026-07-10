@@ -23,6 +23,7 @@ import { useAuth } from './AuthContext';
 import { VEHICLES } from '../data/constants';
 import { useVehicles } from './VehiclesContext';
 import { useNotifications } from './NotificationsContext';
+import { api } from '../lib/api';
 
 interface ReservationsContextType {
   reservations: Reservation[];
@@ -51,6 +52,55 @@ interface ReservationsContextType {
 }
 
 const ReservationsContext = createContext<ReservationsContextType | null>(null);
+
+function reservationToApi(r: Partial<Reservation>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (r.vehicleId       !== undefined) out.vehicle_id             = r.vehicleId;
+  if (r.userId          !== undefined) out.user_id                = r.userId;
+  if (r.clientName      !== undefined) out.client_name            = r.clientName;
+  if (r.clientEmail     !== undefined) out.client_email           = r.clientEmail;
+  if (r.clientPhone     !== undefined) out.client_phone           = r.clientPhone;
+  if (r.clientPhone2    !== undefined) out.client_phone2          = r.clientPhone2;
+  if (r.dataInicio      !== undefined) out.data_inicio            = r.dataInicio;
+  if (r.dataFim         !== undefined) out.data_fim               = r.dataFim;
+  if (r.horaLevantamento !== undefined) out.hora_levantamento     = r.horaLevantamento;
+  if (r.horaDevolucao   !== undefined) out.hora_devolucao         = r.horaDevolucao;
+  if (r.motivoViagem    !== undefined) out.motivo_viagem          = r.motivoViagem;
+  if (r.status          !== undefined) out.status                 = r.status;
+  if (r.valorTotal      !== undefined) out.valor_total            = r.valorTotal;
+  if (r.deposito        !== undefined) out.deposito               = r.deposito;
+  if (r.notas           !== undefined) out.notas                  = r.notas;
+  if (r.localLevantamento !== undefined) out.local_levantamento   = r.localLevantamento;
+  if (r.localDevolucao  !== undefined) out.local_devolucao        = r.localDevolucao;
+  if (r.motoristaId     !== undefined) out.motorista_id           = r.motoristaId;
+  if (r.totalPrestacoes !== undefined) out.total_prestacoes       = r.totalPrestacoes;
+  if (r.prestacoesPagas !== undefined) out.prestacoes_pagas       = r.prestacoesPagas;
+  if (r.prestacoes      !== undefined) out.prestacoes             = r.prestacoes;
+  if (r.horaPagamento   !== undefined) out.hora_pagamento         = r.horaPagamento;
+  if (r.formaPagamento  !== undefined) out.forma_pagamento        = r.formaPagamento;
+  if (r.referenciaPagamento !== undefined) out.referencia_pagamento = r.referenciaPagamento;
+  if (r.motivoCancelamento  !== undefined) out.motivo_cancelamento  = r.motivoCancelamento;
+  if (r.pedidoExtensao      !== undefined) out.pedido_extensao      = r.pedidoExtensao;
+  return out;
+}
+
+function rulesToApi(data: Partial<BusinessRules>): Record<string, unknown> {
+  const map: Record<string, string> = {
+    minDiasAluguer: 'min_dias_aluguer', maxDiasAluguer: 'max_dias_aluguer',
+    antecedenciaMinimaHoras: 'antecedencia_minima_horas', antecedenciaMaximaDias: 'antecedencia_maxima_dias',
+    bufferHorasEntreReservas: 'buffer_horas_entre_reservas', depositoPercentual: 'deposito_percentual',
+    caucaoValor: 'caucao_valor', taxaLimpeza: 'taxa_limpeza', taxaLogistica: 'taxa_logistica',
+    seguroDiario: 'seguro_diario', taxaCombustivel: 'taxa_combustivel',
+    taxaCondutorAdicional: 'taxa_condutor_adicional', kmIncluidosPorDia: 'km_incluidos_por_dia',
+    precoKmExtra: 'preco_km_extra', penalizacaoAtrasoPorHora: 'penalizacao_atraso_por_hora',
+    taxaCancelamento: 'taxa_cancelamento', descontoSemanalPercentual: 'desconto_semanal_percentual',
+    descontoQuinzenalPercentual: 'desconto_quinzenal_percentual', descontoMensalPercentual: 'desconto_mensal_percentual',
+    permitirFimSemana: 'permitir_fim_semana', horaLevantamento: 'hora_levantamento', horaDevolucao: 'hora_devolucao',
+  };
+  return Object.fromEntries(
+    Object.entries(data).filter(([k]) => k in map).map(([k, v]) => [map[k], v])
+  );
+}
 
 export function ReservationsProvider({ children }: { children: ReactNode }) {
   const { user: authUser } = useAuth();
@@ -82,6 +132,27 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('rentcar:businessRules:v2', JSON.stringify(rules));
   }, [rules]);
 
+  // Sincroniza com a API quando o utilizador faz login
+  useEffect(() => {
+    if (!authUser) return;
+    Promise.all([
+      api.get<Reservation[]>('/reservations').catch(() => null),
+      api.get<BlockedPeriod[]>('/blocked-periods').catch(() => null),
+      api.get<BusinessRules>('/business-rules').catch(() => null),
+    ]).then(([apiRes, apiBlocks, apiRules]) => {
+      if (apiRes && Array.isArray(apiRes) && apiRes.length > 0) {
+        setReservations(apiRes);
+      }
+      if (apiBlocks && Array.isArray(apiBlocks)) {
+        setBlocks(apiBlocks);
+      }
+      if (apiRules && typeof apiRules === 'object') {
+        setRules(prev => ({ ...prev, ...apiRules }));
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser?.id]);
+
   const visibleReservations = useMemo(() => {
     if (!authUser) return [];
     if (authUser.role === 'admin') return reservations;
@@ -112,6 +183,7 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
       createdAt: new Date().toISOString().split('T')[0],
     };
     setReservations(prev => [...prev, newRes]);
+    api.post('/reservations', reservationToApi(newRes)).catch(() => {});
 
     // Notificar o Administrador sobre a nova operação pendente
     const operacaoLabel = isPurchase ? 'compra' : 'aluguer';
@@ -148,6 +220,11 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
       }),
     );
 
+    // API fire-and-forget
+    if (Object.keys(data).length > 0) {
+      api.put(`/reservations/${id}`, reservationToApi(data)).catch(() => {});
+    }
+
     // Side effect fora do updater — nunca é duplicado pelo Strict Mode
     if (existing && data.status && data.status !== existing.status && existing.userId) {
       const vehicle = allVehicles.find(v => v.id === existing.vehicleId) ?? VEHICLES.find(v => v.id === existing.vehicleId);
@@ -170,6 +247,7 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
   const deleteReservation = (id: string) => {
     if (authUser?.role !== 'admin') return;
     setReservations(prev => prev.filter(r => r.id !== id));
+    api.delete(`/reservations/${id}`).catch(() => {});
   };
 
   const cancelReservation = (id: string, motivo?: string) => {
@@ -181,6 +259,7 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
         : r
       )
     );
+    api.put(`/reservations/${id}`, { status: 'cancelada', ...(motivo ? { motivo_cancelamento: motivo } : {}) }).catch(() => {});
 
     if (existing?.userId) {
       const vehicle = allVehicles.find(v => v.id === existing.vehicleId) ?? VEHICLES.find(v => v.id === existing.vehicleId);
@@ -212,17 +291,27 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
 
   const addBlock = (data: Omit<BlockedPeriod, 'id'>) => {
     if (authUser?.role !== 'admin') return;
-    setBlocks(prev => [...prev, { ...data, id: `b${Date.now()}` }]);
+    const newBlock = { ...data, id: `b${Date.now()}` };
+    setBlocks(prev => [...prev, newBlock]);
+    api.post('/blocked-periods', {
+      vehicle_id:  data.vehicleId ?? null,
+      data_inicio: data.dataInicio,
+      data_fim:    data.dataFim,
+      motivo:      data.motivo,
+      descricao:   data.descricao ?? null,
+    }).catch(() => {});
   };
 
   const removeBlock = (id: string) => {
     if (authUser?.role !== 'admin') return;
     setBlocks(prev => prev.filter(b => b.id !== id));
+    api.delete(`/blocked-periods/${id}`).catch(() => {});
   };
 
   const updateRules = (data: Partial<BusinessRules>) => {
     if (authUser?.role !== 'admin') return;
     setRules(prev => ({ ...prev, ...data }));
+    api.put('/business-rules', rulesToApi(data)).catch(() => {});
   };
 
   const gerarPrestacoes = (id: string, semEntrada = false, dataInicioCustom?: string, numPrestacoesCustom?: number) => {
@@ -261,6 +350,12 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
         };
       })
     );
+    api.put(`/reservations/${id}`, {
+      status: 'em_prestacao',
+      total_prestacoes: n,
+      prestacoes_pagas: 0,
+      prestacoes: plano,
+    }).catch(() => {});
 
     // Notificar o cliente com o calendário de pagamentos
     if (existing?.userId) {
@@ -342,7 +437,15 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
         const todasPagas = prestacoes.every(p => p.paga);
         const newStatus  = todasPagas ? ('liquidada' as ReservationStatus) : r.status;
 
-        return { ...r, prestacoes, prestacoesPagas, status: newStatus };
+        const updated = { ...r, prestacoes, prestacoesPagas, status: newStatus };
+        // fire-and-forget sync (computed outside setState for correctness)
+        api.put(`/reservations/${reservationId}`, {
+          prestacoes,
+          prestacoes_pagas: prestacoesPagas,
+          status: newStatus,
+        }).catch(() => {});
+
+        return updated;
       })
     );
   };

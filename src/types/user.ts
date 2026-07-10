@@ -37,6 +37,7 @@ export interface User {
   xitique?: boolean;
   motivoSuspensao?: string;
   mustChangePassword?: boolean;
+  passwordChangedByUser?: boolean;
 }
 
 export interface Aluguer {

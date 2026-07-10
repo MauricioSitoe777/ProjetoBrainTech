@@ -2,6 +2,7 @@
 import { useVehicles, type VehicleData } from '../context/VehiclesContext';
 import { useReservations } from '../context/ReservationsContext';
 import { useRoute } from '../hooks/useRoute';
+import { processImage } from '../lib/imageUtils';
 
 const CATEGORIES = ['suv', 'pickup', 'sedan', 'hatchback', 'van'];
 const MODES = ['aluguer', 'compra'];
@@ -125,46 +126,24 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
     setForm(f => ({ ...f, img: url }));
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = '';
     setUploading(true);
     setUploadError('');
-
-    const compress = (src: string, maxW = 800, quality = 0.75): Promise<string> =>
-      new Promise(resolve => {
-        const img = new Image();
-        img.onload = () => {
-          const scale = Math.min(1, maxW / img.width);
-          const canvas = document.createElement('canvas');
-          canvas.width  = Math.round(img.width  * scale);
-          canvas.height = Math.round(img.height * scale);
-          canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/jpeg', quality));
-        };
-        img.src = src;
-      });
-
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const compressed = await compress(reader.result as string);
-        setForm(f => ({
-          ...f,
-          images: [...f.images, compressed],
-          img: f.img || compressed,
-        }));
-      } catch {
-        setUploadError('Erro ao processar imagem. Tenta novamente.');
-      }
+    try {
+      const result = await processImage(file);
+      setForm(f => ({
+        ...f,
+        images: [...f.images, result],
+        img: f.img || result,
+      }));
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Erro ao processar imagem. Tenta novamente.');
+    } finally {
       setUploading(false);
-    };
-    reader.onerror = () => {
-      setUploadError('Erro ao ler o ficheiro. Tenta novamente.');
-      setUploading(false);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
+    }
   };
 
   const handleSubmit = (e?: React.FormEvent) => {

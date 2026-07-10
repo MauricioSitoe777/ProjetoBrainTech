@@ -11,7 +11,7 @@ const STATUS_CFG: Record<ReservationStatus, { label: string; className: string }
   pendente:            { label: 'Reserva Pendente',       className: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
   confirmada:          { label: 'Reserva Confirmada',     className: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
   pronta_levantamento: { label: 'Pronta p/ Levantamento', className: 'bg-sky-400/10 text-sky-400 border-sky-400/20' },
-  ativa:               { label: 'Aluguer Ativo',          className: 'bg-blue-400/10 text-blue-400 border-blue-400/20' },
+  ativa:               { label: 'Aluguer Activo',         className: 'bg-blue-400/10 text-blue-400 border-blue-400/20' },
   devolucao_pendente:  { label: 'Devolução Pendente',     className: 'bg-orange-400/10 text-orange-400 border-orange-400/20' },
   concluida:           { label: 'Concluído',              className: 'bg-zinc-700 text-white border-zinc-600' },
   cancelada:           { label: 'Cancelado',              className: 'bg-red-400/10 text-red-400 border-red-400/20' },
@@ -170,7 +170,7 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
                     const isPurchase = vehicle?.mode === 'compra';
                     return (
                       <React.Fragment key={r.id}>
-                      <tr className="hover:bg-zinc-800/40">
+                      <tr className={`hover:bg-zinc-800/50 transition-colors ${idx % 2 !== 0 ? 'bg-zinc-800/50' : ''}`}>
                         <td className="px-5 py-4 text-xs font-black text-white/30 tabular-nums w-10">{idx + 1}</td>
                         <td className="px-5 py-4">
                           <p className="text-sm text-white">{r.clientName}</p>

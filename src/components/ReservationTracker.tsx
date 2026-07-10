@@ -196,6 +196,7 @@ interface Props {
 export function ReservationTracker({ status, onAdvance, onCancel, onEdit, onContract, readonly, clientView, stepDates }: Props) {
   const [confirming, setConfirming] = useState<'advance' | 'cancel' | null>(null);
   const [cancelMotivo, setCancelMotivo] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const currentIdx     = STEPS.findIndex(s => s.status === status);
   const nextStatus     = NEXT_STATUS[status];
@@ -411,7 +412,7 @@ export function ReservationTracker({ status, onAdvance, onCancel, onEdit, onCont
       })()}
 
       {/* ── Botões (admin / non-readonly) ── */}
-      {!readonly && (nextStatus || onCancel) && (
+      {!readonly && (nextStatus || onCancel || onEdit || onContract) && (
         confirming === 'advance' ? (
           <div className="flex items-center gap-3 bg-zinc-800/60 border border-zinc-700 rounded-xl px-4 py-3">
             <span className="text-xs text-white font-semibold flex-1">{nextLabel} — Tem a certeza?</span>
@@ -455,47 +456,83 @@ export function ReservationTracker({ status, onAdvance, onCancel, onEdit, onCont
             </div>
           </div>
         ) : (
-          <div className="flex gap-2 flex-wrap items-center">
+          <div className="flex items-center gap-2">
+            {/* Botão primário — avança estado */}
             {nextStatus && nextLabel && onAdvance && (
               <button
                 onClick={() => setConfirming('advance')}
                 title={nextStateLabel}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-black bg-amber-400 text-zinc-950 hover:bg-amber-300 active:scale-95 transition-all"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black bg-amber-400 text-zinc-950 hover:bg-amber-300 active:scale-95 transition-all shadow-sm shadow-amber-400/20"
               >
-                {nextLabel}
+                Gerir
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="9 18 15 12 9 6" />
                 </svg>
               </button>
             )}
-            <button
-              onClick={onEdit}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 active:scale-95 transition-all"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-              Editar reserva
-            </button>
-            <button
-              onClick={onContract}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white border border-zinc-700 hover:bg-zinc-800/60 active:scale-95 transition-all"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5z"/>
-                <polyline points="14 2 14 8 20 8"/>
-              </svg>
-              Ver contrato
-            </button>
-            {status !== 'devolucao_pendente' && status !== 'concluida' && onCancel && (
+
+            {/* Menu de acções secundárias */}
+            <div className="relative">
               <button
-                onClick={() => setConfirming('cancel')}
-                className="ml-auto px-4 py-2 rounded-lg text-xs font-semibold bg-red-400/10 text-red-400 border border-red-400/20 hover:bg-red-400/20 active:scale-95 transition-all"
+                onClick={() => setMenuOpen(o => !o)}
+                className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all active:scale-95 ${
+                  menuOpen
+                    ? 'bg-zinc-700 border-zinc-600 text-white'
+                    : 'bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700 hover:border-zinc-600'
+                }`}
+                aria-label="Mais opções"
               >
-                Cancelar aluguer
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+                </svg>
               </button>
-            )}
+
+              {menuOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                  <div className="absolute left-0 top-full mt-1.5 bg-zinc-900 border border-zinc-700/80 rounded-2xl shadow-2xl z-20 min-w-[190px] overflow-hidden py-1.5">
+                    {onEdit && (
+                      <button
+                        onClick={() => { onEdit(); setMenuOpen(false); }}
+                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-white hover:bg-zinc-800 transition-colors"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-white/50">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                        Editar reserva
+                      </button>
+                    )}
+                    {onContract && (
+                      <button
+                        onClick={() => { onContract(); setMenuOpen(false); }}
+                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-white hover:bg-zinc-800 transition-colors"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-white/50">
+                          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5z"/>
+                          <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                        Ver contrato
+                      </button>
+                    )}
+                    {status !== 'devolucao_pendente' && status !== 'concluida' && onCancel && (
+                      <>
+                        <div className="mx-3 my-1 h-px bg-zinc-700/60" />
+                        <button
+                          onClick={() => { setConfirming('cancel'); setMenuOpen(false); }}
+                          className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                          </svg>
+                          Cancelar aluguer
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         )
       )}

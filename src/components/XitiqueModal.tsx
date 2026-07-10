@@ -11,6 +11,13 @@ function gerarOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+function formatTel(raw: string): string {
+  const d = raw.replace(/\D/g, '').slice(0, 9);
+  if (d.length <= 2) return d;
+  if (d.length <= 5) return `${d.slice(0, 2)} ${d.slice(2)}`;
+  return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)}`;
+}
+
 export default function XitiqueModal({ onClose }: { onClose: () => void }) {
   const { grupos, adicionarInscricao } = useXitique();
   const { user: authUser, allUsers } = useAuth();
@@ -93,14 +100,17 @@ export default function XitiqueModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative w-full max-w-md bg-zinc-900 border border-amber-500/20 rounded-3xl shadow-2xl overflow-hidden">
+      <div
+        className="relative w-full max-w-sm bg-zinc-900 border border-amber-500/20 rounded-2xl shadow-2xl overflow-hidden"
+        style={{ fontFamily: "'DM Sans', system-ui, sans-serif", WebkitFontSmoothing: 'antialiased', MozOsxFontSmoothing: 'grayscale' }}
+      >
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-72 h-28 bg-amber-500/8 blur-3xl pointer-events-none" />
 
         {/* Header */}
-        <div className="relative flex items-center justify-between px-6 pt-6 pb-4 border-b border-zinc-800">
+        <div className="relative flex items-center justify-between px-4 pt-3 pb-2.5 border-b border-zinc-800">
           <div>
-            <div className="text-[10px] text-amber-400 font-bold uppercase tracking-widest mb-0.5">Xitique · SOS Motors</div>
-            <h2 className="text-white font-black text-lg">
+            <div className="text-[10px] text-amber-400 font-black uppercase tracking-widest mb-0.5">Xitique · SOS Motors</div>
+            <h2 className="text-white font-black text-xl tracking-tight">
               {step === 'grupoSelect' && 'Escolha o seu Grupo'}
               {step === 'form'        && 'Os seus Dados'}
               {step === 'otp'        && (fullUser ? `Olá, ${nome.split(' ')[0]}!` : 'Verificação por SMS')}
@@ -122,7 +132,7 @@ export default function XitiqueModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <div className="relative px-6 py-6">
+        <div className="relative px-4 py-3">
 
           {/* ── PASSO 0: Selecção de Grupo ── */}
           {step === 'grupoSelect' && (
@@ -159,21 +169,21 @@ export default function XitiqueModal({ onClose }: { onClose: () => void }) {
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
-                              <p className="text-white font-black text-sm group-hover:text-amber-400 transition-colors">{g.nome}</p>
+                              <p className="text-white font-black text-base group-hover:text-amber-400 transition-colors">{g.nome}</p>
                               <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                                <span className="text-xs text-zinc-400">
+                                <span className="text-sm text-white">
                                   <span className="text-amber-400 font-bold">{fmt(g.quotaMT)}</span> / mês
                                 </span>
-                                <span className="text-xs text-zinc-400">
+                                <span className="text-sm text-white">
                                   Prémio <span className="text-white font-bold">{fmt(g.premioMT)}</span>
                                 </span>
-                                <span className="text-xs text-zinc-400">
+                                <span className="text-sm text-white">
                                   <span className="text-white font-bold">{g.maxMembros}</span> membros
                                 </span>
                               </div>
                             </div>
                             <div className="shrink-0 text-right">
-                              <div className={`text-xs font-black px-2.5 py-1 rounded-full border ${
+                              <div className={`text-sm font-black px-2.5 py-1 rounded-full border ${
                                 vagasLivres <= 2
                                   ? 'bg-red-500/10 text-red-400 border-red-500/20'
                                   : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
@@ -187,7 +197,7 @@ export default function XitiqueModal({ onClose }: { onClose: () => void }) {
                                     style={{ width: `${(g.membros.length / g.maxMembros) * 100}%` }}
                                   />
                                 </div>
-                                <p className="text-[10px] text-zinc-500 mt-0.5 text-right">{g.membros.length}/{g.maxMembros}</p>
+                                <p className="text-xs text-white mt-0.5 text-right">{g.membros.length}/{g.maxMembros}</p>
                               </div>
                             </div>
                           </div>
@@ -202,49 +212,49 @@ export default function XitiqueModal({ onClose }: { onClose: () => void }) {
 
           {/* ── PASSO 1: Formulário ── */}
           {step === 'form' && (
-            <form onSubmit={handleSubmitForm} className="space-y-4">
+            <form onSubmit={handleSubmitForm} className="space-y-2.5">
               {grupoSelecionado && (
-                <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 px-4 py-2.5 rounded-xl">
+                <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-xl">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                  <span className="text-xs text-amber-400 font-bold">{grupoSelecionado.nome}</span>
-                  <span className="text-xs text-zinc-500">· {fmt(grupoSelecionado.quotaMT)}/mês</span>
+                  <span className="text-sm text-amber-400 font-bold">{grupoSelecionado.nome}</span>
+                  <span className="text-sm text-white">· {fmt(grupoSelecionado.quotaMT)}/mês</span>
                 </div>
               )}
 
-              <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl">
-                <p className="text-amber-500 text-[10px] font-black uppercase tracking-widest mb-1">Aviso Importante</p>
-                <p className="text-white text-[11px] leading-tight font-medium italic">
-                  O pagamento <span className="text-white font-bold">não é feito na aplicação</span>. Submeta o interesse e o administrador entrará em contacto para os dados de pagamento.
+              <div className="bg-amber-500/10 border border-amber-500/20 px-3 py-2.5 rounded-xl">
+                <p className="text-amber-500 text-[10px] font-black uppercase tracking-widest mb-0.5">Aviso Importante</p>
+                <p className="text-white text-sm leading-snug font-medium">
+                  O pagamento <span className="text-white font-black">não é feito na aplicação</span>. Submeta o interesse e o administrador entrará em contacto para os dados de pagamento.
                 </p>
               </div>
 
               <div>
-                <label className="text-white text-xs font-bold uppercase tracking-wider block mb-1.5">Nome Completo</label>
+                <label className="text-amber-400 text-[10px] font-black uppercase tracking-widest block mb-1">Nome Completo</label>
                 <input type="text" value={nome} onChange={e => { setNome(e.target.value); setErro(''); }} placeholder="Ex: Ana Joaquim Sitoe"
-                  className="w-full rounded-xl bg-zinc-950/60 border border-zinc-700 px-4 py-3 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-amber-500 transition" />
+                  className="w-full rounded-xl bg-zinc-950/60 border border-zinc-700 px-4 py-2 text-sm font-medium text-white placeholder:text-white/40 outline-none focus:border-amber-500 transition" />
               </div>
 
               <div>
-                <label className="text-white text-xs font-bold uppercase tracking-wider block mb-1.5">Número M-Pesa</label>
+                <label className="text-amber-400 text-[10px] font-black uppercase tracking-widest block mb-1">Contacto</label>
                 <div className="flex items-center rounded-xl bg-zinc-950/60 border border-zinc-700 focus-within:border-amber-500 transition overflow-hidden">
-                  <span className="pl-4 pr-2 text-sm text-white font-bold shrink-0 select-none">+258</span>
-                  <input type="tel" value={telefone} onChange={e => { setTelefone(e.target.value.replace(/\D/g, '')); setErro(''); }} placeholder="84 123 4567" maxLength={9}
-                    className="flex-1 bg-transparent pr-4 py-3 text-sm text-white placeholder:text-zinc-500 outline-none" />
+                  <span className="pl-4 pr-2 text-sm text-white font-black shrink-0 select-none">+258</span>
+                  <input type="tel" value={formatTel(telefone)} onChange={e => { setTelefone(e.target.value.replace(/\D/g, '').slice(0, 9)); setErro(''); }} placeholder="84 123 4567" maxLength={11}
+                    className="flex-1 bg-transparent pr-4 py-2 text-sm font-medium text-white placeholder:text-white/40 outline-none" />
                 </div>
               </div>
 
               <div>
-                <label className="text-white text-xs font-bold uppercase tracking-wider block mb-1.5">Email</label>
+                <label className="text-amber-400 text-[10px] font-black uppercase tracking-widest block mb-1">Email</label>
                 <input type="email" value={email} onChange={e => { setEmail(e.target.value); setErro(''); }} placeholder="exemplo@email.com"
-                  className="w-full rounded-xl bg-zinc-950/60 border border-zinc-700 px-4 py-3 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-amber-500 transition" />
+                  className="w-full rounded-xl bg-zinc-950/60 border border-zinc-700 px-4 py-2 text-sm font-medium text-white placeholder:text-white/40 outline-none focus:border-amber-500 transition" />
               </div>
 
-              {erro && <div className="text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{erro}</div>}
+              {erro && <div className="text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{erro}</div>}
 
-              <button type="submit" className="w-full py-4 rounded-2xl bg-amber-500 text-zinc-950 font-black uppercase tracking-widest text-sm hover:bg-amber-400 active:scale-[0.98] transition">
+              <button type="submit" className="w-full py-2.5 rounded-xl bg-amber-500 text-zinc-950 font-black uppercase tracking-widest text-base hover:bg-amber-400 active:scale-[0.98] transition">
                 Continuar →
               </button>
-              <button type="button" onClick={() => setStep('grupoSelect')} className="w-full py-2 text-xs text-white hover:text-white transition">
+              <button type="button" onClick={() => setStep('grupoSelect')} className="w-full py-1 text-sm text-white hover:text-white transition">
                 ← Mudar de grupo
               </button>
             </form>
@@ -256,24 +266,24 @@ export default function XitiqueModal({ onClose }: { onClose: () => void }) {
               {grupoSelecionado && (
                 <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 px-4 py-2.5 rounded-xl">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                  <span className="text-xs text-amber-400 font-bold">{grupoSelecionado.nome}</span>
-                  <span className="text-xs text-zinc-500">· {fmt(grupoSelecionado.quotaMT)}/mês · prémio {fmt(grupoSelecionado.premioMT)}</span>
+                  <span className="text-sm text-amber-400 font-bold">{grupoSelecionado.nome}</span>
+                  <span className="text-sm text-white">· {fmt(grupoSelecionado.quotaMT)}/mês · prémio {fmt(grupoSelecionado.premioMT)}</span>
                 </div>
               )}
               <div className="bg-emerald-400/8 border border-emerald-400/20 rounded-xl px-4 py-4 space-y-2">
                 <p className="text-[10px] text-emerald-400 font-black uppercase tracking-widest mb-2">Dados da sua conta</p>
                 {[{ label: 'Nome', value: nome }, { label: 'Telemóvel', value: telefone ? `+258 ${telefone}` : '—' }, { label: 'Email', value: email }].map(r => (
-                  <div key={r.label} className="flex justify-between text-xs">
-                    <span className="text-zinc-400">{r.label}</span>
-                    <span className="text-white font-semibold">{r.value}</span>
+                  <div key={r.label} className="flex justify-between text-sm">
+                    <span className="text-white font-medium">{r.label}</span>
+                    <span className="text-white font-black">{r.value}</span>
                   </div>
                 ))}
               </div>
               <p className="text-white text-sm leading-relaxed">A sua identidade já foi verificada. Confirme para submeter a inscrição.</p>
-              <button onClick={submitInscricao} className="w-full py-4 rounded-2xl bg-amber-500 text-zinc-950 font-black uppercase tracking-widest text-sm hover:bg-amber-400 active:scale-[0.98] transition">
+              <button onClick={submitInscricao} className="w-full py-4 rounded-2xl bg-amber-500 text-zinc-950 font-black uppercase tracking-widest text-base hover:bg-amber-400 active:scale-[0.98] transition">
                 Confirmar Inscrição
               </button>
-              <button type="button" onClick={() => setStep('grupoSelect')} className="w-full py-2 text-xs text-white hover:text-white transition">
+              <button type="button" onClick={() => setStep('grupoSelect')} className="w-full py-2 text-sm text-white hover:text-white transition">
                 ← Mudar de grupo
               </button>
             </div>
@@ -286,10 +296,10 @@ export default function XitiqueModal({ onClose }: { onClose: () => void }) {
                 Código de verificação enviado para <span className="text-white font-bold">+258 {telefone}</span>.
               </p>
               <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d8a020" strokeWidth="2" className="mt-0.5 shrink-0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d8a020" strokeWidth="2" className="mt-0.5 shrink-0">
                   <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.8" fill="#d8a020"/>
                 </svg>
-                <span className="text-xs text-amber-300 leading-relaxed">
+                <span className="text-sm text-amber-300 leading-relaxed">
                   Modo demo — código de teste: <span className="font-black text-amber-400 tracking-[0.2em]">{otpGerado}</span>
                 </span>
               </div>
@@ -301,10 +311,10 @@ export default function XitiqueModal({ onClose }: { onClose: () => void }) {
                 ))}
               </div>
               {otpErro && <div className="text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{otpErro}</div>}
-              <button onClick={handleVerificar} className="w-full py-4 rounded-2xl bg-amber-500 text-zinc-950 font-black uppercase tracking-widest text-sm hover:bg-amber-400 active:scale-[0.98] transition">
+              <button onClick={handleVerificar} className="w-full py-4 rounded-2xl bg-amber-500 text-zinc-950 font-black uppercase tracking-widest text-base hover:bg-amber-400 active:scale-[0.98] transition">
                 Verificar Código
               </button>
-              <button type="button" onClick={() => { setDigits(['','','','','','']); setOtpErro(''); setStep('form'); }} className="w-full py-2 text-xs text-white hover:text-white transition">
+              <button type="button" onClick={() => { setDigits(['','','','','','']); setOtpErro(''); setStep('form'); }} className="w-full py-2 text-sm text-white hover:text-white transition">
                 ← Corrigir dados
               </button>
             </div>
@@ -321,7 +331,7 @@ export default function XitiqueModal({ onClose }: { onClose: () => void }) {
               <div>
                 <h3 className="text-white font-black text-xl mb-2">Inscrição enviada!</h3>
                 {grupoSelecionado && (
-                  <p className="text-amber-400 text-xs font-bold mb-2">{grupoSelecionado.nome} · {fmt(grupoSelecionado.quotaMT)}/mês</p>
+                  <p className="text-amber-400 text-sm font-bold mb-2">{grupoSelecionado.nome} · {fmt(grupoSelecionado.quotaMT)}/mês</p>
                 )}
                 <p className="text-white text-sm leading-relaxed">
                   Os seus dados foram registados. O administrador irá validar e confirmar a sua entrada no grupo.
@@ -330,12 +340,12 @@ export default function XitiqueModal({ onClose }: { onClose: () => void }) {
               <div className="bg-zinc-800/50 border border-zinc-700 rounded-2xl p-4 text-left space-y-2">
                 {[{ label: 'Nome', value: nome }, { label: 'Telemóvel', value: `+258 ${telefone}` }, { label: 'Email', value: email }].map(row => (
                   <div key={row.label} className="flex items-center justify-between gap-4">
-                    <span className="text-white text-xs shrink-0">{row.label}</span>
-                    <span className="text-white text-sm font-semibold truncate">{row.value}</span>
+                    <span className="text-white text-xs font-black uppercase tracking-widest shrink-0">{row.label}</span>
+                    <span className="text-white text-sm font-black truncate">{row.value}</span>
                   </div>
                 ))}
               </div>
-              <button onClick={onClose} className="w-full py-3 rounded-2xl bg-zinc-800 text-white font-bold hover:bg-zinc-700 transition">
+              <button onClick={onClose} className="w-full py-3 rounded-2xl bg-zinc-800 text-white font-black text-sm hover:bg-zinc-700 transition">
                 Fechar
               </button>
             </div>

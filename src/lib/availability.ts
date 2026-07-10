@@ -6,7 +6,13 @@ import type {
   ReservationStatus,
 } from '../types/reservation';
 
-const BLOCKING_STATUSES: ReservationStatus[] = ['pendente', 'confirmada', 'ativa'];
+const BLOCKING_STATUSES: ReservationStatus[] = ['pendente', 'confirmada', 'pronta_levantamento', 'ativa', 'devolucao_pendente'];
+const SOLD_STATUSES: ReservationStatus[] = ['compra_aprovada', 'entrada_paga', 'em_prestacao', 'prestacao_atraso', 'liquidada'];
+
+function fmtPT(iso: string): string {
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
 
 export function parseDate(iso: string): Date {
   const [y, m, d] = iso.split('-').map(Number);
@@ -117,7 +123,7 @@ export function isVehicleAvailable(
     if (r.vehicleId !== vehicleId) continue;
     if (!BLOCKING_STATUSES.includes(r.status)) continue;
     if (rangesOverlap(start, end, r.dataInicio, r.dataFim)) {
-      conflicts.push(`Reserva ${r.status}: ${r.clientName} (${r.dataInicio} → ${r.dataFim})`);
+      conflicts.push(`Viatura indisponível de ${fmtPT(r.dataInicio)} a ${fmtPT(r.dataFim)} — já reservada para esse período.`);
     }
   }
 
@@ -133,6 +139,10 @@ export function isVehicleAvailable(
   }
 
   return { available: conflicts.length === 0, conflicts };
+}
+
+export function isSoldVehicle(vehicleId: number, reservations: Reservation[]): boolean {
+  return reservations.some(r => r.vehicleId === vehicleId && SOLD_STATUSES.includes(r.status));
 }
 
 export function getDatesInMonth(year: number, month: number): string[] {

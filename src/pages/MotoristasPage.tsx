@@ -5,7 +5,7 @@ import type { Motorista, MotoristaSatus } from '../types/motorista';
 const STATUS_CFG: Record<MotoristaSatus, { label: string; className: string }> = {
   disponivel:  { label: 'Disponível',   className: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
   em_servico:  { label: 'Em Serviço',   className: 'bg-blue-400/10 text-blue-400 border-blue-400/20' },
-  inativo:     { label: 'Inativo',      className: 'bg-zinc-700 text-white border-zinc-600' },
+  inativo:     { label: 'Inactivo',     className: 'bg-zinc-700 text-white border-zinc-600' },
 };
 
 const EMPTY = { nome: '', telefone: '', bi: '', carta: '', status: 'disponivel' as MotoristaSatus, observacoes: '' };
@@ -174,7 +174,7 @@ export function MotoristasPage({ onExit }: { onExit?: () => void }) {
               {motoristas.map((m, idx) => {
                 const st = STATUS_CFG[m.status];
                 return (
-                  <tr key={m.id} className="hover:bg-zinc-800/30 transition-colors">
+                  <tr key={m.id} className={`hover:bg-zinc-800/40 transition-colors ${idx % 2 !== 0 ? 'bg-zinc-800/50' : ''}`}>
                     <td className="px-5 py-4 text-xs font-black text-white/30 tabular-nums w-10">{idx + 1}</td>
                     <td className="px-5 py-4">
                       <p className="text-sm font-semibold text-white">{m.nome}</p>

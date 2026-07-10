@@ -5,9 +5,10 @@ import { useRoute } from "../hooks/useRoute";
 interface VehicleCardProps {
   vehicle: Vehicle;
   onAction?: (vehicle: Vehicle) => void;
+  isSold?: boolean;
 }
 
-export default function VehicleCard({ vehicle }: VehicleCardProps) {
+export default function VehicleCard({ vehicle, isSold = false }: VehicleCardProps) {
   const [hovered, setHovered] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
   const { navigate } = useRoute();
@@ -32,7 +33,9 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={`group relative rounded-3xl overflow-hidden bg-zinc-900 border transition-all duration-500 ${
-        isUnavailable
+        isSold
+          ? "border-zinc-600/40 opacity-80"
+          : isUnavailable
           ? "border-red-500/30 opacity-75"
           : hovered
             ? "border-amber-500/60 shadow-[0_20px_40px_rgba(0,0,0,0.5),0_0_24px_rgba(228,180,46,0.15)] -translate-y-2"
@@ -61,8 +64,20 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/20 to-transparent" />
 
+        {/* Vendido overlay */}
+        {isSold && (
+          <div className="absolute inset-0 bg-zinc-950/75 flex flex-col items-center justify-center gap-2 backdrop-blur-[2px]">
+            <div className="bg-zinc-700 text-white text-[13px] font-black uppercase tracking-widest px-4 py-2 rounded-full border border-zinc-500/40 shadow-lg">
+              Vendido
+            </div>
+            <p className="text-zinc-400 text-[11px] font-medium text-center leading-tight px-4">
+              Esta viatura já foi vendida
+            </p>
+          </div>
+        )}
+
         {/* Indisponível overlay */}
-        {isUnavailable && (
+        {!isSold && isUnavailable && (
           <div className="absolute inset-0 bg-zinc-950/70 flex flex-col items-center justify-center gap-2 backdrop-blur-[2px] px-4">
             <div className="bg-red-500/90 text-white text-[11px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full">
               Indisponível
@@ -129,15 +144,18 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            handleNavigate();
+            if (!isSold) handleNavigate();
           }}
+          disabled={isSold}
           className={`w-full py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all duration-200 ${
-            isUnavailable
+            isSold
+              ? "bg-zinc-700 text-zinc-400 cursor-not-allowed border border-zinc-600/40"
+              : isUnavailable
               ? "bg-red-500/20 text-white border border-red-500/40"
               : "bg-amber-500 text-zinc-950 hover:bg-amber-400 active:scale-[0.97] shadow-lg shadow-amber-500/20 hover:shadow-amber-400/30"
           }`}
         >
-          {isUnavailable ? "Temporariamente Indisponível" : "Ver Detalhe"}
+          {isSold ? "Vendido" : isUnavailable ? "Temporariamente Indisponível" : "Ver Detalhe"}
         </button>
       </div>
     </div>

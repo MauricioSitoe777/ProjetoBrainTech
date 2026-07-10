@@ -1322,7 +1322,10 @@ export default function Simulator({
           prefill={{ nome: clientName, telefone: clientContact || undefined }}
           preCategory={flow === 'compra' ? (category as import('../types/guest').GuestCategory) : undefined}
           withDriver={flow === 'aluguer' ? comMotorista : undefined}
-          onClose={() => setShowGuestModal(false)}
+          onClose={() => {
+            setShowGuestModal(false);
+            window.dispatchEvent(new CustomEvent('rentcar:close-simulator'));
+          }}
         />
       )}
     </>

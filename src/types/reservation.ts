@@ -29,6 +29,16 @@ export interface Prestacao {
   notasPagamento?: string;
 }
 
+export interface PedidoExtensao {
+  dias: number;
+  novaDataFim: string;
+  motivo: string;
+  dataSubmissao: string;
+  status: 'pendente' | 'aprovado' | 'rejeitado';
+  respostaAdmin?: string;
+  dataResposta?: string;
+}
+
 export interface Reservation {
   id: string;
   vehicleId: number;
@@ -57,6 +67,7 @@ export interface Reservation {
   horaPagamento?: string;
   formaPagamento?: string;
   referenciaPagamento?: string;
+  pedidoExtensao?: PedidoExtensao;
 }
 
 export interface BlockedPeriod {

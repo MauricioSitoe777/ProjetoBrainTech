@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { VEHICLES } from '../data/constants';
 import { useAuth } from './AuthContext';
+import { api } from '../lib/api';
 
 export interface VehicleData {
   id: number;
@@ -22,6 +23,45 @@ export interface VehicleData {
   matricula?: string;
 }
 
+interface ApiVehicle {
+  id: number;
+  name: string; brand: string; cat: string; mode: string; price: string;
+  description?: string; img: string; images?: string[]; fuel: string;
+  seats: number; year: number; discount?: number; available?: number | boolean;
+  matricula?: string;
+  motivo_indisponibilidade?: string;
+  data_disponibilidade?: string;
+}
+
+function fromApi(v: ApiVehicle): VehicleData {
+  return {
+    id:                     v.id,
+    name:                   v.name,
+    brand:                  v.brand,
+    cat:                    v.cat,
+    mode:                   v.mode,
+    price:                  v.price,
+    description:            v.description,
+    img:                    v.img ?? '',
+    images:                 v.images ?? [],
+    fuel:                   v.fuel ?? '',
+    seats:                  v.seats ?? 5,
+    year:                   v.year ?? 2020,
+    discount:               v.discount,
+    available:              Boolean(v.available),
+    matricula:              v.matricula,
+    motivoIndisponibilidade: v.motivo_indisponibilidade,
+    dataDisponibilidade:     v.data_disponibilidade,
+  };
+}
+
+function toApi(v: Partial<VehicleData>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...v };
+  if ('motivoIndisponibilidade' in v) { out.motivo_indisponibilidade = v.motivoIndisponibilidade; delete out.motivoIndisponibilidade; }
+  if ('dataDisponibilidade' in v)     { out.data_disponibilidade = v.dataDisponibilidade; delete out.dataDisponibilidade; }
+  return out;
+}
+
 interface VehiclesContextType {
   vehicles: VehicleData[];
   searchTerm: string;
@@ -33,7 +73,6 @@ interface VehiclesContextType {
 
 const VehiclesContext = createContext<VehiclesContextType | null>(null);
 
-const API_URL      = 'http://localhost:4001/vehicles';
 const STORAGE_KEY  = 'rentcar:vehicles:v1';
 
 const STATIC_MAP = new Map(VEHICLES.map(v => [Number(v.id), v]));
@@ -72,15 +111,14 @@ export function VehiclesProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    fetch(API_URL)
-      .then(res => res.json())
-      .then((serverData: VehicleData[]) => {
+    api.get<ApiVehicle[]>('/vehicles')
+      .then((serverData) => {
         if (!Array.isArray(serverData)) return;
-        // Mantém veículos locais (local_*) que o servidor ainda não tem
+        const mapped = serverData.map(fromApi);
         setVehicles(prev => {
-          const serverIds = new Set(serverData.map(v => String(v.id)));
+          const serverIds = new Set(mapped.map(v => String(v.id)));
           const localOnly = prev.filter(v => String(v.id).startsWith('local_') && !serverIds.has(String(v.id)));
-          const merged = serverData.length > 0 ? [...serverData, ...localOnly] : [...prev, ...localOnly];
+          const merged = mapped.length > 0 ? [...mapped, ...localOnly] : [...prev, ...localOnly];
           saveLocal(merged);
           return merged;
         });
@@ -91,80 +129,40 @@ export function VehiclesProvider({ children }: { children: ReactNode }) {
   const addVehicle = async (vehicle: Omit<VehicleData, 'id'>) => {
     if (!isAdmin) { console.warn('[Vehicles] addVehicle bloqueado — não é admin'); return; }
 
-    // Optimistic update: adiciona imediatamente com ID temporário
     const tempId = `local_${Date.now()}`;
     const tempVehicle = { ...vehicle, id: tempId as unknown as number };
-    setVehicles(prev => {
-      const next = [...prev, tempVehicle];
-      saveLocal(next);
-      return next;
-    });
+    setVehicles(prev => { const next = [...prev, tempVehicle]; saveLocal(next); return next; });
 
-    // Tenta sincronizar com json-server em background
     try {
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(vehicle),
+      const serverVehicle = await api.post<ApiVehicle>('/vehicles', toApi(vehicle));
+      const mapped = fromApi(serverVehicle);
+      setVehicles(prev => {
+        const next = prev.map(v => String(v.id) === tempId ? mapped : v);
+        saveLocal(next);
+        return next;
       });
-      if (res.ok) {
-        const serverVehicle = await res.json();
-        // Substitui o temp ID pelo ID do servidor
-        setVehicles(prev => {
-          const next = prev.map(v => String(v.id) === tempId ? serverVehicle : v);
-          saveLocal(next);
-          return next;
-        });
-      }
-      // Se não ok (ex: 413 payload too large), o veículo já está no estado com tempId — não remove
     } catch {
-      // json-server offline — veículo já foi adicionado localmente acima
+      // API offline — veículo permanece com tempId local
     }
   };
 
   const updateVehicle = async (id: number, updates: Partial<VehicleData>) => {
     if (!isAdmin) { console.warn('[Vehicles] updateVehicle bloqueado — não é admin'); return; }
+    // Optimistic local update
+    setVehicles(prev => { const next = prev.map(v => String(v.id) === String(id) ? { ...v, ...updates } : v); saveLocal(next); return next; });
     try {
-      const res = await fetch(`${API_URL}/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        setVehicles(prev => {
-          const next = prev.map(v => String(v.id) === String(id) ? updated : v);
-          saveLocal(next);
-          return next;
-        });
-      } else {
-        // API respondeu mas erro — aplica localmente
-        setVehicles(prev => {
-          const next = prev.map(v => String(v.id) === String(id) ? { ...v, ...updates } : v);
-          saveLocal(next);
-          return next;
-        });
-      }
-    } catch (err) {
-      console.error('[Vehicles] updateVehicle erro:', (err as Error).message);
-      setVehicles(prev => {
-        const next = prev.map(v => String(v.id) === String(id) ? { ...v, ...updates } : v);
-        saveLocal(next);
-        return next;
-      });
+      const updated = await api.patch<ApiVehicle>(`/vehicles/${id}`, toApi(updates));
+      const mapped = fromApi(updated);
+      setVehicles(prev => { const next = prev.map(v => String(v.id) === String(id) ? mapped : v); saveLocal(next); return next; });
+    } catch {
+      // fallback já foi aplicado localmente
     }
   };
 
   const removeVehicle = async (id: number) => {
     if (!isAdmin) { console.warn('[Vehicles] removeVehicle bloqueado — não é admin'); return; }
-    try {
-      await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-    } catch { /* remove localmente mesmo assim */ }
-    setVehicles(prev => {
-      const next = prev.filter(v => String(v.id) !== String(id));
-      saveLocal(next);
-      return next;
-    });
+    setVehicles(prev => { const next = prev.filter(v => String(v.id) !== String(id)); saveLocal(next); return next; });
+    api.delete(`/vehicles/${id}`).catch(() => {});
   };
 
   return (

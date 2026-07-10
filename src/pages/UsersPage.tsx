@@ -11,6 +11,8 @@ import { useGuests } from '../context/GuestsContext';
 import { GuestReviewModal } from '../components/GuestReviewModal';
 import { useRoute } from '../hooks/useRoute';
 import { useNotifications } from '../context/NotificationsContext';
+import { useReservations } from '../context/ReservationsContext';
+import { useVehicles } from '../context/VehiclesContext';
 import { IconKey, IconCar } from '../components/Icons';
 
 // ── Configs ────────────────────────────────────────────────────────────────
@@ -21,8 +23,8 @@ const roleConfig = {
 };
 
 const userStatusConfig = {
-  ativo:    { label: 'Ativo',     dot: 'bg-emerald-400' },
-  inativo:  { label: 'Inativo',   dot: 'bg-zinc-500' },
+  ativo:    { label: 'Activo',    dot: 'bg-emerald-400' },
+  inativo:  { label: 'Inactivo', dot: 'bg-zinc-500' },
   suspenso: { label: 'Suspenso',  dot: 'bg-red-400' },
   pendente: { label: 'Pendente',  dot: 'bg-amber-400 animate-pulse' },
 };
@@ -30,7 +32,7 @@ const userStatusConfig = {
 const motoristaStatusConfig: Record<MotoristaSatus, { label: string; dot: string; badge: string }> = {
   disponivel: { label: 'Disponível',  dot: 'bg-emerald-400', badge: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
   em_servico: { label: 'Em Serviço',  dot: 'bg-amber-400',   badge: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
-  inativo:    { label: 'Inativo',     dot: 'bg-zinc-500',    badge: 'bg-zinc-800 text-white border-zinc-700' },
+  inativo:    { label: 'Inactivo',    dot: 'bg-zinc-500',    badge: 'bg-zinc-800 text-white border-zinc-700' },
 };
 
 const restrictionConfig = {
@@ -132,10 +134,12 @@ function MotoristaModal({ initial, onSave, onClose }: {
 export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
   const { users, addUser, updateUser, deleteUser } = useUsers();
   const { motoristas, addMotorista, updateMotorista, deleteMotorista } = useMotoristas();
-  const { guests, updateGuest } = useGuests();
+  const { guests, updateGuest, deleteGuest } = useGuests();
   const { user: authUser } = useAuth();
   const { path } = useRoute();
   const { addNotification } = useNotifications();
+  const { createReservation } = useReservations();
+  const { vehicles } = useVehicles();
 
   const [search, setSearch]     = useState('');
   const [mainTab, setMainTab]   = useState<MainTab>(() =>
@@ -181,6 +185,50 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
 
   // Guest modal state
   const [reviewGuest, setReviewGuest] = useState<Guest | null>(null);
+
+  const handleColocarNosInternos = (g: Guest) => {
+    const senha = g.senhaGerada ?? Math.random().toString(36).slice(-8);
+    const newUser = addUser({
+      nome: g.nome,
+      email: g.email,
+      telefone: g.telefone,
+      role: 'cliente',
+      status: 'ativo',
+      regularity: 'regular',
+      restriction: 'nenhuma',
+      password: senha,
+      mustChangePassword: true,
+      documentos: (g.documentos ?? {}) as any,
+    });
+
+    if (g.intent === 'aluguer') {
+      const aluguerVehicles = vehicles.filter(v => v.mode === 'aluguer');
+      const matched =
+        aluguerVehicles.find(v =>
+          v.name.toLowerCase().includes((g.vehicleName ?? '').toLowerCase().trim()) ||
+          (g.vehicleName ?? '').toLowerCase().includes(v.name.toLowerCase().trim())
+        ) ?? aluguerVehicles[0];
+
+      if (matched) {
+        const addDays = (n: number) => {
+          const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().split('T')[0];
+        };
+        const notaVeiculo = g.vehicleName && g.vehicleName !== matched.name
+          ? `Viatura solicitada pelo cliente: "${g.vehicleName}". ` : '';
+        createReservation({
+          vehicleId: matched.id, userId: newUser.id,
+          clientName: g.nome, clientEmail: g.email, clientPhone: g.telefone,
+          dataInicio: addDays(10), dataFim: addDays(13),
+          horaLevantamento: '08:00', horaDevolucao: '18:00',
+          status: 'pendente', valorTotal: 0, deposito: 0,
+          notas: `${notaVeiculo}Pedido criado automaticamente a partir de visitante. Datas e valor a confirmar com o cliente.`,
+        });
+      }
+    }
+
+    deleteGuest(g.id);
+    addNotification('admin', 'Utilizador criado', `${g.nome} foi adicionado como cliente interno.`, 'success', undefined, '/admin/utilizadores/clientes');
+  };
 
   // Suspend modal state
   const [suspendTarget, setSuspendTarget] = useState<User | null>(null);
@@ -245,15 +293,15 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
   const kpiCards = useMemo(() => {
     if (mainTab === 'utilizadores') return [
       { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, value: activePool.length, label: 'Total', sub: 'Utilizadores', col: 'text-white', bg: 'bg-zinc-700/40 border-zinc-600' },
-      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>, value: activePool.filter(u => u.status === 'ativo').length, label: 'Ativos', sub: 'Utilizadores', col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30' },
+      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>, value: activePool.filter(u => u.status === 'ativo').length, label: 'Activos', sub: 'Utilizadores', col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30' },
       { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, value: activePool.filter(u => u.status === 'suspenso').length, label: 'Suspensos', sub: 'Utilizadores', col: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' },
-      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>, value: activePool.filter(u => u.status === 'inativo').length, label: 'Inativos', sub: 'Utilizadores', col: 'text-white', bg: 'bg-zinc-700/40 border-zinc-600' },
+      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>, value: activePool.filter(u => u.status === 'inativo').length, label: 'Inactivos', sub: 'Utilizadores', col: 'text-white', bg: 'bg-zinc-700/40 border-zinc-600' },
     ];
     if (mainTab === 'motoristas') return [
       { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="7" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg>, value: motoristas.length, label: 'Total', sub: 'Motoristas', col: 'text-white', bg: 'bg-zinc-700/40 border-zinc-600' },
       { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="7" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/><polyline points="16 11 18 13 22 9"/></svg>, value: motoristas.filter(m => m.status === 'disponivel').length, label: 'Disponíveis', sub: 'Motoristas', col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30' },
       { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>, value: motoristas.filter(m => m.status === 'em_servico').length, label: 'Em Serviço', sub: 'Motoristas', col: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' },
-      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>, value: motoristas.filter(m => m.status === 'inativo').length, label: 'Inativos', sub: 'Motoristas', col: 'text-white', bg: 'bg-zinc-700/40 border-zinc-600' },
+      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>, value: motoristas.filter(m => m.status === 'inativo').length, label: 'Inactivos', sub: 'Motoristas', col: 'text-white', bg: 'bg-zinc-700/40 border-zinc-600' },
     ];
     return [
       { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>, value: guests.length, label: 'Total', sub: 'Visitantes', col: 'text-white', bg: 'bg-zinc-700/40 border-zinc-600' },
@@ -329,14 +377,14 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
 
           {/* Sub-filters — Visitantes */}
           {mainTab === 'visitantes' && ([
-            { value: 'todos',               label: 'Todos' },
-            { value: 'aguarda_documentos',  label: 'Aguarda Docs', badge: guests.filter(g => g.status === 'aguarda_documentos' || g.status === 'documentos_submetidos').length || undefined },
-            { value: 'em_analise',          label: 'Registrar',    badge: guests.filter(g => g.status === 'em_analise').length || undefined },
-            { value: 'aprovado',            label: 'Aprovados' },
-            { value: 'rejeitado',           label: 'Rejeitados' },
-          ] as { value: GuestSubFilter; label: string; badge?: number }[]).map(sf => {
+            { value: 'todos',              label: 'Todos',        count: guests.length,                                                                                          urgent: false },
+            { value: 'aguarda_documentos', label: 'Aguarda Docs', count: guests.filter(g => g.status === 'aguarda_documentos' || g.status === 'documentos_submetidos').length,  urgent: true  },
+            { value: 'em_analise',         label: 'Registrar',    count: guests.filter(g => g.status === 'em_analise').length,                                                   urgent: true  },
+            { value: 'aprovado',           label: 'Aprovados',    count: guests.filter(g => g.status === 'aprovado').length,                                                     urgent: false },
+            { value: 'rejeitado',          label: 'Rejeitados',   count: guests.filter(g => g.status === 'rejeitado').length,                                                    urgent: false },
+          ] as { value: GuestSubFilter; label: string; count: number; urgent: boolean }[]).map(sf => {
             const isActive = guestSub === sf.value;
-            const isUrgent = !!sf.badge && sf.badge > 0 && !isActive;
+            const isUrgent = sf.urgent && sf.count > 0 && !isActive;
             return (
               <button key={sf.value}
                 onClick={() => setGuestSub(sf.value)}
@@ -348,11 +396,13 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
                     : 'bg-zinc-900 text-white border-zinc-700 hover:border-zinc-500'
                 }`}>
                 {sf.label}
-                {sf.badge !== undefined && (
-                  <span className={`min-w-[18px] h-5 flex items-center justify-center rounded-full text-xs font-black px-1 ${
-                    isActive ? 'bg-zinc-950/30 text-zinc-950' : 'bg-red-500/20 text-red-400'
-                  }`}>{sf.badge}</span>
-                )}
+                <span className={`min-w-[18px] h-5 flex items-center justify-center rounded-full text-xs font-black px-1 ${
+                  isActive
+                    ? 'bg-zinc-950/30 text-zinc-950'
+                    : isUrgent
+                    ? 'bg-red-500/20 text-red-400'
+                    : 'bg-zinc-700/60 text-zinc-400'
+                }`}>{sf.count}</span>
               </button>
             );
           })}
@@ -413,14 +463,14 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
             <table className="w-full min-w-[700px]">
               <thead>
                 <tr className="border-b border-zinc-700/60 bg-zinc-800/40">
-                  <th className="text-left px-4 py-2 text-[10px] font-black text-white/40 uppercase tracking-widest whitespace-nowrap w-8">#</th>
-                  <th className="text-left px-4 py-2 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap">Nome</th>
-                  <th className="text-left px-4 py-2 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap hidden sm:table-cell w-[110px]">Tipo</th>
-                  <th className="text-left px-4 py-2 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap hidden md:table-cell w-[130px]">Telefone</th>
-                  <th className="text-left px-4 py-2 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap w-[100px]">Estado</th>
-                  <th className="text-left px-4 py-2 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap hidden md:table-cell w-[120px]">Registo</th>
-                  <th className="text-left px-4 py-2 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap hidden lg:table-cell w-[100px]">Restrição</th>
-                  <th className="text-right px-4 py-2 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap w-[100px]">Ações</th>
+                  <th className="text-left px-3 py-1.5 text-[10px] font-black text-white/40 uppercase tracking-widest whitespace-nowrap w-8">#</th>
+                  <th className="text-left px-3 py-1.5 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap">Nome</th>
+                  <th className="text-left px-3 py-1.5 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap hidden sm:table-cell w-[110px]">Tipo</th>
+                  <th className="text-left px-3 py-1.5 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap hidden md:table-cell w-[130px]">Telefone</th>
+                  <th className="text-left px-3 py-1.5 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap w-[100px]">Estado</th>
+                  <th className="text-left px-3 py-1.5 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap hidden md:table-cell w-[120px]">Registo</th>
+                  <th className="text-left px-3 py-1.5 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap hidden lg:table-cell w-[100px]">Restrição</th>
+                  <th className="text-right px-3 py-1.5 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap w-[180px]">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800">
@@ -448,6 +498,7 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
                     const guestRowEl = (
                       <GuestRow key={`g-${row.data.id}`} g={row.data} guestStatusConfig={guestStatusConfig}
                         onReview={setReviewGuest} onAdvance={(g, next) => next ? updateGuest(g.id, { status: next }) : setReviewGuest(g)}
+                        onColocarNosInternos={handleColocarNosInternos}
                         rowNum={dataRowCount} />
                     );
                     if (showSep || showFirst) {
@@ -469,8 +520,8 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
                     const status = userStatusConfig[u.status];
                     dataRowCount++;
                     return (
-                      <tr key={`u-${u.id}`} className="hover:bg-zinc-800/40 transition-colors group border-b border-zinc-800/60">
-                        <td className="px-4 py-2 text-[10px] font-black text-white/30 tabular-nums w-8">{dataRowCount}</td>
+                      <tr key={`u-${u.id}`} className={`hover:bg-zinc-800/50 transition-colors group border-b border-zinc-800/60 ${dataRowCount % 2 === 0 ? 'bg-zinc-800/50' : ''}`}>
+                        <td className="px-4 py-2 text-[10px] font-black text-white tabular-nums w-8">{dataRowCount}</td>
                         <td className="px-4 py-2 max-w-0">
                           <div className="min-w-0">
                             <p className="text-xs font-bold text-white truncate">{firstLast(u.nome)}</p>
@@ -551,8 +602,8 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
                   const st = motoristaStatusConfig[m.status];
                   dataRowCount++;
                   return (
-                    <tr key={`m-${m.id}`} className="hover:bg-zinc-800/40 transition-colors group border-b border-zinc-800/60">
-                      <td className="px-4 py-2 text-[10px] font-black text-white/30 tabular-nums w-8">{dataRowCount}</td>
+                    <tr key={`m-${m.id}`} className={`hover:bg-zinc-800/50 transition-colors group border-b border-zinc-800/60 ${dataRowCount % 2 === 0 ? 'bg-zinc-800/50' : ''}`}>
+                      <td className="px-4 py-2 text-[10px] font-black text-white tabular-nums w-8">{dataRowCount}</td>
                       <td className="px-4 py-2 max-w-0">
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-white truncate">{firstLast(m.nome)}</p>
@@ -755,11 +806,12 @@ const NEXT_STATUS: Partial<Record<GuestStatus, GuestStatus | null>> = {
   em_analise:            null, // null = open review modal
 };
 
-function GuestRow({ g, guestStatusConfig, onReview, onAdvance, rowNum }: {
+function GuestRow({ g, guestStatusConfig, onReview, onAdvance, onColocarNosInternos, rowNum }: {
   g: Guest;
   guestStatusConfig: Record<GuestStatus, { label: string; dot: string }>;
   onReview: (g: Guest) => void;
   onAdvance: (g: Guest, next: GuestStatus | null) => void;
+  onColocarNosInternos?: (g: Guest) => void;
   rowNum?: number;
 }) {
   const gs = guestStatusConfig[g.status];
@@ -767,49 +819,57 @@ function GuestRow({ g, guestStatusConfig, onReview, onAdvance, rowNum }: {
   const canAdvance = g.status in NEXT_STATUS;
 
   return (
-    <tr className="hover:bg-zinc-800/40 transition-colors group border-b border-zinc-800/60 cursor-pointer" onClick={() => onReview(g)}>
-      <td className="px-4 py-2 text-[10px] font-black text-white/30 tabular-nums w-8">{rowNum ?? ''}</td>
-      <td className="px-4 py-2 max-w-0">
+    <tr className={`hover:bg-zinc-800/50 transition-colors group border-b border-zinc-800/60 cursor-pointer ${(rowNum ?? 0) % 2 === 0 ? 'bg-zinc-800/50' : ''}`} onClick={() => onReview(g)}>
+      <td className="px-3 py-1.5 text-[10px] font-black text-white tabular-nums w-8">{rowNum ?? ''}</td>
+      <td className="px-3 py-1.5 max-w-0">
         <div className="min-w-0">
           <p className="text-xs font-bold text-white truncate">{firstLast(g.nome)}</p>
-          <p className="text-[10px] text-white mt-0.5 truncate">{g.email}</p>
+          <p className="text-[10px] text-white/60 truncate">{g.email}</p>
           {g.status === 'rejeitado' && g.notaAdmin && (
-            <p className="text-[10px] text-red-400 mt-0.5 font-semibold leading-tight truncate">✕ {g.notaAdmin}</p>
+            <p className="text-[10px] text-red-400 font-semibold leading-tight truncate">✕ {g.notaAdmin}</p>
           )}
         </div>
       </td>
-      <td className="px-4 py-2 hidden sm:table-cell">
-        <span className="text-[10px] font-bold border rounded-md px-2 py-0.5 bg-amber-500/10 text-amber-400 border-amber-500/20 whitespace-nowrap">
-          Visitante · {g.intent === 'aluguer' ? 'Aluguer' : 'Compra'}
+      <td className="px-3 py-1.5 hidden sm:table-cell">
+        <span className="text-[10px] font-bold border rounded px-1.5 py-0.5 bg-amber-500/10 text-amber-400 border-amber-500/20 whitespace-nowrap">
+          {g.intent === 'aluguer' ? 'Aluguer' : 'Compra'}
         </span>
       </td>
-      <td className="px-4 py-2 hidden md:table-cell text-xs font-medium text-white whitespace-nowrap">{g.telefone}</td>
-      <td className="px-4 py-2">
-        <div className="flex items-center gap-1.5">
+      <td className="px-3 py-1.5 hidden md:table-cell text-[11px] font-medium text-white whitespace-nowrap">{g.telefone}</td>
+      <td className="px-3 py-1.5">
+        <div className="flex items-center gap-1">
           <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${gs.dot}`} />
-          <span className="text-xs font-semibold text-white whitespace-nowrap">{gs.label}</span>
+          <span className="text-[11px] font-semibold text-white whitespace-nowrap">{gs.label}</span>
           {canAdvance && (
             <button
               onClick={e => { e.stopPropagation(); onAdvance(g, nextStatus ?? null); }}
               title={nextStatus ? `→ ${guestStatusConfig[nextStatus]?.label ?? nextStatus}` : '→ Aprovar / Rejeitar'}
               className="p-0.5 text-amber-500 hover:text-amber-400 transition-colors shrink-0"
             >
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
           )}
         </div>
       </td>
-      <td className="px-4 py-2 hidden md:table-cell text-xs font-semibold text-white whitespace-nowrap">
+      <td className="px-3 py-1.5 hidden md:table-cell text-[11px] font-semibold text-white whitespace-nowrap">
         {new Date(g.dataCriacao).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
       </td>
-      <td className="px-4 py-2 hidden lg:table-cell">
-        {g.vehicleName ? <span className="text-[10px] text-white truncate block max-w-[90px]">{g.vehicleName}</span> : <span className="text-[10px] text-white">—</span>}
+      <td className="px-3 py-1.5 hidden lg:table-cell">
+        {g.vehicleName ? <span className="text-[10px] text-white/80 truncate block max-w-[90px]">{g.vehicleName}</span> : <span className="text-[10px] text-white/30">—</span>}
       </td>
-      <td className="px-4 py-2">
-        <div className="flex items-center justify-end">
+      <td className="px-3 py-1.5">
+        <div className="flex items-center justify-end gap-1.5">
+          {g.status === 'aprovado' && onColocarNosInternos && (
+            <button
+              onClick={e => { e.stopPropagation(); onColocarNosInternos(g); }}
+              className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 font-bold whitespace-nowrap transition-all"
+            >
+              Adicionar aos Utilizadores
+            </button>
+          )}
           <button onClick={e => { e.stopPropagation(); onReview(g); }}
-            className="p-1 text-white hover:text-amber-400 transition-colors rounded-lg hover:bg-amber-400/10" title="Analisar">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            className="p-1 text-white/50 hover:text-amber-400 transition-colors rounded hover:bg-amber-400/10" title="Analisar">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
         </div>
       </td>

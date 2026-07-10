@@ -8,10 +8,13 @@ import { useXitique } from '../context/XitiqueContext';
 import { useRoute } from '../hooks/useRoute';
 import { VEHICLES } from '../data/constants';
 
+const EM_USO_STATUSES = new Set(['confirmada', 'pronta_levantamento', 'ativa', 'devolucao_pendente']);
+
 const compraIds  = new Set(VEHICLES.filter(v => v.mode === 'compra').map(v => v.id));
 const aluguerIds = new Set(VEHICLES.filter(v => v.mode === 'aluguer').map(v => v.id));
 
-type AlertTab = 'todos' | 'alugueres' | 'veiculos' | 'xitique' | 'utilizadores';
+type AlertTab = 'todos' | 'alugueres' | 'em_uso' | 'veiculos' | 'xitique' | 'utilizadores';
+type EmUsoFilter = 'todos' | 'em_uso' | 'em_atraso' | 'confirmadas' | 'devolucao';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function ArrowRight() {
@@ -88,6 +91,7 @@ export function DashboardPage() {
 
   const today = new Date().toISOString().split('T')[0];
   const [alertTab, setAlertTab] = useState<AlertTab>('todos');
+  const [emUsoFilter, setEmUsoFilter] = useState<EmUsoFilter>('todos');
   const [ts, setTs] = useState(
     () => new Date().toLocaleTimeString('pt-MZ', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   );
@@ -106,7 +110,7 @@ export function DashboardPage() {
     const aluguerAtivos    = aluguerRes.filter(r => r.status === 'ativa').length;
     const aluguerPendentes = aluguerRes.filter(r => r.status === 'pendente').length;
     const aluguerAtraso    = aluguerRes.filter(r => r.status === 'ativa' && r.dataFim < today).length;
-    const devolucaoPend    = aluguerRes.filter(r => r.status === 'devolucao_pendente').length;
+    const devolucaoPend    = aluguerRes.filter(r => r.status === 'devolucao_pendente' || (r.status === 'ativa' && r.dataFim < today)).length;
 
     const compraRes     = reservations.filter(r => compraIds.has(r.vehicleId));
     const compraPend    = compraRes.filter(r => r.status === 'pendente').length;
@@ -144,36 +148,76 @@ export function DashboardPage() {
   const badgeUtilizadores = s.pendentUsers + s.guestsPend;
   const badgeTodos       = badgeAluguer + badgeVeiculos + badgeXitique + badgeUtilizadores;
 
-  const tabs: { key: AlertTab; label: string; badge: number }[] = [
+  // ── Viaturas em uso ──
+  const emUsoAll = useMemo(
+    () => reservations.filter(r => EM_USO_STATUSES.has(r.status)),
+    [reservations],
+  );
+  const emUsoAtivos    = emUsoAll.filter(r => r.status === 'ativa' && r.dataFim >= today).length;
+  const emUsoAtrasados = emUsoAll.filter(r => r.status === 'ativa' && r.dataFim < today).length;
+  const emUsoConfirm   = emUsoAll.filter(r => r.status === 'confirmada' || r.status === 'pronta_levantamento').length;
+  const emUsoDev       = emUsoAll.filter(r => r.status === 'devolucao_pendente').length;
+
+  const emUsoFiltered = useMemo(() => {
+    let list = emUsoAll;
+    if (emUsoFilter === 'em_uso')      list = list.filter(r => r.status === 'ativa' && r.dataFim >= today);
+    if (emUsoFilter === 'em_atraso')   list = list.filter(r => r.status === 'ativa' && r.dataFim < today);
+    if (emUsoFilter === 'confirmadas') list = list.filter(r => r.status === 'confirmada' || r.status === 'pronta_levantamento');
+    if (emUsoFilter === 'devolucao')   list = list.filter(r => r.status === 'devolucao_pendente');
+    return list.sort((a, b) => {
+      if (a.status === 'ativa' && a.dataFim < today) return -1;
+      if (b.status === 'ativa' && b.dataFim < today) return 1;
+      return a.dataFim.localeCompare(b.dataFim);
+    });
+  }, [emUsoAll, emUsoFilter, today]);
+
+  const getVehicleName = (id: number) =>
+    vehicles.find(v => v.id === id)?.name ?? VEHICLES.find(v => v.id === id)?.name ?? `Viatura #${id}`;
+  const getVehicleImg  = (id: number) =>
+    vehicles.find(v => v.id === id)?.img  ?? VEHICLES.find(v => v.id === id)?.img;
+  const fmtD = (iso: string) => { const [,m,d] = iso.split('-'); return `${d}/${m}`; };
+
+  // ── Alertas tabs ──
+  const tabs: { key: AlertTab; label: string; badge: number; dot?: string }[] = [
     { key: 'todos',        label: 'Todos',        badge: badgeTodos },
     { key: 'alugueres',    label: 'Alugueres',    badge: badgeAluguer },
+    { key: 'em_uso',       label: 'Em Uso',        badge: emUsoAll.length, dot: 'bg-amber-400' },
     { key: 'veiculos',     label: 'Veículos',      badge: badgeVeiculos },
     { key: 'xitique',      label: 'Xitique',       badge: badgeXitique },
     { key: 'utilizadores', label: 'Utilizadores',  badge: badgeUtilizadores },
   ];
 
-  const showAluguer     = alertTab === 'todos' || alertTab === 'alugueres';
-  const showVeiculos    = alertTab === 'todos' || alertTab === 'veiculos';
-  const showXitique     = alertTab === 'todos' || alertTab === 'xitique';
+  const emUsoSubTabs: { key: EmUsoFilter; label: string; count: number; dot: string }[] = [
+    { key: 'todos',       label: 'Todos',        count: emUsoAll.length,  dot: 'bg-zinc-400' },
+    { key: 'em_uso',      label: 'Em Uso',       count: emUsoAtivos,      dot: 'bg-amber-400' },
+    { key: 'em_atraso',   label: 'Em Atraso',    count: emUsoAtrasados,   dot: 'bg-red-500' },
+    { key: 'confirmadas', label: 'Confirmadas',   count: emUsoConfirm,     dot: 'bg-blue-400' },
+    { key: 'devolucao',   label: 'Devoluções',    count: emUsoDev,         dot: 'bg-orange-400' },
+  ];
+
+  const showAluguer      = alertTab === 'todos' || alertTab === 'alugueres';
+  const showVeiculos     = alertTab === 'todos' || alertTab === 'veiculos';
+  const showXitique      = alertTab === 'todos' || alertTab === 'xitique';
   const showUtilizadores = alertTab === 'todos' || alertTab === 'utilizadores';
 
-  const hasAluguerAlert     = s.aluguerAtraso > 0 || s.aluguerPendentes > 0 || s.devolucaoPend > 0;
-  const hasVeiculosAlert    = s.totalVeiculos - s.disponíveis > 0 || s.compraAtraso > 0 || s.motorOcupado > 0;
-  const hasXitiqueAlert     = s.inscricoesPend > 0 || s.gruposAbertos > 0 || s.gruposAtivos > 0;
+  const hasAluguerAlert      = s.aluguerAtraso > 0 || s.aluguerPendentes > 0 || s.devolucaoPend > 0;
+  const hasVeiculosAlert     = s.totalVeiculos - s.disponíveis > 0 || s.compraAtraso > 0 || s.motorOcupado > 0;
+  const hasXitiqueAlert      = s.inscricoesPend > 0 || s.gruposAbertos > 0 || s.gruposAtivos > 0;
   const hasUtilizadoresAlert = s.pendentUsers > 0 || s.guestsPend > 0;
 
-  const hasAnyInView = (showAluguer && hasAluguerAlert) || (showVeiculos && hasVeiculosAlert)
-    || (showXitique && hasXitiqueAlert) || (showUtilizadores && hasUtilizadoresAlert);
+  const hasAnyInView = alertTab !== 'em_uso' && (
+    (showAluguer && hasAluguerAlert) || (showVeiculos && hasVeiculosAlert)
+    || (showXitique && hasXitiqueAlert) || (showUtilizadores && hasUtilizadoresAlert)
+  );
 
-  // botão de acção consoante o tab activo
-  const tabAction: Record<AlertTab, { primary: string; route: string; secondary?: { label: string; route: string } }> = {
-    todos:        { primary: 'Ver Alugueres', route: '/admin/aluguer?tab=acoes' },
-    alugueres:    { primary: 'Gerir Alugueres', route: '/admin/aluguer?tab=acoes', secondary: { label: 'Aprovar', route: '/admin/aluguer?tab=acoes' } },
-    veiculos:     { primary: 'Gerir Veículos',  route: '/admin/veiculos' },
-    xitique:      { primary: 'Gerir Xitique',   route: '/admin/xitique' },
+  const tabAction: Partial<Record<AlertTab, { primary: string; route: string; secondary?: { label: string; route: string } }>> = {
+    todos:        { primary: 'Ver Alugueres',      route: '/admin/aluguer?tab=acoes' },
+    alugueres:    { primary: 'Gerir Alugueres',    route: '/admin/aluguer?tab=acoes', secondary: { label: 'Aprovar', route: '/admin/aluguer?tab=acoes' } },
+    veiculos:     { primary: 'Gerir Veículos',     route: '/admin/veiculos' },
+    xitique:      { primary: 'Gerir Xitique',      route: '/admin/xitique' },
     utilizadores: { primary: 'Gerir Utilizadores', route: '/admin/utilizadores' },
   };
-  const action = tabAction[alertTab];
+  const action = alertTab !== 'em_uso' ? tabAction[alertTab] : undefined;
 
   return (
     <div className="bg-zinc-950 text-white min-h-screen">
@@ -241,37 +285,28 @@ export function DashboardPage() {
           </div>
         </div>
 
-        {/* ── Painel de alertas unificado ─────────────────────────────────────── */}
+        {/* ── Painel unificado: Alertas + Viaturas em Uso ─────────────────────── */}
         <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
 
-          {/* Header com tabs de filtro */}
-          <div className="flex items-center gap-2.5 px-5 pt-3.5 border-b border-zinc-800/70 flex-wrap">
+          {/* ── Header com tabs unificadas ── */}
+          <div className="flex items-center gap-2 px-5 pt-3.5 border-b border-zinc-800/70 flex-wrap">
             <div className="w-1 h-4 bg-amber-500 rounded-full shrink-0" />
-            <p className="text-xs font-black text-amber-400 uppercase tracking-widest mr-2 shrink-0">Alertas</p>
-
+            <p className="text-xs font-black text-amber-400 uppercase tracking-widest mr-1 shrink-0">Painel</p>
             <div className="flex items-center gap-1 flex-wrap pb-3.5">
               {tabs.map(tab => {
                 const active = alertTab === tab.key;
                 return (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => setAlertTab(tab.key)}
+                  <button key={tab.key} type="button"
+                    onClick={() => { setAlertTab(tab.key); if (tab.key !== 'em_uso') setEmUsoFilter('todos'); }}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all whitespace-nowrap ${
-                      active
-                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                        : 'text-white hover:text-white hover:bg-zinc-800'
-                    }`}
-                  >
+                      active ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'text-white hover:bg-zinc-800 border border-transparent'
+                    }`}>
+                    {tab.dot && <span className={`w-1.5 h-1.5 rounded-full ${tab.dot}`} />}
                     {tab.label}
                     {tab.badge > 0 && (
                       <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md leading-none ${
-                        active
-                          ? 'bg-amber-500/30 text-amber-300'
-                          : 'bg-zinc-700 text-white'
-                      }`}>
-                        {tab.badge}
-                      </span>
+                        active ? 'bg-amber-500/30 text-amber-300' : 'bg-zinc-700 text-white'
+                      }`}>{tab.badge}</span>
                     )}
                   </button>
                 );
@@ -279,111 +314,257 @@ export function DashboardPage() {
             </div>
           </div>
 
-          {/* Conteúdo dos alertas */}
-          <div className="px-5 py-4">
-            {!hasAnyInView ? (
-              <p className="text-xs text-white py-2">Sem alertas activos para esta categoria.</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-8 gap-y-3">
-
-                {/* Alugueres */}
-                {showAluguer && hasAluguerAlert && (
-                  <div className="space-y-3">
-                    <p className="text-[9px] font-black text-white uppercase tracking-widest">Alugueres</p>
-                    {s.aluguerAtraso > 0 && (
-                      <AlertRow dot="bg-red-500"
-                        label={`${s.aluguerAtraso} Aluguer${s.aluguerAtraso > 1 ? 'es' : ''} Fora do Prazo`}
-                        sub="Devolução em atraso" />
-                    )}
-                    {s.aluguerPendentes > 0 && (
-                      <AlertRow dot="bg-amber-500"
-                        label={`${s.aluguerPendentes} Reserva${s.aluguerPendentes > 1 ? 's' : ''} Pendente${s.aluguerPendentes > 1 ? 's' : ''}`}
-                        sub="Aguarda confirmação" />
-                    )}
-                    {s.devolucaoPend > 0 && (
-                      <AlertRow dot="bg-amber-400"
-                        label={`${s.devolucaoPend} Devolução Pendente`}
-                        sub="Aguarda verificação" />
-                    )}
+          {/* ── Conteúdo: Viaturas em Uso ── */}
+          {alertTab === 'em_uso' && (
+            <>
+              {/* KPIs */}
+              <div className="grid grid-cols-4 divide-x divide-zinc-800/50 border-b border-zinc-800/50">
+                {[
+                  { label: 'Em Uso',       value: emUsoAtivos,    color: 'text-amber-400' },
+                  { label: 'Em Atraso',    value: emUsoAtrasados, color: emUsoAtrasados > 0 ? 'text-red-400' : 'text-zinc-500' },
+                  { label: 'Confirmadas',  value: emUsoConfirm,   color: 'text-blue-400' },
+                  { label: 'Devoluções',   value: emUsoDev,       color: 'text-orange-400' },
+                ].map(k => (
+                  <div key={k.label} className="px-4 py-3">
+                    <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-0.5">{k.label}</p>
+                    <p className={`text-xl font-black ${k.color}`}>{k.value}</p>
                   </div>
-                )}
-
-                {/* Veículos */}
-                {showVeiculos && hasVeiculosAlert && (
-                  <div className="space-y-3">
-                    <p className="text-[9px] font-black text-white uppercase tracking-widest">Veículos</p>
-                    {s.totalVeiculos - s.disponíveis > 0 && (
-                      <AlertRow dot="bg-amber-500"
-                        label={`${s.totalVeiculos - s.disponíveis} Veículo${s.totalVeiculos - s.disponíveis > 1 ? 's' : ''} Indisponível${s.totalVeiculos - s.disponíveis > 1 ? 'is' : ''}`}
-                        sub={`${s.disponíveis} de ${s.totalVeiculos} disponíveis`} />
-                    )}
-                    {s.compraAtraso > 0 && (
-                      <AlertRow dot="bg-red-500"
-                        label={`${s.compraAtraso} Prestação${s.compraAtraso > 1 ? 'ões' : ''} em Atraso`}
-                        sub="Compras com pagamento em falta" />
-                    )}
-                    {s.motorOcupado > 0 && (
-                      <AlertRow dot="bg-emerald-500"
-                        label={`${s.motorOcupado} Motorista${s.motorOcupado > 1 ? 's' : ''} em Serviço`}
-                        sub={`${s.motorDisp} de ${s.totalMotoristas} disponíveis`} />
-                    )}
-                  </div>
-                )}
-
-                {/* Xitique */}
-                {showXitique && hasXitiqueAlert && (
-                  <div className="space-y-3">
-                    <p className="text-[9px] font-black text-white uppercase tracking-widest">Xitique</p>
-                    {s.inscricoesPend > 0 && (
-                      <AlertRow dot="bg-amber-500"
-                        label={`${s.inscricoesPend} Nova${s.inscricoesPend > 1 ? 's' : ''} Inscrição${s.inscricoesPend > 1 ? 'ões' : ''}`}
-                        sub="Aguarda validação" />
-                    )}
-                    {s.gruposAbertos > 0 && (
-                      <AlertRow dot="bg-emerald-500"
-                        label={`${s.gruposAbertos} Grupo${s.gruposAbertos > 1 ? 's' : ''} Aberto${s.gruposAbertos > 1 ? 's' : ''}`}
-                        sub="A aceitar membros" />
-                    )}
-                    {s.gruposAtivos > 0 && (
-                      <AlertRow dot="bg-white/60"
-                        label={`${s.gruposAtivos} Grupo${s.gruposAtivos > 1 ? 's' : ''} Em Andamento`}
-                        sub="Ciclo activo" />
-                    )}
-                  </div>
-                )}
-
-                {/* Utilizadores */}
-                {showUtilizadores && hasUtilizadoresAlert && (
-                  <div className="space-y-3">
-                    <p className="text-[9px] font-black text-white uppercase tracking-widest">Utilizadores</p>
-                    {s.pendentUsers > 0 && (
-                      <AlertRow dot="bg-amber-500"
-                        label={`${s.pendentUsers} Utilizador${s.pendentUsers > 1 ? 'es' : ''} em Revisão`}
-                        sub={`Conta${s.pendentUsers > 1 ? 's' : ''} sob investigação`} />
-                    )}
-                    {s.guestsPend > 0 && (
-                      <AlertRow dot="bg-amber-400"
-                        label={`${s.guestsPend} Visitante${s.guestsPend > 1 ? 's' : ''} Pendente${s.guestsPend > 1 ? 's' : ''}`}
-                        sub="Aguarda aprovação" />
-                    )}
-                  </div>
-                )}
-
+                ))}
               </div>
-            )}
-          </div>
 
-          {/* Rodapé com botões de acção */}
-          <div className="px-5 pb-4 pt-1 flex gap-2.5 border-t border-zinc-800/50">
-            <BtnPrimary label={action.primary} onClick={() => navigate(action.route)} />
-            {action.secondary && (
-              <BtnGhost label={action.secondary.label} onClick={() => navigate(action.secondary!.route)} />
-            )}
-          </div>
+              {/* Sub-filtros */}
+              <div className="flex items-center gap-1.5 px-5 py-2.5 border-b border-zinc-800/50 flex-wrap">
+                {emUsoSubTabs.map(t => (
+                  <button key={t.key} onClick={() => setEmUsoFilter(t.key)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-black transition-all whitespace-nowrap border ${
+                      emUsoFilter === t.key
+                        ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                        : 'text-white hover:bg-zinc-800 border-transparent'
+                    }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${t.dot}`} />
+                    {t.label}
+                    <span className={`text-[10px] font-black ${emUsoFilter === t.key ? 'text-amber-300' : 'text-white/50'}`}>{t.count}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Lista */}
+              {emUsoFiltered.length === 0 ? (
+                <div className="px-5 py-8 text-center text-xs text-zinc-500">Sem viaturas para este filtro.</div>
+              ) : (
+                <div className="divide-y divide-zinc-800/50">
+                  {emUsoFiltered.map((r, idx) => {
+                    const nome = getVehicleName(r.vehicleId);
+                    const img  = getVehicleImg(r.vehicleId);
+                    const isAtrasado = r.status === 'ativa' && r.dataFim < today;
+                    return (
+                      <div key={r.id} className={`flex items-center gap-3 px-5 py-2.5 ${isAtrasado ? 'bg-red-500/5' : idx % 2 !== 0 ? 'bg-zinc-800/50' : ''}`}>
+                        <div className="w-12 h-9 rounded-lg overflow-hidden bg-zinc-800 border border-zinc-700/50 shrink-0">
+                          {img
+                            ? <img src={img} alt={nome} className="w-full h-full object-cover" />
+                            : <div className="w-full h-full flex items-center justify-center text-zinc-600 text-sm">🚗</div>
+                          }
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-black text-white truncate">{nome}</p>
+                          <p className="text-[10px] text-zinc-400">{r.clientName}{r.clientPhone ? ` · ${r.clientPhone}` : ''}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-[10px] text-zinc-400 tabular-nums">{fmtD(r.dataInicio)} → {fmtD(r.dataFim)}</p>
+                          {isAtrasado
+                            ? <span className="text-[9px] font-black text-red-400 uppercase">⚠ Atraso</span>
+                            : <span className="text-[9px] font-bold text-amber-400 uppercase">
+                                {r.status === 'ativa' ? 'Em Uso' : r.status === 'devolucao_pendente' ? 'Devolução' : 'Confirmada'}
+                              </span>
+                          }
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Rodapé */}
+              <div className="px-5 py-3 border-t border-zinc-800/50 flex items-center justify-between">
+                <span className="text-[11px] text-white">{emUsoFiltered.length} registo{emUsoFiltered.length !== 1 ? 's' : ''}</span>
+                <button onClick={() => navigate('/admin/viaturas-em-uso')}
+                  className="flex items-center gap-1.5 text-xs font-black text-amber-400 hover:text-amber-300 transition-colors">
+                  Ver lista completa
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                  </svg>
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* ── Conteúdo: Alertas ── */}
+          {alertTab !== 'em_uso' && (
+            <>
+              <div className="px-5 py-4">
+                {!hasAnyInView ? (
+                  <p className="text-xs text-white py-2">Sem alertas activos para esta categoria.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-y-5 divide-x-2 divide-amber-500/40">
+                    {showAluguer && hasAluguerAlert && (
+                      <div className="flex-1 min-w-[160px] space-y-3 px-6 first:pl-0 last:pr-0">
+                        <p className="text-[9px] font-black text-amber-400/70 uppercase tracking-widest pb-1 border-b border-zinc-800/60">Alugueres</p>
+                        {s.aluguerAtraso > 0 && <AlertRow dot="bg-red-500" label={`${s.aluguerAtraso} Aluguer${s.aluguerAtraso > 1 ? 'es' : ''} Fora do Prazo`} sub="Devolução em atraso" />}
+                        {s.aluguerPendentes > 0 && <AlertRow dot="bg-amber-500" label={`${s.aluguerPendentes} Reserva${s.aluguerPendentes > 1 ? 's' : ''} Pendente${s.aluguerPendentes > 1 ? 's' : ''}`} sub="Aguarda confirmação" />}
+                        {s.devolucaoPend > 0 && <AlertRow dot="bg-amber-400" label={`${s.devolucaoPend} Devolução Pendente`} sub="Aguarda verificação" />}
+                      </div>
+                    )}
+                    {showVeiculos && hasVeiculosAlert && (
+                      <div className="flex-1 min-w-[160px] space-y-3 px-6 first:pl-0 last:pr-0">
+                        <p className="text-[9px] font-black text-amber-400/70 uppercase tracking-widest pb-1 border-b border-zinc-800/60">Veículos</p>
+                        {s.totalVeiculos - s.disponíveis > 0 && <AlertRow dot="bg-amber-500" label={`${s.totalVeiculos - s.disponíveis} Veículo${s.totalVeiculos - s.disponíveis > 1 ? 's' : ''} Indisponível${s.totalVeiculos - s.disponíveis > 1 ? 'is' : ''}`} sub={`${s.disponíveis} de ${s.totalVeiculos} disponíveis`} />}
+                        {s.compraAtraso > 0 && <AlertRow dot="bg-red-500" label={`${s.compraAtraso} Prestação${s.compraAtraso > 1 ? 'ões' : ''} em Atraso`} sub="Compras com pagamento em falta" />}
+                        {s.motorOcupado > 0 && <AlertRow dot="bg-emerald-500" label={`${s.motorOcupado} Motorista${s.motorOcupado > 1 ? 's' : ''} em Serviço`} sub={`${s.motorDisp} de ${s.totalMotoristas} disponíveis`} />}
+                      </div>
+                    )}
+                    {showXitique && hasXitiqueAlert && (
+                      <div className="flex-1 min-w-[160px] space-y-3 px-6 first:pl-0 last:pr-0">
+                        <p className="text-[9px] font-black text-amber-400/70 uppercase tracking-widest pb-1 border-b border-zinc-800/60">Xitique</p>
+                        {s.inscricoesPend > 0 && <AlertRow dot="bg-amber-500" label={`${s.inscricoesPend} Nova${s.inscricoesPend > 1 ? 's' : ''} Inscrição${s.inscricoesPend > 1 ? 'ões' : ''}`} sub="Aguarda validação" />}
+                        {s.gruposAbertos > 0 && <AlertRow dot="bg-emerald-500" label={`${s.gruposAbertos} Grupo${s.gruposAbertos > 1 ? 's' : ''} Aberto${s.gruposAbertos > 1 ? 's' : ''}`} sub="A aceitar membros" />}
+                        {s.gruposAtivos > 0 && <AlertRow dot="bg-white/60" label={`${s.gruposAtivos} Grupo${s.gruposAtivos > 1 ? 's' : ''} Em Andamento`} sub="Ciclo activo" />}
+                      </div>
+                    )}
+                    {showUtilizadores && hasUtilizadoresAlert && (
+                      <div className="flex-1 min-w-[160px] space-y-3 px-6 first:pl-0 last:pr-0">
+                        <p className="text-[9px] font-black text-amber-400/70 uppercase tracking-widest pb-1 border-b border-zinc-800/60">Utilizadores</p>
+                        {s.pendentUsers > 0 && <AlertRow dot="bg-amber-500" label={`${s.pendentUsers} Utilizador${s.pendentUsers > 1 ? 'es' : ''} em Revisão`} sub={`Conta${s.pendentUsers > 1 ? 's' : ''} sob investigação`} />}
+                        {s.guestsPend > 0 && <AlertRow dot="bg-amber-400" label={`${s.guestsPend} Visitante${s.guestsPend > 1 ? 's' : ''} Pendente${s.guestsPend > 1 ? 's' : ''}`} sub="Aguarda aprovação" />}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              {action && (
+                <div className="px-5 pb-4 pt-1 flex gap-2.5 border-t border-zinc-800/50">
+                  <BtnPrimary label={action.primary} onClick={() => navigate(action.route)} />
+                  {action.secondary && (
+                    <BtnGhost label={action.secondary.label} onClick={() => navigate(action.secondary!.route)} />
+                  )}
+                </div>
+              )}
+            </>
+          )}
 
         </div>
 
       </div>
     </div>
+  );
+}
+
+// ── Secção Viaturas em Uso (dentro do card unificado) ────────────────────────
+function ViaturaEmUsoInline({
+  navigate,
+  reservations,
+  vehicles,
+  today,
+}: {
+  navigate: (to: string) => void;
+  reservations: ReturnType<typeof useReservations>['reservations'];
+  vehicles: ReturnType<typeof useVehicles>['vehicles'];
+  today: string;
+}) {
+  const emUso = useMemo(
+    () => reservations.filter(r => EM_USO_STATUSES.has(r.status)),
+    [reservations],
+  );
+
+  const atrasados = emUso.filter(r => r.status === 'ativa' && r.dataFim < today).length;
+  const ativos    = emUso.filter(r => r.status === 'ativa' && r.dataFim >= today).length;
+
+  const getVehicleName = (id: number) =>
+    vehicles.find(v => v.id === id)?.name ?? VEHICLES.find(v => v.id === id)?.name ?? `Viatura #${id}`;
+  const getVehicleImg  = (id: number) =>
+    vehicles.find(v => v.id === id)?.img  ?? VEHICLES.find(v => v.id === id)?.img;
+
+  const preview = emUso.slice(0, 4);
+  const fmtD = (iso: string) => { const [,m,d] = iso.split('-'); return `${d}/${m}`; };
+
+  return (
+    <>
+      {/* Sub-header */}
+      <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-zinc-800/70">
+        <div className="w-1 h-4 bg-amber-500 rounded-full" />
+        <p className="text-xs font-black text-amber-400 uppercase tracking-widest flex-1">Viaturas em Uso</p>
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] text-zinc-400">{emUso.length} total</span>
+          {atrasados > 0 && (
+            <span className="text-[10px] font-black text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-md">
+              ⚠ {atrasados} em atraso
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* KPI row */}
+      <div className="grid grid-cols-3 divide-x divide-zinc-800/50 border-b border-zinc-800/50">
+        {[
+          { label: 'Em Uso Agora',  value: ativos,       color: 'text-amber-400' },
+          { label: 'Em Atraso',     value: atrasados,    color: atrasados > 0 ? 'text-red-400' : 'text-zinc-500' },
+          { label: 'Total Activas', value: emUso.length, color: 'text-white' },
+        ].map(k => (
+          <div key={k.label} className="px-5 py-3">
+            <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-0.5">{k.label}</p>
+            <p className={`text-2xl font-black ${k.color}`}>{k.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Lista prévia */}
+      {emUso.length === 0 ? (
+        <div className="px-5 py-5 text-center text-xs text-zinc-500">Sem viaturas activas no momento.</div>
+      ) : (
+        <div className="divide-y divide-zinc-800/50">
+          {preview.map((r, idx) => {
+            const nome = getVehicleName(r.vehicleId);
+            const img  = getVehicleImg(r.vehicleId);
+            const isAtrasado = r.status === 'ativa' && r.dataFim < today;
+            return (
+              <div key={r.id} className={`flex items-center gap-3 px-5 py-2.5 ${isAtrasado ? 'bg-red-500/5' : idx % 2 !== 0 ? 'bg-zinc-800/50' : ''}`}>
+                <div className="w-12 h-9 rounded-lg overflow-hidden bg-zinc-800 border border-zinc-700/50 shrink-0">
+                  {img
+                    ? <img src={img} alt={nome} className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center text-zinc-600 text-sm">🚗</div>
+                  }
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black text-white truncate">{nome}</p>
+                  <p className="text-[10px] text-zinc-400 truncate">{r.clientName}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-[10px] text-zinc-400 tabular-nums">{fmtD(r.dataInicio)} → {fmtD(r.dataFim)}</p>
+                  {isAtrasado
+                    ? <span className="text-[9px] font-black text-red-400 uppercase">Em Atraso</span>
+                    : <span className="text-[9px] font-bold text-amber-400 uppercase">
+                        {r.status === 'ativa' ? 'Em Uso' : r.status === 'devolucao_pendente' ? 'Devolução' : 'Confirmada'}
+                      </span>
+                  }
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Rodapé */}
+      <div className="px-5 py-3 border-t border-zinc-800/50 flex items-center justify-between">
+        {emUso.length > 4 && <span className="text-[11px] text-zinc-500">+{emUso.length - 4} mais</span>}
+        <button
+          onClick={() => navigate('/admin/viaturas-em-uso')}
+          className="ml-auto flex items-center gap-1.5 text-xs font-black text-amber-400 hover:text-amber-300 transition-colors"
+        >
+          Ver lista completa
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </button>
+      </div>
+    </>
   );
 }

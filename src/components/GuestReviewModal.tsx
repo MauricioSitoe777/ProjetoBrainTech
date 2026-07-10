@@ -1,6 +1,5 @@
 ﻿import { useState } from 'react';
 import { useGuests } from '../context/GuestsContext';
-import { useUsers } from '../context/UsersContext';
 import { useNotifications } from '../context/NotificationsContext';
 import type { Guest } from '../types/guest';
 
@@ -44,7 +43,6 @@ interface Props { guest: Guest; onClose: () => void; }
 
 export function GuestReviewModal({ guest, onClose }: Props) {
   const { updateGuest, deleteGuest } = useGuests();
-  const { addUser } = useUsers();
   const { addNotification } = useNotifications();
   const [action, setAction] = useState<'idle' | 'aprovar' | 'rejeitar'>('idle');
   const [senha, setSenha] = useState(generatePassword);
@@ -62,20 +60,8 @@ export function GuestReviewModal({ guest, onClose }: Props) {
   };
 
   const handleAprovar = () => {
-    addUser({
-      nome: guest.nome,
-      email: guest.email,
-      telefone: guest.telefone,
-      role: 'cliente',
-      status: 'ativo',
-      regularity: 'regular',
-      restriction: 'nenhuma',
-      password: senha,
-      mustChangePassword: true,
-      documentos: Object.fromEntries(Object.entries(guest.documentos)) as any,
-    });
-    deleteGuest(guest.id);
-    addNotification('admin', 'Visitante aprovado', `${guest.nome} foi adicionado à lista de utilizadores como Cliente.`, 'success', undefined, '/admin/utilizadores/clientes');
+    updateGuest(guest.id, { status: 'aprovado' });
+    addNotification('admin', 'Documentos aprovados', `${guest.nome} foi aprovado e aguarda inserção nos utilizadores internos.`, 'success', undefined, '/admin/visitantes/aprovados');
     setApproved(true);
     setAction('idle');
     onClose();
@@ -230,14 +216,14 @@ export function GuestReviewModal({ guest, onClose }: Props) {
                 </button>
               )}
 
-              {action !== 'rejeitar' && (
+              {guest.status === 'em_analise' && action !== 'rejeitar' && (
                 <button onClick={() => setAction('aprovar')}
                   className="w-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-black rounded-lg py-2.5 text-sm transition-colors">
                   Aprovar e Criar Conta
                 </button>
               )}
 
-              {action !== 'aprovar' && (
+              {guest.status === 'em_analise' && action !== 'aprovar' && (
                 <button onClick={() => setAction('rejeitar')}
                   className="w-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-bold rounded-lg py-2.5 text-sm transition-colors">
                   Rejeitar Pedido

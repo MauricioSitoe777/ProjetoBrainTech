@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useGuests } from '../context/GuestsContext';
 import type { GuestCategory, GuestIntent } from '../types/guest';
 import { IconKey, IconCar } from './Icons';
@@ -25,6 +25,12 @@ export function GuestRequestModal({ intent: initialIntent = 'aluguer', vehicleNa
     category: (preCategory ?? 'func_publico') as GuestCategory,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!done) return;
+    const t = setTimeout(() => onClose(), 3000);
+    return () => clearTimeout(t);
+  }, [done, onClose]);
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -164,8 +170,9 @@ export function GuestRequestModal({ intent: initialIntent = 'aluguer', vehicleNa
               </div>
 
               <button onClick={onClose}
-                className="w-full bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg py-2.5 text-sm font-bold transition-colors">
+                className="w-full bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg py-2.5 text-sm font-bold transition-colors flex items-center justify-center gap-2">
                 Fechar
+                <span className="text-xs text-white/40">(fecha automaticamente em 3s)</span>
               </button>
             </div>
           )}

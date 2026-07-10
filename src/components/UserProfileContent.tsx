@@ -12,7 +12,7 @@ interface UserProfileContentProps {
 const STATUS_RESERVA: Record<string, { label: string; cls: string; dot: string }> = {
   pendente:  { label: 'Ag. Pagamento', cls: 'bg-amber-400/10 text-amber-400 border-amber-400/20', dot: 'bg-amber-400' },
   confirmada:{ label: 'Confirmada', cls: 'bg-blue-400/10 text-blue-400 border-blue-400/20',       dot: 'bg-blue-400' },
-  ativa:     { label: 'Ativa',      cls: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20', dot: 'bg-emerald-400' },
+  ativa:     { label: 'Activa',     cls: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20', dot: 'bg-emerald-400' },
   concluida: { label: 'Concluída',  cls: 'bg-zinc-700 text-white border-zinc-600',                dot: 'bg-zinc-400' },
   cancelada: { label: 'Cancelada',  cls: 'bg-red-400/10 text-red-400 border-red-400/20',          dot: 'bg-red-400' },
 };
@@ -20,7 +20,7 @@ const STATUS_RESERVA: Record<string, { label: string; cls: string; dot: string }
 const ROLE_LABEL  = { admin: 'Administrador', cliente: 'Cliente' };
 const REG_LABEL   = { regular: 'Regular', pendente: 'Pendente', inadimplente: 'Inadimplente' };
 const REST_LABEL  = { nenhuma: 'Nenhuma', blacklisted: 'Lista Negra' };
-const STATUS_LABEL = { ativo: 'Ativo', inativo: 'Inativo', suspenso: 'Suspenso', pendente: 'Pendente' };
+const STATUS_LABEL = { ativo: 'Activo', inativo: 'Inactivo', suspenso: 'Suspenso', pendente: 'Pendente' };
 
 function initials(nome: string) {
   return nome.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
@@ -282,41 +282,49 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
             <div className="flex items-center justify-between px-4 py-3 gap-3">
               <div className="min-w-0">
                 <p className="text-[9px] text-white uppercase font-bold tracking-wider mb-0.5">Palavra-passe</p>
-                <div className="flex items-center gap-2">
-                  <span className={`text-sm font-black tracking-widest ${user.password ? 'text-amber-400' : 'text-zinc-400'}`}>
-                    {showPass ? (user.password || '123') : '••••••••'}
-                  </span>
-                  {!user.password && (
-                    <span className="text-[9px] text-zinc-500 font-bold uppercase bg-zinc-800 border border-zinc-700 px-1.5 py-0.5 rounded">padrão</span>
-                  )}
+                {user.passwordChangedByUser ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-zinc-500 italic">Definida pelo utilizador</span>
+                    <span className="text-[9px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-1.5 py-0.5 rounded uppercase tracking-wide">Privada</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-black tracking-widest ${user.password ? 'text-amber-400' : 'text-zinc-400'}`}>
+                      {showPass ? (user.password || '123') : '••••••••'}
+                    </span>
+                    {!user.password && (
+                      <span className="text-[9px] text-zinc-500 font-bold uppercase bg-zinc-800 border border-zinc-700 px-1.5 py-0.5 rounded">padrão</span>
+                    )}
+                  </div>
+                )}
+              </div>
+              {!user.passwordChangedByUser && (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() => setShowPass(v => !v)}
+                    title={showPass ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'}
+                    aria-label={showPass ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'}
+                    className={`p-1.5 rounded-lg transition ${showPass ? 'text-amber-400 bg-amber-400/10' : 'text-white hover:text-white hover:bg-zinc-700'}`}
+                  >
+                    {showPass ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => copiar(user.password || '123', 'pass')}
+                    title="Copiar palavra-passe"
+                    className={`text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all ${
+                      copiado === 'pass'
+                        ? 'bg-emerald-400/15 text-emerald-400 border border-emerald-400/30'
+                        : 'bg-zinc-700 text-white hover:bg-zinc-600'
+                    }`}
+                  >
+                    {copiado === 'pass' ? 'Copiado!' : 'Copiar'}
+                  </button>
                 </div>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                {/* H4/H7 — título descritivo em todos os botões de ícone */}
-                <button
-                  onClick={() => setShowPass(v => !v)}
-                  title={showPass ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'}
-                  aria-label={showPass ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'}
-                  className={`p-1.5 rounded-lg transition ${showPass ? 'text-amber-400 bg-amber-400/10' : 'text-white hover:text-white hover:bg-zinc-700'}`}
-                >
-                  {showPass ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                  )}
-                </button>
-                <button
-                  onClick={() => copiar(user.password || '123', 'pass')}
-                  title="Copiar palavra-passe"
-                  className={`text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all ${
-                    copiado === 'pass'
-                      ? 'bg-emerald-400/15 text-emerald-400 border border-emerald-400/30'
-                      : 'bg-zinc-700 text-white hover:bg-zinc-600'
-                  }`}
-                >
-                  {copiado === 'pass' ? 'Copiado!' : 'Copiar'}
-                </button>
-              </div>
+              )}
             </div>
           </div>
         </div>

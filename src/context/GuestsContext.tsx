@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { Guest } from '../types/guest';
 import { useNotifications } from './NotificationsContext';
+import { api } from '../lib/api';
 
 const STORAGE_KEY = 'rentcar:guests:v1';
 
@@ -30,6 +31,14 @@ export function GuestsProvider({ children }: { children: ReactNode }) {
 
   const set = (list: Guest[]) => { setGuests(list); persist(list); };
 
+  // Carrega visitantes da API no mount
+  useEffect(() => {
+    api.get<Guest[]>('/guests')
+      .then(data => { if (Array.isArray(data) && data.length > 0) set(data); })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const addGuest = (data: Omit<Guest, 'id' | 'dataCriacao' | 'status'>) => {
     const guest: Guest = {
       ...data,
@@ -39,6 +48,12 @@ export function GuestsProvider({ children }: { children: ReactNode }) {
     };
     const next = [...guests, guest];
     set(next);
+    api.post('/guests', {
+      nome: data.nome, email: data.email, telefone: data.telefone,
+      intent: data.intent, category: data.category ?? null,
+      vehicle_name: data.vehicleName ?? null,
+      status: 'aguarda_documentos',
+    }).catch(() => {});
     addNotification(
       'admin',
       'Novo visitante em espera',
@@ -49,10 +64,22 @@ export function GuestsProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const updateGuest = (id: string, updates: Partial<Guest>) =>
+  const updateGuest = (id: string, updates: Partial<Guest>) => {
     set(guests.map(g => g.id === id ? { ...g, ...updates } : g));
+    const patch: Record<string, unknown> = {};
+    if (updates.status     !== undefined) patch.status      = updates.status;
+    if (updates.documentos !== undefined) patch.documentos  = updates.documentos;
+    if (updates.notaAdmin  !== undefined) patch.nota_admin  = updates.notaAdmin;
+    if (updates.senhaGerada !== undefined) patch.senha_gerada = updates.senhaGerada;
+    if (updates.category   !== undefined) patch.category    = updates.category;
+    if (updates.vehicleName !== undefined) patch.vehicle_name = updates.vehicleName;
+    if (Object.keys(patch).length > 0) api.put(`/guests/${id}`, patch).catch(() => {});
+  };
 
-  const deleteGuest = (id: string) => set(guests.filter(g => g.id !== id));
+  const deleteGuest = (id: string) => {
+    set(guests.filter(g => g.id !== id));
+    api.delete(`/guests/${id}`).catch(() => {});
+  };
 
   return (
     <GuestsContext.Provider value={{ guests, addGuest, updateGuest, deleteGuest }}>

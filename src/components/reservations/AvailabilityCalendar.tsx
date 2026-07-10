@@ -1,5 +1,5 @@
 ﻿import { useMemo, useState } from 'react';
-import { VEHICLES } from '../../data/constants';
+import { useVehicles } from '../../context/VehiclesContext';
 import { useReservations } from '../../context/ReservationsContext';
 import {
   dateStatusForVehicle,
@@ -30,8 +30,9 @@ export function AvailabilityCalendar({ vehicleId, onSelectDate, selectedDate }: 
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const { reservations, blocks } = useReservations();
+  const { vehicles } = useVehicles();
 
-  const rentalVehicles = useMemo(() => VEHICLES.filter(v => v.mode === 'aluguer'), []);
+  const rentalVehicles = useMemo(() => vehicles.filter(v => v.mode === 'aluguer'), [vehicles]);
 
   const dates    = useMemo(() => getDatesInMonth(year, month), [year, month]);
   const firstDow = useMemo(() => new Date(year, month, 1).getDay(), [year, month]);

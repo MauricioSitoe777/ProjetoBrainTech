@@ -14,8 +14,8 @@ const ROLES: { value: UserRole; label: string }[] = [
 ];
 
 const STATUSES: { value: UserStatus; label: string }[] = [
-  { value: 'ativo', label: 'Ativo' },
-  { value: 'inativo', label: 'Inativo' },
+  { value: 'ativo', label: 'Activo' },
+  { value: 'inativo', label: 'Inactivo' },
   { value: 'suspenso', label: 'Suspenso' },
   { value: 'pendente', label: 'Pendente' },
 ];

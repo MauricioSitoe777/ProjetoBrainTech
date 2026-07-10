@@ -3,6 +3,8 @@ import type { Vehicle } from "../data/constants";
 import VehicleCard from "./VehicleCard";
 import { useScrollTo } from "../hooks";
 import { useVehicles } from "../context/VehiclesContext";
+import { useReservations } from "../context/ReservationsContext";
+import { isSoldVehicle } from "../lib/availability";
 
 const ITEMS_PER_PAGE = 8;
 
@@ -58,6 +60,7 @@ export default function CatalogSection({
 }) {
   const scrollTo = useScrollTo();
   const { vehicles: dynamicVehicles, searchTerm, setSearchTerm } = useVehicles();
+  const { reservations } = useReservations();
   const [mode, setMode] = useState<Mode>("todos");
   const [cat,  setCat]  = useState<Cat>(null);
   const [page, setPage] = useState(1);
@@ -286,6 +289,7 @@ export default function CatalogSection({
               key={v.id}
               vehicle={v}
               onAction={handleAction}
+              isSold={isSoldVehicle(v.id, reservations)}
             />
           ))}
         </div>

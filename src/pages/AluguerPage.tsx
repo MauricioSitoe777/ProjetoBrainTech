@@ -3,6 +3,7 @@ import { VEHICLES } from '../data/constants';
 import { useReservations } from '../context/ReservationsContext';
 import { useMotoristas } from '../context/MotoristasContext';
 import { useVehicles } from '../context/VehiclesContext';
+import { useNotifications } from '../context/NotificationsContext';
 import { AvailabilityCalendar } from '../components/reservations/AvailabilityCalendar';
 import { BlockPeriodModal } from '../components/reservations/BlockPeriodModal';
 import { BusinessRulesPanel } from '../components/reservations/BusinessRulesPanel';
@@ -10,6 +11,7 @@ import { EditReservationModal } from '../components/reservations/EditReservation
 import { ContratoModal } from '../components/reservations/ContratoModal';
 import { RegistarPagamentoModal } from '../components/reservations/RegistarPagamentoModal';
 import { ReservationTracker } from '../components/ReservationTracker';
+import { ViaturaEmUsoPage } from './ViaturaEmUsoPage';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import type { Prestacao, Reservation, ReservationStatus } from '../types/reservation';
@@ -20,7 +22,7 @@ const STATUS_CFG: Record<ReservationStatus, { label: string; className: string }
   pendente:            { label: 'Aguarda Pagamento',      className: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
   confirmada:          { label: 'Reserva Confirmada',     className: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
   pronta_levantamento: { label: 'Pronta p/ Levantamento', className: 'bg-sky-400/10 text-sky-400 border-sky-400/20' },
-  ativa:               { label: 'Aluguer Ativo',          className: 'bg-blue-400/10 text-blue-400 border-blue-400/20' },
+  ativa:               { label: 'Aluguer Activo',         className: 'bg-blue-400/10 text-blue-400 border-blue-400/20' },
   devolucao_pendente:  { label: 'Devolução Pendente',     className: 'bg-orange-400/10 text-orange-400 border-orange-400/20' },
   concluida:           { label: 'Concluído',              className: 'bg-zinc-700 text-white border-zinc-600' },
   cancelada:           { label: 'Cancelado',              className: 'bg-red-400/10 text-red-400 border-red-400/20' },
@@ -31,7 +33,7 @@ const STATUS_CFG: Record<ReservationStatus, { label: string; className: string }
   liquidada:           { label: 'Liquidada',              className: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
 };
 
-type Tab = 'reservas' | 'acoes' | 'calendario' | 'bloqueios' | 'regras';
+type Tab = 'reservas' | 'acoes' | 'em_uso' | 'calendario' | 'bloqueios' | 'regras';
 
 const GRUPOS: Array<{
   status: ReservationStatus;
@@ -43,7 +45,7 @@ const GRUPOS: Array<{
   { status: 'pendente',            title: 'Aguarda Pagamento',       dot: 'bg-amber-400',   badge: 'bg-amber-400/10 text-amber-400 border-amber-400/20',     textColor: 'text-amber-400'   },
   { status: 'confirmada',          title: 'Reservas Confirmadas',    dot: 'bg-emerald-400', badge: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20',textColor: 'text-emerald-400' },
   { status: 'pronta_levantamento', title: 'Prontas p/ Levantamento', dot: 'bg-sky-400',     badge: 'bg-sky-400/10 text-sky-400 border-sky-400/20',           textColor: 'text-sky-400'     },
-  { status: 'ativa',               title: 'Alugueres Ativos',        dot: 'bg-blue-400',    badge: 'bg-blue-400/10 text-blue-400 border-blue-400/20',        textColor: 'text-blue-400'    },
+  { status: 'ativa',               title: 'Alugueres Activos',        dot: 'bg-blue-400',    badge: 'bg-blue-400/10 text-blue-400 border-blue-400/20',        textColor: 'text-blue-400'    },
   { status: 'devolucao_pendente',  title: 'Devolução Pendente',      dot: 'bg-orange-400',  badge: 'bg-orange-400/10 text-orange-400 border-orange-400/20',  textColor: 'text-orange-400'  },
 ];
 
@@ -51,15 +53,19 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
   const { reservations, blocks, updateReservation, cancelReservation, removeBlock, marcarPrestacao } = useReservations();
   const { motoristas } = useMotoristas();
   const { vehicles: allVehicles } = useVehicles();
+  const { addNotification } = useNotifications();
 
   const aluguerVehicles = useMemo(() => allVehicles.filter(v => v.mode === 'aluguer'), [allVehicles]);
   const aluguerIds = useMemo(() => new Set(aluguerVehicles.map(v => v.id)), [aluguerVehicles]);
 
   const getUrlParams = () => new URLSearchParams(window.location.search);
 
-  const [tab, setTab] = useState<Tab>(() =>
-    getUrlParams().get('tab') === 'acoes' ? 'acoes' : 'reservas'
-  );
+  const [tab, setTab] = useState<Tab>(() => {
+    const t = getUrlParams().get('tab');
+    if (t === 'acoes') return 'acoes';
+    if (t === 'em_uso') return 'em_uso';
+    return 'reservas';
+  });
   const [highlightStatus, setHighlightStatus] = useState<string | null>(() =>
     getUrlParams().get('status')
   );
@@ -79,13 +85,16 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
     onAfterSave?: () => void;
     titulo?: string;
   } | null>(null);
+  const [extensaoRespostaId, setExtensaoRespostaId]       = useState<string | null>(null);
+  const [extensaoRespostaTipo, setExtensaoRespostaTipo]   = useState<'aprovado' | 'rejeitado' | null>(null);
+  const [extensaoRespostaTexto, setExtensaoRespostaTexto] = useState('');
 
   // Sync tab + status with URL on navigation
   useEffect(() => {
     const sync = () => {
       const p = getUrlParams();
       const t = p.get('tab');
-      setTab(t === 'acoes' ? 'acoes' : 'reservas');
+      setTab(t === 'acoes' ? 'acoes' : t === 'em_uso' ? 'em_uso' : 'reservas');
       setHighlightStatus(p.get('status'));
     };
     window.addEventListener('popstate', sync);
@@ -142,9 +151,15 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
 
   const acoesUrgente = kpis.pendentes > 0 || kpis.devolucaoPendente > 0;
 
+  const emUsoCount = useMemo(
+    () => reservations.filter(r => aluguerIds.has(r.vehicleId) && ['confirmada','pronta_levantamento','ativa','devolucao_pendente'].includes(r.status)).length,
+    [reservations, aluguerIds],
+  );
+
   const tabList: { key: Tab; label: string; urgent?: boolean }[] = [
     { key: 'reservas',   label: `Histórico (${historico.length})` },
     { key: 'acoes',      label: `Ações (${accionaveisCount})`,     urgent: acoesUrgente },
+    { key: 'em_uso',     label: `Em Uso (${emUsoCount})` },
     { key: 'calendario', label: 'Calendário' },
     { key: 'bloqueios',  label: `Bloqueios (${blocks.length})` },
     { key: 'regras',     label: 'Regras' },
@@ -204,7 +219,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
               icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>,
             },
             {
-              label: 'Alugueres Ativos', sub: 'Em curso agora',
+              label: 'Alugueres Activos', sub: 'Em curso agora',
               value: kpis.ativas,
               numCol: kpis.ativas > 0 ? 'text-amber-400' : 'text-white',
               iconCol: 'text-amber-400',
@@ -303,7 +318,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                   {historico.map((r, idx) => {
                     const st = STATUS_CFG[r.status];
                     return (
-                      <tr key={r.id} className="hover:bg-zinc-800/30 transition-colors">
+                      <tr key={r.id} className={`hover:bg-zinc-800/40 transition-colors ${idx % 2 !== 0 ? 'bg-zinc-800/50' : ''}`}>
                         <td className="px-5 py-4 text-xs font-black text-white/30 tabular-nums w-10">{idx + 1}</td>
                         <td className="px-5 py-4">
                           <p className="text-sm font-semibold text-white">{r.clientName}</p>
@@ -381,6 +396,163 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                 })}
               </div>
 
+              {/* ── Pedidos de extensão pendentes ── */}
+              {(() => {
+                const comExtensao = aluguerReservations.filter(r => r.pedidoExtensao?.status === 'pendente');
+                if (comExtensao.length === 0) return null;
+                return (
+                  <div className="bg-amber-500/5 border-2 border-amber-500/40 rounded-2xl overflow-hidden">
+                    {/* cabeçalho da secção */}
+                    <div className="flex items-center gap-3 px-5 py-3 border-b border-amber-500/20 bg-amber-500/10">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                      <p className="text-xs font-black text-amber-400 uppercase tracking-widest">
+                        Pedidos de Extensão Pendentes
+                      </p>
+                      <span className="text-[10px] font-black bg-amber-500/20 border border-amber-500/40 text-amber-400 rounded-md px-2 py-0.5">
+                        {comExtensao.length}
+                      </span>
+                    </div>
+
+                    <div className="divide-y divide-amber-500/10">
+                      {comExtensao.map(r => {
+                        const veh = vehicleName(r.vehicleId);
+                        const ext = r.pedidoExtensao!;
+                        const isResponding = extensaoRespostaId === r.id;
+                        return (
+                          <div key={r.id} className="px-5 py-4 space-y-3">
+                            {/* Info do pedido */}
+                            <div className="flex items-start justify-between gap-4 flex-wrap">
+                              <div className="space-y-0.5 min-w-0">
+                                <p className="text-sm font-black text-white">{r.clientName}
+                                  <span className="text-white/40 font-mono text-[10px] ml-2">#{r.id.slice(0,8).toUpperCase()}</span>
+                                </p>
+                                <p className="text-xs text-white/60">{veh}</p>
+                              </div>
+                              <div className="flex gap-2 shrink-0 flex-wrap">
+                                <div className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-1.5 text-center">
+                                  <p className="text-[10px] text-white/40">Data fim actual</p>
+                                  <p className="text-xs font-black text-white">{r.dataFim}</p>
+                                </div>
+                                <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-1.5 text-center">
+                                  <p className="text-[10px] text-amber-400/70">Nova data sugerida</p>
+                                  <p className="text-xs font-black text-amber-400">{ext.novaDataFim}</p>
+                                </div>
+                                <div className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-1.5 text-center">
+                                  <p className="text-[10px] text-white/40">Extensão</p>
+                                  <p className="text-xs font-black text-white">+{ext.dias} dia(s)</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Motivo do cliente */}
+                            <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
+                              <p className="text-[10px] text-white/40 uppercase tracking-wider mb-1">Motivo do cliente</p>
+                              <p className="text-sm text-white leading-snug">{ext.motivo}</p>
+                            </div>
+
+                            {/* Área de resposta */}
+                            {isResponding ? (
+                              <div className={`rounded-xl border p-4 space-y-3 ${
+                                extensaoRespostaTipo === 'aprovado'
+                                  ? 'bg-emerald-500/10 border-emerald-500/30'
+                                  : 'bg-red-500/10 border-red-500/30'
+                              }`}>
+                                <p className={`text-xs font-black uppercase tracking-wider ${
+                                  extensaoRespostaTipo === 'aprovado' ? 'text-emerald-400' : 'text-red-400'
+                                }`}>
+                                  {extensaoRespostaTipo === 'aprovado' ? 'Confirmar aprovação' : 'Confirmar rejeição'}
+                                </p>
+                                <div>
+                                  <label className="text-[10px] text-white font-bold block mb-1">
+                                    Mensagem ao cliente <span className="text-amber-400">*</span>
+                                  </label>
+                                  <textarea
+                                    value={extensaoRespostaTexto}
+                                    onChange={e => setExtensaoRespostaTexto(e.target.value)}
+                                    placeholder={extensaoRespostaTipo === 'aprovado'
+                                      ? 'Ex: Extensão aprovada. A nova data de devolução é confirmada.'
+                                      : 'Ex: Não é possível estender porque a viatura já está reservada nesse período.'}
+                                    rows={3}
+                                    className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-400 rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 resize-none outline-none transition-colors"
+                                  />
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    disabled={!extensaoRespostaTexto.trim()}
+                                    onClick={() => {
+                                      const tipo     = extensaoRespostaTipo!;
+                                      const resposta = extensaoRespostaTexto.trim();
+                                      const novaData = tipo === 'aprovado' ? ext.novaDataFim : r.dataFim;
+                                      updateReservation(r.id, {
+                                        ...(tipo === 'aprovado' ? { dataFim: novaData } : {}),
+                                        pedidoExtensao: {
+                                          ...ext,
+                                          status: tipo,
+                                          respostaAdmin: resposta,
+                                          dataResposta: new Date().toISOString(),
+                                        },
+                                      });
+                                      if (r.userId) {
+                                        addNotification(
+                                          r.userId,
+                                          tipo === 'aprovado'
+                                            ? `Extensão aprovada — ${veh}`
+                                            : `Extensão não aprovada — ${veh}`,
+                                          tipo === 'aprovado'
+                                            ? `A sua extensão de ${ext.dias} dia(s) foi aprovada. Nova data de devolução: ${novaData}. ${resposta}`
+                                            : `A sua extensão não foi aprovada. ${resposta}`,
+                                          tipo === 'aprovado' ? 'success' : 'alert',
+                                          r.id,
+                                          '/perfil?section=reservas',
+                                        );
+                                      }
+                                      setExtensaoRespostaId(null);
+                                      setExtensaoRespostaTipo(null);
+                                      setExtensaoRespostaTexto('');
+                                      setLastActedId(r.id);
+                                    }}
+                                    className={`flex-1 py-2.5 rounded-xl text-sm font-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                                      extensaoRespostaTipo === 'aprovado'
+                                        ? 'bg-emerald-500 hover:bg-emerald-400 text-black'
+                                        : 'bg-red-500 hover:bg-red-400 text-white'
+                                    }`}
+                                  >
+                                    {extensaoRespostaTipo === 'aprovado' ? 'Aprovar e actualizar data' : 'Confirmar rejeição'}
+                                  </button>
+                                  <button
+                                    onClick={() => { setExtensaoRespostaId(null); setExtensaoRespostaTipo(null); setExtensaoRespostaTexto(''); }}
+                                    className="px-5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-sm font-bold transition-colors"
+                                  >
+                                    Cancelar
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => { setExtensaoRespostaId(r.id); setExtensaoRespostaTipo('aprovado'); setExtensaoRespostaTexto(''); }}
+                                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 text-sm font-black transition-colors"
+                                >
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                  Aprovar extensão
+                                </button>
+                                <button
+                                  onClick={() => { setExtensaoRespostaId(r.id); setExtensaoRespostaTipo('rejeitado'); setExtensaoRespostaTexto(''); }}
+                                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-sm font-black transition-colors"
+                                >
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                  Rejeitar
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {totalAcionaveis === 0 && (
                 <div className="bg-zinc-900 border border-amber-500/20 rounded-xl py-12 text-center text-white text-sm">
                   Sem reservas com acções pendentes
@@ -446,6 +618,12 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                                   🧑‍✈️ {mot.nome}
                                 </span>
                               )}
+                              {r.pedidoExtensao?.status === 'pendente' && (
+                                <span className="inline-flex items-center gap-1.5 text-[10px] font-black text-amber-300 bg-amber-400/15 border border-amber-400/40 rounded-md px-2 py-0.5 animate-pulse">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                                  Extensão pendente
+                                </span>
+                              )}
                               {isLastActed && (
                                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-300 bg-amber-400/15 border border-amber-400/30 rounded-md px-2 py-0.5 animate-pulse">
                                   ✓ Última ação
@@ -477,37 +655,49 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                             <ReservationTracker
                               status={r.status}
                               onAdvance={next => {
+                                const isShortRental = totalDays <= 5;
                                 if (next === 'confirmada') {
+                                  // ≤5 dias: paga o valor total logo no início; >5 dias: só o depósito
+                                  const valorInicial = isShortRental
+                                    ? r.valorTotal
+                                    : (r.deposito > 0 ? r.deposito : r.valorTotal);
                                   const firstPrest: Prestacao = r.prestacoes?.[0] ?? {
                                     numero: 1,
                                     dataVencimento: new Date().toISOString().split('T')[0],
-                                    valor: r.deposito > 0 ? r.deposito : r.valorTotal,
+                                    valor: valorInicial,
                                     paga: false,
                                   };
                                   setPagamentoModal({
                                     reservationId: r.id,
                                     prestacao: firstPrest,
-                                    titulo: 'Registar 1º Pagamento',
+                                    titulo: isShortRental ? 'Registar Pagamento Total' : 'Registar 1º Pagamento',
                                     onAfterSave: () => { updateReservation(r.id, { status: 'confirmada' }); setLastActedId(r.id); },
                                   });
                                 } else if (next === 'concluida') {
-                                  const lastUnpaid = r.prestacoes?.filter(p => !p.paga).at(-1);
-                                  const remaining = Math.max(0, r.valorTotal - pago);
-                                  const finalPrest: Prestacao = lastUnpaid ?? {
-                                    numero: (r.prestacoes?.length ?? 0) + 1,
-                                    dataVencimento: r.dataFim,
-                                    valor: remaining > 0 ? remaining : r.valorTotal,
-                                    paga: false,
-                                  };
-                                  setPagamentoModal({
-                                    reservationId: r.id,
-                                    prestacao: finalPrest,
-                                    titulo: 'Registar Pagamento Final',
-                                    onAfterSave: () => { updateReservation(r.id, { status: 'concluida' }); setLastActedId(r.id); },
-                                  });
+                                  // ≤5 dias: pagamento total foi feito no início — conclui directamente sem pedir novo pagamento
+                                  if (isShortRental) {
+                                    updateReservation(r.id, { status: 'concluida' });
+                                    setLastActedId(r.id);
+                                  } else {
+                                    const remaining = Math.max(0, r.valorTotal - pago);
+                                    const lastUnpaid = r.prestacoes?.filter(p => !p.paga).at(-1);
+                                    const finalPrest: Prestacao = lastUnpaid ?? {
+                                      numero: (r.prestacoes?.length ?? 0) + 1,
+                                      dataVencimento: r.dataFim,
+                                      valor: remaining > 0 ? remaining : r.valorTotal,
+                                      paga: false,
+                                    };
+                                    setPagamentoModal({
+                                      reservationId: r.id,
+                                      prestacao: finalPrest,
+                                      titulo: 'Registar Pagamento Final',
+                                      onAfterSave: () => { updateReservation(r.id, { status: 'concluida' }); setLastActedId(r.id); },
+                                    });
+                                  }
                                 } else {
                                   updateReservation(r.id, { status: next });
                                   setLastActedId(r.id);
+                                  if (next === 'devolucao_pendente') setAcoesFilter('todos');
                                 }
                               }}
                               onCancel={(motivo) => { cancelReservation(r.id, motivo); setLastActedId(r.id); }}
@@ -758,7 +948,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                           {/* Stats row */}
                           <div className="px-5 py-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
                             {([
-                              { label: 'Alugueres ativos', value: String(kpis.ativas), col: 'text-amber-400' },
+                              { label: 'Alugueres activos', value: String(kpis.ativas), col: 'text-amber-400' },
                               { label: 'Dias restantes', value: daysRemaining === 0 ? 'Hoje' : `${daysRemaining}d`, col: daysRemaining <= 1 ? 'text-red-400' : 'text-white' },
                               { label: 'Em dívida total', value: fmt(divida), col: divida > 0 ? 'text-amber-400' : 'text-emerald-400' },
                               { label: 'Estado veículo', value: estadoVeiculo, col: r.status === 'ativa' ? 'text-emerald-400' : 'text-white' },
@@ -769,6 +959,24 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                               </div>
                             ))}
                           </div>
+
+                          {/* Historial de extensão — só mostra após resposta */}
+                          {r.pedidoExtensao && r.pedidoExtensao.status !== 'pendente' && (
+                            <div className={`border-t px-5 py-3 flex items-center gap-3 ${
+                              r.pedidoExtensao.status === 'aprovado'
+                                ? 'border-emerald-500/20 bg-emerald-500/5'
+                                : 'border-zinc-800/60 bg-zinc-900/30'
+                            }`}>
+                              {r.pedidoExtensao.status === 'aprovado'
+                                ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                              }
+                              <p className={`text-xs font-bold ${r.pedidoExtensao.status === 'aprovado' ? 'text-emerald-400' : 'text-zinc-400'}`}>
+                                Extensão {r.pedidoExtensao.status === 'aprovado' ? 'aprovada' : 'rejeitada'}
+                                {r.pedidoExtensao.status === 'aprovado' && ` · nova data fim: ${r.pedidoExtensao.novaDataFim}`}
+                              </p>
+                            </div>
+                          )}
 
                           </>}
 
@@ -996,6 +1204,9 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
             )}
           </div>
         )}
+
+        {/* TAB: Em Uso */}
+        {tab === 'em_uso' && <ViaturaEmUsoPage />}
 
         {/* TAB: Regras */}
         {tab === 'regras' && <BusinessRulesPanel />}
