@@ -3,7 +3,7 @@ import { useXitique } from '../context/XitiqueContext';
 import { useAuth } from '../context/AuthContext';
 import type { GrupoXitique } from '../types/xitique';
 
-type Step = 'grupoSelect' | 'form' | 'otp' | 'sucesso';
+type Step = 'grupoSelect' | 'form' | 'otp' | 'sucesso' | 'rejeitado';
 
 const fmt = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',00 MT';
 
@@ -83,8 +83,8 @@ export default function XitiqueModal({ onClose }: { onClose: () => void }) {
   };
 
   const submitInscricao = () => {
-    adicionarInscricao({ nome, telefone: `+258 ${telefone}`, email, grupoId });
-    setStep('sucesso');
+    const resultado = adicionarInscricao({ nome, telefone: `+258 ${telefone}`, email, grupoId, userId: fullUser?.id });
+    setStep(resultado === 'aprovado' ? 'sucesso' : 'rejeitado');
   };
 
   const handleVerificar = () => {
@@ -114,14 +114,17 @@ export default function XitiqueModal({ onClose }: { onClose: () => void }) {
               {step === 'grupoSelect' && 'Escolha o seu Grupo'}
               {step === 'form'        && 'Os seus Dados'}
               {step === 'otp'        && (fullUser ? `Olá, ${nome.split(' ')[0]}!` : 'Verificação por SMS')}
-              {step === 'sucesso'     && 'Inscrição Recebida!'}
+              {step === 'sucesso'     && 'Inscrição Confirmada!'}
+              {step === 'rejeitado'   && 'Grupo Sem Vagas'}
             </h2>
           </div>
           {/* Step dots */}
           <div className="flex items-center gap-2 mr-8">
             {[0, 1, 2, 3].map(i => (
               <div key={i} className={`h-1.5 rounded-full transition-all ${
-                i === stepIndex ? 'w-6 bg-amber-500' : i < stepIndex ? 'w-3 bg-emerald-400' : 'w-3 bg-zinc-700'
+                step === 'rejeitado'
+                  ? (i <= stepIndex ? 'w-3 bg-red-500' : 'w-3 bg-zinc-700')
+                  : i === stepIndex ? 'w-6 bg-amber-500' : i < stepIndex ? 'w-3 bg-emerald-400' : 'w-3 bg-zinc-700'
               }`} />
             ))}
           </div>
@@ -320,7 +323,7 @@ export default function XitiqueModal({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {/* ── PASSO 3: Sucesso ── */}
+          {/* ── PASSO 3: Sucesso (aprovado automaticamente) ── */}
           {step === 'sucesso' && (
             <div className="text-center space-y-5 py-2">
               <div className="w-16 h-16 rounded-full bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center mx-auto">
@@ -329,12 +332,12 @@ export default function XitiqueModal({ onClose }: { onClose: () => void }) {
                 </svg>
               </div>
               <div>
-                <h3 className="text-white font-black text-xl mb-2">Inscrição enviada!</h3>
+                <h3 className="text-white font-black text-xl mb-2">Bem-vindo ao Xitique!</h3>
                 {grupoSelecionado && (
                   <p className="text-amber-400 text-sm font-bold mb-2">{grupoSelecionado.nome} · {fmt(grupoSelecionado.quotaMT)}/mês</p>
                 )}
                 <p className="text-white text-sm leading-relaxed">
-                  Os seus dados foram registados. O administrador irá validar e confirmar a sua entrada no grupo.
+                  A sua inscrição foi <span className="text-emerald-400 font-black">confirmada automaticamente</span>. O administrador entrará em contacto com as instruções de pagamento.
                 </p>
               </div>
               <div className="bg-zinc-800/50 border border-zinc-700 rounded-2xl p-4 text-left space-y-2">
@@ -344,6 +347,35 @@ export default function XitiqueModal({ onClose }: { onClose: () => void }) {
                     <span className="text-white text-sm font-black truncate">{row.value}</span>
                   </div>
                 ))}
+              </div>
+              <button onClick={onClose} className="w-full py-3 rounded-2xl bg-zinc-800 text-white font-black text-sm hover:bg-zinc-700 transition">
+                Fechar
+              </button>
+            </div>
+          )}
+
+          {/* ── PASSO 4: Rejeitado (grupo cheio) ── */}
+          {step === 'rejeitado' && (
+            <div className="text-center space-y-5 py-2">
+              <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2.5" strokeLinecap="round">
+                  <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-white font-black text-xl mb-2">Grupo Completo</h3>
+                {grupoSelecionado && (
+                  <p className="text-red-400 text-sm font-bold mb-2">{grupoSelecionado.nome}</p>
+                )}
+                <p className="text-white text-sm leading-relaxed">
+                  Lamentamos, mas o grupo atingiu o número máximo de membros enquanto processava a sua inscrição. Não há vagas disponíveis de momento.
+                </p>
+              </div>
+              <div className="bg-amber-500/8 border border-amber-500/20 rounded-2xl px-4 py-3 text-left">
+                <p className="text-amber-400 text-xs font-black uppercase tracking-widest mb-1">O que fazer?</p>
+                <p className="text-white text-sm leading-relaxed">
+                  Aguarde a abertura de um novo grupo ou contacte o administrador para mais informações.
+                </p>
               </div>
               <button onClick={onClose} className="w-full py-3 rounded-2xl bg-zinc-800 text-white font-black text-sm hover:bg-zinc-700 transition">
                 Fechar

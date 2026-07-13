@@ -21,18 +21,26 @@ export function XitiqueClientPage({ onExit, embedded }: { onExit?: () => void; e
     if (m) { grupoDoUser = g; membroDoUser = m; break; }
   }
 
-  // Verifica se há inscrição ainda pendente (não aprovada)
-  const inscricaoPendente = !membroDoUser && inscricoes.find(i =>
-    i.status === 'aguarda_validacao' && (
-      i.email === fullUser?.email ||
-      (fullUser?.telefone && i.telefone.replace(/\D/g, '').endsWith(fullUser.telefone.replace(/\D/g, '').slice(-8)))
-    )
-  );
+  const matchUser = (i: { email: string; telefone: string }) =>
+    i.email === fullUser?.email ||
+    (!!fullUser?.telefone && i.telefone.replace(/\D/g, '').endsWith(fullUser.telefone.replace(/\D/g, '').slice(-8)));
 
-  // Grupo da inscrição pendente (para mostrar info do grupo)
+  // Inscrição ainda aguarda validação manual (legado)
+  const inscricaoPendente = !membroDoUser
+    ? inscricoes.find(i => i.status === 'aguarda_validacao' && matchUser(i))
+    : undefined;
+
+  // Inscrição rejeitada (grupo cheio ou outro motivo)
+  const inscricaoRejeitada = !membroDoUser && !inscricaoPendente
+    ? inscricoes.find(i => i.status === 'rejeitado' && matchUser(i))
+    : undefined;
+
+  // Grupo da inscrição pendente/rejeitada
   const grupoPendente = inscricaoPendente
     ? grupos.find(g => g.id === inscricaoPendente.grupoId)
-    : null;
+    : inscricaoRejeitada
+      ? grupos.find(g => g.id === inscricaoRejeitada.grupoId)
+      : null;
 
   const membro       = membroDoUser;
   const grupo        = grupoDoUser;
@@ -54,6 +62,18 @@ export function XitiqueClientPage({ onExit, embedded }: { onExit?: () => void; e
   };
 
   const cores = membro ? estadoCores[membro.estado] : null;
+
+  // Calcula mês/ano real de cada posição a partir da data de início do grupo
+  const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const MESES_ABR  = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const getDataMes = (mesNum: number, abreviado = false): string | null => {
+    if (!grupo?.dataInicio) return null;
+    const d = new Date(grupo.dataInicio + 'T00:00:00');
+    d.setMonth(d.getMonth() + mesNum - 1);
+    return abreviado
+      ? `${MESES_ABR[d.getMonth()]} ${d.getFullYear()}`
+      : `${MESES_FULL[d.getMonth()]} de ${d.getFullYear()}`;
+  };
 
   return (
     <div className={embedded ? 'text-white' : 'min-h-screen bg-zinc-950 text-white'}>
@@ -224,7 +244,7 @@ export function XitiqueClientPage({ onExit, embedded }: { onExit?: () => void; e
           </div>
         )}
 
-        {/* Caso 2: Inscrição pendente */}
+        {/* Caso 2a: Inscrição pendente (legado — validação manual) */}
         {!membro && inscricaoPendente && (
           <div className="bg-amber-400/5 border border-amber-400/20 rounded-2xl p-5 space-y-3">
             <div className="flex items-center gap-3">
@@ -252,14 +272,47 @@ export function XitiqueClientPage({ onExit, embedded }: { onExit?: () => void; e
               )}
               <div className="flex justify-between">
                 <span className="text-white">Estado</span>
-                <span className="text-amber-400 font-bold capitalize">{inscricaoPendente.status.replace('_', ' ')}</span>
+                <span className="text-amber-400 font-bold">Em análise</span>
               </div>
             </div>
           </div>
         )}
 
-        {/* Caso 3: Não encontrado */}
-        {!membro && !inscricaoPendente && (
+        {/* Caso 2b: Inscrição rejeitada (grupo cheio) */}
+        {!membro && inscricaoRejeitada && (
+          <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-5 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2.5" strokeLinecap="round">
+                  <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
+              </div>
+              <div>
+                <span className="text-red-400 font-black text-sm uppercase tracking-wide block">Inscrição Recusada</span>
+                {grupoPendente && (
+                  <span className="text-xs text-zinc-400">{grupoPendente.nome}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-zinc-800/60 border border-zinc-700 rounded-xl px-4 py-3 space-y-1">
+              <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Motivo</p>
+              <p className="text-sm text-white font-semibold leading-relaxed">
+                {inscricaoRejeitada.motivoRejeicao ?? 'O grupo atingiu o número máximo de membros.'}
+              </p>
+            </div>
+
+            <div className="bg-amber-500/8 border border-amber-500/20 rounded-xl px-4 py-3">
+              <p className="text-amber-400 text-xs font-black uppercase tracking-widest mb-1">O que fazer?</p>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Aguarde a abertura de um novo grupo ou contacte o administrador para verificar se existe alguma alternativa disponível.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Caso 3: Sem qualquer inscrição */}
+        {!membro && !inscricaoPendente && !inscricaoRejeitada && (
           <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-6 text-center space-y-3">
             <div className="w-12 h-12 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center mx-auto">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#71717a" strokeWidth="2">
@@ -271,64 +324,107 @@ export function XitiqueClientPage({ onExit, embedded }: { onExit?: () => void; e
           </div>
         )}
 
-        {/* Sequência do ciclo */}
-        {membro && grupo?.sequencia && grupo.sequencia.length > 0 && estadoGrupo !== 'Aberto' && (() => {
-          const seqIdx     = grupo.sequencia!.findIndex(id => id === membro.id);
-          const meuMes     = seqIdx + 1; // 0 se não encontrado → meuMes = 0
-          const jáRecebeu  = membro.estado === 'Sorteado';
-          const esteEuMes  = meuMes > 0 && meuMes === mesAtual && estadoGrupo === 'EmAndamento';
-          const futuraMinha = meuMes > 0 && !jáRecebeu && meuMes > (mesAtual - 1);
-          return (
-            <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4 space-y-3">
-              <h3 className="text-white font-black text-sm uppercase tracking-wider">Sequência de Entregas</h3>
+        {/* Sequência do ciclo — sempre visível quando o grupo está Em Andamento ou Concluído */}
+        {membro && estadoGrupo !== 'Aberto' && (
+          <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4 space-y-3">
+            <h3 className="text-white font-black text-sm uppercase tracking-wider">Sequência de Entregas</h3>
 
-              {/* Banner: quando é a vez do cliente */}
-              {meuMes > 0 && futuraMinha && (
-                <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${
-                  esteEuMes ? 'bg-amber-400/15 border-amber-400/30' : 'bg-zinc-800/60 border-zinc-700'
-                }`}>
-                  <span className="text-xl shrink-0">{esteEuMes ? '🏆' : '📅'}</span>
-                  <div>
-                    <div className={`text-sm font-black ${esteEuMes ? 'text-amber-400' : 'text-white'}`}>
-                      {esteEuMes ? 'Este mês é o seu!' : `Você recebe no Mês ${meuMes}`}
-                    </div>
-                    <div className="text-xs text-white">{fmt(premioMT)}</div>
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-1.5">
-                {grupo.sequencia!.map((memId, idx) => {
-                  const m      = grupo.membros.find(m => m.id === memId);
-                  const mesNum = idx + 1;
-                  const feito  = sorteios.some(s => s.mes === mesNum);
-                  const atual  = mesNum === mesAtual && estadoGrupo === 'EmAndamento';
-                  const euSou  = memId === membro.id;
-                  return (
-                    <div key={memId} className={`flex items-center gap-3 px-3 py-2 rounded-xl border ${
-                      euSou && !feito ? 'border-amber-400/30 bg-amber-400/5' :
-                      feito           ? 'border-transparent opacity-50'      :
-                      'border-transparent'
-                    }`}>
-                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
-                        feito ? 'bg-zinc-700 text-zinc-400' :
-                        atual ? 'bg-amber-500 text-zinc-950' :
-                        'bg-zinc-800 border border-zinc-700 text-white'
-                      }`}>{mesNum}</span>
-                      <span className={`text-sm flex-1 truncate ${
-                        euSou && !feito ? 'font-black text-amber-400' :
-                        feito           ? 'text-zinc-500'             :
-                        'text-white'
-                      }`}>{euSou ? `${m?.nome ?? 'Você'} (você)` : (m?.nome ?? '?')}</span>
-                      {feito && <span className="text-[10px] text-emerald-400 font-bold shrink-0">✓</span>}
-                      {atual && !feito && <span className="text-[10px] text-amber-400 font-bold shrink-0 animate-pulse">← agora</span>}
-                    </div>
-                  );
-                })}
+            {/* Ainda sem sequência gerada */}
+            {(!grupo?.sequencia || grupo.sequencia.length === 0) && (
+              <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-zinc-800/50 border border-zinc-700">
+                <span className="text-lg shrink-0 mt-0.5">⏳</span>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  O sorteio inicial ainda não foi realizado. Assim que o administrador gerar a sequência, poderá ver aqui a ordem e a data aproximada em que irá receber o prémio.
+                </p>
               </div>
-            </div>
-          );
-        })()}
+            )}
+
+            {/* Sequência já gerada */}
+            {grupo?.sequencia && grupo.sequencia.length > 0 && (() => {
+              const seqIdx      = grupo.sequencia!.findIndex(id => id === membro.id);
+              const meuMes      = seqIdx >= 0 ? seqIdx + 1 : 0;
+              const jáRecebeu   = membro.estado === 'Sorteado';
+              const esteEuMes   = meuMes > 0 && meuMes === mesAtual && estadoGrupo === 'EmAndamento';
+              const futuraMinha = meuMes > 0 && !jáRecebeu;
+              const dataRecebi  = meuMes > 0 ? getDataMes(meuMes) : null;
+              return (
+                <>
+                  {/* Banner da vez do cliente */}
+                  {futuraMinha && (
+                    <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${
+                      esteEuMes
+                        ? 'bg-amber-400/15 border-amber-400/40'
+                        : 'bg-zinc-800/60 border-zinc-700'
+                    }`}>
+                      <span className="text-2xl shrink-0">{esteEuMes ? '🏆' : '📅'}</span>
+                      <div className="space-y-0.5">
+                        <div className={`text-sm font-black ${esteEuMes ? 'text-amber-400' : 'text-white'}`}>
+                          {esteEuMes
+                            ? 'Este mês é o seu!'
+                            : dataRecebi
+                              ? `Você recebe em ${dataRecebi}`
+                              : `Você recebe no Mês ${meuMes}`}
+                        </div>
+                        <div className="text-xs text-zinc-400">
+                          Prémio: <span className="text-amber-400 font-bold">{fmt(premioMT)}</span>
+                          {!esteEuMes && <span className="ml-2">· Posição {meuMes} de {numMembros}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Lista completa */}
+                  <div className="space-y-1">
+                    {grupo.sequencia!.map((memId, idx) => {
+                      const m         = grupo.membros.find(m => m.id === memId);
+                      const mesNum    = idx + 1;
+                      const feito     = sorteios.some(s => s.mes === mesNum);
+                      const atual     = mesNum === mesAtual && estadoGrupo === 'EmAndamento';
+                      const euSou     = memId === membro.id;
+                      const dataAprox = getDataMes(mesNum, true);
+                      return (
+                        <div key={memId} className={`flex items-center gap-3 px-3 py-2 rounded-xl border ${
+                          euSou && !feito ? 'border-amber-400/30 bg-amber-400/5'    :
+                          feito           ? 'border-transparent opacity-40'          :
+                          atual           ? 'border-amber-500/20 bg-amber-500/5'    :
+                          'border-transparent'
+                        }`}>
+                          {/* Número do mês */}
+                          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                            feito ? 'bg-zinc-700 text-zinc-500'      :
+                            atual ? 'bg-amber-500 text-zinc-950'     :
+                            'bg-zinc-800 border border-zinc-700 text-zinc-400'
+                          }`}>{mesNum}</span>
+
+                          {/* Nome */}
+                          <span className={`text-sm flex-1 min-w-0 truncate ${
+                            euSou && !feito ? 'font-black text-amber-400' :
+                            feito           ? 'text-zinc-500'             :
+                            atual           ? 'text-white font-semibold'  :
+                            'text-zinc-300'
+                          }`}>
+                            {euSou ? `${m?.nome ?? 'Você'} (você)` : (m?.nome ?? '—')}
+                          </span>
+
+                          {/* Data aproximada (apenas pendentes) */}
+                          {dataAprox && !feito && (
+                            <span className={`text-[10px] shrink-0 ${
+                              euSou ? 'text-amber-400/70 font-bold' : 'text-zinc-600'
+                            }`}>{dataAprox}</span>
+                          )}
+
+                          {/* Estado */}
+                          {feito  && <span className="text-[10px] text-emerald-400 font-bold shrink-0">✓ entregue</span>}
+                          {atual && !feito && <span className="text-[10px] text-amber-400 font-bold shrink-0 animate-pulse">← este mês</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        )}
 
         {/* Histórico do cliente */}
         {membro && (sorteios.length > 0 || membro.mesesPagos.length > 0) && (

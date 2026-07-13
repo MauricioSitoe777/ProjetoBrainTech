@@ -91,7 +91,7 @@ interface XitiqueContextType {
   confirmarPagamento: (grupoId: string, id: string, metodo: string, referencia?: string) => void;
   realizarSorteio: (grupoId: string) => string | null;
   reiniciarGrupo: (grupoId: string) => void;
-  adicionarInscricao: (dados: Pick<InscricaoXitique, 'nome' | 'telefone' | 'email' | 'grupoId'>) => void;
+  adicionarInscricao: (dados: Pick<InscricaoXitique, 'nome' | 'telefone' | 'email' | 'grupoId'> & { userId?: string }) => 'aprovado' | 'rejeitado';
   aprovarInscricao: (id: string, userId?: string) => void;
   rejeitarInscricao: (id: string, motivo?: string) => void;
   gerarSequencia: (grupoId: string) => void;
@@ -197,26 +197,49 @@ export function XitiqueProvider({ children }: { children: ReactNode }) {
   const reiniciarGrupo = (grupoId: string) =>
     updateGrupo(grupoId, g => ({ ...g, membros: [], sorteios: [], estadoGrupo: 'Aberto', mesAtual: 1, sequencia: undefined }));
 
-  const adicionarInscricao = (dados: Pick<InscricaoXitique, 'nome' | 'telefone' | 'email' | 'grupoId'>) => {
+  const adicionarInscricao = (dados: Pick<InscricaoXitique, 'nome' | 'telefone' | 'email' | 'grupoId'> & { userId?: string }): 'aprovado' | 'rejeitado' => {
+    const grupo = grupos.find(g => g.id === dados.grupoId);
+    const podeEntrar = !!(grupo && grupo.estadoGrupo === 'Aberto' && grupo.membros.length < grupo.maxMembros);
+    const motivo = !grupo
+      ? 'Grupo não encontrado.'
+      : grupo.estadoGrupo !== 'Aberto'
+        ? 'O grupo já está em andamento ou foi concluído.'
+        : 'O grupo atingiu o número máximo de membros.';
+
     const nova: InscricaoXitique = {
       id: `insc${Date.now()}`,
       grupoId: dados.grupoId,
       nome: dados.nome.trim(),
       telefone: dados.telefone.trim(),
       email: dados.email.trim(),
-      status: 'aguarda_validacao',
+      status: podeEntrar ? 'aprovado' : 'rejeitado',
       dataCriacao: new Date().toISOString().split('T')[0],
+      motivoRejeicao: podeEntrar ? undefined : motivo,
     };
     setInscricoes(prev => [...prev, nova]);
-    const grupo = grupos.find(g => g.id === dados.grupoId);
-    addNotification(
-      'admin',
-      'Nova inscrição Xitique',
-      `${dados.nome.trim()} solicitou entrada no grupo "${grupo?.nome ?? dados.grupoId}". Aguarda validação.`,
-      'info',
-      undefined,
-      '/admin/xitique'
-    );
+
+    if (podeEntrar && grupo) {
+      addMembro(dados.grupoId, dados.nome.trim(), dados.userId);
+      addNotification(
+        dados.userId ?? 'client',
+        'Inscrição Confirmada no Xitique',
+        `Bem-vindo ao grupo "${grupo.nome}"! Aguarde as instruções de pagamento do administrador.`,
+        'success',
+        undefined,
+        '/cliente/xitique'
+      );
+    } else {
+      addNotification(
+        dados.userId ?? 'client',
+        'Inscrição Recusada',
+        `Não foi possível inscrevê-lo no grupo "${grupo?.nome ?? ''}": ${motivo}`,
+        'error',
+        undefined,
+        '/cliente/xitique'
+      );
+    }
+
+    return podeEntrar ? 'aprovado' : 'rejeitado';
   };
 
   const aprovarInscricao = (id: string, userId?: string) => {

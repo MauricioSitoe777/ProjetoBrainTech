@@ -94,8 +94,9 @@ export function FinancePage() {
     reservations.filter(r => r.status !== 'cancelada'),
   [reservations]);
 
-  const aluguerRes = useMemo(() => resActivas.filter(r => !compraIds.has(r.vehicleId)), [resActivas]);
-  const compraRes  = useMemo(() => resActivas.filter(r =>  compraIds.has(r.vehicleId)), [resActivas]);
+  const aluguerRes    = useMemo(() => resActivas.filter(r => !compraIds.has(r.vehicleId)), [resActivas]);
+  const compraRes     = useMemo(() => resActivas.filter(r =>  compraIds.has(r.vehicleId)), [resActivas]);
+  const carrosVendidos = useMemo(() => compraRes.filter(r => r.status === 'liquidada').length, [compraRes]);
 
   // ── Totais de receita ───────────────────────────────────────────────────────
   const receitaAluguer = useMemo(() => aluguerRes.reduce((s, r) => s + r.valorTotal, 0), [aluguerRes]);
@@ -265,28 +266,28 @@ export function FinancePage() {
 
             {/* 1. KPI Cards — topo, linha horizontal */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* TOTAL ENTRADAS — ouro do logo */}
+              {/* VIATURAS NA EMPRESA */}
               <div style={{ background: 'linear-gradient(135deg,rgba(228,180,46,.18) 0%,rgba(154,106,16,.07) 100%)', borderColor: 'rgba(228,180,46,.38)' }} className="border rounded-2xl p-4 flex items-center gap-4">
                 <div style={{ backgroundColor: 'rgba(228,180,46,.18)' }} className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F0CD49" strokeWidth="2" strokeLinecap="round">
-                    <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F0CD49" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
                   </svg>
                 </div>
                 <div>
                   <p className="text-xs text-white uppercase font-bold tracking-wider">Total Entradas</p>
-                  <p style={{ color: '#F0CD49' }} className="text-2xl font-black leading-tight">{fmt(totalEntradas_op)}</p>
+                  <p style={{ color: '#F0CD49' }} className="text-2xl font-black leading-tight">{vehicles.length} <span className="text-sm font-semibold">viaturas</span></p>
                 </div>
               </div>
-              {/* TOTAL SAÍDAS */}
+              {/* CARROS VENDIDOS */}
               <div className="bg-zinc-900 border border-red-500/20 rounded-2xl p-4 flex items-center gap-4">
                 <div className="w-11 h-11 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/>
                   </svg>
                 </div>
                 <div>
                   <p className="text-xs text-white uppercase font-bold tracking-wider">Total Saídas</p>
-                  <p className="text-2xl font-black text-red-400 leading-tight">{fmt(totalSaidas)}</p>
+                  <p className="text-2xl font-black text-red-400 leading-tight">{carrosVendidos} <span className="text-sm font-semibold">vendidos</span></p>
                 </div>
               </div>
               {/* VALOR ARRECADADO — ouro quando positivo */}
@@ -814,7 +815,7 @@ export function FinancePage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <KpiCard label="Total Entradas"  value={fmt(totalEntradas)}         color="text-emerald-400" />
               <KpiCard label="Total Saídas"    value={fmt(totalSaidas)}           color="text-red-400" />
-              <KpiCard label="Lucro Líquido"   value={fmt(lucroLiquido)}          color={lucroLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'} />
+              <KpiCard label="Lucro"            value={fmt(lucroLiquido)}          color={lucroLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'} />
               <KpiCard label="Dívidas Activas" value={fmt(totalDividasPendentes)} color="text-amber-400" />
             </div>
 
@@ -867,11 +868,9 @@ export function FinancePage() {
           <div className="space-y-6">
 
             {/* KPIs */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <KpiCard label="Total Contratos"  value={String(aluguerRes.length)}  color="text-blue-400"    accent="border-blue-500/20" />
               <KpiCard label="Receita Total"    value={fmt(receitaAluguer)}         color="text-amber-400"   accent="border-amber-500/20" />
-              <KpiCard label="Valor Médio"     value={fmt(aluguerRes.length > 0 ? receitaAluguer / aluguerRes.length : 0)} color="text-white" />
-              <KpiCard label="Duração Média"    value={`${avgDiasAluguer} dias`}    color="text-white" />
             </div>
 
             {/* Distribuição por estado */}
@@ -992,14 +991,9 @@ export function FinancePage() {
           <div className="space-y-6">
 
             {/* KPIs */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <KpiCard label="Total Contratos"    value={String(compraRes.length)}   color="text-white" />
               <KpiCard label="Receita Total"      value={fmt(receitaCompra)}          color="text-amber-400"   accent="border-amber-500/20" />
-              <KpiCard label="Valor Médio"       value={fmt(compraRes.length > 0 ? receitaCompra / compraRes.length : 0)} color="text-white" />
-              <KpiCard label="Prestações Pagas"
-                value={totalPrestacoesTotal > 0 ? `${totalPrestacoesPagas}/${totalPrestacoesTotal}` : '—'}
-                color="text-emerald-400"
-                sub={totalPrestacoesTotal > 0 ? `${Math.round((totalPrestacoesPagas / totalPrestacoesTotal) * 100)}% cumpridas` : undefined} />
             </div>
 
             {/* Distribuição por estado */}
