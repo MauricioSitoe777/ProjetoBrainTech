@@ -583,7 +583,7 @@ export default function Simulator({
         horaDevolucao: "09:00",
         status: "pendente",
         valorTotal: purchaseTotal,
-        deposito: paymentPlan === "prestacoes" ? purchasePMT : purchaseTotal,
+        deposito: paymentPlan === "prestacoes" ? downPayment : purchaseTotal,
         notas: `Compra via plano: ${paymentPlan === "prestacoes" ? `${mesesPrestacoes} prestações` : "Pronto pagamento"}`,
         totalPrestacoes: paymentPlan === "prestacoes" ? mesesPrestacoes : undefined,
         prestacoesPagas: paymentPlan === "prestacoes" ? 0 : undefined,
@@ -796,7 +796,8 @@ export default function Simulator({
                     zeroAsEmpty placeholder="Insira o valor" />
                   {paymentPlan === "prestacoes" && (
                     <NumberField label="O Meu Salário" value={income}
-                      onChange={(v) => setIncome(Math.min(100_000_000, Math.max(0, v)))} min={0} suffix="MT/mês" />
+                      onChange={(v) => setIncome(Math.min(100_000_000, Math.max(0, v)))} min={0} suffix="MT/mês"
+                      disabled={!isAdmin} />
                   )}
                   <div>
                     <label className="text-white text-sm font-normal block mb-1.5">Como pagar?</label>

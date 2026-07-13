@@ -141,7 +141,16 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
       api.get<BusinessRules>('/business-rules').catch(() => null),
     ]).then(([apiRes, apiBlocks, apiRules]) => {
       if (apiRes && Array.isArray(apiRes) && apiRes.length > 0) {
-        setReservations(apiRes);
+        setReservations(prev => {
+          const localMap = new Map(prev.map(r => [r.id, r]));
+          return (apiRes as Reservation[]).map(apiR => {
+            if (!apiR.userId) {
+              const local = localMap.get(apiR.id);
+              if (local?.userId) return { ...apiR, userId: local.userId };
+            }
+            return apiR;
+          });
+        });
       }
       if (apiBlocks && Array.isArray(apiBlocks)) {
         setBlocks(apiBlocks);
@@ -326,13 +335,14 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
       ? new Date(dataInicioCustom + 'T00:00:00')
       : (() => { const d = new Date(); d.setMonth(d.getMonth() + 1); d.setDate(1); return d; })();
 
+    let plano: Prestacao[] = [];
     setReservations(prev =>
       prev.map(r => {
         if (r.id !== id) return r;
         const entradaPaga = semEntrada ? 0 : (r.deposito ?? 0);
         const restante = Math.max(0, r.valorTotal - entradaPaga);
         const valorPrestacao = Math.round(restante / n);
-        const plano: Prestacao[] = Array.from({ length: n }, (_, i) => {
+        plano = Array.from({ length: n }, (_, i) => {
           const due = new Date(startDate.getFullYear(), startDate.getMonth() + i, startDate.getDate());
           return {
             numero: i + 1,

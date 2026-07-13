@@ -213,7 +213,10 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
   const { vehicles: dynamicVehicles } = useVehicles();
 
   // ── Dados derivados ────────────────────────────────────────────────────────
-  const userRes = reservations.filter(r => r.userId === authUser?.id);
+  const userRes = reservations.filter(r =>
+    r.userId === authUser?.id ||
+    (!r.userId && r.clientEmail && r.clientEmail === authUser?.email)
+  );
 
   const alugueres = userRes.filter(r => {
     const v = VEHICLES.find(veh => veh.id === r.vehicleId);
@@ -727,7 +730,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                     )}
                     <div className="flex flex-wrap gap-2">
                       <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold border ${fullUser?.status === 'ativo' ? 'bg-emerald-400/10 border-emerald-400/20 text-emerald-400' : 'bg-red-400/10 border-red-400/20 text-red-400'}`}>
-                        {fullUser?.status === 'ativo' ? 'Conta Activa' : fullUser?.status === 'suspenso' ? 'Conta suspensa' : fullUser?.status === 'inativo' ? 'Conta inactiva' : 'Conta pendente'}
+                        {fullUser?.status === 'ativo' ? 'Conta Activa' : fullUser?.status === 'suspenso' ? 'Conta Suspensa' : fullUser?.status === 'inativo' ? 'Conta Inactiva' : 'Conta Pendente'}
                       </span>
                       <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold border ${fullUser?.regularity === 'regular' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-red-400/10 border-red-400/20 text-red-400'}`}>
                         {fullUser?.regularity === 'regular' ? 'Regular' : 'Pagamento em Falta'}
@@ -1106,11 +1109,11 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                 </div>
                 <div className="divide-y divide-zinc-800/50">
                   <div className="flex items-center justify-between px-4 py-3">
-                    <span className="text-xs text-white">Gasto em alugueres</span>
+                    <span className="text-xs text-white">Gasto em Alugueres</span>
                     <span className="text-xs font-black text-white">{totalAlugueresGasto > 0 ? fmt(totalAlugueresGasto) : '—'}</span>
                   </div>
                   <div className="flex items-center justify-between px-4 py-3">
-                    <span className="text-xs text-white">Total em compras</span>
+                    <span className="text-xs text-white">Total em Compras</span>
                     <span className="text-xs font-black text-white">{totalComprasGasto > 0 ? fmt(totalComprasGasto) : '—'}</span>
                   </div>
                   {membro && (
@@ -1278,12 +1281,12 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                             <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Período</p>
                             <div className="space-y-4">
                               <div>
-                                <p className="text-xs font-bold uppercase tracking-widest text-white">Pick-up</p>
+                                <p className="text-xs font-bold uppercase tracking-widest text-white">Levantamento</p>
                                 <p className="text-3xl font-black text-white leading-none mt-1">{d(r.dataInicio)}</p>
                                 {r.horaLevantamento && <p className="text-sm text-white mt-1.5">{r.horaLevantamento}</p>}
                               </div>
                               <div>
-                                <p className="text-xs font-bold uppercase tracking-widest text-amber-400">Return</p>
+                                <p className="text-xs font-bold uppercase tracking-widest text-amber-400">Devolução</p>
                                 <p className="text-3xl font-black text-amber-400 leading-none mt-1">{d(r.dataFim)}</p>
                                 {r.horaDevolucao && <p className="text-sm text-amber-400 mt-1.5">{r.horaDevolucao}</p>}
                               </div>
@@ -1360,7 +1363,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                               className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-bold transition-colors"
                             >
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="17" y1="14" x2="17" y2="20"/><line x1="14" y1="17" x2="20" y2="17"/></svg>
-                              Solicitar extensão
+                              Solicitar Extensão
                             </button>
                           )}
                           {podeCancelar && (
@@ -1369,7 +1372,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                               className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold transition-colors"
                             >
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                              Cancelar reserva
+                              Cancelar Reserva
                             </button>
                           )}
                         </div>
@@ -1424,11 +1427,11 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                   {cancelConfirm === r.id && (
                     <div className="border-t border-red-500/20 bg-red-500/5 px-4 py-4 space-y-3">
                       <div>
-                        <p className="text-sm text-white font-bold mb-0.5">Cancelar reserva?</p>
-                        <p className="text-xs text-white/70">Esta acção não pode ser desfeita. A sua reserva de <span className="text-white font-bold">{getVehicleName(r.vehicleId)}</span> será cancelada.</p>
+                        <p className="text-sm text-white font-bold mb-0.5">Cancelar Reserva?</p>
+                        <p className="text-xs text-white/70">Esta ação não pode ser desfeita. A sua reserva de <span className="text-white font-bold">{getVehicleName(r.vehicleId)}</span> será cancelada.</p>
                       </div>
                       <div>
-                        <label className="text-xs text-white font-bold block mb-1">Motivo do cancelamento <span className="text-red-400">*</span></label>
+                        <label className="text-xs text-white font-bold block mb-1">Motivo do Cancelamento <span className="text-red-400">*</span></label>
                         <textarea
                           value={cancelMotivo}
                           onChange={e => setCancelMotivo(e.target.value)}
@@ -1583,7 +1586,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                   const docs = [
                     { label: 'Certificado de Matrícula', valor: veh?.matricula ?? '—', ok: !!veh?.matricula },
                     { label: 'Livrete / Doc. Único',     valor: 'Disponível',           ok: true },
-                    { label: 'Seguro Obrigatório',        valor: c.status === 'liquidada' ? 'Disponível' : 'Aguarda liquidação', ok: c.status === 'liquidada' },
+                    { label: 'Seguro Obrigatório',        valor: c.status === 'liquidada' ? 'Disponível' : 'Aguarda Liquidação', ok: c.status === 'liquidada' },
                     { label: 'Inspeção Técnica',          valor: (veh?.year ?? 0) >= 2022 ? 'Válida' : 'Verificar renovação', ok: (veh?.year ?? 0) >= 2022 },
                   ];
 
@@ -1900,7 +1903,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                   className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-xs font-bold transition-colors"
                                 >
                                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                  Baixar Comprovativo
+                                  Descarregar Comprovativo
                                 </button>
 
                                 {(c.status === 'pendente' || c.status === 'compra_aprovada') && cancelConfirm !== c.id && (
@@ -1918,10 +1921,10 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                 <div className="border border-red-500/20 bg-red-500/5 rounded-xl px-4 py-4 space-y-3">
                                   <div>
                                     <p className="text-sm text-white font-bold mb-0.5">Cancelar compra?</p>
-                                    <p className="text-xs text-white/70">Esta acção não pode ser desfeita. O pedido de compra de <span className="text-white font-bold">{veh?.name ?? getVehicleName(c.vehicleId)}</span> será cancelado.</p>
+                                    <p className="text-xs text-white/70">Esta ação não pode ser desfeita. O pedido de compra de <span className="text-white font-bold">{veh?.name ?? getVehicleName(c.vehicleId)}</span> será cancelado.</p>
                                   </div>
                                   <div>
-                                    <label className="text-xs text-white font-bold block mb-1">Motivo do cancelamento <span className="text-red-400">*</span></label>
+                                    <label className="text-xs text-white font-bold block mb-1">Motivo do Cancelamento <span className="text-red-400">*</span></label>
                                     <textarea
                                       value={cancelMotivo}
                                       onChange={e => setCancelMotivo(e.target.value)}
@@ -3008,6 +3011,37 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
                     {membro.estado === 'Aceite' && `O seu pagamento de ${fmt(quotaMT)} foi confirmado.`}
                     {membro.estado === 'Sorteado' && `Parabéns! Foi contemplado e receberá ${fmt(premioMT)}.`}
                   </p>
+
+                  {membro.estado === 'Pendente' && grupoDoUser?.estadoGrupo === 'EmAndamento' && (
+                    <div className="mt-4 p-4 rounded-xl bg-zinc-800/50 border border-zinc-700 space-y-3">
+                      <div className="text-[10px] text-amber-400 font-black uppercase tracking-widest">Contas para Pagamento</div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="p-3 bg-zinc-900 border border-zinc-700/50 rounded-lg">
+                          <div className="text-[10px] text-white font-bold uppercase mb-1">M-Pesa</div>
+                          <div className="text-sm font-black text-white">84 000 0000</div>
+                          <div className="text-[10px] text-white mt-0.5">SOS Motors Lda</div>
+                        </div>
+                        <div className="p-3 bg-zinc-900 border border-zinc-700/50 rounded-lg">
+                          <div className="text-[10px] text-white font-bold uppercase mb-1">e-Mola</div>
+                          <div className="text-sm font-black text-white">86 000 0000</div>
+                          <div className="text-[10px] text-white mt-0.5">SOS Motors Lda</div>
+                        </div>
+                        <div className="p-3 bg-zinc-900 border border-zinc-700/50 rounded-lg sm:col-span-2">
+                          <div className="text-[10px] text-white font-bold uppercase mb-1">Transferência Bancária (Millennium BIM)</div>
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                              <div className="text-xs text-white">Conta: <span className="text-sm font-black text-white">0000 0000</span></div>
+                              <div className="text-xs text-white">NIB: <span className="text-sm font-mono text-white">0001 0000 0000 0000 0000 0</span></div>
+                            </div>
+                            <div className="text-[10px] text-white text-left sm:text-right">Titular:<br/>SOS Motors Lda</div>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-white leading-relaxed mt-2">
+                        * Após efectuar a transferência ou depósito, guarde o comprovativo. O administrador irá confirmar o seu pagamento e o estado será actualizado automaticamente.
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <div className="flex justify-between text-xs text-white mb-1.5">
                       <span>Progresso do Ciclo</span>

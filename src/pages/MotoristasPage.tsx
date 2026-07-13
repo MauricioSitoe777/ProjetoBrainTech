@@ -111,7 +111,7 @@ export function MotoristasPage({ onExit }: { onExit?: () => void }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}>
           <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-6 max-w-sm w-full text-center space-y-4">
             <p className="text-white font-bold text-sm">Remover motorista?</p>
-            <p className="text-white text-xs">Esta acção não pode ser desfeita.</p>
+            <p className="text-white text-xs">Esta ação não pode ser desfeita.</p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmDelete(null)} className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg py-2 text-sm font-semibold">Cancelar</button>
               <button onClick={() => { deleteMotorista(confirmDelete); setConfirmDelete(null); }}

@@ -1,4 +1,4 @@
-﻿import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { useXitique } from '../context/XitiqueContext';
 import { BrandLogo } from '../components/BrandLogo';
 
@@ -74,7 +74,7 @@ export function XitiqueClientPage({ onExit, embedded }: { onExit?: () => void; e
                 </button>
               )}
               <div className="w-px h-4 bg-zinc-800" />
-              <button onClick={logout} className="text-white hover:text-amber-400 transition text-sm">Logout</button>
+              <button onClick={logout} className="text-white hover:text-amber-400 transition text-sm">Sair</button>
             </div>
           </div>
         </nav>
@@ -160,16 +160,48 @@ export function XitiqueClientPage({ onExit, embedded }: { onExit?: () => void; e
               {membro.estado === 'Pendente' && estadoGrupo === 'EmAndamento' &&
                 `Efectue o pagamento de ${fmt(quotaMT)} e aguarde a confirmação do administrador.`}
               {membro.estado === 'Aceite' &&
-                `O seu pagamento de ${fmt(quotaMT)} foi confirmado. Está elegível para o sorteio deste mês.`}
+                `O seu pagamento de ${fmt(quotaMT)} foi confirmado.`}
               {membro.estado === 'Sorteado' &&
                 `Parabéns! Foi contemplado e irá receber ${fmt(premioMT)}. O administrador entrará em contacto.`}
             </p>
+
+            {membro.estado === 'Pendente' && estadoGrupo === 'EmAndamento' && (
+              <div className="mt-4 p-4 rounded-xl bg-zinc-800/50 border border-zinc-700 space-y-3">
+                <div className="text-[10px] text-amber-400 font-black uppercase tracking-widest">Contas para Pagamento</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3 bg-zinc-900 border border-zinc-700/50 rounded-lg">
+                    <div className="text-[10px] text-white font-bold uppercase mb-1">M-Pesa</div>
+                    <div className="text-sm font-black text-white">84 000 0000</div>
+                    <div className="text-[10px] text-white mt-0.5">SOS Motors Lda</div>
+                  </div>
+                  <div className="p-3 bg-zinc-900 border border-zinc-700/50 rounded-lg">
+                    <div className="text-[10px] text-white font-bold uppercase mb-1">e-Mola</div>
+                    <div className="text-sm font-black text-white">86 000 0000</div>
+                    <div className="text-[10px] text-white mt-0.5">SOS Motors Lda</div>
+                  </div>
+                  <div className="p-3 bg-zinc-900 border border-zinc-700/50 rounded-lg sm:col-span-2">
+                    <div className="text-[10px] text-white font-bold uppercase mb-1">Transferência Bancária (Millennium BIM)</div>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <div className="text-xs text-white">Conta: <span className="text-sm font-black text-white">0000 0000</span></div>
+                        <div className="text-xs text-white">NIB: <span className="text-sm font-mono text-white">0001 0000 0000 0000 0000 0</span></div>
+                      </div>
+                      <div className="text-[10px] text-white text-left sm:text-right">Titular:<br/>SOS Motors Lda</div>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-[10px] text-white leading-relaxed mt-2">
+                  * Após efectuar a transferência ou depósito, guarde o comprovativo. O administrador irá confirmar o seu pagamento e o estado será actualizado automaticamente.
+                </p>
+              </div>
+            )}
+
 
             {/* Progresso visual do ciclo */}
             <div>
               <div className="flex justify-between text-[10px] text-white mb-1.5">
                 <span>Progresso do Ciclo</span>
-                <span>{sorteios.length} / {numMembros} sorteios realizados</span>
+                <span>{sorteios.length} / {numMembros} entregas realizadas</span>
               </div>
               <div className="flex gap-1">
                 {Array.from({ length: numMembros }).map((_, i) => (
@@ -239,6 +271,65 @@ export function XitiqueClientPage({ onExit, embedded }: { onExit?: () => void; e
           </div>
         )}
 
+        {/* Sequência do ciclo */}
+        {membro && grupo?.sequencia && grupo.sequencia.length > 0 && estadoGrupo !== 'Aberto' && (() => {
+          const seqIdx     = grupo.sequencia!.findIndex(id => id === membro.id);
+          const meuMes     = seqIdx + 1; // 0 se não encontrado → meuMes = 0
+          const jáRecebeu  = membro.estado === 'Sorteado';
+          const esteEuMes  = meuMes > 0 && meuMes === mesAtual && estadoGrupo === 'EmAndamento';
+          const futuraMinha = meuMes > 0 && !jáRecebeu && meuMes > (mesAtual - 1);
+          return (
+            <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4 space-y-3">
+              <h3 className="text-white font-black text-sm uppercase tracking-wider">Sequência de Entregas</h3>
+
+              {/* Banner: quando é a vez do cliente */}
+              {meuMes > 0 && futuraMinha && (
+                <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${
+                  esteEuMes ? 'bg-amber-400/15 border-amber-400/30' : 'bg-zinc-800/60 border-zinc-700'
+                }`}>
+                  <span className="text-xl shrink-0">{esteEuMes ? '🏆' : '📅'}</span>
+                  <div>
+                    <div className={`text-sm font-black ${esteEuMes ? 'text-amber-400' : 'text-white'}`}>
+                      {esteEuMes ? 'Este mês é o seu!' : `Você recebe no Mês ${meuMes}`}
+                    </div>
+                    <div className="text-xs text-white">{fmt(premioMT)}</div>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                {grupo.sequencia!.map((memId, idx) => {
+                  const m      = grupo.membros.find(m => m.id === memId);
+                  const mesNum = idx + 1;
+                  const feito  = sorteios.some(s => s.mes === mesNum);
+                  const atual  = mesNum === mesAtual && estadoGrupo === 'EmAndamento';
+                  const euSou  = memId === membro.id;
+                  return (
+                    <div key={memId} className={`flex items-center gap-3 px-3 py-2 rounded-xl border ${
+                      euSou && !feito ? 'border-amber-400/30 bg-amber-400/5' :
+                      feito           ? 'border-transparent opacity-50'      :
+                      'border-transparent'
+                    }`}>
+                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                        feito ? 'bg-zinc-700 text-zinc-400' :
+                        atual ? 'bg-amber-500 text-zinc-950' :
+                        'bg-zinc-800 border border-zinc-700 text-white'
+                      }`}>{mesNum}</span>
+                      <span className={`text-sm flex-1 truncate ${
+                        euSou && !feito ? 'font-black text-amber-400' :
+                        feito           ? 'text-zinc-500'             :
+                        'text-white'
+                      }`}>{euSou ? `${m?.nome ?? 'Você'} (você)` : (m?.nome ?? '?')}</span>
+                      {feito && <span className="text-[10px] text-emerald-400 font-bold shrink-0">✓</span>}
+                      {atual && !feito && <span className="text-[10px] text-amber-400 font-bold shrink-0 animate-pulse">← agora</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Histórico do cliente */}
         {membro && (sorteios.length > 0 || membro.mesesPagos.length > 0) && (
           <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4">
@@ -301,7 +392,7 @@ export function XitiqueClientPage({ onExit, embedded }: { onExit?: () => void; e
         {/* Histórico geral de sorteios do grupo */}
         {membro && sorteios.length > 0 && (
           <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4">
-            <h3 className="text-white font-black text-sm uppercase tracking-wider mb-3">Sorteios do {grupo?.nome}</h3>
+            <h3 className="text-white font-black text-sm uppercase tracking-wider mb-3">Entregas do {grupo?.nome}</h3>
             <div className="space-y-2">
               {[...sorteios].reverse().map(s => (
                 <div key={s.mes} className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 ${

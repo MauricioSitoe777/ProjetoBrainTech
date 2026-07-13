@@ -35,6 +35,7 @@ export interface GrupoXitique {
   estadoGrupo: EstadoGrupo;
   mesAtual: number;
   dataInicio?: string;
+  sequencia?: string[]; // IDs dos membros na ordem em que recebem o prémio
 }
 
 export interface InscricaoXitique {
@@ -45,4 +46,5 @@ export interface InscricaoXitique {
   email: string;
   status: 'aguarda_validacao' | 'aprovado' | 'rejeitado';
   dataCriacao: string;
+  motivoRejeicao?: string;
 }

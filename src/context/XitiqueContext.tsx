@@ -93,7 +93,8 @@ interface XitiqueContextType {
   reiniciarGrupo: (grupoId: string) => void;
   adicionarInscricao: (dados: Pick<InscricaoXitique, 'nome' | 'telefone' | 'email' | 'grupoId'>) => void;
   aprovarInscricao: (id: string, userId?: string) => void;
-  rejeitarInscricao: (id: string) => void;
+  rejeitarInscricao: (id: string, motivo?: string) => void;
+  gerarSequencia: (grupoId: string) => void;
 }
 
 const XitiqueContext = createContext<XitiqueContextType | null>(null);
@@ -147,20 +148,44 @@ export function XitiqueProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const gerarSequencia = (grupoId: string) => {
+    updateGrupo(grupoId, g => {
+      // Grupo já em andamento sem sequência (dados legados): gera a partir dos restantes
+      if (g.estadoGrupo === 'EmAndamento' && !g.sequencia) {
+        const feitos = [...g.sorteios].sort((a, b) => a.mes - b.mes)
+          .map(s => g.membros.find(m => m.nome === s.vencedor)?.id ?? '');
+        const restantes = g.membros.filter(m => m.estado !== 'Sorteado').map(m => m.id);
+        for (let i = restantes.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [restantes[i], restantes[j]] = [restantes[j], restantes[i]];
+        }
+        return { ...g, sequencia: [...feitos, ...restantes] };
+      }
+      if (g.estadoGrupo !== 'Aberto' || g.membros.length < g.maxMembros) return g;
+      const ids = g.membros.map(m => m.id);
+      for (let i = ids.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [ids[i], ids[j]] = [ids[j], ids[i]];
+      }
+      return { ...g, sequencia: ids, estadoGrupo: 'EmAndamento' };
+    });
+  };
+
   const realizarSorteio = (grupoId: string): string | null => {
     const g = grupos.find(g => g.id === grupoId);
     if (!g || g.estadoGrupo !== 'EmAndamento') return null;
     if (!g.membros.every(m => m.pagamentoMes)) return null;
+    if (!g.sequencia || g.sequencia.length === 0) return null;
 
-    const elegiveis = g.membros.filter(m => m.estado !== 'Sorteado');
-    if (elegiveis.length === 0) return null;
+    const vencedorId = g.sequencia[g.mesAtual - 1];
+    const vencedor = g.membros.find(m => m.id === vencedorId);
+    if (!vencedor) return null;
 
-    const vencedor = elegiveis[Math.floor(Math.random() * elegiveis.length)];
     const grupoConcluido = g.mesAtual === g.maxMembros;
 
     updateGrupo(grupoId, g => ({
       ...g,
-      membros: g.membros.map(m => ({ ...m, estado: m.id === vencedor.id ? 'Sorteado' : m.estado, pagamentoMes: false })),
+      membros: g.membros.map(m => ({ ...m, estado: m.id === vencedorId ? 'Sorteado' : m.estado, pagamentoMes: false })),
       sorteios: [...g.sorteios, { mes: g.mesAtual, vencedor: vencedor.nome, valorPremio: g.premioMT }],
       mesAtual: grupoConcluido ? g.maxMembros : g.mesAtual + 1,
       estadoGrupo: grupoConcluido ? 'Concluido' : 'EmAndamento',
@@ -170,7 +195,7 @@ export function XitiqueProvider({ children }: { children: ReactNode }) {
   };
 
   const reiniciarGrupo = (grupoId: string) =>
-    updateGrupo(grupoId, g => ({ ...g, membros: [], sorteios: [], estadoGrupo: 'Aberto', mesAtual: 1 }));
+    updateGrupo(grupoId, g => ({ ...g, membros: [], sorteios: [], estadoGrupo: 'Aberto', mesAtual: 1, sequencia: undefined }));
 
   const adicionarInscricao = (dados: Pick<InscricaoXitique, 'nome' | 'telefone' | 'email' | 'grupoId'>) => {
     const nova: InscricaoXitique = {
@@ -204,11 +229,11 @@ export function XitiqueProvider({ children }: { children: ReactNode }) {
     setInscricoes(prev => prev.map(i => i.id === id ? { ...i, status: 'aprovado' } : i));
   };
 
-  const rejeitarInscricao = (id: string) =>
-    setInscricoes(prev => prev.map(i => i.id === id ? { ...i, status: 'rejeitado' } : i));
+  const rejeitarInscricao = (id: string, motivo?: string) =>
+    setInscricoes(prev => prev.map(i => i.id === id ? { ...i, status: 'rejeitado', motivoRejeicao: motivo ?? '' } : i));
 
   return (
-    <XitiqueContext.Provider value={{ grupos, inscricoes, criarGrupo, definirDataInicio, addMembro, removeMembro, confirmarPagamento, realizarSorteio, reiniciarGrupo, adicionarInscricao, aprovarInscricao, rejeitarInscricao }}>
+    <XitiqueContext.Provider value={{ grupos, inscricoes, criarGrupo, definirDataInicio, addMembro, removeMembro, confirmarPagamento, realizarSorteio, reiniciarGrupo, adicionarInscricao, aprovarInscricao, rejeitarInscricao, gerarSequencia }}>
       {children}
     </XitiqueContext.Provider>
   );

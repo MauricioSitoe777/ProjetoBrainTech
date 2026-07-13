@@ -1,6 +1,7 @@
 ﻿import { useState, useMemo } from 'react';
 import { useXitique } from '../context/XitiqueContext';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationsContext';
 import type { EstadoGrupo, EstadoMembroXitique, InscricaoXitique, GrupoXitique } from '../types/xitique';
 
 function gerarSenha(): string {
@@ -50,8 +51,9 @@ function fmtDataPt(iso: string) {
 }
 
 function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void }) {
-  const { addMembro, removeMembro, confirmarPagamento, realizarSorteio, reiniciarGrupo, definirDataInicio, inscricoes, aprovarInscricao, rejeitarInscricao } = useXitique();
+  const { addMembro, removeMembro, confirmarPagamento, realizarSorteio, reiniciarGrupo, definirDataInicio, inscricoes, aprovarInscricao, rejeitarInscricao, gerarSequencia } = useXitique();
   const { allUsers, addUser, updateUser } = useAuth();
+  const { addNotification } = useNotifications();
 
   const [tab,           setTab]           = useState<Tab>('grupo');
   const [novoNome,      setNovoNome]      = useState('');
@@ -65,8 +67,9 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
   const [refTemp,       setRefTemp]       = useState('');
   const [editandoData,  setEditandoData]  = useState(false);
   const [dataTemp,      setDataTemp]      = useState(grupo.dataInicio ?? '');
+  const [rejectInput,   setRejectInput]   = useState<{ id: string; motivo: string } | null>(null);
 
-  const { membros, sorteios, estadoGrupo, mesAtual, quotaMT, premioMT, maxMembros } = grupo;
+  const { membros, sorteios, estadoGrupo, mesAtual, quotaMT, premioMT, maxMembros, sequencia } = grupo;
 
   const inscricoesGrupo = inscricoes.filter(i => i.grupoId === grupo.id);
   const pendentes        = inscricoesGrupo.filter(i => i.status === 'aguarda_validacao');
@@ -93,6 +96,8 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
     const nome = realizarSorteio(grupo.id);
     if (nome) { setVencedorFlash(nome); setTimeout(() => setVencedorFlash(null), 5000); }
   };
+
+  const handleGerarSequencia = () => gerarSequencia(grupo.id);
 
   const fallbackCopy = (texto: string) => {
     const el = document.createElement('textarea');
@@ -125,6 +130,21 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
       const novoUser = addUser({ nome: insc.nome, email: insc.email, telefone: insc.telefone, role: 'cliente', status: 'ativo', regularity: 'regular', restriction: 'nenhuma', password: senha, mustChangePassword: true, xitique: true });
       aprovarInscricao(insc.id, novoUser.id);
       setCredencial({ nome: insc.nome, utilizador, email: insc.email, senha });
+    }
+  };
+
+  const handleRejeitar = (insc: InscricaoXitique, motivo: string) => {
+    rejeitarInscricao(insc.id, motivo);
+    const clientUser = allUsers.find(u => u.email.toLowerCase() === insc.email.toLowerCase());
+    if (clientUser) {
+      addNotification(
+        clientUser.id,
+        'Inscrição Xitique Rejeitada',
+        `O seu pedido de entrada no grupo "${grupo.nome}" foi rejeitado.${motivo ? ` Motivo: ${motivo}.` : ''}`,
+        'alert',
+        undefined,
+        '/admin'
+      );
     }
   };
 
@@ -238,16 +258,40 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
                 <div className="text-[10px] text-white">{insc.dataCriacao}</div>
               </div>
               {insc.status === 'aguarda_validacao' && (
-                <div className="flex gap-2 shrink-0">
-                  <button onClick={() => handleAprovar(insc)} disabled={grupoCompleto}
-                    className="text-xs font-bold px-3 py-2 rounded-xl border transition disabled:opacity-40 disabled:cursor-not-allowed bg-emerald-400/10 text-emerald-400 border-emerald-400/20 hover:bg-emerald-400/20">
-                    ✓ Aprovar
-                  </button>
-                  <button onClick={() => rejeitarInscricao(insc.id)}
-                    className="text-xs font-bold px-3 py-2 rounded-xl bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 transition">
-                    ✗ Rejeitar
-                  </button>
-                </div>
+                rejectInput?.id === insc.id ? (
+                  <div className="flex flex-col gap-1.5 items-end shrink-0 min-w-[200px]">
+                    <input
+                      autoFocus
+                      value={rejectInput.motivo}
+                      onChange={e => setRejectInput(prev => prev ? { ...prev, motivo: e.target.value } : prev)}
+                      placeholder="Motivo da rejeição..."
+                      className="w-full text-xs px-2.5 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-white/40 outline-none focus:border-red-500/60"
+                    />
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={() => { handleRejeitar(insc, rejectInput.motivo); setRejectInput(null); }}
+                        className="text-xs font-bold px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition">
+                        Confirmar
+                      </button>
+                      <button
+                        onClick={() => setRejectInput(null)}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 transition">
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-2 shrink-0">
+                    <button onClick={() => handleAprovar(insc)} disabled={grupoCompleto}
+                      className="text-xs font-bold px-3 py-2 rounded-xl border transition disabled:opacity-40 disabled:cursor-not-allowed bg-emerald-400/10 text-emerald-400 border-emerald-400/20 hover:bg-emerald-400/20">
+                      ✓ Aprovar
+                    </button>
+                    <button onClick={() => setRejectInput({ id: insc.id, motivo: '' })}
+                      className="text-xs font-bold px-3 py-2 rounded-xl bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 transition">
+                      ✗ Rejeitar
+                    </button>
+                  </div>
+                )
               )}
             </div>
           ))}
@@ -280,7 +324,7 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
             { label: 'Membros',          value: `${membros.length} / ${maxMembros}` },
             { label: 'Pagamentos mês',   value: `${membros.filter(m => m.pagamentoMes).length} / ${membros.length}` },
             { label: 'Total arrecadado', value: fmt(totalPagoMes) },
-            { label: 'Ainda p/ sortear', value: String(membrosRestantes) },
+            { label: 'Por receber', value: String(membrosRestantes) },
           ].map(m => (
             <div key={m.label} className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4">
               <div className="text-xs text-amber-400 mb-1">{m.label}</div>
@@ -412,34 +456,98 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
             </div>
           </div>
 
-          {/* Sorteio + Histórico */}
+          {/* Sequência + Histórico */}
           <div className="lg:col-span-2 space-y-4">
-            {estadoGrupo === 'EmAndamento' && (
+
+            {/* Botão: gerar sequência única (grupo completo sem sequência, ou EmAndamento legado) */}
+            {((estadoGrupo === 'Aberto' && membros.length >= maxMembros) || (estadoGrupo === 'EmAndamento' && !sequencia)) && (
               <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-5 text-center space-y-4">
-                <div className="text-xs text-white uppercase tracking-widest font-bold">Sorteio do Mês {mesAtual}</div>
+                <div className="text-xs text-amber-400 uppercase tracking-widest font-bold">
+                  {estadoGrupo === 'Aberto' ? 'Grupo Completo — Pronto para Iniciar' : 'Sequência não definida'}
+                </div>
                 <div className="text-3xl font-black text-white">{fmt(premioMT)}</div>
-                <p className="text-xs text-white">
-                  {todosPagaram ? `${membrosRestantes} membro${membrosRestantes !== 1 ? 's' : ''} elegível${membrosRestantes !== 1 ? 'is' : ''}` : `Aguarda ${porConfirmar} pagamento(s)`}
+                <p className="text-xs text-white leading-relaxed">
+                  Realize o sorteio único para definir a ordem em que cada membro irá receber o Xitique ao longo dos {maxMembros} meses. Todos ficarão a saber antecipadamente quando é a sua vez.
                 </p>
-                <button onClick={handleSortear} disabled={!todosPagaram}
-                  className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition ${todosPagaram ? 'bg-amber-500 text-zinc-950 hover:bg-amber-400 active:scale-[0.98]' : 'bg-zinc-800 text-white cursor-not-allowed'}`}>
-                  Realizar Sorteio
+                <button onClick={handleGerarSequencia}
+                  className="w-full py-4 rounded-2xl font-black uppercase tracking-widest text-sm bg-amber-500 text-zinc-950 hover:bg-amber-400 active:scale-[0.98] transition">
+                  Realizar Sorteio de Sequência
                 </button>
               </div>
             )}
+
+            {/* Confirmação mensal — quem é o próximo na sequência */}
+            {estadoGrupo === 'EmAndamento' && sequencia && (() => {
+              const proximoId = sequencia[mesAtual - 1];
+              const proximo   = membros.find(m => m.id === proximoId);
+              return (
+                <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-5 space-y-3">
+                  <div className="text-xs text-amber-400 uppercase tracking-widest font-bold text-center">Mês {mesAtual} / {maxMembros}</div>
+                  <div className="text-center space-y-1">
+                    <div className="text-xs text-white">Entrega a</div>
+                    <div className="text-xl font-black text-white">{proximo?.nome ?? '—'}</div>
+                    <div className="text-2xl font-black text-amber-400">{fmt(premioMT)}</div>
+                  </div>
+                  <p className="text-xs text-white text-center">
+                    {todosPagaram ? 'Todos os pagamentos confirmados.' : `Aguarda ${porConfirmar} pagamento(s)`}
+                  </p>
+                  <button onClick={handleSortear} disabled={!todosPagaram}
+                    className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition ${todosPagaram ? 'bg-amber-500 text-zinc-950 hover:bg-amber-400 active:scale-[0.98]' : 'bg-zinc-800 text-white cursor-not-allowed'}`}>
+                    Confirmar Entrega
+                  </button>
+                </div>
+              );
+            })()}
+
+            {/* Flash: entrega confirmada */}
             {vencedorFlash && (
               <div className="bg-emerald-400/10 border border-emerald-400/30 rounded-2xl p-5 text-center animate-pulse">
                 <div className="text-2xl mb-1">🎉</div>
-                <div className="text-xs text-emerald-400 font-bold uppercase tracking-widest mb-1">Contemplado</div>
+                <div className="text-xs text-emerald-400 font-bold uppercase tracking-widest mb-1">Entrega Confirmada</div>
                 <div className="text-xl font-black text-white">{vencedorFlash}</div>
                 <div className="text-sm text-emerald-400 mt-1">{fmt(premioMT)}</div>
               </div>
             )}
-            <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4">
-              <h3 className="text-white font-black text-sm uppercase tracking-wider mb-3">Histórico de Sorteios</h3>
-              {sorteios.length === 0 ? (
-                <p className="text-white text-xs text-center py-4">Nenhum sorteio realizado.</p>
-              ) : (
+
+            {/* Calendário da sequência */}
+            {sequencia && sequencia.length > 0 && (
+              <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4">
+                <h3 className="text-amber-400 font-black text-sm uppercase tracking-wider mb-3">Sequência do Ciclo</h3>
+                <div className="space-y-1.5">
+                  {sequencia.map((memId, idx) => {
+                    const m      = membros.find(m => m.id === memId);
+                    const mesNum = idx + 1;
+                    const feito  = sorteios.some(s => s.mes === mesNum);
+                    const atual  = mesNum === mesAtual && estadoGrupo === 'EmAndamento';
+                    return (
+                      <div key={memId} className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition ${
+                        feito ? 'border-transparent opacity-50' :
+                        atual ? 'bg-amber-400/10 border-amber-400/20' :
+                        'border-transparent'
+                      }`}>
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                          feito ? 'bg-zinc-700 text-zinc-400' :
+                          atual ? 'bg-amber-500 text-zinc-950' :
+                          'bg-zinc-800 border border-zinc-700 text-white'
+                        }`}>{mesNum}</span>
+                        <span className={`text-sm flex-1 truncate ${
+                          atual  ? 'text-amber-400 font-black' :
+                          feito  ? 'text-zinc-500'             :
+                          'text-white'
+                        }`}>{m?.nome ?? '?'}</span>
+                        {feito && <span className="text-[10px] text-emerald-400 font-bold shrink-0">✓ Recebeu</span>}
+                        {atual && <span className="text-[10px] text-amber-400 font-bold shrink-0 animate-pulse">← Este mês</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Histórico de entregas */}
+            {sorteios.length > 0 && (
+              <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4">
+                <h3 className="text-white font-black text-sm uppercase tracking-wider mb-3">Histórico de Entregas</h3>
                 <div className="space-y-2">
                   {[...sorteios].reverse().map(s => (
                     <div key={s.mes} className="flex items-center justify-between gap-2 bg-zinc-800/50 rounded-xl px-3 py-2.5">
@@ -451,8 +559,9 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
             {estadoGrupo === 'Concluido' && (
               <div className="bg-emerald-400/5 border border-emerald-400/20 rounded-2xl p-4 text-center">
                 <div className="text-emerald-400 font-black text-sm uppercase tracking-wider mb-1">Ciclo Concluído</div>
@@ -619,7 +728,7 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
           <div className="relative bg-zinc-900 border border-zinc-700 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl">
             <div className="text-2xl mb-3">⚠️</div>
             <h3 className="text-white font-black text-lg mb-2">Reiniciar "{grupo.nome}"?</h3>
-            <p className="text-white text-sm mb-5">Todo o histórico e membros serão eliminados. Esta acção é irreversível.</p>
+            <p className="text-white text-sm mb-5">Todo o histórico e membros serão eliminados. Esta ação é irreversível.</p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmRein(false)} className="flex-1 py-3 rounded-2xl bg-zinc-800 text-white font-bold hover:bg-zinc-700 transition">Cancelar</button>
               <button onClick={() => { reiniciarGrupo(grupo.id); setConfirmRein(false); setVencedorFlash(null); }}
@@ -799,7 +908,7 @@ export function XitiquePage({ onExit }: { onExit?: () => void }) {
                   </div>
 
                   <div className="flex items-center justify-between text-xs text-white pt-1 border-t border-zinc-800">
-                    <span>{g.sorteios.length} sorteio{g.sorteios.length !== 1 ? 's' : ''} realizados</span>
+                    <span>{g.sorteios.length} entrega{g.sorteios.length !== 1 ? 's' : ''} realizada{g.sorteios.length !== 1 ? 's' : ''}</span>
                     <span className="text-amber-400 font-bold">Gerir →</span>
                   </div>
                 </button>

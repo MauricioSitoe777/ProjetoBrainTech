@@ -585,7 +585,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
             <div className="space-y-4">
               {accionaveis.length === 0 && (
                 <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl py-12 text-center text-white text-sm">
-                  Sem compras com acções pendentes
+                  Sem compras com ações pendentes
                 </div>
               )}
               {accionaveis.map(r => {
@@ -675,21 +675,16 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                         </button>
                       )}
 
-                      {/* 2. Com Entrada */}
+                      {/* 2. Definir Plano (determina entrada automaticamente pelo valor do depósito do simulador) */}
                       {r.status === 'compra_aprovada' && (
-                        <button disabled={isBlocked} onClick={() => advance(r.id, 'entrada_paga')}
-                          className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-bold bg-teal-500/10 text-teal-400 border border-teal-500/20 hover:bg-teal-500/20 disabled:opacity-50 transition-all">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                          Com Entrada
-                        </button>
-                      )}
-
-                      {/* 3. Sem Entrada */}
-                      {r.status === 'compra_aprovada' && (
-                        <button disabled={isBlocked} onClick={() => openGerarConfig(r.id, true)}
-                          className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-bold bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 disabled:opacity-50 transition-all">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                          Sem Entrada
+                        <button disabled={isBlocked} onClick={() => {
+                          const temEntrada = (r.deposito ?? 0) > 0;
+                          if (temEntrada) advance(r.id, 'entrada_paga');
+                          openGerarConfig(r.id, !temEntrada);
+                        }}
+                          className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 disabled:opacity-50 transition-all">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                          Definir Plano
                         </button>
                       )}
 

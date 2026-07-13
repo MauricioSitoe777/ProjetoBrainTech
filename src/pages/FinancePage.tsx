@@ -104,8 +104,10 @@ export function FinancePage() {
     const aceites = g.membros.filter(m => m.estado === 'Aceite' || m.estado === 'Sorteado');
     return s + aceites.length * g.quotaMT;
   }, 0), [grupos]);
-  const receitaTotal   = receitaAluguer + receitaCompra + receitaXitique;
-  const margem         = receitaTotal > 0 ? Math.round((lucroLiquido / receitaTotal) * 100) : 0;
+  const receitaTotal      = receitaAluguer + receitaCompra + receitaXitique;
+  const totalEntradas_op  = receitaTotal + totalEntradas;   // reservas + entradas manuais
+  const valorArrecadado   = totalEntradas_op - totalSaidas; // resultado líquido real
+  const margem            = totalEntradas_op > 0 ? Math.round((valorArrecadado / totalEntradas_op) * 100) : 0;
 
   // ── Dados mensais ────────────────────────────────────────────────────────────
   const dadosMensais = useMemo(() => {
@@ -263,7 +265,7 @@ export function FinancePage() {
 
             {/* 1. KPI Cards — topo, linha horizontal */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* RECEITAS TOTAL — ouro do logo */}
+              {/* TOTAL ENTRADAS — ouro do logo */}
               <div style={{ background: 'linear-gradient(135deg,rgba(228,180,46,.18) 0%,rgba(154,106,16,.07) 100%)', borderColor: 'rgba(228,180,46,.38)' }} className="border rounded-2xl p-4 flex items-center gap-4">
                 <div style={{ backgroundColor: 'rgba(228,180,46,.18)' }} className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F0CD49" strokeWidth="2" strokeLinecap="round">
@@ -271,8 +273,8 @@ export function FinancePage() {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-xs text-white uppercase font-bold tracking-wider">Receitas Total</p>
-                  <p style={{ color: '#F0CD49' }} className="text-2xl font-black leading-tight">{fmt(receitaTotal)}</p>
+                  <p className="text-xs text-white uppercase font-bold tracking-wider">Total Entradas</p>
+                  <p style={{ color: '#F0CD49' }} className="text-2xl font-black leading-tight">{fmt(totalEntradas_op)}</p>
                 </div>
               </div>
               {/* TOTAL SAÍDAS */}
@@ -287,21 +289,21 @@ export function FinancePage() {
                   <p className="text-2xl font-black text-red-400 leading-tight">{fmt(totalSaidas)}</p>
                 </div>
               </div>
-              {/* LUCRO LÍQUIDO — ouro quando positivo */}
+              {/* VALOR ARRECADADO — ouro quando positivo */}
               <div style={{
-                background: lucroLiquido >= 0
+                background: valorArrecadado >= 0
                   ? 'linear-gradient(135deg,rgba(228,180,46,.10) 0%,rgba(154,106,16,.04) 100%)'
                   : 'rgba(239,68,68,.05)',
-                borderColor: lucroLiquido >= 0 ? 'rgba(228,180,46,.28)' : 'rgba(239,68,68,.2)',
+                borderColor: valorArrecadado >= 0 ? 'rgba(228,180,46,.28)' : 'rgba(239,68,68,.2)',
               }} className="border rounded-2xl p-4 flex items-center gap-4">
-                <div style={{ backgroundColor: lucroLiquido >= 0 ? 'rgba(228,180,46,.14)' : 'rgba(239,68,68,.10)' }} className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={lucroLiquido >= 0 ? '#E4B42E' : '#f87171'} strokeWidth="2" strokeLinecap="round">
+                <div style={{ backgroundColor: valorArrecadado >= 0 ? 'rgba(228,180,46,.14)' : 'rgba(239,68,68,.10)' }} className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={valorArrecadado >= 0 ? '#E4B42E' : '#f87171'} strokeWidth="2" strokeLinecap="round">
                     <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
                   </svg>
                 </div>
                 <div>
-                  <p className="text-xs text-white uppercase font-bold tracking-wider">Lucro Líquido</p>
-                  <p style={{ color: lucroLiquido >= 0 ? '#E4B42E' : '#f87171' }} className="text-2xl font-black leading-tight">{fmt(lucroLiquido)}</p>
+                  <p className="text-xs text-white uppercase font-bold tracking-wider">Valor Arrecadado</p>
+                  <p style={{ color: valorArrecadado >= 0 ? '#E4B42E' : '#f87171' }} className="text-2xl font-black leading-tight">{fmt(valorArrecadado)}</p>
                 </div>
               </div>
             </div>

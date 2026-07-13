@@ -210,7 +210,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
               icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="12" y1="11" x2="12" y2="14"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
             },
             {
-              label: 'Prontas p/ Levantar', sub: 'Prontas para entrega',
+              label: 'Prontas p/ Levantar', sub: 'Prontas para Entrega',
               value: kpis.prontas,
               numCol: kpis.prontas > 0 ? 'text-amber-400' : 'text-white',
               iconCol: 'text-amber-400',
@@ -219,7 +219,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
               icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>,
             },
             {
-              label: 'Alugueres Activos', sub: 'Em curso agora',
+              label: 'Alugueres Activos', sub: 'Em Uso Agora',
               value: kpis.ativas,
               numCol: kpis.ativas > 0 ? 'text-amber-400' : 'text-white',
               iconCol: 'text-amber-400',
@@ -430,11 +430,11 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                               </div>
                               <div className="flex gap-2 shrink-0 flex-wrap">
                                 <div className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-1.5 text-center">
-                                  <p className="text-[10px] text-white/40">Data fim actual</p>
+                                  <p className="text-[10px] text-white/40">Data Fim Actual</p>
                                   <p className="text-xs font-black text-white">{r.dataFim}</p>
                                 </div>
                                 <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-1.5 text-center">
-                                  <p className="text-[10px] text-amber-400/70">Nova data sugerida</p>
+                                  <p className="text-[10px] text-amber-400/70">Nova Data Sugerida</p>
                                   <p className="text-xs font-black text-amber-400">{ext.novaDataFim}</p>
                                 </div>
                                 <div className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-1.5 text-center">
@@ -446,7 +446,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
 
                             {/* Motivo do cliente */}
                             <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
-                              <p className="text-[10px] text-white/40 uppercase tracking-wider mb-1">Motivo do cliente</p>
+                              <p className="text-[10px] text-white/40 uppercase tracking-wider mb-1">Motivo do Cliente</p>
                               <p className="text-sm text-white leading-snug">{ext.motivo}</p>
                             </div>
 
@@ -555,7 +555,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
 
               {totalAcionaveis === 0 && (
                 <div className="bg-zinc-900 border border-amber-500/20 rounded-xl py-12 text-center text-white text-sm">
-                  Sem reservas com acções pendentes
+                  Sem reservas com ações pendentes
                 </div>
               )}
               {gruposVisiveis.map(grupo => {
@@ -626,7 +626,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                               )}
                               {isLastActed && (
                                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-300 bg-amber-400/15 border border-amber-400/30 rounded-md px-2 py-0.5 animate-pulse">
-                                  ✓ Última ação
+                                  ✓ Última Ação
                                 </span>
                               )}
                             </div>
@@ -716,12 +716,12 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                           {/* Pagamento */}
                           {r.valorTotal > 0 && (() => {
                             const payCtx: Record<string, { label: string; col: string; bg: string }> = {
-                              pendente:            { label: 'Aguarda depósito',    col: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
-                              confirmada:          { label: 'Depósito recebido',   col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-                              pronta_levantamento: { label: 'Pronto p/ entrega',   col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-                              ativa:               { label: 'Aluguer em curso',    col: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
-                              devolucao_pendente:  { label: 'Liquidação pendente', col: 'text-red-400',   bg: 'bg-red-500/10 border-red-500/20' },
-                              concluida:           { label: 'Totalmente liquidado',col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+                              pendente:            { label: 'Aguarda Depósito',    col: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
+                              confirmada:          { label: 'Depósito Recebido',   col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+                              pronta_levantamento: { label: 'Pronto p/ Entrega',   col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+                              ativa:               { label: 'Aluguer em Curso',    col: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
+                              devolucao_pendente:  { label: 'Liquidação Pendente', col: 'text-red-400',   bg: 'bg-red-500/10 border-red-500/20' },
+                              concluida:           { label: 'Totalmente Liquidado',col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
                               cancelada:           { label: 'Cancelado',           col: 'text-red-400',   bg: 'bg-red-500/10 border-red-500/20' },
                             };
                             const ctx = payCtx[r.status] ?? { label: '', col: 'text-white', bg: 'bg-zinc-800 border-zinc-700' };
@@ -892,7 +892,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                                   <p className="text-sm font-black text-white leading-tight truncate">{r.clientName}</p>
                                   <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-md px-1.5 py-0.5 mt-0.5">
                                     <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-                                    Cliente verificado
+                                    Cliente Verificado
                                   </span>
                                 </div>
                               </div>
@@ -928,7 +928,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                               </div>
                               <div className="space-y-1 text-[11px]">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-white">Tarifa diária</span>
+                                  <span className="text-white">Tarifa Diária</span>
                                   <span className="font-black text-amber-400">{fmt(tarifaDiaria)}</span>
                                 </div>
                                 <div className="flex items-center justify-between">
@@ -948,10 +948,10 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                           {/* Stats row */}
                           <div className="px-5 py-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
                             {([
-                              { label: 'Alugueres activos', value: String(kpis.ativas), col: 'text-amber-400' },
-                              { label: 'Dias restantes', value: daysRemaining === 0 ? 'Hoje' : `${daysRemaining}d`, col: daysRemaining <= 1 ? 'text-red-400' : 'text-white' },
-                              { label: 'Em dívida total', value: fmt(divida), col: divida > 0 ? 'text-amber-400' : 'text-emerald-400' },
-                              { label: 'Estado veículo', value: estadoVeiculo, col: r.status === 'ativa' ? 'text-emerald-400' : 'text-white' },
+                              { label: 'Alugueres Activos', value: String(kpis.ativas), col: 'text-amber-400' },
+                              { label: 'Dias Restantes', value: daysRemaining === 0 ? 'Hoje' : `${daysRemaining}d`, col: daysRemaining <= 1 ? 'text-red-400' : 'text-white' },
+                              { label: 'Em Dívida Total', value: fmt(divida), col: divida > 0 ? 'text-amber-400' : 'text-emerald-400' },
+                              { label: 'Estado Veículo', value: estadoVeiculo, col: r.status === 'ativa' ? 'text-emerald-400' : 'text-white' },
                             ] as const).map(s => (
                               <div key={s.label} className="bg-zinc-800/40 border border-zinc-700/30 rounded-xl p-3 text-center">
                                 <p className={`text-sm font-black ${s.col}`}>{s.value}</p>

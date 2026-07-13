@@ -719,7 +719,7 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-6 max-w-sm w-full">
             <h3 className="text-white font-semibold mb-1">Remover motorista</h3>
-            <p className="text-white text-sm mb-6">Esta acção não pode ser desfeita.</p>
+            <p className="text-white text-sm mb-6">Esta ação não pode ser desfeita.</p>
             <div className="flex gap-3">
               <button onClick={() => setDeleteMotoristaConfirm(null)} className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg py-2 text-sm transition-colors">Cancelar</button>
               <button onClick={() => { deleteMotorista(deleteMotoristaConfirm); setDeleteMotoristaConfirm(null); }} className="flex-1 bg-red-500 hover:bg-red-400 text-white font-medium rounded-lg py-2 text-sm transition-colors">Remover</button>
