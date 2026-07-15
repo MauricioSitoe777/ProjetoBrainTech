@@ -4,6 +4,7 @@ import {
   Home, KeyRound, ShoppingCart, CreditCard,
   Trophy, History, User, BarChart3, Bell,
   AlertTriangle, Clock, FileText, Smartphone,
+  Menu, X,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useReservations } from '../context/ReservationsContext';
@@ -206,7 +207,7 @@ const TIPO_LABEL: Record<PagEvt['tipo'], string> = {
 
 export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) {
   const { user: authUser, allUsers } = useAuth();
-  const { reservations, cancelReservation, updateReservation } = useReservations();
+  const { reservations, cancelReservation, updateReservation, rules } = useReservations();
   const { grupos, inscricoes } = useXitique();
   const { dividas } = useFinance();
   const { showToast, unreadCount, addNotification } = useNotifications();
@@ -282,7 +283,8 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
 
   const fullUser = allUsers.find(u => u.id === authUser?.id) ?? null;
 
-  const [section, setSection] = useState<Section>('resumo');
+  const [section,     setSection]     = useState<Section>('resumo');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [prestOpen, setPrestOpen]         = useState<Set<string>>(new Set());
   const [secOpen, setSecOpen]             = useState<Set<string>>(new Set());
@@ -309,13 +311,20 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
     const veh = getVehicleName(r.vehicleId);
     const st  = RES_STATUS[r.status]?.label ?? r.status;
 
-    // Soma tudo o que foi pago (prestações ou depósito directo)
+    // Soma tudo o que foi pago (prestações ou depósito confirmado)
+    const depConfirmado = ['confirmada', 'pronta_levantamento', 'ativa', 'devolucao_pendente', 'concluida'].includes(r.status);
     const totalPago = (r.prestacoes && r.prestacoes.length > 0)
       ? r.prestacoes.filter(p => p.paga).reduce((s, p) => s + (p.valorPago ?? p.valor), 0)
-      : (r.deposito ?? 0);
+      : (depConfirmado ? (r.deposito ?? 0) : 0);
 
-    const valorBase = r.valorTotal > 0 ? r.valorTotal : totalPago;
-    const restante  = Math.max(0, valorBase - totalPago);
+    const multa        = r.multaAtraso ?? 0;
+    const valorBase    = r.valorTotal > 0 ? r.valorTotal : totalPago;
+    const totalComMulta = valorBase + multa;
+    const restante     = Math.max(0, totalComMulta - totalPago);
+    const horasMulta   = multa > 0 && rules.penalizacaoAtrasoPorHora > 0
+      ? Math.round(multa / rules.penalizacaoAtrasoPorHora) : 0;
+    const diasMulta    = Math.floor(horasMulta / 24);
+    const horasRest    = horasMulta % 24;
 
     const FORMA_MAP: Record<string, string> = {
       mpesa: 'M-Pesa', emola: 'e-Mola', dinheiro: 'Dinheiro',
@@ -357,9 +366,20 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
 
       <div class="section-title">Pagamento</div>
       <div class="summary-box">
-        ${valorBase > 0 ? `<div class="summary-row"><span>Valor Total do Aluguer</span><span style="font-weight:800;">${fmt(valorBase)}</span></div>` : ''}
+        ${valorBase > 0 ? `<div class="summary-row"><span>Valor do Aluguer (${diffDias(r.dataInicio, r.dataFim)} dia${diffDias(r.dataInicio, r.dataFim) !== 1 ? 's' : ''})</span><span style="font-weight:800;">${fmt(valorBase)}</span></div>` : ''}
+        ${multa > 0 ? `
+          <div class="summary-row" style="align-items:flex-start;">
+            <div>
+              <span style="font-weight:700;color:#dc2626;">Multa por Atraso</span>
+              <small style="font-size:10px;color:#52525b;font-weight:400;display:block;margin-top:3px;">Devolução prevista: ${fmtData(r.dataFim)} · ${diasMulta > 0 ? diasMulta + 'd ' : ''}${horasRest}h × ${fmt(rules.penalizacaoAtrasoPorHora)}/hora</small>
+            </div>
+            <span style="font-weight:800;color:#dc2626;white-space:nowrap;padding-left:12px;">${fmt(multa)}</span>
+          </div>
+          <div class="summary-row" style="font-weight:900;background:#fffbeb;border-top:1px solid #fde68a;">
+            <span>Total com Multa</span><span style="white-space:nowrap;">${fmt(totalComMulta)}</span>
+          </div>` : ''}
         ${totalPago > 0 ? `<div class="summary-row"><span>Total Pago</span><span class="val-green">${fmt(totalPago)}</span></div>` : ''}
-        ${valorBase > 0
+        ${(valorBase > 0 || multa > 0)
           ? `<div class="summary-row total"><span>Restante a Pagar</span><span class="${restante > 0 ? 'val-red' : 'val-green'}">${fmt(restante)}</span></div>`
           : `<div class="summary-row"><span>Valor</span><span style="color:#71717a;font-style:italic;">A confirmar com o administrador</span></div>`}
       </div>
@@ -480,7 +500,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
   // ── helpers de navegação ──────────────────────────────────────────────────
   const goto = (s: Section) => {
     setSection(s);
-
+    setSidebarOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -492,8 +512,21 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex font-medium">
 
+      {/* Overlay mobile */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/60 z-40 md:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
       {/* ══ ASIDE SIDEBAR ════════════════════════════════════════════════════ */}
-      <aside className="w-56 shrink-0 bg-zinc-900 border-r border-zinc-800 flex flex-col sticky top-0 h-screen overflow-hidden">
+      <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col w-64 bg-zinc-900 border-r border-zinc-800 transition-transform duration-300 overflow-hidden md:relative md:z-auto md:w-56 md:shrink-0 md:sticky md:top-16 md:h-[calc(100vh-4rem)] md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+
+        {/* Cabeçalho do drawer (só mobile) */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 md:hidden">
+          <span className="text-xs font-black text-amber-400 uppercase tracking-widest">Menu</span>
+          <button onClick={() => setSidebarOpen(false)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-800 text-white hover:bg-zinc-700 transition">
+            <X size={14} />
+          </button>
+        </div>
 
         {/* Navigation */}
         <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto outline-none">
@@ -599,8 +632,12 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
       <main className="flex-1 min-w-0 overflow-y-auto outline-none">
 
         {/* ── Topbar ── */}
-        <div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur border-b border-zinc-800/60 px-6 py-3 flex items-center justify-between gap-4">
+        <div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur border-b border-zinc-800/60 px-4 md:px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
+            {/* Hamburger — só mobile */}
+            <button className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg border border-zinc-700 text-white hover:bg-zinc-800 transition" onClick={() => setSidebarOpen(true)}>
+              <Menu size={16} />
+            </button>
             <div className="text-amber-500">
               {section === 'resumo'            && <Home size={15} />}
               {section === 'dados_pessoais'    && <User size={15} />}
@@ -627,7 +664,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
           <div />
         </div>
 
-        <div className="p-6 space-y-4 w-full">
+        <div className="p-4 md:p-6 space-y-4 w-full">
 
           {/* ══ RESUMO / HOME DASHBOARD ══════════════════════════════════════ */}
           {section === 'resumo' && (() => {
@@ -897,7 +934,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
               </div>
 
               {/* 3 Stat Cards — estilo Metric admin */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
                   { label: 'Reservas',   value: alugueres.length, sub: `${alugueres.filter(a => a.status === 'concluida').length} concluída(s)`, color: 'text-amber-400' },
                   { label: 'Compras',    value: compras.length,   sub: `${compras.filter(c => c.status === 'liquidada').length} liquidada(s)`,   color: 'text-white' },
@@ -1188,9 +1225,16 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
               const isAtivo   = ACTIVE_STATUSES.includes(r.status);
               const podeCancelar = isAtivo && r.status !== 'ativa' && r.status !== 'devolucao_pendente';
               const podeEstender = r.status === 'ativa';
-              const valorRestante = r.valorTotal - r.deposito;
-              const pct = r.deposito > 0 && r.valorTotal > 0
-                ? Math.min(100, Math.round((r.deposito / r.valorTotal) * 100))
+              const depositoConfirmado = ['confirmada', 'pronta_levantamento', 'ativa', 'devolucao_pendente', 'concluida'].includes(r.status);
+              const pagoViaPrest = r.prestacoes && r.prestacoes.length > 0
+                ? r.prestacoes.filter(p => p.paga).reduce((s, p) => s + (p.valorPago ?? p.valor), 0)
+                : null;
+              const valorPago = pagoViaPrest !== null ? pagoViaPrest : (depositoConfirmado ? (r.deposito ?? 0) : 0);
+              const multaR = r.multaAtraso ?? 0;
+              const totalComMultaR = r.valorTotal + multaR;
+              const valorRestante = Math.max(0, totalComMultaR - valorPago);
+              const pct = totalComMultaR > 0
+                ? Math.min(100, Math.round((valorPago / totalComMultaR) * 100))
                 : 0;
 
               return (
@@ -1316,7 +1360,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                           </div>
 
                           {/* FINANCEIRO */}
-                          <div className="px-5 py-5 space-y-4">
+                          <div className="px-5 py-5 space-y-3">
                             <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Financeiro</p>
                             <div className="flex items-center gap-4">
                               <div className="relative shrink-0 w-[72px] h-[72px]">
@@ -1336,17 +1380,78 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                 </div>
                               </div>
                               <div className="min-w-0">
-                                <p className="text-xs text-white mb-1">Pago vs Restante</p>
+                                <p className="text-[10px] text-white/60 mb-0.5">Valor do aluguer</p>
                                 <p className="text-xl font-black text-white leading-none">{fmt(r.valorTotal)}</p>
-                                <p className="text-xs text-white mt-1">valor total da reserva</p>
+                                {multaR > 0 && (
+                                  <p className="text-[11px] font-bold text-red-400 mt-1">+ {fmt(multaR)} multa</p>
+                                )}
+                                {multaR > 0 && (
+                                  <p className="text-xs font-black text-white mt-0.5">= {fmt(totalComMultaR)} total</p>
+                                )}
                                 {valorRestante > 0 && r.status !== 'concluida' && (
                                   <p className="text-sm font-bold text-red-400 mt-1.5">−{fmt(valorRestante)} restante</p>
+                                )}
+                                {valorRestante === 0 && (
+                                  <p className="text-xs font-bold text-emerald-400 mt-1">Liquidado ✓</p>
                                 )}
                               </div>
                             </div>
                           </div>
 
                         </div>
+
+                        {/* ── Plano de Prestações ── */}
+                        {r.prestacoes && r.prestacoes.length > 0 && (
+                          <div className="px-5 py-4 space-y-2">
+                            <p className="text-xs font-black text-amber-400 uppercase tracking-widest mb-3">Plano de Pagamentos</p>
+                            <div className="space-y-1.5">
+                              {r.prestacoes.map(p => {
+                                const vencida = !p.paga && p.dataVencimento < new Date().toISOString().split('T')[0];
+                                return (
+                                  <div key={p.numero} className={`flex items-center justify-between px-3 py-2.5 rounded-xl border ${
+                                    p.paga ? 'bg-emerald-500/5 border-emerald-500/20' : vencida ? 'bg-red-500/5 border-red-500/20' : 'bg-zinc-800/40 border-zinc-700/40'
+                                  }`}>
+                                    <div className="flex items-center gap-2">
+                                      <div className={`w-5 h-5 rounded-full flex items-center justify-center border shrink-0 ${p.paga ? 'bg-emerald-500 border-emerald-400' : vencida ? 'border-red-500' : 'border-zinc-600'}`}>
+                                        {p.paga && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                                        {!p.paga && vencida && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>}
+                                      </div>
+                                      <div>
+                                        <p className="text-xs font-black text-white">{p.numero}ª prestação</p>
+                                        <p className={`text-[10px] ${p.paga ? 'text-emerald-400' : vencida ? 'text-red-400' : 'text-white/60'}`}>
+                                          {p.paga ? `Pago em ${p.dataPagamento ?? '—'}` : `Vence ${p.dataVencimento}`}
+                                          {vencida && ' · VENCIDA'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className={`text-sm font-black ${p.paga ? 'text-emerald-400' : vencida ? 'text-red-400' : 'text-white'}`}>
+                                        {fmt(p.valorPago ?? p.valor)}
+                                      </p>
+                                      {p.paga && p.formaPagamento && (
+                                        <p className="text-[10px] text-white/50">
+                                          {({ mpesa: 'M-Pesa', emola: 'e-Mola', dinheiro: 'Dinheiro', transferencia: 'Transf.', cheque: 'Cheque', outros: 'Outros' } as Record<string, string>)[p.formaPagamento] ?? p.formaPagamento}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {multaR > 0 && (
+                              <div className="flex items-center gap-2 bg-red-500/5 border border-red-500/20 rounded-xl px-3 py-2.5 mt-2">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12.01" y1="16" x2="12" y2="16"/></svg>
+                                <div className="flex-1">
+                                  <p className="text-[10px] font-black text-red-400 uppercase tracking-wider">Multa por Atraso na Devolução</p>
+                                  <p className="text-[10px] text-red-300/60">
+                                    {Math.floor((multaR / (rules.penalizacaoAtrasoPorHora || 1)) / 24)}d {Math.round((multaR / (rules.penalizacaoAtrasoPorHora || 1)) % 24)}h · {fmt(rules.penalizacaoAtrasoPorHora)}/hora
+                                  </p>
+                                </div>
+                                <p className="text-sm font-black text-red-400">{fmt(multaR)}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         {/* ── 4. Acções ── */}
                         <div className="flex gap-2 flex-wrap px-4 py-3">
@@ -2141,7 +2246,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                   ];
                   return (
                     <>
-                      <div className="grid grid-cols-5 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                         {kpis.map((k, i) => {
                           const isDiv = i === 0;
                           return (
@@ -2969,7 +3074,7 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
                 const dataInicio = grupoDoUser.dataInicio;
                 return (
                   <div className="space-y-2">
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-3 sm:grid-cols-3 gap-3">
                       {[
                         { label: 'Estado', value: estadoGrupo === 'EmAndamento' ? 'Em Andamento' : estadoGrupo === 'Concluido' ? 'Concluído' : 'Aberto' },
                         estadoGrupo === 'Aberto'
@@ -3252,7 +3357,7 @@ body{font-family:Arial,Helvetica,sans-serif;color:#1c1917;background:#f5f5f4}
               <div className="space-y-4">
 
                 {/* KPI cards */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-4">
                     <p className="text-xs font-black text-amber-400 uppercase tracking-widest mb-1">Total Pago</p>
                     <p className="text-lg font-black text-amber-400 tabular-nums">{fmt(totalHist)}</p>

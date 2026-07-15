@@ -12,8 +12,6 @@ import { ContratoModal } from '../components/reservations/ContratoModal';
 import { RegistarPagamentoModal } from '../components/reservations/RegistarPagamentoModal';
 import { ReservationTracker } from '../components/ReservationTracker';
 import { ViaturaEmUsoPage } from './ViaturaEmUsoPage';
-import { ChevronDown, ChevronUp } from 'lucide-react';
-import { Button } from '../components/ui/button';
 import type { Prestacao, Reservation, ReservationStatus } from '../types/reservation';
 
 const fmt = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',00 MT';
@@ -50,7 +48,7 @@ const GRUPOS: Array<{
 ];
 
 export function AluguerPage({ onExit }: { onExit?: () => void }) {
-  const { reservations, blocks, updateReservation, cancelReservation, removeBlock, marcarPrestacao } = useReservations();
+  const { reservations, blocks, updateReservation, cancelReservation, removeBlock, marcarPrestacao, rules } = useReservations();
   const { motoristas } = useMotoristas();
   const { vehicles: allVehicles } = useVehicles();
   const { addNotification } = useNotifications();
@@ -66,9 +64,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
     if (t === 'em_uso') return 'em_uso';
     return 'reservas';
   });
-  const [highlightStatus, setHighlightStatus] = useState<string | null>(() =>
-    getUrlParams().get('status')
-  );
+
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
   const [selectedCalDate, setSelectedCalDate] = useState<string | null>(null);
   const [showBlockModal, setShowBlockModal] = useState(false);
@@ -76,9 +72,10 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
   const [contractReservation, setContractReservation] = useState<Reservation | null>(null);
   const [lastActedId, setLastActedId] = useState<string | null>(null);
   const [acoesFilter, setAcoesFilter] = useState<ReservationStatus | 'todos'>('todos');
-  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
-  const toggleCollapse = (id: string) =>
-    setCollapsedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  const [gerirId,      setGerirId]      = useState<string | null>(null);
+  const [acoesSearch,  setAcoesSearch]  = useState('');
+  const [reservaModal, setReservaModal] = useState<Reservation | null>(null);
   const [pagamentoModal, setPagamentoModal] = useState<{
     reservationId: string;
     prestacao: Prestacao;
@@ -89,38 +86,102 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
   const [extensaoRespostaTipo, setExtensaoRespostaTipo]   = useState<'aprovado' | 'rejeitado' | null>(null);
   const [extensaoRespostaTexto, setExtensaoRespostaTexto] = useState('');
 
+  const [planoModal, setPlanoModal]               = useState<typeof reservations[number] | null>(null);
+  const [planoTipo, setPlanoTipo]                 = useState<'total' | 'parcial'>('total');
+  const [planoValorInicial, setPlanoValorInicial] = useState('');
+
   // Sync tab + status with URL on navigation
   useEffect(() => {
     const sync = () => {
       const p = getUrlParams();
       const t = p.get('tab');
       setTab(t === 'acoes' ? 'acoes' : t === 'em_uso' ? 'em_uso' : 'reservas');
-      setHighlightStatus(p.get('status'));
     };
     window.addEventListener('popstate', sync);
     return () => window.removeEventListener('popstate', sync);
   }, []);
 
-  // Scroll to the highlighted group after rendering
-  useEffect(() => {
-    if (tab !== 'acoes' || !highlightStatus) return;
-    const timer = setTimeout(() => {
-      const el = document.getElementById(`aluguer-grupo-${highlightStatus}`);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 150);
-    return () => clearTimeout(timer);
-  }, [tab, highlightStatus]);
-
-  // After an action, scroll to the card's new position and briefly highlight it
+  // After an action, scroll the drawer into view if open
   useEffect(() => {
     if (!lastActedId) return;
-    const timer = setTimeout(() => {
-      const el = document.getElementById(`res-card-${lastActedId}`);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 80);
     const clear = setTimeout(() => setLastActedId(null), 3500);
-    return () => { clearTimeout(timer); clearTimeout(clear); };
+    return () => clearTimeout(clear);
   }, [lastActedId]);
+
+  // Alertas automáticos de devolução — hoje e amanhã
+  useEffect(() => {
+    const today    = new Date().toISOString().split('T')[0];
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+    reservations
+      .filter(r => aluguerIds.has(r.vehicleId) && r.status === 'ativa' && r.userId)
+      .forEach(r => {
+        const veiculo = allVehicles.find(v => v.id === r.vehicleId)?.name ?? `Viatura #${r.vehicleId}`;
+
+        if (r.dataFim === today) {
+          const key = `rentcar:alerta_devolucao:${r.id}:${today}`;
+          if (!localStorage.getItem(key)) {
+            addNotification(
+              r.userId!,
+              `Devolução hoje — ${veiculo}`,
+              `O seu aluguer do ${veiculo} termina hoje. Por favor devolva a viatura nas nossas instalações antes das 18h00.`,
+              'alert',
+              r.id,
+              '/perfil?section=reservas',
+            );
+            localStorage.setItem(key, '1');
+          }
+        }
+
+        if (r.dataFim === tomorrow) {
+          const key = `rentcar:alerta_amanha:${r.id}:${today}`;
+          if (!localStorage.getItem(key)) {
+            addNotification(
+              r.userId!,
+              `Lembrete: devolução amanhã — ${veiculo}`,
+              `O seu aluguer do ${veiculo} termina amanhã. Lembre-se de devolver a viatura no prazo acordado.`,
+              'info',
+              r.id,
+              '/perfil?section=reservas',
+            );
+            localStorage.setItem(key, '1');
+          }
+        }
+
+        // Carro em atraso — notificar cliente E admin uma vez por dia
+        if (r.dataFim < today) {
+          const diasAtraso = Math.floor((new Date(today).getTime() - new Date(r.dataFim).getTime()) / 86400000);
+          const horasAtraso = diasAtraso * 24;
+          const multaAcumulada = horasAtraso * rules.penalizacaoAtrasoPorHora;
+
+          const keyCli = `rentcar:alerta_atraso_cli:${r.id}:${today}`;
+          if (!localStorage.getItem(keyCli)) {
+            addNotification(
+              r.userId!,
+              `Devolução em atraso — ${veiculo}`,
+              `O seu aluguer do ${veiculo} está em atraso há ${diasAtraso} dia${diasAtraso !== 1 ? 's' : ''}. Multa acumulada: ${fmt(multaAcumulada)} (${fmt(rules.penalizacaoAtrasoPorHora)}/hora). Contacte-nos urgentemente.`,
+              'alert',
+              r.id,
+              '/perfil?section=reservas',
+            );
+            localStorage.setItem(keyCli, '1');
+          }
+
+          const keyAdm = `rentcar:alerta_atraso_adm:${r.id}:${today}`;
+          if (!localStorage.getItem(keyAdm)) {
+            addNotification(
+              'admin',
+              `Carro em atraso — ${r.clientName}`,
+              `"${r.clientName}" não devolveu o ${veiculo}. Atraso: ${diasAtraso} dia${diasAtraso !== 1 ? 's' : ''} · Multa acumulada: ${fmt(multaAcumulada)} (${fmt(rules.penalizacaoAtrasoPorHora)}/h).`,
+              'alert',
+              r.id,
+              '/admin/aluguer?tab=acoes&status=ativa',
+            );
+            localStorage.setItem(keyAdm, '1');
+          }
+        }
+      });
+  }, [reservations, aluguerIds, allVehicles, addNotification, rules]);
 
   const aluguerReservations = useMemo(() =>
     reservations
@@ -194,6 +255,336 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
           onClose={() => setPagamentoModal(null)}
         />
       )}
+
+      {/* ── Modal de Plano de Pagamento ── */}
+      {planoModal && (() => {
+        const r = planoModal;
+        const valorTotalR = r.valorTotal;
+        const valorInicialNum = parseFloat(planoValorInicial) || 0;
+        const valorFinalNum = Math.max(0, valorTotalR - valorInicialNum);
+        const valido = planoTipo === 'total' || (valorInicialNum > 0 && valorInicialNum < valorTotalR);
+
+        const confirmarPlano = () => {
+          const today = new Date().toISOString().split('T')[0];
+          if (planoTipo === 'total') {
+            const p1: Prestacao = { numero: 1, dataVencimento: today, valor: valorTotalR, paga: false };
+            updateReservation(r.id, { prestacoes: [p1] });
+            setPlanoModal(null);
+            setPagamentoModal({
+              reservationId: r.id,
+              prestacao: p1,
+              titulo: 'Registar Pagamento Total',
+              onAfterSave: () => { updateReservation(r.id, { status: 'confirmada' }); setLastActedId(r.id); },
+            });
+          } else {
+            const p1: Prestacao = { numero: 1, dataVencimento: today, valor: valorInicialNum, paga: false };
+            const p2: Prestacao = { numero: 2, dataVencimento: r.dataFim, valor: valorFinalNum, paga: false };
+            updateReservation(r.id, { prestacoes: [p1, p2] });
+            setPlanoModal(null);
+            setPagamentoModal({
+              reservationId: r.id,
+              prestacao: p1,
+              titulo: 'Registar 1º Pagamento',
+              onAfterSave: () => { updateReservation(r.id, { status: 'confirmada' }); setLastActedId(r.id); },
+            });
+          }
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setPlanoModal(null)}>
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+            <div
+              className="relative z-10 w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
+                <div>
+                  <p className="text-sm font-black text-white">Plano de Pagamento</p>
+                  <p className="text-[11px] text-zinc-400">{r.clientName} · {fmt(valorTotalR)}</p>
+                </div>
+                <button
+                  onClick={() => setPlanoModal(null)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+
+              {/* Opções */}
+              <div className="p-4 space-y-3">
+                {/* Opção 1: Total */}
+                <button
+                  onClick={() => setPlanoTipo('total')}
+                  className={`w-full text-left p-4 rounded-xl border transition-all ${planoTipo === 'total' ? 'border-amber-500/60 bg-amber-500/10' : 'border-zinc-800 bg-zinc-800/40 hover:border-zinc-700'}`}
+                >
+                  <div className="flex items-center gap-3 mb-1.5">
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${planoTipo === 'total' ? 'border-amber-400 bg-amber-400' : 'border-zinc-600'}`}>
+                      {planoTipo === 'total' && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="4" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                    </div>
+                    <p className="text-sm font-black text-white">Pagamento Total</p>
+                    <span className="ml-auto text-xs font-black text-amber-400">{fmt(valorTotalR)}</span>
+                  </div>
+                  <p className="text-xs text-zinc-400 ml-7">Cobrar o valor total agora, na confirmação da reserva.</p>
+                </button>
+
+                {/* Opção 2: Parcial */}
+                <div
+                  className={`w-full text-left p-4 rounded-xl border transition-all cursor-pointer ${planoTipo === 'parcial' ? 'border-amber-500/60 bg-amber-500/10' : 'border-zinc-800 bg-zinc-800/40 hover:border-zinc-700'}`}
+                  onClick={() => setPlanoTipo('parcial')}
+                >
+                  <div className="flex items-center gap-3 mb-1.5">
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${planoTipo === 'parcial' ? 'border-amber-400 bg-amber-400' : 'border-zinc-600'}`}>
+                      {planoTipo === 'parcial' && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="4" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                    </div>
+                    <p className="text-sm font-black text-white">Parte agora + Parte no fim</p>
+                  </div>
+                  <p className="text-xs text-zinc-400 ml-7 mb-3">Cobrar uma parte agora e o restante na devolução.</p>
+
+                  {planoTipo === 'parcial' && (
+                    <div className="ml-7 space-y-3" onClick={e => e.stopPropagation()}>
+                      <div>
+                        <label className="text-[10px] font-black text-amber-400 uppercase tracking-widest block mb-1.5">
+                          Valor a cobrar agora (MT)
+                        </label>
+                        <input
+                          autoFocus
+                          type="number"
+                          min={0}
+                          max={valorTotalR}
+                          value={planoValorInicial}
+                          onChange={e => setPlanoValorInicial(e.target.value)}
+                          placeholder={String(Math.round(valorTotalR * 0.5))}
+                          className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-500 text-white rounded-xl px-3 py-2.5 text-sm outline-none transition-colors"
+                        />
+                      </div>
+                      {valorInicialNum > 0 && valorInicialNum < valorTotalR && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-zinc-900 border border-amber-500/25 rounded-xl p-3 text-center">
+                            <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest mb-1">Agora</p>
+                            <p className="text-sm font-black text-white">{fmt(valorInicialNum)}</p>
+                          </div>
+                          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-center">
+                            <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Na devolução</p>
+                            <p className="text-sm font-black text-zinc-300">{fmt(valorFinalNum)}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-4 pb-4 pt-3 flex gap-2 border-t border-zinc-800">
+                <button
+                  onClick={() => setPlanoModal(null)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-zinc-800 text-white hover:bg-zinc-700 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmarPlano}
+                  disabled={!valido}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-black bg-amber-400 text-zinc-950 hover:bg-amber-300 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  Continuar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Modal de detalhes de reserva (tab Reservas) ── */}
+      {reservaModal && (() => {
+        const r = reservaModal;
+        const st = STATUS_CFG[r.status];
+        const depositoConfirmado = ['confirmada', 'pronta_levantamento', 'ativa', 'devolucao_pendente', 'concluida'].includes(r.status);
+        const pago = r.prestacoes
+          ? r.prestacoes.filter(p => p.paga).reduce((s, p) => s + (p.valorPago ?? p.valor), 0)
+          : (depositoConfirmado ? (r.deposito ?? 0) : 0);
+        const divida = Math.max(0, r.valorTotal - pago);
+        const pct = r.valorTotal > 0 ? Math.round((pago / r.valorTotal) * 100) : 0;
+        const totalDays = Math.max(1, Math.round((new Date(r.dataFim).getTime() - new Date(r.dataInicio).getTime()) / 86400000));
+        const tarifaDiaria = r.valorTotal / totalDays;
+        const mot = r.motoristaId ? motoristas.find(m => m.id === r.motoristaId) : null;
+        const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        const fmtD = (iso: string) => { const [,m,d] = iso.split('-'); return `${d} ${MESES[parseInt(m)-1]}`; };
+        const payCtx: Record<string, { label: string; col: string; bg: string }> = {
+          pendente:            { label: 'Aguarda Depósito',     col: 'text-amber-400',   bg: 'bg-amber-500/10 border-amber-500/20' },
+          confirmada:          { label: 'Depósito Recebido',    col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+          pronta_levantamento: { label: 'Pronto p/ Entrega',    col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+          ativa:               { label: 'Aluguer em Curso',     col: 'text-amber-400',   bg: 'bg-amber-500/10 border-amber-500/20' },
+          devolucao_pendente:  { label: 'Liquidação Pendente',  col: 'text-red-400',     bg: 'bg-red-500/10 border-red-500/20' },
+          concluida:           { label: 'Totalmente Liquidado', col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+          cancelada:           { label: 'Cancelado',            col: 'text-red-400',     bg: 'bg-red-500/10 border-red-500/20' },
+        };
+        const ctx = payCtx[r.status] ?? { label: '', col: 'text-white', bg: 'bg-zinc-800 border-zinc-700' };
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 pt-20 pb-4" onClick={() => setReservaModal(null)}>
+            {/* Overlay */}
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+
+            {/* Modal */}
+            <div
+              className="relative z-10 w-full max-w-2xl bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl flex flex-col max-h-[calc(100vh-96px)] overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800 shrink-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center text-amber-400 font-black text-sm shrink-0">
+                    {r.clientName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-white truncate">{r.clientName}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className={`text-[10px] border rounded-md px-1.5 py-0.5 font-semibold ${st.className}`}>{st.label}</span>
+                      <span className="text-[10px] text-zinc-500 font-mono">#{r.id.slice(0,8).toUpperCase()}</span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setReservaModal(null)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors shrink-0"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="overflow-y-auto flex-1 min-h-0">
+
+                {/* Tracker */}
+                <div className="px-5 py-4 border-b border-zinc-800">
+                  <ReservationTracker
+                    status={r.status}
+                    readonly
+                    stepDates={{
+                      pendente: r.createdAt,
+                      pronta_levantamento: r.dataInicio,
+                      ativa: r.dataInicio,
+                      devolucao_pendente: r.dataFim,
+                      concluida: r.dataFim,
+                    }}
+                  />
+                </div>
+
+                {/* Cliente + Viatura */}
+                <div className="px-5 py-4 border-b border-zinc-800 grid grid-cols-2 gap-3">
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3">
+                    <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest mb-1.5">Cliente</p>
+                    <p className="text-xs font-black text-white mb-0.5">{r.clientName}</p>
+                    {mot && <p className="text-[10px] text-amber-400 mb-0.5">Mot: {mot.nome}</p>}
+                    {r.clientPhone && <p className="text-[11px] text-zinc-400">{r.clientPhone}</p>}
+                    {r.clientEmail && <p className="text-[10px] text-zinc-400 truncate">{r.clientEmail}</p>}
+                  </div>
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3">
+                    <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest mb-1.5">Viatura</p>
+                    <p className="text-xs font-black text-white mb-0.5">{vehicleName(r.vehicleId)}</p>
+                    <p className="text-[11px] text-zinc-400">{fmt(tarifaDiaria)}/dia · {totalDays}d</p>
+                    <p className="text-[10px] text-zinc-400 tabular-nums">{fmtD(r.dataInicio)} → {fmtD(r.dataFim)}</p>
+                    {r.localLevantamento && <p className="text-[10px] text-zinc-400 mt-0.5">{r.localLevantamento}</p>}
+                  </div>
+                </div>
+
+                {/* Pagamento */}
+                {r.valorTotal > 0 && (
+                  <div className="px-5 py-4 border-b border-zinc-800">
+                    <div className="flex items-center gap-2 mb-3">
+                      <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Pagamento</p>
+                      {ctx.label && (
+                        <span className={`text-[9px] font-black border rounded-md px-2 py-0.5 uppercase tracking-wider ${ctx.col} ${ctx.bg}`}>
+                          {ctx.label}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Barra */}
+                    {r.prestacoes && r.prestacoes.length > 0 ? (
+                      <div className="flex gap-1 mb-3">
+                        {r.prestacoes.map((p, i) => (
+                          <div key={i} className="flex-1 h-2 rounded-sm overflow-hidden bg-zinc-800">
+                            <div className={`h-full transition-all ${p.paga ? 'bg-emerald-500' : ''}`} />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="h-2 w-full rounded-full bg-zinc-800 overflow-hidden mb-3">
+                        <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${pct}%` }} />
+                      </div>
+                    )}
+
+                    {/* Stats */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-2.5 text-center">
+                        <p className="text-[10px] text-zinc-400 mb-0.5">Total</p>
+                        <p className="text-sm font-black text-white">{fmt(r.valorTotal)}</p>
+                      </div>
+                      <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-2.5 text-center">
+                        <p className="text-[10px] text-emerald-400 mb-0.5">Pago {pct > 0 ? `(${pct}%)` : ''}</p>
+                        <p className="text-sm font-black text-emerald-400">{fmt(pago)}</p>
+                      </div>
+                      <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-2.5 text-center">
+                        <p className="text-[10px] text-amber-400 mb-0.5">Em dívida</p>
+                        <p className="text-sm font-black text-amber-400">{fmt(divida)}</p>
+                      </div>
+                    </div>
+
+                    {/* Prestações */}
+                    {r.prestacoes && r.prestacoes.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-2">Plano de Prestações</p>
+                        <div className="space-y-1">
+                          {r.prestacoes.map(p => (
+                            <div key={p.numero} className={`flex items-center justify-between py-2 px-3 rounded-xl border ${
+                              p.paga ? 'bg-emerald-500/5 border-emerald-500/15' : 'bg-zinc-800/40 border-zinc-700/40'
+                            }`}>
+                              <div className="flex items-center gap-2">
+                                <div className={`w-4 h-4 rounded-full flex items-center justify-center border ${p.paga ? 'bg-emerald-500 border-emerald-400' : 'border-zinc-600'}`}>
+                                  {p.paga && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                                </div>
+                                <span className="text-xs font-black text-white">{p.numero}ª</span>
+                                <span className={`text-[10px] ${p.paga ? 'text-emerald-400/70' : 'text-zinc-400'}`}>{p.dataPagamento ?? p.dataVencimento}</span>
+                              </div>
+                              <span className={`text-xs font-black ${p.paga ? 'text-emerald-400' : 'text-white'}`}>{fmt(p.valorPago ?? p.valor)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Motivo de viagem / notas */}
+                {(r.motivoViagem || r.notas) && (
+                  <div className="px-5 py-4">
+                    {r.motivoViagem && (
+                      <div className="mb-2">
+                        <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Motivo da Viagem</p>
+                        <p className="text-xs text-zinc-300 italic">{r.motivoViagem}</p>
+                      </div>
+                    )}
+                    {r.notas && (
+                      <div>
+                        <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Notas</p>
+                        <p className="text-xs text-zinc-300">{r.notas}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="w-full px-5 sm:px-8 py-8 space-y-6">
 
@@ -318,20 +709,24 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                   {historico.map((r, idx) => {
                     const st = STATUS_CFG[r.status];
                     return (
-                      <tr key={r.id} className={`hover:bg-zinc-800/40 transition-colors ${idx % 2 !== 0 ? 'bg-zinc-800/50' : ''}`}>
+                      <tr
+                        key={r.id}
+                        onClick={() => setReservaModal(r)}
+                        className={`cursor-pointer hover:bg-zinc-800/60 transition-colors ${idx % 2 !== 0 ? 'bg-zinc-800/30' : ''}`}
+                      >
                         <td className="px-5 py-4 text-xs font-black text-white/30 tabular-nums w-10">{idx + 1}</td>
                         <td className="px-5 py-4">
                           <p className="text-sm font-semibold text-white">{r.clientName}</p>
-                          <p className="text-xs text-white">{r.clientPhone ?? r.clientEmail ?? '—'}</p>
+                          <p className="text-xs text-zinc-400">{r.clientPhone ?? r.clientEmail ?? '—'}</p>
                         </td>
                         <td className="px-5 py-4 hidden md:table-cell text-sm text-white">{vehicleName(r.vehicleId)}</td>
                         <td className="px-5 py-4">
                           <p className="text-xs text-white tabular-nums">{r.dataInicio} → {r.dataFim}</p>
-                          {r.motivoViagem && <p className="text-[10px] text-white mt-0.5 italic">{r.motivoViagem}</p>}
+                          {r.motivoViagem && <p className="text-[10px] text-zinc-400 mt-0.5 italic">{r.motivoViagem}</p>}
                         </td>
                         <td className="px-5 py-4 hidden sm:table-cell">
                           <p className="text-sm text-white tabular-nums">{r.dataFim}</p>
-                          <p className="text-xs text-white">{r.horaDevolucao}</p>
+                          <p className="text-xs text-zinc-400">{r.horaDevolucao}</p>
                         </td>
                         <td className="px-5 py-4">
                           <span className={`text-xs border rounded-md px-2 py-0.5 font-semibold ${st.className}`}>{st.label}</span>
@@ -350,47 +745,71 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
           </div>
         )}
 
-        {/* TAB: Ações — separado por estado */}
+        {/* TAB: Ações — grid compacto + drawer lateral */}
         {tab === 'acoes' && (() => {
+          const MESES_ABR = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+          const fmtD = (iso: string) => { const [,m,d] = iso.split('-'); return `${d} ${MESES_ABR[parseInt(m)-1]}`; };
           const totalAcionaveis = aluguerReservations.filter(r => r.status !== 'cancelada' && r.status !== 'concluida').length;
           const gruposVisiveis = GRUPOS.filter(g => acoesFilter === 'todos' || g.status === acoesFilter);
-          return (
-            <div className="space-y-6">
+          const flatList = gruposVisiveis
+            .flatMap(g => aluguerReservations.filter(r => r.status === g.status))
+            .filter(r => {
+              if (!acoesSearch.trim()) return true;
+              const q = acoesSearch.toLowerCase();
+              return r.clientName.toLowerCase().includes(q) || vehicleName(r.vehicleId).toLowerCase().includes(q);
+            });
+          const gerirR = gerirId ? aluguerReservations.find(r => r.id === gerirId) ?? null : null;
 
-              {/* Barra de filtros */}
-              <div className="flex flex-wrap gap-2 p-2 bg-zinc-900 border border-amber-500/20 rounded-2xl">
+          return (
+            <div className="space-y-4">
+
+              {/* Header + search */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-xl font-black text-white">Filtros e Pesquisa</h2>
+                <div className="relative">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Nome, Matrícula..."
+                    value={acoesSearch}
+                    onChange={e => setAcoesSearch(e.target.value)}
+                    className="bg-zinc-900 border border-zinc-800 text-white rounded-xl pl-9 pr-4 py-2 text-sm placeholder-zinc-500 outline-none focus:border-zinc-600 transition-colors w-56"
+                  />
+                </div>
+              </div>
+
+              {/* Filter tabs */}
+              <div className="flex gap-1.5 flex-wrap">
                 <button
                   onClick={() => setAcoesFilter('todos')}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                    acoesFilter === 'todos'
-                      ? 'bg-zinc-700 text-white border border-zinc-500'
-                      : 'text-white border border-zinc-700 hover:bg-zinc-800 hover:border-zinc-600'
-                  }`}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${acoesFilter === 'todos' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
                 >
                   Todos
-                  <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${acoesFilter === 'todos' ? 'bg-zinc-600 text-white' : 'bg-zinc-800 text-white'}`}>
-                    {totalAcionaveis}
-                  </span>
+                  <span className={`text-xs font-black px-2 py-0.5 rounded-md ${acoesFilter === 'todos' ? 'bg-zinc-600 text-white' : 'bg-zinc-800/80 text-zinc-400'}`}>{totalAcionaveis}</span>
                 </button>
                 {GRUPOS.map(g => {
                   const count = aluguerReservations.filter(r => r.status === g.status).length;
-                  if (count === 0) return null;
                   const isActive = acoesFilter === g.status;
                   return (
                     <button
                       key={g.status}
                       onClick={() => setAcoesFilter(isActive ? 'todos' : g.status)}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border transition-all ${
+                      disabled={count === 0}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border ${
                         isActive
                           ? `${g.badge} border-current`
-                          : 'text-white border-zinc-700 hover:bg-zinc-800 hover:border-zinc-600'
+                          : count === 0
+                            ? 'text-zinc-600 border-zinc-800/50 cursor-not-allowed'
+                            : 'text-zinc-400 border-zinc-800 hover:text-white hover:bg-zinc-800 hover:border-zinc-700'
                       }`}
                     >
-                      <span className={`w-2 h-2 rounded-full shrink-0 ${g.dot}`} />
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${count === 0 ? 'bg-zinc-700' : g.dot}`} />
                       {g.title}
-                      <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${isActive ? 'bg-black/25 text-current' : 'bg-zinc-800 text-white'}`}>
-                        {count}
-                      </span>
+                      <span className={`text-xs font-black px-2 py-0.5 rounded-md ${
+                        isActive ? 'bg-black/20 text-current' : count === 0 ? 'bg-zinc-800/40 text-zinc-600' : 'bg-zinc-800/80 text-zinc-400'
+                      }`}>{count}</span>
                     </button>
                   );
                 })}
@@ -553,221 +972,262 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                 );
               })()}
 
-              {totalAcionaveis === 0 && (
-                <div className="bg-zinc-900 border border-amber-500/20 rounded-xl py-12 text-center text-white text-sm">
+              {/* Empty state */}
+              {flatList.length === 0 && (
+                <div className="bg-zinc-900 border border-amber-500/20 rounded-xl py-12 text-center text-zinc-400 text-sm">
                   Sem reservas com ações pendentes
                 </div>
               )}
-              {gruposVisiveis.map(grupo => {
-                const lista = aluguerReservations.filter(r => r.status === grupo.status);
-                if (lista.length === 0) return null;
-                const isHighlighted = highlightStatus === grupo.status;
-                return (
-                  <div
-                    key={grupo.status}
-                    id={`aluguer-grupo-${grupo.status}`}
-                    className={`space-y-3 rounded-2xl transition-all duration-500 ${isHighlighted ? 'ring-2 ring-amber-400/50 ring-offset-2 ring-offset-zinc-950 p-3 -mx-3' : ''}`}
-                  >
-                    {/* Cabeçalho de secção */}
-                    <div className="flex items-center gap-3 pt-2">
-                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${grupo.dot}`} />
-                      <h3 className={`text-xs font-black uppercase tracking-widest ${grupo.textColor}`}>
-                        {grupo.title}
-                      </h3>
-                      <span className={`text-[10px] font-black border rounded-md px-2 py-0.5 ${grupo.badge}`}>
-                        {lista.length}
-                      </span>
-                      <div className="flex-1 h-px bg-zinc-800" />
-                    </div>
-                    {/* Cards do grupo */}
-                    {lista.map(r => {
-                      const st = STATUS_CFG[r.status];
-                      const pago = r.prestacoes
-                        ? r.prestacoes.filter(p => p.paga).reduce((s, p) => s + (p.valorPago ?? p.valor), 0)
-                        : (r.deposito ?? 0);
-                      const divida = Math.max(0, r.valorTotal - pago);
-                      const pct = r.valorTotal > 0 ? Math.round((pago / r.valorTotal) * 100) : 0;
-                      const nextPrest = r.prestacoes?.find(p => !p.paga);
-                      const paidPrest = [...(r.prestacoes?.filter(p => p.paga) ?? [])].reverse().slice(0, 3);
-                      const totalDays = Math.max(1, Math.round((new Date(r.dataFim).getTime() - new Date(r.dataInicio).getTime()) / 86400000));
-                      const daysRemaining = Math.max(0, Math.ceil((new Date(r.dataFim).getTime() - Date.now()) / 86400000));
-                      const tarifaDiaria = r.valorTotal / totalDays;
-                      const estadoVeiculo = r.status === 'ativa' ? 'Em Uso' : r.status === 'devolucao_pendente' ? 'A Devolver' : r.status === 'pronta_levantamento' ? 'Reservado' : 'Disponível';
-                      const mot = r.motoristaId ? motoristas.find(m => m.id === r.motoristaId) : null;
 
-                      const isLastActed = lastActedId === r.id;
-                      const isCollapsed = collapsedIds.has(r.id);
-                      return (
-                        <div
-                          key={r.id}
-                          id={`res-card-${r.id}`}
-                          className={`bg-zinc-900 rounded-2xl overflow-hidden transition-all duration-300 ${
-                            isLastActed
-                              ? 'border-2 border-amber-500/70 ring-4 ring-amber-500/20 shadow-lg shadow-amber-500/10'
-                              : 'border border-zinc-800 hover:border-zinc-700'
-                          }`}
-                        >
-
-                          {/* Header — clicável para colapsar/expandir */}
-                          <div className="px-5 pt-4 pb-4 flex items-center justify-between gap-3 border-b border-zinc-800/60">
-                            <div className="flex items-center gap-2 flex-wrap min-w-0">
-                              <span className={`text-xs border rounded-md px-2 py-0.5 font-semibold shrink-0 ${st.className}`}>{st.label}</span>
-                              <p className="text-white font-black text-sm truncate">{r.clientName}</p>
-                              {mot && (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-md px-2 py-0.5">
-                                  🧑‍✈️ {mot.nome}
-                                </span>
-                              )}
+              {/* ── Grid de reservas ── */}
+              {flatList.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3">
+                    LISTAGEM DE RESERVAS&nbsp;<span className="text-amber-400">{flatList.length}</span>
+                  </p>
+                  <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                      {flatList.map(r => {
+                        const st = STATUS_CFG[r.status];
+                        const depConf = ['confirmada', 'pronta_levantamento', 'ativa', 'devolucao_pendente', 'concluida'].includes(r.status);
+                        const pagoCard = r.prestacoes
+                          ? r.prestacoes.filter(p => p.paga).reduce((s, p) => s + (p.valorPago ?? p.valor), 0)
+                          : (depConf ? (r.deposito ?? 0) : 0);
+                        const dividaCard = Math.max(0, r.valorTotal - pagoCard);
+                        const fmtDate = (iso: string) => { const [,m,d] = iso.split('-'); return `${d} ${MESES_ABR[parseInt(m)-1]}`; };
+                        return (
+                          <div
+                            key={r.id}
+                            onClick={() => setGerirId(r.id === gerirId ? null : r.id)}
+                            className={`bg-zinc-900 border rounded-2xl p-4 flex flex-col gap-3 cursor-pointer transition-all hover:border-zinc-600 ${
+                              gerirId === r.id
+                                ? 'border-amber-500/60 ring-2 ring-amber-500/20'
+                                : lastActedId === r.id
+                                  ? 'border-amber-500/40 ring-1 ring-amber-500/10'
+                                  : 'border-zinc-800'
+                            }`}
+                          >
+                            {/* Avatar + nome */}
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center text-amber-400 font-black text-sm shrink-0">
+                                {r.clientName.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-black text-white truncate leading-tight">{r.clientName}</p>
+                                {r.clientPhone && <p className="text-[10px] text-zinc-500">{r.clientPhone}</p>}
+                              </div>
                               {r.pedidoExtensao?.status === 'pendente' && (
-                                <span className="inline-flex items-center gap-1.5 text-[10px] font-black text-amber-300 bg-amber-400/15 border border-amber-400/40 rounded-md px-2 py-0.5 animate-pulse">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-                                  Extensão pendente
-                                </span>
-                              )}
-                              {isLastActed && (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-300 bg-amber-400/15 border border-amber-400/30 rounded-md px-2 py-0.5 animate-pulse">
-                                  ✓ Última Ação
-                                </span>
+                                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" title="Extensão pendente" />
                               )}
                             </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-[10px] text-white/40 font-mono">#{r.id.slice(0, 8).toUpperCase()}</span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => toggleCollapse(r.id)}
-                                aria-expanded={!isCollapsed}
-                                className="h-8 w-8 text-amber-400 hover:text-amber-300 hover:bg-amber-400/10 transition-colors"
-                              >
-                                {isCollapsed
-                                  ? <ChevronDown size={16} strokeWidth={2.5} />
-                                  : <ChevronUp size={16} strokeWidth={2.5} />
-                                }
-                              </Button>
+
+                            {/* Viatura */}
+                            <div className="flex items-center gap-2 text-xs text-white">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-zinc-400">
+                                <rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/>
+                                <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+                              </svg>
+                              <span className="truncate">{vehicleName(r.vehicleId)}</span>
+                            </div>
+
+                            {/* Datas */}
+                            <div className="flex items-center gap-2 text-xs text-white">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-zinc-400">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                              </svg>
+                              <span className="tabular-nums">{fmtDate(r.dataInicio)} → {fmtDate(r.dataFim)}</span>
+                            </div>
+
+                            {/* Status + dívida */}
+                            <div className="flex items-center justify-between gap-2 pt-1 border-t border-zinc-800">
+                              <span className={`text-[10px] border rounded-md px-2 py-0.5 font-semibold ${st.className}`}>{st.label}</span>
+                              {dividaCard > 0
+                                ? <span className="text-xs font-black text-amber-400">{fmt(dividaCard)}</span>
+                                : <span className="text-xs font-black text-emerald-400">Liquidado</span>
+                              }
                             </div>
                           </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
 
-                          {/* Corpo colapsável */}
-                          {!isCollapsed && <>
+              {/* ── Modal de detalhe (Ações) ── */}
+              {gerirR && (() => {
+                const r = gerirR;
+                const st = STATUS_CFG[r.status];
+                const depositoConfirmado = ['confirmada', 'pronta_levantamento', 'ativa', 'devolucao_pendente', 'concluida'].includes(r.status);
+                const pago = r.prestacoes
+                  ? r.prestacoes.filter(p => p.paga).reduce((s, p) => s + (p.valorPago ?? p.valor), 0)
+                  : (depositoConfirmado ? (r.deposito ?? 0) : 0);
+                const divida = Math.max(0, r.valorTotal - pago);
+                const pct = r.valorTotal > 0 ? Math.round((pago / r.valorTotal) * 100) : 0;
+                const nextPrest = r.prestacoes?.find(p => !p.paga);
+                const totalDays = Math.max(1, Math.round((new Date(r.dataFim).getTime() - new Date(r.dataInicio).getTime()) / 86400000));
+                const daysRemaining = Math.max(0, Math.ceil((new Date(r.dataFim).getTime() - Date.now()) / 86400000));
+                const tarifaDiaria = r.valorTotal / totalDays;
+                const mot = r.motoristaId ? motoristas.find(m => m.id === r.motoristaId) : null;
+                const isShortRental = totalDays <= 5;
+                return (
+                  <div className="fixed inset-0 z-40 flex items-center justify-center px-4 pt-20 pb-4" onClick={() => setGerirId(null)}>
+                    <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+                    <div className="relative z-10 w-full max-w-2xl bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl flex flex-col max-h-[calc(100vh-96px)] overflow-hidden" onClick={e => e.stopPropagation()}>
 
-                          {/* Tracker + Botões */}
-                          <div className="px-5 pt-4 pb-4 border-b border-zinc-800/60">
-                            <ReservationTracker
-                              status={r.status}
-                              onAdvance={next => {
-                                const isShortRental = totalDays <= 5;
-                                if (next === 'confirmada') {
-                                  // ≤5 dias: paga o valor total logo no início; >5 dias: só o depósito
-                                  const valorInicial = isShortRental
-                                    ? r.valorTotal
-                                    : (r.deposito > 0 ? r.deposito : r.valorTotal);
-                                  const firstPrest: Prestacao = r.prestacoes?.[0] ?? {
-                                    numero: 1,
-                                    dataVencimento: new Date().toISOString().split('T')[0],
-                                    valor: valorInicial,
-                                    paga: false,
-                                  };
+                      {/* Drawer header */}
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/25 flex items-center justify-center text-amber-400 font-black text-xs shrink-0">
+                            {r.clientName.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-black text-white truncate">{r.clientName}</p>
+                            <span className={`text-[10px] border rounded-md px-1.5 py-0.5 font-semibold ${st.className}`}>{st.label}</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setGerirId(null)}
+                          className="w-7 h-7 flex items-center justify-center rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors shrink-0"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                          </svg>
+                        </button>
+                      </div>
+
+                      {/* Drawer body */}
+                      <div className="flex-1 min-h-0 overflow-y-auto">
+
+                        {/* Tracker */}
+                        <div className="px-4 py-3 border-b border-zinc-800">
+                          <ReservationTracker
+                            status={r.status}
+                            onAdvance={next => {
+                              if (next === 'confirmada') {
+                                setPlanoModal(r);
+                                setPlanoTipo('total');
+                                setPlanoValorInicial(String(Math.round(r.deposito > 0 ? r.deposito : r.valorTotal * 0.5)));
+                              } else if (next === 'concluida') {
+                                const multaAtraso = r.multaAtraso ?? 0;
+                                const totalComMulta = r.valorTotal + multaAtraso;
+                                const unpaid = r.prestacoes?.filter(p => !p.paga) ?? [];
+                                if (unpaid.length === 0 && pago >= totalComMulta) {
+                                  updateReservation(r.id, { status: 'concluida' });
+                                  setLastActedId(r.id);
+                                } else if (unpaid.length > 0) {
+                                  const finalPrest = unpaid.at(-1)!;
                                   setPagamentoModal({
                                     reservationId: r.id,
-                                    prestacao: firstPrest,
-                                    titulo: isShortRental ? 'Registar Pagamento Total' : 'Registar 1º Pagamento',
-                                    onAfterSave: () => { updateReservation(r.id, { status: 'confirmada' }); setLastActedId(r.id); },
+                                    prestacao: finalPrest,
+                                    titulo: multaAtraso > 0 ? 'Registar Pagamento Final + Multa' : 'Registar Pagamento Final',
+                                    onAfterSave: () => { updateReservation(r.id, { status: 'concluida' }); setLastActedId(r.id); },
                                   });
-                                } else if (next === 'concluida') {
-                                  // ≤5 dias: pagamento total foi feito no início — conclui directamente sem pedir novo pagamento
-                                  if (isShortRental) {
-                                    updateReservation(r.id, { status: 'concluida' });
-                                    setLastActedId(r.id);
-                                  } else {
-                                    const remaining = Math.max(0, r.valorTotal - pago);
-                                    const lastUnpaid = r.prestacoes?.filter(p => !p.paga).at(-1);
-                                    const finalPrest: Prestacao = lastUnpaid ?? {
-                                      numero: (r.prestacoes?.length ?? 0) + 1,
-                                      dataVencimento: r.dataFim,
-                                      valor: remaining > 0 ? remaining : r.valorTotal,
-                                      paga: false,
-                                    };
-                                    setPagamentoModal({
-                                      reservationId: r.id,
-                                      prestacao: finalPrest,
-                                      titulo: 'Registar Pagamento Final',
-                                      onAfterSave: () => { updateReservation(r.id, { status: 'concluida' }); setLastActedId(r.id); },
-                                    });
-                                  }
                                 } else {
-                                  updateReservation(r.id, { status: next });
-                                  setLastActedId(r.id);
-                                  if (next === 'devolucao_pendente') setAcoesFilter('todos');
+                                  // Apenas multa pendente — criar prestação específica
+                                  const multaNum = (r.prestacoes?.length ?? 0) + 1;
+                                  const multaPrest: Prestacao = {
+                                    numero: multaNum,
+                                    dataVencimento: new Date().toISOString().split('T')[0],
+                                    valor: Math.max(0, totalComMulta - pago),
+                                    paga: false,
+                                  };
+                                  updateReservation(r.id, { prestacoes: [...(r.prestacoes ?? []), multaPrest] });
+                                  setPagamentoModal({
+                                    reservationId: r.id,
+                                    prestacao: multaPrest,
+                                    titulo: 'Registar Pagamento de Multa por Atraso',
+                                    onAfterSave: () => { updateReservation(r.id, { status: 'concluida' }); setLastActedId(r.id); },
+                                  });
                                 }
-                              }}
-                              onCancel={(motivo) => { cancelReservation(r.id, motivo); setLastActedId(r.id); }}
-                              onEdit={() => setEditingReservation(r)}
-                              onContract={() => setContractReservation(r)}
-                              stepDates={{
-                                pendente: r.createdAt,
-                                pronta_levantamento: r.dataInicio,
-                                ativa: r.dataInicio,
-                                devolucao_pendente: r.dataFim,
-                                concluida: r.dataFim,
-                              }}
-                            />
-                          </div>
+                              } else if (next === 'devolucao_pendente') {
+                                const todayD = new Date().toISOString().split('T')[0];
+                                let multaFinal = 0;
+                                if (r.dataFim < todayD) {
+                                  const devTime = new Date(`${r.dataFim}T${r.horaDevolucao || '18:00'}`);
+                                  const horasAtraso = Math.ceil((Date.now() - devTime.getTime()) / 3600000);
+                                  multaFinal = Math.max(0, horasAtraso) * rules.penalizacaoAtrasoPorHora;
+                                }
+                                updateReservation(r.id, {
+                                  status: 'devolucao_pendente',
+                                  ...(multaFinal > 0 && { multaAtraso: multaFinal }),
+                                });
+                                setLastActedId(r.id);
+                                setAcoesFilter('todos');
+                              } else {
+                                updateReservation(r.id, { status: next });
+                                setLastActedId(r.id);
+                              }
+                            }}
+                            onCancel={motivo => { cancelReservation(r.id, motivo); setLastActedId(r.id); }}
+                            onEdit={() => setEditingReservation(r)}
+                            onContract={() => setContractReservation(r)}
+                            stepDates={{
+                              pendente: r.createdAt,
+                              pronta_levantamento: r.dataInicio,
+                              ativa: r.dataInicio,
+                              devolucao_pendente: r.dataFim,
+                              concluida: r.dataFim,
+                            }}
+                          />
+                        </div>
 
-                          {/* Pagamento */}
-                          {r.valorTotal > 0 && (() => {
-                            const payCtx: Record<string, { label: string; col: string; bg: string }> = {
-                              pendente:            { label: 'Aguarda Depósito',    col: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
-                              confirmada:          { label: 'Depósito Recebido',   col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-                              pronta_levantamento: { label: 'Pronto p/ Entrega',   col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-                              ativa:               { label: 'Aluguer em Curso',    col: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
-                              devolucao_pendente:  { label: 'Liquidação Pendente', col: 'text-red-400',   bg: 'bg-red-500/10 border-red-500/20' },
-                              concluida:           { label: 'Totalmente Liquidado',col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-                              cancelada:           { label: 'Cancelado',           col: 'text-red-400',   bg: 'bg-red-500/10 border-red-500/20' },
-                            };
-                            const ctx = payCtx[r.status] ?? { label: '', col: 'text-white', bg: 'bg-zinc-800 border-zinc-700' };
-                            return (
-                            <div className="px-5 py-4 border-b border-zinc-800/60">
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Pagamento</p>
-                                  {ctx.label && (
-                                    <span className={`text-[9px] font-black border rounded-md px-2 py-0.5 uppercase tracking-wider ${ctx.col} ${ctx.bg}`}>
-                                      {ctx.label}
-                                    </span>
-                                  )}
-                                </div>
-                                {nextPrest && (
-                                  <div className="text-right">
-                                    <p className="text-[10px] text-white">Próximo pagamento</p>
-                                    <p className="text-sm font-black text-amber-400">{fmt(nextPrest.valor)}</p>
-                                    <p className="text-[10px] text-white">{nextPrest.dataVencimento}</p>
-                                  </div>
+                        {/* Cliente + Viatura */}
+                        <div className="px-4 py-3 border-b border-zinc-800 grid grid-cols-2 gap-2">
+                          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-2.5">
+                            <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest mb-1.5">Cliente</p>
+                            <p className="text-xs font-black text-white mb-0.5 truncate">{r.clientName}</p>
+                            {mot && <p className="text-[10px] text-amber-400 mb-0.5">Mot: {mot.nome}</p>}
+                            {r.clientPhone && <p className="text-[11px] text-white">{r.clientPhone}</p>}
+                            {r.clientEmail && <p className="text-[10px] text-white truncate">{r.clientEmail}</p>}
+                          </div>
+                          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-2.5">
+                            <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest mb-1.5">Viatura</p>
+                            <p className="text-xs font-black text-white mb-0.5 truncate">{vehicleName(r.vehicleId)}</p>
+                            <p className="text-[11px] text-white">{fmt(tarifaDiaria)}/dia · {totalDays}d</p>
+                            <p className="text-[10px] text-white tabular-nums">{r.dataInicio} → {r.dataFim}</p>
+                            {daysRemaining <= 1 && r.status === 'ativa' && (
+                              <p className="text-[10px] font-black text-red-400 mt-0.5">
+                                {daysRemaining === 0 ? 'Devolução hoje!' : 'Devolução amanhã'}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Pagamento */}
+                        {r.valorTotal > 0 && (() => {
+                          const payCtx: Record<string, { label: string; col: string; bg: string }> = {
+                            pendente:            { label: 'Aguarda Depósito',     col: 'text-amber-400',   bg: 'bg-amber-500/10 border-amber-500/20' },
+                            confirmada:          { label: 'Depósito Recebido',    col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+                            pronta_levantamento: { label: 'Pronto p/ Entrega',    col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+                            ativa:               { label: 'Aluguer em Curso',     col: 'text-amber-400',   bg: 'bg-amber-500/10 border-amber-500/20' },
+                            devolucao_pendente:  { label: 'Liquidação Pendente',  col: 'text-red-400',     bg: 'bg-red-500/10 border-red-500/20' },
+                            concluida:           { label: 'Totalmente Liquidado', col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+                            cancelada:           { label: 'Cancelado',            col: 'text-red-400',     bg: 'bg-red-500/10 border-red-500/20' },
+                          };
+                          const ctx = payCtx[r.status] ?? { label: '', col: 'text-white', bg: 'bg-zinc-800 border-zinc-700' };
+                          return (
+                            <div className="px-4 py-3 border-b border-zinc-800">
+                              <div className="flex items-center gap-2 mb-3">
+                                <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Pagamento</p>
+                                {ctx.label && (
+                                  <span className={`text-[9px] font-black border rounded-md px-2 py-0.5 uppercase tracking-wider ${ctx.col} ${ctx.bg}`}>
+                                    {ctx.label}
+                                  </span>
                                 )}
                               </div>
 
                               {/* Barra de progresso */}
                               {r.prestacoes && r.prestacoes.length > 0 ? (
-                                <div className="mb-4">
-                                  <div className="flex gap-1 mb-1">
-                                    {r.prestacoes.map((p, i) => (
-                                      <div key={i} className="flex-1 h-2 rounded-sm overflow-hidden bg-zinc-800">
-                                        <div className={`h-full transition-all ${p.paga ? 'bg-emerald-500' : ''}`} />
-                                      </div>
-                                    ))}
-                                  </div>
-                                  <div className="flex mb-1">
-                                    {r.prestacoes.map((p, i) => (
-                                      <div key={i} className="flex-1 text-center">
-                                        <span className={`text-[9px] font-bold ${p.paga ? 'text-emerald-400' : 'text-white/30'}`}>{i + 1}ª</span>
-                                      </div>
-                                    ))}
-                                  </div>
+                                <div className="flex gap-1 mb-4">
+                                  {r.prestacoes.map((p, i) => (
+                                    <div key={i} className="flex-1 h-2 rounded-sm overflow-hidden bg-zinc-800">
+                                      <div className={`h-full transition-all ${p.paga ? 'bg-emerald-500' : ''}`} />
+                                    </div>
+                                  ))}
                                 </div>
                               ) : (
-                                <div className="mb-4">
-                                  <div className="h-2 w-full rounded-full bg-zinc-800 overflow-hidden">
-                                    <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${pct}%` }} />
-                                  </div>
+                                <div className="h-2 w-full rounded-full bg-zinc-800 overflow-hidden mb-4">
+                                  <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${pct}%` }} />
                                 </div>
                               )}
 
@@ -782,41 +1242,59 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                                   <p className="text-sm font-black text-emerald-400">{fmt(pago)}</p>
                                 </div>
                                 <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-2.5">
-                                  <p className="text-[10px] text-amber-400 mb-1">Em dívida {pct < 100 ? `(${100 - pct}%)` : ''}</p>
+                                  <p className="text-[10px] text-amber-400 mb-1">Em dívida</p>
                                   <p className="text-sm font-black text-amber-400">{fmt(divida)}</p>
                                 </div>
                               </div>
 
-                              {/* Plano de prestações com botões Pagar */}
+                              {/* Multa por atraso */}
+                              {r.multaAtraso != null && r.multaAtraso > 0 && (() => {
+                                const horasMulta = rules.penalizacaoAtrasoPorHora > 0
+                                  ? Math.round(r.multaAtraso! / rules.penalizacaoAtrasoPorHora)
+                                  : 0;
+                                const diasMulta = Math.floor(horasMulta / 24);
+                                const horasRest = horasMulta % 24;
+                                return (
+                                  <div className="mb-3 rounded-xl border border-red-500/30 bg-red-500/5 px-3 py-2.5">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <div className="flex items-center gap-1.5">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12.01" y1="16" x2="12" y2="16"/></svg>
+                                        <p className="text-[10px] font-black text-red-400 uppercase tracking-widest">Multa por Atraso</p>
+                                      </div>
+                                      <p className="text-sm font-black text-red-400">{fmt(r.multaAtraso!)}</p>
+                                    </div>
+                                    <p className="text-[10px] text-red-300/60">
+                                      {diasMulta > 0 ? `${diasMulta}d ` : ''}{horasRest}h de atraso · {fmt(rules.penalizacaoAtrasoPorHora)}/hora
+                                    </p>
+                                    <div className="mt-1.5 pt-1.5 border-t border-red-500/20 flex items-center justify-between">
+                                      <p className="text-[10px] text-white/60">Total com multa</p>
+                                      <p className="text-xs font-black text-red-300">{fmt(r.valorTotal + r.multaAtraso!)}</p>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+
+                              {/* Prestações */}
                               {r.prestacoes && r.prestacoes.length > 0 && (
                                 <div>
                                   <p className="text-[10px] font-black text-white uppercase tracking-widest mb-2">Plano de Prestações</p>
                                   <div className="space-y-1">
                                     {r.prestacoes.map(p => (
-                                      <div key={p.numero} className={`flex items-center justify-between py-2.5 px-3 rounded-xl border transition ${
+                                      <div key={p.numero} className={`flex items-center justify-between py-2 px-3 rounded-xl border transition ${
                                         p.paga
                                           ? 'bg-emerald-500/5 border-emerald-500/15'
                                           : new Date(p.dataVencimento) < new Date() ? 'bg-red-500/5 border-red-500/20' : 'bg-zinc-800/40 border-zinc-700/40'
                                       }`}>
-                                        <div className="flex items-start gap-2.5 min-w-0">
-                                          <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 border ${
-                                            p.paga ? 'bg-emerald-500 border-emerald-400' : 'border-zinc-600'
-                                          }`}>
-                                            {p.paga && (
-                                              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-                                            )}
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 border ${p.paga ? 'bg-emerald-500 border-emerald-400' : 'border-zinc-600'}`}>
+                                            {p.paga && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
                                           </div>
-                                          <div className="min-w-0">
-                                            <div className="flex items-center gap-1.5 flex-wrap">
-                                              <span className="text-xs font-black text-white">{p.numero}ª prestação</span>
-                                              <span className={`text-[10px] ${p.paga ? 'text-emerald-400/70' : new Date(p.dataVencimento) < new Date() ? 'text-red-400' : 'text-white'}`}>
-                                                · {p.dataPagamento ?? p.dataVencimento}
-                                                {p.horaPagamento && ` · ${p.horaPagamento}`}
-                                              </span>
-                                            </div>
-                                          </div>
+                                          <span className="text-xs font-black text-white">{p.numero}ª</span>
+                                          <span className={`text-[10px] ${p.paga ? 'text-emerald-400/70' : new Date(p.dataVencimento) < new Date() ? 'text-red-400' : 'text-white'}`}>
+                                            {p.dataPagamento ?? p.dataVencimento}
+                                          </span>
                                         </div>
-                                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                                        <div className="flex items-center gap-2 shrink-0">
                                           <span className={`text-xs font-black ${p.paga ? 'text-emerald-400' : 'text-white'}`}>
                                             {fmt(p.valorPago ?? p.valor)}
                                           </span>
@@ -835,41 +1313,42 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                                 </div>
                               )}
 
-                              {/* Registo de Pagamentos — detalhes de cada transação */}
+                              {/* Próximo pagamento */}
+                              {nextPrest && (
+                                <div className="mt-3 flex items-center justify-between bg-zinc-800/60 border border-zinc-700/40 rounded-xl px-4 py-2.5">
+                                  <p className="text-xs text-white">Próximo pagamento</p>
+                                  <div className="text-right">
+                                    <p className="text-sm font-black text-amber-400">{fmt(nextPrest.valor)}</p>
+                                    <p className="text-[10px] text-zinc-400">{nextPrest.dataVencimento}</p>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Registo de pagamentos */}
                               {(() => {
                                 const FORMA_MAP: Record<string, string> = { mpesa: 'M-Pesa', emola: 'e-Mola', dinheiro: 'Dinheiro', transferencia: 'Transferência', cheque: 'Cheque', outros: 'Outros' };
                                 const pagos = (r.prestacoes ?? []).filter(p => p.paga && (p.formaPagamento || p.referenciaPagamento || p.notasPagamento || p.dataPagamento));
                                 if (pagos.length === 0) return null;
                                 return (
-                                  <div className="mt-4 pt-4 border-t border-zinc-800/60">
+                                  <div className="mt-4 pt-4 border-t border-zinc-800">
                                     <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-2">Registo de Pagamentos</p>
                                     <div className="space-y-2">
                                       {pagos.map(p => (
-                                        <div key={p.numero} className="bg-zinc-800/50 border border-zinc-700/50 rounded-xl px-4 py-3 flex items-start gap-3">
-                                          {/* Ícone */}
-                                          <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                        <div key={p.numero} className="bg-zinc-800/50 border border-zinc-700/50 rounded-xl px-3 py-2.5 flex items-start gap-2.5">
+                                          <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                                           </div>
-                                          {/* Detalhes */}
                                           <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between gap-2 mb-1">
+                                            <div className="flex items-center justify-between gap-2 mb-0.5">
                                               <span className="text-xs font-black text-white">{p.numero}ª Prestação</span>
                                               <span className="text-sm font-black text-emerald-400 tabular-nums">{fmt(p.valorPago ?? p.valor)}</span>
                                             </div>
-                                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-white">
-                                              {p.dataPagamento && (
-                                                <span>{p.dataPagamento}{p.horaPagamento ? ` · ${p.horaPagamento}` : ''}</span>
-                                              )}
-                                              {p.formaPagamento && (
-                                                <span className="font-bold text-amber-400">{FORMA_MAP[p.formaPagamento] ?? p.formaPagamento}</span>
-                                              )}
-                                              {p.referenciaPagamento && (
-                                                <span className="font-mono text-white/70">Ref: {p.referenciaPagamento}</span>
-                                              )}
+                                            <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-white">
+                                              {p.dataPagamento && <span>{p.dataPagamento}{p.horaPagamento ? ` · ${p.horaPagamento}` : ''}</span>}
+                                              {p.formaPagamento && <span className="font-bold text-amber-400">{FORMA_MAP[p.formaPagamento] ?? p.formaPagamento}</span>}
+                                              {p.referenciaPagamento && <span className="font-mono text-white/70">Ref: {p.referenciaPagamento}</span>}
                                             </div>
-                                            {p.notasPagamento && (
-                                              <p className="text-[11px] text-white/60 italic mt-1">{p.notasPagamento}</p>
-                                            )}
+                                            {p.notasPagamento && <p className="text-[11px] text-white/70 italic mt-0.5">{p.notasPagamento}</p>}
                                           </div>
                                         </div>
                                       ))}
@@ -878,114 +1357,32 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                                 );
                               })()}
                             </div>
-                            );
-                          })()}
+                          );
+                        })()}
 
-                          {/* Cliente + Viatura */}
-                          <div className="px-5 py-4 border-b border-zinc-800/60 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div className="bg-zinc-800/40 border border-zinc-700/40 rounded-xl p-3.5">
-                              <div className="flex items-center gap-3 mb-2.5">
-                                <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center text-amber-400 font-black text-sm shrink-0">
-                                  {r.clientName.charAt(0).toUpperCase()}
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-black text-white leading-tight truncate">{r.clientName}</p>
-                                  <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-md px-1.5 py-0.5 mt-0.5">
-                                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-                                    Cliente Verificado
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="space-y-1">
-                                {r.clientPhone && (
-                                  <div className="flex items-center gap-2 text-[11px] text-white">
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12.6 19.79 19.79 0 0 1 1.65 4a2 2 0 0 1 1.99-2H6.5a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.4a16 16 0 0 0 6.29 6.29l1.36-1.36a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                                    {r.clientPhone}
-                                  </div>
-                                )}
-                                {r.clientEmail && (
-                                  <div className="flex items-center gap-2 text-[11px] text-white">
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                                    {r.clientEmail}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="bg-zinc-800/40 border border-zinc-700/40 rounded-xl p-3.5">
-                              <div className="flex items-center gap-3 mb-2.5">
-                                <div className="w-10 h-10 rounded-xl bg-zinc-700/60 border border-zinc-600/50 flex items-center justify-center text-white shrink-0">
-                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <rect x="1" y="3" width="15" height="13" rx="2"/>
-                                    <path d="M16 8h4l3 3v5h-7V8z"/>
-                                    <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
-                                  </svg>
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-black text-white leading-tight truncate">{vehicleName(r.vehicleId)}</p>
-                                  <p className="text-[10px] text-white mt-0.5">Viatura #{r.vehicleId}</p>
-                                </div>
-                              </div>
-                              <div className="space-y-1 text-[11px]">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-white">Tarifa Diária</span>
-                                  <span className="font-black text-amber-400">{fmt(tarifaDiaria)}</span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <span className="text-white">Período</span>
-                                  <span className="font-semibold text-white tabular-nums">{r.dataInicio} → {r.dataFim}</span>
-                                </div>
-                                {r.localLevantamento && (
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-white">Local</span>
-                                    <span className="font-semibold text-white truncate ml-2 text-right">{r.localLevantamento}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
+                        {/* Historial de extensão */}
+                        {r.pedidoExtensao && r.pedidoExtensao.status !== 'pendente' && (
+                          <div className={`mx-4 my-3 rounded-xl border px-3 py-2.5 flex items-center gap-3 ${
+                            r.pedidoExtensao.status === 'aprovado'
+                              ? 'border-emerald-500/20 bg-emerald-500/5'
+                              : 'border-zinc-800 bg-zinc-900/30'
+                          }`}>
+                            {r.pedidoExtensao.status === 'aprovado'
+                              ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                              : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            }
+                            <p className={`text-xs font-bold ${r.pedidoExtensao.status === 'aprovado' ? 'text-emerald-400' : 'text-zinc-400'}`}>
+                              Extensão {r.pedidoExtensao.status === 'aprovado' ? 'aprovada' : 'rejeitada'}
+                              {r.pedidoExtensao.status === 'aprovado' && ` · nova data fim: ${r.pedidoExtensao.novaDataFim}`}
+                            </p>
                           </div>
+                        )}
 
-                          {/* Stats row */}
-                          <div className="px-5 py-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                            {([
-                              { label: 'Alugueres Activos', value: String(kpis.ativas), col: 'text-amber-400' },
-                              { label: 'Dias Restantes', value: daysRemaining === 0 ? 'Hoje' : `${daysRemaining}d`, col: daysRemaining <= 1 ? 'text-red-400' : 'text-white' },
-                              { label: 'Em Dívida Total', value: fmt(divida), col: divida > 0 ? 'text-amber-400' : 'text-emerald-400' },
-                              { label: 'Estado Veículo', value: estadoVeiculo, col: r.status === 'ativa' ? 'text-emerald-400' : 'text-white' },
-                            ] as const).map(s => (
-                              <div key={s.label} className="bg-zinc-800/40 border border-zinc-700/30 rounded-xl p-3 text-center">
-                                <p className={`text-sm font-black ${s.col}`}>{s.value}</p>
-                                <p className="text-[10px] text-white mt-0.5 leading-tight">{s.label}</p>
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Historial de extensão — só mostra após resposta */}
-                          {r.pedidoExtensao && r.pedidoExtensao.status !== 'pendente' && (
-                            <div className={`border-t px-5 py-3 flex items-center gap-3 ${
-                              r.pedidoExtensao.status === 'aprovado'
-                                ? 'border-emerald-500/20 bg-emerald-500/5'
-                                : 'border-zinc-800/60 bg-zinc-900/30'
-                            }`}>
-                              {r.pedidoExtensao.status === 'aprovado'
-                                ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                              }
-                              <p className={`text-xs font-bold ${r.pedidoExtensao.status === 'aprovado' ? 'text-emerald-400' : 'text-zinc-400'}`}>
-                                Extensão {r.pedidoExtensao.status === 'aprovado' ? 'aprovada' : 'rejeitada'}
-                                {r.pedidoExtensao.status === 'aprovado' && ` · nova data fim: ${r.pedidoExtensao.novaDataFim}`}
-                              </p>
-                            </div>
-                          )}
-
-                          </>}
-
-                        </div>
-                      );
-                    })}
+                      </div>
+                    </div>
                   </div>
                 );
-              })}
+              })()}
             </div>
           );
         })()}

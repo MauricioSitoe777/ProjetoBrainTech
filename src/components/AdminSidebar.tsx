@@ -1,10 +1,15 @@
 import { useMemo } from 'react';
 import { useRoute } from '../hooks/useRoute';
+import { useAuth } from '../context/AuthContext';
 import { useGuests } from '../context/GuestsContext';
 import { useNotifications } from '../context/NotificationsContext';
 import { useReservations } from '../context/ReservationsContext';
 import { useVehicles } from '../context/VehiclesContext';
 import { useXitique } from '../context/XitiqueContext';
+
+function getInitials(nome: string) {
+  return nome.trim().split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase();
+}
 
 interface Props {
   onClose?: () => void;
@@ -28,11 +33,14 @@ const COMPRA_URGENT    = new Set(['pendente', 'prestacao_atraso']);
 
 export function AdminSidebar({ onClose }: Props) {
   const { path, navigate } = useRoute();
+  const { user, allUsers, logout } = useAuth();
   const { guests } = useGuests();
   const { unreadCount } = useNotifications();
   const { reservations } = useReservations();
   const { vehicles: allVehicles } = useVehicles();
   const { grupos, inscricoes } = useXitique();
+
+  const fullUser = user ? allUsers.find(u => u.id === user.id) : null;
 
   const pendingCount = guests.filter(g => g.status !== 'aprovado' && g.status !== 'rejeitado').length;
 
@@ -168,6 +176,40 @@ export function AdminSidebar({ onClose }: Props) {
         />
 
       </nav>
+
+      {/* ── Perfil + Sair — apenas visível no drawer móvel ── */}
+      {user && (
+        <div className="md:hidden border-t border-zinc-800 p-3 shrink-0">
+          <div className="flex items-center gap-2.5 px-2 py-2 mb-1 min-w-0">
+            {fullUser?.avatar ? (
+              <img
+                src={fullUser.avatar}
+                alt={user.nome}
+                className="w-8 h-8 rounded-full object-cover border-2 border-amber-500/40 shrink-0"
+              />
+            ) : (
+              <span className="w-8 h-8 rounded-full bg-amber-500/20 border-2 border-amber-500/40 text-amber-400 text-[10px] font-black flex items-center justify-center shrink-0">
+                {getInitials(user.nome)}
+              </span>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-white text-xs font-bold leading-tight truncate">{user.nome}</p>
+              <p className="text-amber-400 text-[10px]">Administrador</p>
+            </div>
+          </div>
+          <button
+            onClick={() => { logout(); navigate('/'); onClose?.(); }}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-colors font-medium"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Sair da conta
+          </button>
+        </div>
+      )}
 
     </aside>
   );

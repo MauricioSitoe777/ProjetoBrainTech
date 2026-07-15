@@ -185,7 +185,7 @@ function AppInner() {
               <div className="hidden md:block shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
                 <AdminSidebar />
               </div>
-              <main className="flex-1 min-w-0 overflow-x-hidden">
+              <main className="flex-1 min-w-0">
                 {adminPage()}
               </main>
             </div>

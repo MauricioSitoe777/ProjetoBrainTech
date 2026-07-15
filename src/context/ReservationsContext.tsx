@@ -81,6 +81,7 @@ function reservationToApi(r: Partial<Reservation>): Record<string, unknown> {
   if (r.referenciaPagamento !== undefined) out.referencia_pagamento = r.referenciaPagamento;
   if (r.motivoCancelamento  !== undefined) out.motivo_cancelamento  = r.motivoCancelamento;
   if (r.pedidoExtensao      !== undefined) out.pedido_extensao      = r.pedidoExtensao;
+  if (r.multaAtraso         !== undefined) out.multa_atraso          = r.multaAtraso;
   return out;
 }
 
@@ -132,6 +133,20 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('rentcar:businessRules:v2', JSON.stringify(rules));
   }, [rules]);
 
+  // Sincronização cross-tab: reflecte alterações do localStorage feitas por outras abas
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'rentcar:reservations:v2' && e.newValue) {
+        try { setReservations(JSON.parse(e.newValue)); } catch { /* ignore */ }
+      }
+      if (e.key === 'rentcar:blocks:v1' && e.newValue) {
+        try { setBlocks(JSON.parse(e.newValue)); } catch { /* ignore */ }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
   // Sincroniza com a API quando o utilizador faz login
   useEffect(() => {
     if (!authUser) return;
@@ -144,10 +159,11 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
         setReservations(prev => {
           const localMap = new Map(prev.map(r => [r.id, r]));
           return (apiRes as Reservation[]).map(apiR => {
-            if (!apiR.userId) {
-              const local = localMap.get(apiR.id);
-              if (local?.userId) return { ...apiR, userId: local.userId };
-            }
+            const local = localMap.get(apiR.id);
+            // O estado local (localStorage) reflecte sempre as últimas acções do admin,
+            // mesmo que a chamada à API tenha falhado ou ainda não propagado.
+            // Por isso, o local tem prioridade sobre a resposta da API.
+            if (local) return { ...apiR, ...local };
             return apiR;
           });
         });

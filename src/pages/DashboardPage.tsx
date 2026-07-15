@@ -246,41 +246,31 @@ export function DashboardPage() {
             <span className="text-[9px] text-white font-black uppercase tracking-widest">Negócio</span>
           </div>
 
-          {/* 8 métricas: 4 operacional + separador âmbar + 4 negócio */}
-          <div className="flex divide-x divide-zinc-800/50">
-            {/* Grupo operacional */}
-            <div className="flex-1 grid grid-cols-4 divide-x divide-zinc-800/50">
-              <div className="px-4 py-4">
-                <Metric label="Frota" value={s.totalVeiculos} sub="Veículos" onClick={() => navigate('/admin/veiculos')} />
-              </div>
-              <div className="px-4 py-4">
-                <Metric label="Em Atraso" value={s.aluguerAtraso} sub="Alugueres" onClick={() => navigate('/admin/aluguer?tab=acoes')} />
-              </div>
-              <div className="px-4 py-4">
-                <Metric label="Devoluções" value={s.devolucaoPend} sub="Pendentes" onClick={() => navigate('/admin/aluguer?tab=acoes')} />
-              </div>
-              <div className="px-4 py-4">
-                <Metric label="Motoristas" value={s.motorDisp} sub="Disponíveis" onClick={() => navigate('/admin/motoristas')} />
-              </div>
+          {/* 8 métricas: 2 colunas mobile → 4 tablet → 8 desktop */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 divide-zinc-800/50">
+            <div className="px-4 py-4 border-r border-b sm:border-b-0 border-zinc-800/50">
+              <Metric label="Frota" value={s.totalVeiculos} sub="Veículos" onClick={() => navigate('/admin/veiculos')} />
             </div>
-
-            {/* Separador âmbar */}
-            <div className="w-px bg-amber-500/25" />
-
-            {/* Grupo negócio */}
-            <div className="flex-1 grid grid-cols-4 divide-x divide-zinc-800/50">
-              <div className="px-4 py-4">
-                <Metric label="Utilizadores" value={s.activeUsers} sub="Activos" onClick={() => navigate('/admin/utilizadores')} />
-              </div>
-              <div className="px-4 py-4">
-                <Metric label="Alugueres" value={s.aluguerAtivos} sub="Activos" onClick={() => navigate('/admin/aluguer')} />
-              </div>
-              <div className="px-4 py-4">
-                <Metric label="Compras" value={s.compraAtivas} sub="A Decorrer" onClick={() => navigate('/admin/compra')} />
-              </div>
-              <div className="px-4 py-4">
-                <Metric label="Xitique" value={s.gruposAtivos + s.gruposAbertos} sub="Grupos" onClick={() => navigate('/admin/xitique')} />
-              </div>
+            <div className="px-4 py-4 border-b sm:border-r sm:border-b-0 border-zinc-800/50">
+              <Metric label="Em Atraso" value={s.aluguerAtraso} sub="Alugueres" onClick={() => navigate('/admin/aluguer?tab=acoes')} />
+            </div>
+            <div className="px-4 py-4 border-r border-b sm:border-b-0 border-zinc-800/50">
+              <Metric label="Devoluções" value={s.devolucaoPend} sub="Pendentes" onClick={() => navigate('/admin/aluguer?tab=acoes')} />
+            </div>
+            <div className="px-4 py-4 border-b lg:border-r border-zinc-800/50 lg:border-amber-500/25">
+              <Metric label="Motoristas" value={s.motorDisp} sub="Disponíveis" onClick={() => navigate('/admin/motoristas')} />
+            </div>
+            <div className="px-4 py-4 border-r border-zinc-800/50">
+              <Metric label="Utilizadores" value={s.activeUsers} sub="Activos" onClick={() => navigate('/admin/utilizadores')} />
+            </div>
+            <div className="px-4 py-4 border-r border-zinc-800/50">
+              <Metric label="Alugueres" value={s.aluguerAtivos} sub="Activos" onClick={() => navigate('/admin/aluguer')} />
+            </div>
+            <div className="px-4 py-4 border-r border-zinc-800/50">
+              <Metric label="Compras" value={s.compraAtivas} sub="A Decorrer" onClick={() => navigate('/admin/compra')} />
+            </div>
+            <div className="px-4 py-4">
+              <Metric label="Xitique" value={s.gruposAtivos + s.gruposAbertos} sub="Grupos" onClick={() => navigate('/admin/xitique')} />
             </div>
           </div>
         </div>
@@ -318,14 +308,14 @@ export function DashboardPage() {
           {alertTab === 'em_uso' && (
             <>
               {/* KPIs */}
-              <div className="grid grid-cols-4 divide-x divide-zinc-800/50 border-b border-zinc-800/50">
+              <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-zinc-800/50">
                 {[
                   { label: 'Em Uso',       value: emUsoAtivos,    color: 'text-amber-400' },
                   { label: 'Em Atraso',    value: emUsoAtrasados, color: emUsoAtrasados > 0 ? 'text-red-400' : 'text-zinc-500' },
                   { label: 'Confirmadas',  value: emUsoConfirm,   color: 'text-blue-400' },
                   { label: 'Devoluções',   value: emUsoDev,       color: 'text-orange-400' },
-                ].map(k => (
-                  <div key={k.label} className="px-4 py-3">
+                ].map((k, i) => (
+                  <div key={k.label} className={`px-4 py-3 ${i < 3 ? 'border-r border-zinc-800/50' : ''} ${i < 2 ? 'border-b sm:border-b-0 border-zinc-800/50' : ''}`}>
                     <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-0.5">{k.label}</p>
                     <p className={`text-xl font-black ${k.color}`}>{k.value}</p>
                   </div>

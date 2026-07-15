@@ -216,11 +216,11 @@ export function ReservationTracker({ status, onAdvance, onCancel, onEdit, onCont
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
 
       {/* ── Timeline ── */}
       <div className="overflow-x-auto">
-        <div className="flex items-start min-w-max gap-0 pt-4 pb-3">
+        <div className="flex items-start min-w-max gap-0 pt-2 pb-1">
           {STEPS.map((step, idx) => {
             const isDone    = idx < currentIdx;
             const isCurrent = idx === currentIdx;
@@ -230,22 +230,22 @@ export function ReservationTracker({ status, onAdvance, onCancel, onEdit, onCont
               <div key={step.status} className="flex items-start">
 
                 {/* Step node */}
-                <div className="flex flex-col items-center gap-1.5 w-[90px]">
+                <div className="flex flex-col items-center gap-1 w-[82px]">
 
                   {/* Circle + pulse rings */}
-                  <div className="relative w-[56px] h-[56px] shrink-0">
+                  <div className="relative w-[48px] h-[48px] shrink-0">
 
                     {isCurrent && (
                       <span
                         className="absolute rounded-full border border-amber-400/25 animate-pulse"
-                        style={{ inset: '-12px', animationDuration: '2s', animationDelay: '0.4s' }}
+                        style={{ inset: '-8px', animationDuration: '2s', animationDelay: '0.4s' }}
                       />
                     )}
 
                     {isCurrent && (
                       <span
                         className="absolute rounded-full border-2 border-amber-400/55 animate-pulse"
-                        style={{ inset: '-6px', animationDuration: '2s' }}
+                        style={{ inset: '-4px', animationDuration: '2s' }}
                       />
                     )}
 
@@ -255,33 +255,33 @@ export function ReservationTracker({ status, onAdvance, onCancel, onEdit, onCont
                           ? 'bg-amber-500/20 border-amber-400 text-amber-400'
                           : 'bg-emerald-500/20 border-emerald-400 text-emerald-400'
                         : isCurrent
-                          ? 'bg-amber-400 border-amber-300 text-zinc-950 shadow-[0_0_28px_rgba(251,191,36,0.75)]'
+                          ? 'bg-amber-400 border-amber-300 text-zinc-950 shadow-[0_0_20px_rgba(251,191,36,0.65)]'
                           : 'bg-zinc-800 border-zinc-600 text-zinc-400'
                     }`}>
                       {isDone ? (
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
                       ) : (
-                        step.icon
+                        <span className="[&_svg]:w-[15px] [&_svg]:h-[15px]">{step.icon}</span>
                       )}
                     </div>
                   </div>
 
                   {/* Label */}
-                  <span className={`text-xs text-center leading-tight px-1 transition-colors duration-300 ${
+                  <span className={`text-xs text-center leading-tight px-0.5 transition-colors duration-300 ${
                     isDone
                       ? clientView ? 'text-amber-400 font-semibold' : 'text-emerald-400 font-semibold'
                       : isCurrent
                         ? 'text-amber-400 font-black'
-                        : 'text-zinc-400 font-medium'
+                        : 'text-zinc-500 font-medium'
                   }`}>
                     {step.short}
                   </span>
 
                   {/* Timestamp */}
                   {dateStr && (isDone || isCurrent) && (
-                    <span className={`text-[9px] text-center leading-tight tabular-nums ${
+                    <span className={`text-[10px] text-center leading-tight tabular-nums ${
                       isDone
                         ? clientView ? 'text-amber-400/60' : 'text-emerald-400/60'
                         : 'text-amber-300/80'
@@ -293,14 +293,14 @@ export function ReservationTracker({ status, onAdvance, onCancel, onEdit, onCont
 
                 {/* Connector */}
                 {idx < STEPS.length - 1 && (
-                  <div className="flex items-center mt-[40px] shrink-0">
-                    <div className={`h-px w-6 transition-colors duration-500 ${
+                  <div className="flex items-center mt-[33px] shrink-0">
+                    <div className={`h-px w-4 transition-colors duration-500 ${
                       isDone
                         ? clientView ? 'bg-amber-400' : 'bg-emerald-400'
                         : 'bg-zinc-600'
                     }`} />
                     <svg
-                      width="12" height="12" viewBox="0 0 24 24" fill="none"
+                      width="10" height="10" viewBox="0 0 24 24" fill="none"
                       stroke={isDone ? (clientView ? '#fbbf24' : '#34d399') : '#52525b'}
                       strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                       className="-ml-px transition-all duration-500"
@@ -322,39 +322,33 @@ export function ReservationTracker({ status, onAdvance, onCancel, onEdit, onCont
         if (!msg) return null;
 
         const variantCfg = {
-          warning: { border: 'border-amber-500/40', bar: 'bg-amber-500',  icon: 'bg-zinc-900 border-2 border-amber-500 text-amber-400',                          title: 'text-amber-300', body: 'text-white', dot: 'bg-amber-400' },
-          info:    { border: 'border-zinc-600/60',  bar: 'bg-zinc-500',   icon: 'bg-zinc-900 border-2 border-zinc-500 text-zinc-300',                             title: 'text-white',     body: 'text-white', dot: null },
-          success: { border: 'border-emerald-500/40', bar: 'bg-emerald-500', icon: 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400',               title: 'text-emerald-300', body: 'text-white', dot: null },
-          danger:  { border: 'border-red-500/40',   bar: 'bg-red-500',    icon: 'bg-zinc-900 border-2 border-red-500/60 text-red-400',                            title: 'text-red-300',   body: 'text-red-200/70', dot: null },
+          warning: { border: 'border-amber-500/40', bar: 'bg-amber-500',    icon: 'bg-zinc-900 border-2 border-amber-500 text-amber-400',       title: 'text-amber-300',   body: 'text-zinc-300', dot: 'bg-amber-400' },
+          info:    { border: 'border-zinc-600/60',  bar: 'bg-zinc-500',     icon: 'bg-zinc-900 border-2 border-zinc-500 text-zinc-300',         title: 'text-white',       body: 'text-zinc-300', dot: null },
+          success: { border: 'border-emerald-500/40', bar: 'bg-emerald-500', icon: 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400', title: 'text-emerald-300', body: 'text-zinc-300', dot: null },
+          danger:  { border: 'border-red-500/40',   bar: 'bg-red-500',      icon: 'bg-zinc-900 border-2 border-red-500/60 text-red-400',        title: 'text-red-300',     body: 'text-red-200/70', dot: null },
         }[msg.variant];
 
         const currentStep = STEPS.find(s => s.status === status);
 
         return (
-          <div className={`bg-zinc-900 border rounded-2xl overflow-hidden ${variantCfg.border}`}>
-            {/* Barra topo */}
+          <div className={`bg-zinc-900 border rounded-xl overflow-hidden ${variantCfg.border}`}>
             <div className={`h-0.5 w-full ${variantCfg.bar} opacity-60`} />
-            <div className="px-5 py-4 flex items-center gap-4">
-              {/* Ícone */}
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 [&_svg]:w-5 [&_svg]:h-5 ${variantCfg.icon}`}>
+            <div className="px-3 py-3 flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 [&_svg]:w-4 [&_svg]:h-4 ${variantCfg.icon}`}>
                 {currentStep?.icon ?? (
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                   </svg>
                 )}
               </div>
-
-              {/* Texto */}
               <div className="flex-1 min-w-0">
-                <p className={`text-sm font-black leading-snug ${variantCfg.title}`}>{msg.title}</p>
-                <p className={`text-xs leading-relaxed mt-1 ${variantCfg.body}`}>{msg.body}</p>
+                <p className={`text-xs font-black leading-snug ${variantCfg.title}`}>{msg.title}</p>
+                <p className={`text-[11px] leading-relaxed mt-0.5 ${variantCfg.body}`}>{msg.body}</p>
               </div>
-
-              {/* Ponto animado — estados que requerem atenção */}
               {(msg.variant === 'warning') && (
-                <div className="shrink-0 relative w-2.5 h-2.5">
+                <div className="shrink-0 relative w-2 h-2">
                   <span className="absolute inset-0 rounded-full bg-amber-400/50 animate-ping" />
-                  <span className="relative w-2.5 h-2.5 rounded-full bg-amber-400 flex" />
+                  <span className="relative w-2 h-2 rounded-full bg-amber-400 flex" />
                 </div>
               )}
             </div>

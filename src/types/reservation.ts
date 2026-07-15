@@ -68,6 +68,7 @@ export interface Reservation {
   formaPagamento?: string;
   referenciaPagamento?: string;
   pedidoExtensao?: PedidoExtensao;
+  multaAtraso?: number; // multa por atraso na devolução (MT)
 }
 
 export interface BlockedPeriod {

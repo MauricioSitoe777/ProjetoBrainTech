@@ -95,6 +95,7 @@ interface XitiqueContextType {
   aprovarInscricao: (id: string, userId?: string) => void;
   rejeitarInscricao: (id: string, motivo?: string) => void;
   gerarSequencia: (grupoId: string) => void;
+  eliminarGrupo: (grupoId: string) => void;
 }
 
 const XitiqueContext = createContext<XitiqueContextType | null>(null);
@@ -255,8 +256,15 @@ export function XitiqueProvider({ children }: { children: ReactNode }) {
   const rejeitarInscricao = (id: string, motivo?: string) =>
     setInscricoes(prev => prev.map(i => i.id === id ? { ...i, status: 'rejeitado', motivoRejeicao: motivo ?? '' } : i));
 
+  const eliminarGrupo = (grupoId: string) => {
+    const g = grupos.find(g => g.id === grupoId);
+    if (!g || g.estadoGrupo !== 'Concluido') return;
+    setGrupos(prev => prev.filter(g => g.id !== grupoId));
+    setInscricoes(prev => prev.filter(i => i.grupoId !== grupoId));
+  };
+
   return (
-    <XitiqueContext.Provider value={{ grupos, inscricoes, criarGrupo, definirDataInicio, addMembro, removeMembro, confirmarPagamento, realizarSorteio, reiniciarGrupo, adicionarInscricao, aprovarInscricao, rejeitarInscricao, gerarSequencia }}>
+    <XitiqueContext.Provider value={{ grupos, inscricoes, criarGrupo, definirDataInicio, addMembro, removeMembro, confirmarPagamento, realizarSorteio, reiniciarGrupo, adicionarInscricao, aprovarInscricao, rejeitarInscricao, gerarSequencia, eliminarGrupo }}>
       {children}
     </XitiqueContext.Provider>
   );

@@ -51,7 +51,7 @@ function fmtDataPt(iso: string) {
 }
 
 function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void }) {
-  const { addMembro, removeMembro, confirmarPagamento, realizarSorteio, reiniciarGrupo, definirDataInicio, inscricoes, aprovarInscricao, rejeitarInscricao, gerarSequencia } = useXitique();
+  const { addMembro, removeMembro, confirmarPagamento, realizarSorteio, reiniciarGrupo, eliminarGrupo, definirDataInicio, inscricoes, aprovarInscricao, rejeitarInscricao, gerarSequencia } = useXitique();
   const { allUsers, addUser, updateUser } = useAuth();
   const { addNotification } = useNotifications();
 
@@ -59,6 +59,7 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
   const [novoNome,      setNovoNome]      = useState('');
   const [vencedorFlash, setVencedorFlash] = useState<string | null>(null);
   const [confirmRein,   setConfirmRein]   = useState(false);
+  const [confirmElim,   setConfirmElim]   = useState(false);
   const [credencial,    setCredencial]    = useState<Credencial | null>(null);
   const [copiado,       setCopiado]       = useState<string | null>(null);
   const [confirmando,      setConfirmando]      = useState<string | null>(null);
@@ -192,9 +193,20 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
             </div>
           )}
           {estadoGrupo === 'Concluido' && (
-            <button onClick={() => setConfirmRein(true)} className="text-xs font-bold px-4 py-2 rounded-xl bg-zinc-800 text-white hover:bg-zinc-700 border border-zinc-700 transition">
-              Reiniciar Grupo
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setConfirmRein(true)} className="text-xs font-bold px-4 py-2 rounded-xl bg-zinc-800 text-white hover:bg-zinc-700 border border-zinc-700 transition">
+                Reiniciar Grupo
+              </button>
+              <button
+                onClick={() => setConfirmElim(true)}
+                className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30 transition"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                </svg>
+                Eliminar Grupo
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -737,6 +749,43 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
           </div>
         </div>
       )}
+
+      {/* Modal confirmar eliminação */}
+      {confirmElim && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setConfirmElim(false)} />
+          <div className="relative bg-zinc-900 border border-red-500/30 rounded-3xl p-6 max-w-sm w-full shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center shrink-0">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-white font-black text-base leading-tight">Eliminar "{grupo.nome}"?</h3>
+                <p className="text-red-400 text-xs font-semibold mt-0.5">Esta ação é permanente e irreversível</p>
+              </div>
+            </div>
+            <div className="bg-red-500/5 border border-red-500/20 rounded-xl px-4 py-3 mb-5 space-y-1">
+              <p className="text-xs text-white">Serão eliminados permanentemente:</p>
+              <ul className="text-xs text-red-300 space-y-0.5 mt-1 list-disc list-inside">
+                <li>{membros.length} membro{membros.length !== 1 ? 's' : ''} e todos os registos de pagamento</li>
+                <li>{sorteios.length} sorteio{sorteios.length !== 1 ? 's' : ''} e histórico do grupo</li>
+                <li>Todas as inscrições associadas</li>
+              </ul>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmElim(false)} className="flex-1 py-3 rounded-2xl bg-zinc-800 text-white font-bold hover:bg-zinc-700 transition">Cancelar</button>
+              <button
+                onClick={() => { eliminarGrupo(grupo.id); setConfirmElim(false); onBack(); }}
+                className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-black hover:bg-red-400 transition"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -817,9 +866,10 @@ function CriarGrupoModal({ onClose, onCriar }: { onClose: () => void; onCriar: (
 
 // ── Página principal ──────────────────────────────────────────────────────────
 export function XitiquePage({ onExit }: { onExit?: () => void }) {
-  const { grupos, inscricoes, criarGrupo } = useXitique();
-  const [grupoSelId,   setGrupoSelId]   = useState<string | null>(null);
-  const [showCriar,    setShowCriar]    = useState(false);
+  const { grupos, inscricoes, criarGrupo, eliminarGrupo } = useXitique();
+  const [grupoSelId,    setGrupoSelId]    = useState<string | null>(null);
+  const [showCriar,     setShowCriar]     = useState(false);
+  const [confirmElimId, setConfirmElimId] = useState<string | null>(null);
 
   const grupoSel = grupos.find(g => g.id === grupoSelId) ?? null;
   const totalPendentes = inscricoes.filter(i => i.status === 'aguarda_validacao').length;
@@ -867,23 +917,39 @@ export function XitiquePage({ onExit }: { onExit?: () => void }) {
             {grupos.map(g => {
               const pct = g.maxMembros > 0 ? (g.membros.length / g.maxMembros) * 100 : 0;
               const pendentesGrupo = inscricoes.filter(i => i.grupoId === g.id && i.status === 'aguarda_validacao').length;
+              const isConcluido = g.estadoGrupo === 'Concluido';
               return (
-                <button key={g.id} onClick={() => setGrupoSelId(g.id)}
-                  className="text-left bg-zinc-900 border border-amber-500/20 hover:border-amber-500/40 rounded-2xl p-5 transition-all hover:bg-zinc-800/60 group space-y-4">
-
+                <div
+                  key={g.id}
+                  onClick={() => setGrupoSelId(g.id)}
+                  className={`cursor-pointer text-left bg-zinc-900 border rounded-2xl p-5 transition-all hover:bg-zinc-800/60 group space-y-4 ${isConcluido ? 'border-emerald-500/20 hover:border-emerald-500/40' : 'border-amber-500/20 hover:border-amber-500/40'}`}
+                >
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-amber-400 font-black text-base">{g.nome}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-amber-400 font-black text-base truncate">{g.nome}</p>
                       <span className={`mt-1 inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${estadoStyle[g.estadoGrupo]}`}>
                         {estadoLabel[g.estadoGrupo]}
                         {g.estadoGrupo === 'EmAndamento' && ` · Mês ${g.mesAtual}/${g.maxMembros}`}
                       </span>
                     </div>
-                    {pendentesGrupo > 0 && (
-                      <span className="animate-pulse bg-amber-500 text-zinc-950 text-[10px] font-black rounded-full px-2 py-0.5 shrink-0">
-                        {pendentesGrupo} pendente{pendentesGrupo !== 1 ? 's' : ''}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {pendentesGrupo > 0 && (
+                        <span className="animate-pulse bg-amber-500 text-zinc-950 text-[10px] font-black rounded-full px-2 py-0.5">
+                          {pendentesGrupo} pendente{pendentesGrupo !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {isConcluido && (
+                        <button
+                          onClick={e => { e.stopPropagation(); setConfirmElimId(g.id); }}
+                          title="Eliminar grupo"
+                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-500/10 hover:bg-red-500/25 border border-red-500/20 text-red-400 transition-colors"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -892,7 +958,7 @@ export function XitiquePage({ onExit }: { onExit?: () => void }) {
                       <span className="text-white font-bold">{g.membros.length} / {g.maxMembros}</span>
                     </div>
                     <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full transition-all ${g.estadoGrupo === 'Concluido' ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: `${pct}%` }} />
+                      <div className={`h-full rounded-full transition-all ${isConcluido ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: `${pct}%` }} />
                     </div>
                   </div>
 
@@ -909,9 +975,9 @@ export function XitiquePage({ onExit }: { onExit?: () => void }) {
 
                   <div className="flex items-center justify-between text-xs text-white pt-1 border-t border-zinc-800">
                     <span>{g.sorteios.length} entrega{g.sorteios.length !== 1 ? 's' : ''} realizada{g.sorteios.length !== 1 ? 's' : ''}</span>
-                    <span className="text-amber-400 font-bold">Gerir →</span>
+                    <span className={`font-bold ${isConcluido ? 'text-emerald-400' : 'text-amber-400'}`}>Gerir →</span>
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -919,6 +985,47 @@ export function XitiquePage({ onExit }: { onExit?: () => void }) {
       </div>
 
       {showCriar && <CriarGrupoModal onClose={() => setShowCriar(false)} onCriar={criarGrupo} />}
+
+      {/* Modal de confirmação de eliminação (vista de lista) */}
+      {confirmElimId && (() => {
+        const g = grupos.find(g => g.id === confirmElimId);
+        if (!g) return null;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setConfirmElimId(null)} />
+            <div className="relative bg-zinc-900 border border-red-500/30 rounded-3xl p-6 max-w-sm w-full shadow-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center shrink-0">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-white font-black text-base leading-tight">Eliminar "{g.nome}"?</h3>
+                  <p className="text-red-400 text-xs font-semibold mt-0.5">Esta ação é permanente e irreversível</p>
+                </div>
+              </div>
+              <div className="bg-red-500/5 border border-red-500/20 rounded-xl px-4 py-3 mb-5 space-y-1">
+                <p className="text-xs text-white">Serão eliminados permanentemente:</p>
+                <ul className="text-xs text-red-300 space-y-0.5 mt-1 list-disc list-inside">
+                  <li>{g.membros.length} membro{g.membros.length !== 1 ? 's' : ''} e todos os registos de pagamento</li>
+                  <li>{g.sorteios.length} sorteio{g.sorteios.length !== 1 ? 's' : ''} e histórico do grupo</li>
+                  <li>Todas as inscrições associadas</li>
+                </ul>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setConfirmElimId(null)} className="flex-1 py-3 rounded-2xl bg-zinc-800 text-white font-bold hover:bg-zinc-700 transition">Cancelar</button>
+                <button
+                  onClick={() => { eliminarGrupo(g.id); setConfirmElimId(null); }}
+                  className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-black hover:bg-red-400 transition"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
