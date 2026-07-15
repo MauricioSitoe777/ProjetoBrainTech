@@ -518,7 +518,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
       )}
 
       {/* ══ ASIDE SIDEBAR ════════════════════════════════════════════════════ */}
-      <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col w-64 bg-zinc-900 border-r border-zinc-800 transition-transform duration-300 overflow-hidden md:relative md:z-auto md:w-56 md:shrink-0 md:sticky md:top-16 md:h-[calc(100vh-4rem)] md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside style={{borderRight:'3px solid #3f3f46'}} className={`fixed inset-y-0 left-0 z-50 flex flex-col w-64 bg-zinc-900 transition-transform duration-300 overflow-hidden md:relative md:z-auto md:w-56 md:shrink-0 md:sticky md:top-16 md:h-[calc(100vh-4rem)] md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
 
         {/* Cabeçalho do drawer (só mobile) */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 md:hidden">
@@ -1305,7 +1305,18 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                         {/* ── 1. Estado do Processo ── */}
                         <div className="px-5 py-5">
                           <p className="text-xs font-black text-amber-400 uppercase tracking-widest mb-4">Estado do Processo</p>
-                          <ReservationTracker status={r.status} readonly clientView />
+                          <ReservationTracker
+                            status={r.status}
+                            readonly
+                            clientView
+                            stepDates={{
+                              pendente:            r.createdAt,
+                              pronta_levantamento: r.dataInicio,
+                              ativa:               r.dataInicio,
+                              devolucao_pendente:  r.dataFim,
+                              concluida:           r.dataFim,
+                            }}
+                          />
                           {r.status === 'cancelada' && r.motivoCancelamento && (
                             <div className="mt-4 flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2.5" strokeLinecap="round" className="shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -1317,45 +1328,29 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                           )}
                         </div>
 
-                        {/* ── 3. Grid: Período | Locais | Financeiro ── */}
-                        <div className="grid grid-cols-3 divide-x divide-zinc-800">
+                        {/* ── 3. Grid: [Levantamento + Devolução] | Financeiro ── */}
+                        <div className="grid grid-cols-2 divide-x divide-zinc-800 border-b border-zinc-800">
 
-                          {/* PERÍODO */}
-                          <div className="px-5 py-5 space-y-4">
-                            <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Período</p>
-                            <div className="space-y-4">
-                              <div>
-                                <p className="text-xs font-bold uppercase tracking-widest text-white">Levantamento</p>
-                                <p className="text-3xl font-black text-white leading-none mt-1">{d(r.dataInicio)}</p>
-                                {r.horaLevantamento && <p className="text-sm text-white mt-1.5">{r.horaLevantamento}</p>}
-                              </div>
-                              <div>
-                                <p className="text-xs font-bold uppercase tracking-widest text-amber-400">Devolução</p>
-                                <p className="text-3xl font-black text-amber-400 leading-none mt-1">{d(r.dataFim)}</p>
-                                {r.horaDevolucao && <p className="text-sm text-amber-400 mt-1.5">{r.horaDevolucao}</p>}
-                              </div>
+                          {/* PERÍODO — Levantamento e Devolução lado a lado */}
+                          <div className="grid grid-cols-2 divide-x divide-zinc-800">
+                            {/* Levantamento */}
+                            <div className="px-5 py-5">
+                              <p className="text-xs font-black text-amber-400 uppercase tracking-widest mb-4">Levantamento</p>
+                              <p className="text-2xl font-black text-white leading-none">{d(r.dataInicio)}</p>
+                              {r.horaLevantamento && <p className="text-sm text-white/70 mt-1.5">{r.horaLevantamento}</p>}
+                              <p className="text-xs text-white/50 mt-2 leading-snug">
+                                {r.localLevantamento || 'Não definido'}
+                              </p>
                             </div>
-                          </div>
 
-                          {/* LOCAIS */}
-                          <div className="px-5 py-5 space-y-4">
-                            <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Locais</p>
-                            <div className="space-y-4">
-                              {r.localLevantamento && (
-                                <div>
-                                  <p className="text-xs font-bold uppercase tracking-widest text-white mb-1">Levantamento</p>
-                                  <p className="text-sm font-semibold text-white leading-snug">{r.localLevantamento}</p>
-                                </div>
-                              )}
-                              {r.localDevolucao && (
-                                <div>
-                                  <p className="text-xs font-bold uppercase tracking-widest text-white mb-1">Devolução</p>
-                                  <p className="text-sm font-semibold text-white leading-snug">{r.localDevolucao}</p>
-                                </div>
-                              )}
-                              {!r.localLevantamento && !r.localDevolucao && (
-                                <p className="text-sm text-white italic">Não definido</p>
-                              )}
+                            {/* Devolução */}
+                            <div className="px-5 py-5">
+                              <p className="text-xs font-black text-amber-400 uppercase tracking-widest mb-4">Devolução</p>
+                              <p className="text-2xl font-black text-amber-400 leading-none">{d(r.dataFim)}</p>
+                              {r.horaDevolucao && <p className="text-sm text-amber-400/70 mt-1.5">{r.horaDevolucao}</p>}
+                              <p className="text-xs text-amber-400/50 mt-2 leading-snug">
+                                {r.localDevolucao || 'Não definido'}
+                              </p>
                             </div>
                           </div>
 
@@ -1401,28 +1396,68 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                         </div>
 
                         {/* ── Plano de Prestações ── */}
-                        {r.prestacoes && r.prestacoes.length > 0 && (
+                        {r.prestacoes && r.prestacoes.length > 0 && (() => {
+                          const FORMA_LABEL_P: Record<string, string> = { mpesa: 'M-Pesa', emola: 'e-Mola', dinheiro: 'Dinheiro', transferencia: 'Transferência Bancária', cheque: 'Cheque', outros: 'Outros' };
+                          const veh = getVehicleName(r.vehicleId);
+                          const downloadReciboPrestacao = (p: Prestacao) => {
+                            const isMulta = p.numero > 1 && r.prestacoes!.length > 1 && p === r.prestacoes![r.prestacoes!.length - 1] && (r.multaAtraso ?? 0) > 0;
+                            const itemLabel = isMulta ? 'Multa por Atraso na Devolução' : `Pagamento do Aluguer`;
+                            const reciboNum = `${r.id}-P${p.numero}`;
+                            const body = `
+                              <div class="doc-title">Recibo de Pagamento</div>
+                              <div class="doc-sub">Recibo Nº ${reciboNum}</div>
+
+                              <div class="info-grid">
+                                <div class="info-box">
+                                  <div class="info-label">Emitido por</div>
+                                  <div class="info-value">SOS Motors</div>
+                                  <div class="info-sub">geral@sosmotors.co.mz</div>
+                                </div>
+                                <div class="info-box">
+                                  <div class="info-label">Cliente</div>
+                                  <div class="info-value">${r.clientName ?? fullUser?.nome ?? '—'}</div>
+                                  ${r.clientEmail ? `<div class="info-sub">${r.clientEmail}</div>` : ''}
+                                  ${r.clientPhone ? `<div class="info-sub">${r.clientPhone}</div>` : ''}
+                                </div>
+                              </div>
+
+                              <div class="section-title">Detalhes do Pagamento</div>
+                              <div class="summary-box">
+                                <div class="summary-row"><span>Descrição</span><span><b>${itemLabel}</b></span></div>
+                                <div class="summary-row"><span>Viatura</span><span>${veh}</span></div>
+                                <div class="summary-row"><span>Período do Aluguer</span><span>${fmtData(r.dataInicio)} → ${fmtData(r.dataFim)}</span></div>
+                                <div class="summary-row"><span>Prestação</span><span>${p.numero}ª de ${r.prestacoes!.length}</span></div>
+                                <div class="summary-row"><span>Data de Pagamento</span><span>${p.dataPagamento ? fmtData(p.dataPagamento) : '—'}</span></div>
+                                ${p.horaPagamento ? `<div class="summary-row"><span>Hora</span><span>${p.horaPagamento}</span></div>` : ''}
+                                ${p.formaPagamento ? `<div class="summary-row"><span>Método</span><span>${FORMA_LABEL_P[p.formaPagamento] ?? p.formaPagamento}</span></div>` : ''}
+                                ${p.referenciaPagamento ? `<div class="summary-row"><span>Referência</span><span>${p.referenciaPagamento}</span></div>` : ''}
+                                ${p.notasPagamento ? `<div class="summary-row"><span>Notas</span><span>${p.notasPagamento}</span></div>` : ''}
+                                <div class="summary-row total"><span>Valor Pago</span><span class="val-green">${fmt(p.valorPago ?? p.valor)}</span></div>
+                              </div>
+                            `;
+                            printAsPDF(body, `Recibo ${reciboNum}`);
+                          };
+
+                          return (
                           <div className="px-5 py-4 space-y-2">
                             <p className="text-xs font-black text-amber-400 uppercase tracking-widest mb-3">Plano de Pagamentos</p>
                             <div className="space-y-1.5">
-                              {r.prestacoes.map(p => {
+                              {r.prestacoes!.map(p => {
                                 const vencida = !p.paga && p.dataVencimento < new Date().toISOString().split('T')[0];
                                 return (
-                                  <div key={p.numero} className={`flex items-center justify-between px-3 py-2.5 rounded-xl border ${
+                                  <div key={p.numero} className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border ${
                                     p.paga ? 'bg-emerald-500/5 border-emerald-500/20' : vencida ? 'bg-red-500/5 border-red-500/20' : 'bg-zinc-800/40 border-zinc-700/40'
                                   }`}>
-                                    <div className="flex items-center gap-2">
-                                      <div className={`w-5 h-5 rounded-full flex items-center justify-center border shrink-0 ${p.paga ? 'bg-emerald-500 border-emerald-400' : vencida ? 'border-red-500' : 'border-zinc-600'}`}>
-                                        {p.paga && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
-                                        {!p.paga && vencida && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>}
-                                      </div>
-                                      <div>
-                                        <p className="text-xs font-black text-white">{p.numero}ª prestação</p>
-                                        <p className={`text-[10px] ${p.paga ? 'text-emerald-400' : vencida ? 'text-red-400' : 'text-white/60'}`}>
-                                          {p.paga ? `Pago em ${p.dataPagamento ?? '—'}` : `Vence ${p.dataVencimento}`}
-                                          {vencida && ' · VENCIDA'}
-                                        </p>
-                                      </div>
+                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center border shrink-0 ${p.paga ? 'bg-emerald-500 border-emerald-400' : vencida ? 'border-red-500' : 'border-zinc-600'}`}>
+                                      {p.paga && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                                      {!p.paga && vencida && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs font-black text-white">{p.numero}ª prestação</p>
+                                      <p className={`text-[10px] ${p.paga ? 'text-emerald-400' : vencida ? 'text-red-400' : 'text-white/60'}`}>
+                                        {p.paga ? `Pago em ${p.dataPagamento ?? '—'}` : `Vence ${p.dataVencimento}`}
+                                        {vencida && ' · VENCIDA'}
+                                      </p>
                                     </div>
                                     <div className="text-right">
                                       <p className={`text-sm font-black ${p.paga ? 'text-emerald-400' : vencida ? 'text-red-400' : 'text-white'}`}>
@@ -1430,10 +1465,19 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                       </p>
                                       {p.paga && p.formaPagamento && (
                                         <p className="text-[10px] text-white/50">
-                                          {({ mpesa: 'M-Pesa', emola: 'e-Mola', dinheiro: 'Dinheiro', transferencia: 'Transf.', cheque: 'Cheque', outros: 'Outros' } as Record<string, string>)[p.formaPagamento] ?? p.formaPagamento}
+                                          {FORMA_LABEL_P[p.formaPagamento] ?? p.formaPagamento}
                                         </p>
                                       )}
                                     </div>
+                                    {p.paga && (
+                                      <button
+                                        onClick={() => downloadReciboPrestacao(p)}
+                                        title="Baixar recibo"
+                                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-800 hover:bg-emerald-500/20 hover:text-emerald-400 text-white/60 border border-zinc-700 transition-colors shrink-0"
+                                      >
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                      </button>
+                                    )}
                                   </div>
                                 );
                               })}
@@ -1451,35 +1495,103 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                               </div>
                             )}
                           </div>
-                        )}
+                          );
+                        })()}
 
-                        {/* ── 4. Acções ── */}
-                        <div className="flex gap-2 flex-wrap px-4 py-3">
-                          <button
-                            onClick={() => handleDownloadReserva(r)}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-xs font-bold transition-colors"
-                          >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                            Comprovativo
-                          </button>
-                          {podeEstender && !r.pedidoExtensao && (
+                        {/* ── O que precisa de fazer ── */}
+                        {(() => {
+                          const checklist: Partial<Record<ReservationStatus, string[]>> = {
+                            pendente: [
+                              'Aguarde a confirmação da sua reserva',
+                              'Verifique o email para actualizações de estado',
+                              'Prepare o seu documento de identificação',
+                            ],
+                            confirmada: [
+                              'Prepare o seu documento de identificação',
+                              'Prepare a sua carta de condução',
+                              'Aguarde a nossa notificação de levantamento',
+                            ],
+                            pronta_levantamento: [
+                              'Leve o seu documento de identificação',
+                              'Leve a sua carta de condução',
+                              'Dirija-se à receção no horário agendado',
+                            ],
+                            ativa: [
+                              'Respeite as regras de trânsito e limites de velocidade',
+                              'Devolva a viatura na data e hora acordadas',
+                              'Em caso de avaria ou acidente, contacte-nos imediatamente',
+                            ],
+                            devolucao_pendente: [
+                              'Dirija-se às nossas instalações com a viatura',
+                              'Entregue as chaves na receção',
+                              'Aguarde a vistoria de regresso',
+                            ],
+                            concluida: [
+                              'O seu aluguer foi concluído com sucesso',
+                              'Pode baixar o comprovativo para os seus registos',
+                              'Obrigado por escolher a SOS Motors!',
+                            ],
+                          };
+                          const items = checklist[r.status];
+                          if (!items) return null;
+                          return (
+                            <div className="px-5 py-5">
+                              <p className="text-xs font-black text-amber-400 uppercase tracking-widest mb-4">O que precisa de fazer</p>
+                              <div className="space-y-3">
+                                {items.map((item, i) => (
+                                  <div key={i} className="flex items-center gap-3">
+                                    <div className="w-[22px] h-[22px] rounded-full bg-amber-400/10 border border-amber-400/40 flex items-center justify-center shrink-0">
+                                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="20 6 9 17 4 12" />
+                                      </svg>
+                                    </div>
+                                    <p className="text-sm text-white leading-snug">{item}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* ── Ações disponíveis ── */}
+                        <div className="px-5 py-5">
+                          <p className="text-xs font-black text-amber-400 uppercase tracking-widest mb-3">Ações disponíveis</p>
+                          <div className="flex flex-wrap gap-2">
+                            {r.localLevantamento && (
+                              <button
+                                onClick={() => window.open(`https://maps.google.com?q=${encodeURIComponent(r.localLevantamento!)}`, '_blank')}
+                                className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-amber-400 text-zinc-950 font-black text-sm transition-all hover:bg-amber-300 active:scale-[0.98] shadow-sm shadow-amber-400/20"
+                              >
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                Ver localização
+                              </button>
+                            )}
                             <button
-                              onClick={() => handleExtensao(r)}
-                              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-bold transition-colors"
+                              onClick={() => handleDownloadReserva(r)}
+                              className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-bold text-sm transition-all active:scale-[0.98]"
                             >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="17" y1="14" x2="17" y2="20"/><line x1="14" y1="17" x2="20" y2="17"/></svg>
-                              Solicitar Extensão
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                              Baixar comprovativo
                             </button>
-                          )}
-                          {podeCancelar && (
-                            <button
-                              onClick={() => setCancelConfirm(r.id)}
-                              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold transition-colors"
-                            >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                              Cancelar Reserva
-                            </button>
-                          )}
+                            {isAtivo && !r.pedidoExtensao && (
+                              <button
+                                onClick={() => handleExtensao(r)}
+                                className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-amber-500/30 text-amber-400 font-bold text-sm transition-all active:scale-[0.98]"
+                              >
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="17" y1="14" x2="17" y2="20"/><line x1="14" y1="17" x2="20" y2="17"/></svg>
+                                Solicitar Extensão
+                              </button>
+                            )}
+                            {podeCancelar && (
+                              <button
+                                onClick={() => setCancelConfirm(r.id)}
+                                className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-bold text-sm transition-all active:scale-[0.98]"
+                              >
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                                Cancelar reserva
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                       </div>
@@ -1733,49 +1845,71 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
 
                       {/* ── Painel expandido ── */}
                       {expanded && (() => {
-                        const sk = (s: string) => `${c.id}:${s}`;
-                        const isOpen = (s: string) => !closedSecs.has(sk(s));
-                        const SecHeader = ({ id, label }: { id: string; label: string }) => (
-                          <button
-                            type="button"
-                            onClick={() => toggleClosed(sk(id))}
-                            className="w-full flex items-center justify-between px-4 py-3 hover:bg-zinc-800/40 transition-colors"
-                          >
-                            <span className="text-xs font-black text-amber-400 uppercase tracking-widest">{label}</span>
-                            <svg
-                              width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b"
-                              strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                              className={`shrink-0 transition-transform duration-200 ${isOpen(id) ? 'rotate-90' : ''}`}
-                            >
-                              <polyline points="9 18 15 12 9 6" />
-                            </svg>
-                          </button>
-                        );
+                        const COMPRA_FLOW = [
+                          { key: 'pendente',        label: 'Compra\npedida' },
+                          { key: 'compra_aprovada', label: 'Compra\naprovada' },
+                          { key: 'entrada_paga',    label: 'Entrada\npaga' },
+                          { key: 'em_prestacao',    label: 'Em\nprestação' },
+                          { key: 'liquidada',       label: 'Finalizado' },
+                        ] as const;
+                        const compraStatusOrder: string[] = ['pendente','compra_aprovada','entrada_paga','em_prestacao','liquidada'];
+                        const currentIdx = c.status === 'prestacao_atraso'
+                          ? compraStatusOrder.indexOf('em_prestacao')
+                          : Math.max(0, compraStatusOrder.indexOf(c.status));
+                        const isCancelled = c.status === 'cancelada';
+                        const valorMensal = isParcelada ? (prestacoes.find(p => !p.paga)?.valor ?? prestacoes[0]?.valor ?? c.deposito) : null;
+
                         return (
                           <div className="border-t border-zinc-800">
 
-                            {/* Header: small image left + car info */}
-                            <div className="flex items-center gap-3 px-4 py-3">
-                              {veh?.img && (
-                                <div className="w-20 h-[52px] shrink-0 rounded-lg overflow-hidden border border-zinc-700">
-                                  <img src={veh.img} alt={veh.name ?? ''} className="w-full h-full object-cover" />
+                            {/* ── Tracker de 5 passos ── */}
+                            {!isCancelled && (
+                              <div className="px-5 pt-5 pb-4">
+                                <div className="flex items-start">
+                                  {COMPRA_FLOW.map((step, idx) => {
+                                    const isDone    = idx < currentIdx;
+                                    const isCurrent = idx === currentIdx;
+                                    const isLast    = idx === COMPRA_FLOW.length - 1;
+                                    return (
+                                      <div key={step.key} className="flex-1 flex flex-col items-center relative">
+                                        {/* Connector line left */}
+                                        {idx > 0 && (
+                                          <div className={`absolute top-[13px] right-1/2 w-full h-[2px] ${isDone || isCurrent ? 'bg-amber-400' : 'bg-zinc-700'}`} />
+                                        )}
+                                        {/* Circle */}
+                                        <div className={`relative z-10 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black border-2 transition-all ${
+                                          isDone    ? 'bg-amber-400 border-amber-400 text-zinc-950' :
+                                          isCurrent ? 'bg-zinc-950 border-amber-400 text-amber-400' :
+                                                      'bg-zinc-900 border-zinc-700 text-white'
+                                        }`}>
+                                          {isDone
+                                            ? <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                            : idx + 1}
+                                        </div>
+                                        {/* Label */}
+                                        <p className={`mt-2 text-center text-[9px] font-bold leading-tight whitespace-pre-line ${
+                                          isCurrent ? 'text-amber-400' : 'text-white'
+                                        }`}>{step.label}</p>
+                                        {/* Connector line right */}
+                                        {!isLast && (
+                                          <div className={`absolute top-[13px] left-1/2 w-full h-[2px] ${isDone ? 'bg-amber-400' : 'bg-zinc-700'}`} />
+                                        )}
+                                      </div>
+                                    );
+                                  })}
                                 </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-black text-white truncate">{veh?.name ?? getVehicleName(c.vehicleId)}</p>
-                                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                  {veh?.cat && (
-                                    <span className="text-xs font-bold bg-zinc-800 border border-zinc-700 text-white rounded-md px-2 py-0.5 uppercase">
-                                      {CAT_LABEL[veh.cat] ?? veh.cat}
-                                    </span>
-                                  )}
-                                  <span className={`text-xs font-black border rounded-md px-2 py-0.5 ${st.cls}`}>{st.label}</span>
-                                </div>
+                                {c.status === 'prestacao_atraso' && (
+                                  <div className="mt-3 flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12.01" y1="16" x2="12" y2="16"/></svg>
+                                    <p className="text-[11px] font-bold text-red-400">Prestação em atraso — regularize o pagamento o mais brevemente possível.</p>
+                                  </div>
+                                )}
                               </div>
-                            </div>
+                            )}
 
-                            {c.status === 'cancelada' && c.motivoCancelamento && (
-                              <div className="mx-4 mt-4 mb-0 flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                            {/* Motivo cancelamento */}
+                            {isCancelled && c.motivoCancelamento && (
+                              <div className="mx-5 mt-4 flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2.5" strokeLinecap="round" className="shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                                 <div>
                                   <p className="text-xs font-black text-red-400 uppercase tracking-wider mb-0.5">Motivo do Cancelamento</p>
@@ -1784,244 +1918,57 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                               </div>
                             )}
 
-                            <div className="divide-y divide-zinc-800">
-
-                              {/* ── Detalhes da Compra ── */}
-                              <div>
-                                <SecHeader id="det" label="Detalhes da Compra" />
-                                {isOpen('det') && (
-                                  <div className="px-4 pb-4">
-                                    <div className="bg-zinc-900 rounded-xl overflow-hidden divide-y divide-zinc-800">
-                                      <div className="flex items-center justify-between px-5 py-4 gap-4">
-                                        <span className="text-sm text-white">Veículo</span>
-                                        <span className="text-sm font-bold text-white text-right">{veh?.name ?? getVehicleName(c.vehicleId)}</span>
-                                      </div>
-                                      <div className="flex items-center justify-between px-5 py-4 gap-4">
-                                        <span className="text-sm text-white">Data da Compra</span>
-                                        <span className="text-sm font-semibold text-white">{fmtData(c.dataInicio)}</span>
-                                      </div>
-                                      <div className="flex items-center justify-between px-5 py-4 gap-4">
-                                        <span className="text-sm text-white">Estado</span>
-                                        <span className={`text-xs font-black border rounded-lg px-2.5 py-1 ${st.cls}`}>{st.label}</span>
-                                      </div>
-                                      <div className="flex items-center justify-between px-5 py-4 gap-4">
-                                        <span className="text-sm text-white">Valor Total</span>
-                                        <span className="text-lg font-black text-amber-400">{fmt(c.valorTotal)}</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* ── Estado dos Pagamentos ── */}
-                              {isParcelada && (
+                            {/* ── Card GARANTIA ── */}
+                            <div className="mx-5 mt-4 mb-5 bg-amber-500/5 border border-amber-500/20 rounded-xl p-5">
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">
                                 <div>
-                                  <SecHeader id="pag" label="Estado dos Pagamentos" />
-                                  {isOpen('pag') && (
-                                    <div className="px-4 pb-4">
-                                      <div className="bg-zinc-900 rounded-xl overflow-hidden divide-y divide-zinc-800">
-                                        <div className="flex items-center justify-between px-5 py-4 gap-4">
-                                          <span className="text-sm text-white">Prestações pagas</span>
-                                          <span className="text-sm font-black text-emerald-400">{prestacoesPagas} / {totalPrestacoes}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between px-5 py-4 gap-4">
-                                          <span className="text-sm text-white">Faltam</span>
-                                          <span className={`text-sm font-black ${prestRestantes > 0 ? 'text-amber-400' : 'text-white'}`}>{prestRestantes}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between px-5 py-4 gap-4">
-                                          <span className="text-sm text-white">Valor mensal</span>
-                                          <span className="text-sm font-bold text-white">{fmt(prestacoes.find(p => !p.paga)?.valor ?? c.deposito)}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between px-5 py-4 gap-4">
-                                          <span className="text-sm text-white">Total pago</span>
-                                          <span className="text-sm font-black text-emerald-400">{fmt(totalPago)}</span>
-                                        </div>
-                                        {totalEmFalta > 0 && (
-                                          <div className="flex items-center justify-between px-5 py-4 gap-4">
-                                            <span className="text-sm text-white">Total em dívida</span>
-                                            <span className="text-lg font-black text-red-400">{fmt(totalEmFalta)}</span>
-                                          </div>
-                                        )}
-                                        {prestRestantes === 0 && (
-                                          <div className="px-4 py-3 text-center">
-                                            <span className="text-emerald-400 font-black text-xs">Viatura totalmente liquidada!</span>
-                                          </div>
-                                        )}
-                                        {proximaNumero !== null && prestRestantes > 0 && (
-                                          <div className="flex items-center justify-between px-5 py-4 gap-4">
-                                            <span className="text-sm text-white">Próxima prestação</span>
-                                            <span className="text-sm font-bold text-amber-400">
-                                              #{proximaNumero} · {fmt(prestacoes.find(p => p.numero === proximaNumero)?.valor ?? c.deposito)}
-                                            </span>
-                                          </div>
-                                        )}
-                                      </div>
-
-                                      {/* Progress bar */}
-                                      <div className="mt-3">
-                                        <div className="flex justify-between text-xs mb-1.5">
-                                          <span className="text-white font-bold">{Math.round(progressPct)}% pago</span>
-                                        </div>
-                                        <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                                          <div className={`h-1.5 rounded-full transition-all duration-700 ${prestRestantes === 0 ? 'bg-emerald-400' : 'bg-amber-500'}`} style={{ width: `${progressPct}%` }} />
-                                        </div>
-                                      </div>
-
-                                      {/* Prestações detail list */}
-                                      {prestacoes.length > 0 && (
-                                        <div className="space-y-1 mt-3">
-                                          <button
-                                            type="button"
-                                            onClick={() => setPrestOpen(prev => { const n = new Set(prev); n.has(c.id) ? n.delete(c.id) : n.add(c.id); return n; })}
-                                            className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 border border-zinc-700/50 transition-all"
-                                          >
-                                            <span className="flex items-center gap-2 text-xs font-black text-white">
-                                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                                              Detalhe das Prestações
-                                              <span className="text-xs bg-amber-500/15 text-amber-400 border border-amber-500/20 rounded-md px-2 py-0.5">{prestacoesPagas}/{totalPrestacoes}</span>
-                                            </span>
-                                            <IcoChevron open={prestOpen.has(c.id)} />
-                                          </button>
-                                          {prestOpen.has(c.id) && (
-                                            <div className="bg-zinc-900 rounded-xl overflow-hidden divide-y divide-zinc-800">
-                                              {prestacoes.map(p => {
-                                                const isProxima = p.numero === proximaNumero;
-                                                const hoje2 = new Date().toISOString().split('T')[0];
-                                                const emAtraso = !p.paga && p.dataVencimento < hoje2;
-                                                return (
-                                                  <div key={p.numero} className={`flex items-center gap-3 px-4 py-3 ${p.paga ? 'bg-emerald-500/5' : isProxima ? 'bg-amber-500/5' : ''}`}>
-                                                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 border ${
-                                                      p.paga    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-                                                      isProxima ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
-                                                      emAtraso  ? 'bg-red-500/20 text-red-400 border-red-500/30' :
-                                                                  'bg-zinc-800 text-white border-zinc-700'
-                                                    }`}>
-                                                      {p.paga ? '✓' : p.numero}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                      <p className={`text-xs font-bold ${p.paga ? 'text-emerald-300' : isProxima ? 'text-amber-300' : 'text-white'}`}>
-                                                        Prestação {p.numero}
-                                                        {isProxima && <span className="ml-1.5 text-xs bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-full">Próxima</span>}
-                                                        {emAtraso  && <span className="ml-1.5 text-xs bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-md">Em atraso</span>}
-                                                      </p>
-                                                      <p className="text-xs text-white tabular-nums mt-0.5">
-                                                        {p.paga && p.dataPagamento ? `Pago a ${fmtData(p.dataPagamento)}` : `Vence a ${fmtData(p.dataVencimento)}`}
-                                                      </p>
-                                                    </div>
-                                                    <div className="text-right shrink-0">
-                                                      {p.paga ? (
-                                                        <>
-                                                          <p className="text-xs font-black text-emerald-400">{fmt(p.valorPago ?? p.valor)}</p>
-                                                          {p.valorPago && p.valorPago !== p.valor && <p className="text-xs text-white line-through">{fmt(p.valor)}</p>}
-                                                        </>
-                                                      ) : (
-                                                        <p className={`text-xs font-bold tabular-nums ${isProxima ? 'text-amber-400' : 'text-white'}`}>{fmt(p.valor)}</p>
-                                                      )}
-                                                    </div>
-                                                  </div>
-                                                );
-                                              })}
-                                            </div>
-                                          )}
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
+                                  <p className="text-[10px] text-white uppercase tracking-wider mb-1">Carro</p>
+                                  <p className="text-sm font-black text-white leading-snug">{veh?.name ?? getVehicleName(c.vehicleId)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-white uppercase tracking-wider mb-1">Valor</p>
+                                  <p className="text-sm font-black text-amber-400 leading-snug">{veh?.price ?? fmt(c.valorTotal)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-white uppercase tracking-wider mb-1">Tempo restante</p>
+                                  <p className={`text-sm font-black leading-snug ${gar.ativa ? 'text-emerald-400' : 'text-red-400'}`}>
+                                    {gar.ativa ? `${gar.mesesRestantes} meses` : 'Expirada'}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-white uppercase tracking-wider mb-1">Válido até</p>
+                                  <p className="text-sm font-black text-white leading-snug">{fmtData(gar.expira)}</p>
+                                </div>
+                              </div>
+                              {valorMensal !== null && (
+                                <div className="mt-4 pt-4 border-t border-amber-500/20">
+                                  <p className="text-[10px] text-white uppercase tracking-wider mb-1">Valor mensal</p>
+                                  <p className="text-lg font-black text-amber-400">{fmt(valorMensal)}</p>
                                 </div>
                               )}
-
-                              {/* ── Pagamento único ── */}
-                              {c.deposito > 0 && !isParcelada && (
-                                <div>
-                                  <SecHeader id="pag" label="Pagamento" />
-                                  {isOpen('pag') && (
-                                    <div className="px-4 pb-4">
-                                      <div className="bg-zinc-900 rounded-xl overflow-hidden">
-                                        <div className="flex items-center justify-between px-5 py-4 gap-4">
-                                          <span className="text-sm text-white">Valor pago (pronto pagamento)</span>
-                                          <span className="text-lg font-black text-emerald-400">{fmt(c.deposito)}</span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-
-                              {/* ── Garantia ── */}
-                              <div>
-                                <SecHeader id="gar" label="Garantia" />
-                                {isOpen('gar') && (
-                                  <div className="px-4 pb-4">
-                                    <div className="bg-zinc-900 rounded-xl overflow-hidden divide-y divide-zinc-800">
-                                      <div className="flex items-center justify-between px-5 py-4 gap-4">
-                                        <span className="text-sm text-white">Estado</span>
-                                        <span className={`text-xs font-black px-2.5 py-1 rounded-lg border ${gar.ativa ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-red-500/15 border-red-500/30 text-red-400'}`}>
-                                          {gar.ativa ? 'Activa' : 'Expirada'}
-                                        </span>
-                                      </div>
-                                      {gar.ativa && (
-                                        <div className="flex items-center justify-between px-5 py-4 gap-4">
-                                          <span className="text-sm text-white">Tempo restante</span>
-                                          <span className="text-sm font-black text-emerald-400">{gar.mesesRestantes} meses</span>
-                                        </div>
-                                      )}
-                                      <div className="flex items-center justify-between px-5 py-4 gap-4">
-                                        <span className="text-sm text-white">Válida até</span>
-                                        <span className="text-sm font-bold text-white">{fmtData(gar.expira)}</span>
-                                      </div>
-                                      <div className="flex items-start justify-between px-5 py-4 gap-4">
-                                        <span className="text-sm text-white shrink-0">Cobertura</span>
-                                        <span className="text-sm text-white text-right">Motor, transmissão e componentes estruturais</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* ── Documentos ── */}
-                              <div>
-                                <SecHeader id="docs" label="Documentos do Veículo" />
-                                {isOpen('docs') && (
-                                  <div className="px-4 pb-4">
-                                    <div className="bg-zinc-900 rounded-xl overflow-hidden divide-y divide-zinc-800">
-                                      {docs.map(doc => (
-                                        <div key={doc.label} className="flex items-center justify-between px-5 py-4 gap-4">
-                                          <span className="text-sm text-white">{doc.label}</span>
-                                          <span className={`text-xs font-black px-2.5 py-1 rounded-lg border ${doc.ok ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-amber-500/15 border-amber-500/30 text-amber-400'}`}>
-                                            {doc.ok ? doc.valor : 'Pendente'}
-                                          </span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-
                             </div>
 
-                            {/* ── Bottom actions ── */}
-                            <div className="px-4 py-3 border-t border-zinc-800 space-y-2">
-
-                              <div className="flex gap-2">
+                            {/* ── Ações disponíveis ── */}
+                            <div className="px-5 pb-5 space-y-2 border-t border-zinc-800 pt-5">
+                              <p className="text-xs font-black text-amber-400 uppercase tracking-widest mb-3">Ações disponíveis</p>
+                              <div className="flex flex-wrap gap-2">
                                 <button
                                   onClick={() => downloadComprovativo(c, veh)}
-                                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-xs font-bold transition-colors"
+                                  className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-sm font-bold transition-all active:scale-[0.98]"
                                 >
-                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                  Descarregar Comprovativo
+                                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                  Baixar comprovativo
                                 </button>
-
                                 {(c.status === 'pendente' || c.status === 'compra_aprovada') && cancelConfirm !== c.id && (
                                   <button
                                     onClick={() => { setCancelConfirm(c.id); setCancelMotivo(''); }}
-                                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold transition-colors"
+                                    className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-sm font-bold transition-all active:scale-[0.98]"
                                   >
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                                     Cancelar Compra
                                   </button>
                                 )}
                               </div>
-
                               {cancelConfirm === c.id && (
                                 <div className="border border-red-500/20 bg-red-500/5 rounded-xl px-4 py-4 space-y-3">
                                   <div>
@@ -2055,8 +2002,8 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                   </div>
                                 </div>
                               )}
-
                             </div>
+
                           </div>
                         );
                       })()}

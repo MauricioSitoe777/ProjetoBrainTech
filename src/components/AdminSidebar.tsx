@@ -95,7 +95,7 @@ export function AdminSidebar({ onClose }: Props) {
   const isSectionActive = (prefix: string) => path.startsWith(prefix);
 
   return (
-    <aside className="w-56 bg-zinc-900 border-r border-zinc-800 flex flex-col h-full">
+    <aside className="w-56 bg-zinc-900 flex flex-col h-full" style={{borderRight:'3px solid #3f3f46'}}>
 
       {/* ── Navegação ──────────────────────────────────────── */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 flex flex-col gap-0.5">

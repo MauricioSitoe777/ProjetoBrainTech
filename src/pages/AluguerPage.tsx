@@ -86,9 +86,6 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
   const [extensaoRespostaTipo, setExtensaoRespostaTipo]   = useState<'aprovado' | 'rejeitado' | null>(null);
   const [extensaoRespostaTexto, setExtensaoRespostaTexto] = useState('');
 
-  const [planoModal, setPlanoModal]               = useState<typeof reservations[number] | null>(null);
-  const [planoTipo, setPlanoTipo]                 = useState<'total' | 'parcial'>('total');
-  const [planoValorInicial, setPlanoValorInicial] = useState('');
 
   // Sync tab + status with URL on navigation
   useEffect(() => {
@@ -124,7 +121,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
             addNotification(
               r.userId!,
               `Devolução hoje — ${veiculo}`,
-              `O seu aluguer do ${veiculo} termina hoje. Por favor devolva a viatura nas nossas instalações antes das 18h00.`,
+              `O seu aluguer do ${veiculo} termina hoje. Devolva a viatura antes das ${r.horaDevolucao || '18:00'}. ⚠️ Após esse horário, as multas por atraso iniciam automaticamente (${fmt(rules.penalizacaoAtrasoPorHora)}/hora).`,
               'alert',
               r.id,
               '/perfil?section=reservas',
@@ -139,7 +136,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
             addNotification(
               r.userId!,
               `Lembrete: devolução amanhã — ${veiculo}`,
-              `O seu aluguer do ${veiculo} termina amanhã. Lembre-se de devolver a viatura no prazo acordado.`,
+              `O seu aluguer do ${veiculo} termina amanhã. Devolva a viatura a tempo para evitar multas por atraso de ${fmt(rules.penalizacaoAtrasoPorHora)}/hora após o prazo.`,
               'info',
               r.id,
               '/perfil?section=reservas',
@@ -179,6 +176,27 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
             );
             localStorage.setItem(keyAdm, '1');
           }
+        }
+      });
+    // Notificar cliente quando a devolução está pendente (estado devolucao_pendente)
+    reservations
+      .filter(r => aluguerIds.has(r.vehicleId) && r.status === 'devolucao_pendente' && r.userId)
+      .forEach(r => {
+        const veiculo = allVehicles.find(v => v.id === r.vehicleId)?.name ?? `Viatura #${r.vehicleId}`;
+        const key = `rentcar:alerta_dev_pendente:${r.id}:${today}`;
+        if (!localStorage.getItem(key)) {
+          const multa = r.multaAtraso ?? 0;
+          addNotification(
+            r.userId!,
+            `Devolução pendente — ${veiculo}`,
+            multa > 0
+              ? `A devolução do ${veiculo} está pendente. Multa acumulada: ${fmt(multa)}. Cada hora adicional de atraso acrescenta ${fmt(rules.penalizacaoAtrasoPorHora)}. Dirija-se às nossas instalações urgentemente.`
+              : `A devolução do ${veiculo} está registada como pendente. Se houver atraso na entrega, as multas iniciam a contagem (${fmt(rules.penalizacaoAtrasoPorHora)}/hora). Por favor dirija-se às nossas instalações.`,
+            'alert',
+            r.id,
+            '/perfil?section=reservas',
+          );
+          localStorage.setItem(key, '1');
         }
       });
   }, [reservations, aluguerIds, allVehicles, addNotification, rules]);
@@ -255,148 +273,6 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
           onClose={() => setPagamentoModal(null)}
         />
       )}
-
-      {/* ── Modal de Plano de Pagamento ── */}
-      {planoModal && (() => {
-        const r = planoModal;
-        const valorTotalR = r.valorTotal;
-        const valorInicialNum = parseFloat(planoValorInicial) || 0;
-        const valorFinalNum = Math.max(0, valorTotalR - valorInicialNum);
-        const valido = planoTipo === 'total' || (valorInicialNum > 0 && valorInicialNum < valorTotalR);
-
-        const confirmarPlano = () => {
-          const today = new Date().toISOString().split('T')[0];
-          if (planoTipo === 'total') {
-            const p1: Prestacao = { numero: 1, dataVencimento: today, valor: valorTotalR, paga: false };
-            updateReservation(r.id, { prestacoes: [p1] });
-            setPlanoModal(null);
-            setPagamentoModal({
-              reservationId: r.id,
-              prestacao: p1,
-              titulo: 'Registar Pagamento Total',
-              onAfterSave: () => { updateReservation(r.id, { status: 'confirmada' }); setLastActedId(r.id); },
-            });
-          } else {
-            const p1: Prestacao = { numero: 1, dataVencimento: today, valor: valorInicialNum, paga: false };
-            const p2: Prestacao = { numero: 2, dataVencimento: r.dataFim, valor: valorFinalNum, paga: false };
-            updateReservation(r.id, { prestacoes: [p1, p2] });
-            setPlanoModal(null);
-            setPagamentoModal({
-              reservationId: r.id,
-              prestacao: p1,
-              titulo: 'Registar 1º Pagamento',
-              onAfterSave: () => { updateReservation(r.id, { status: 'confirmada' }); setLastActedId(r.id); },
-            });
-          }
-        };
-
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setPlanoModal(null)}>
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-            <div
-              className="relative z-10 w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden"
-              onClick={e => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
-                <div>
-                  <p className="text-sm font-black text-white">Plano de Pagamento</p>
-                  <p className="text-[11px] text-zinc-400">{r.clientName} · {fmt(valorTotalR)}</p>
-                </div>
-                <button
-                  onClick={() => setPlanoModal(null)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                </button>
-              </div>
-
-              {/* Opções */}
-              <div className="p-4 space-y-3">
-                {/* Opção 1: Total */}
-                <button
-                  onClick={() => setPlanoTipo('total')}
-                  className={`w-full text-left p-4 rounded-xl border transition-all ${planoTipo === 'total' ? 'border-amber-500/60 bg-amber-500/10' : 'border-zinc-800 bg-zinc-800/40 hover:border-zinc-700'}`}
-                >
-                  <div className="flex items-center gap-3 mb-1.5">
-                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${planoTipo === 'total' ? 'border-amber-400 bg-amber-400' : 'border-zinc-600'}`}>
-                      {planoTipo === 'total' && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="4" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
-                    </div>
-                    <p className="text-sm font-black text-white">Pagamento Total</p>
-                    <span className="ml-auto text-xs font-black text-amber-400">{fmt(valorTotalR)}</span>
-                  </div>
-                  <p className="text-xs text-zinc-400 ml-7">Cobrar o valor total agora, na confirmação da reserva.</p>
-                </button>
-
-                {/* Opção 2: Parcial */}
-                <div
-                  className={`w-full text-left p-4 rounded-xl border transition-all cursor-pointer ${planoTipo === 'parcial' ? 'border-amber-500/60 bg-amber-500/10' : 'border-zinc-800 bg-zinc-800/40 hover:border-zinc-700'}`}
-                  onClick={() => setPlanoTipo('parcial')}
-                >
-                  <div className="flex items-center gap-3 mb-1.5">
-                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${planoTipo === 'parcial' ? 'border-amber-400 bg-amber-400' : 'border-zinc-600'}`}>
-                      {planoTipo === 'parcial' && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="4" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
-                    </div>
-                    <p className="text-sm font-black text-white">Parte agora + Parte no fim</p>
-                  </div>
-                  <p className="text-xs text-zinc-400 ml-7 mb-3">Cobrar uma parte agora e o restante na devolução.</p>
-
-                  {planoTipo === 'parcial' && (
-                    <div className="ml-7 space-y-3" onClick={e => e.stopPropagation()}>
-                      <div>
-                        <label className="text-[10px] font-black text-amber-400 uppercase tracking-widest block mb-1.5">
-                          Valor a cobrar agora (MT)
-                        </label>
-                        <input
-                          autoFocus
-                          type="number"
-                          min={0}
-                          max={valorTotalR}
-                          value={planoValorInicial}
-                          onChange={e => setPlanoValorInicial(e.target.value)}
-                          placeholder={String(Math.round(valorTotalR * 0.5))}
-                          className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-500 text-white rounded-xl px-3 py-2.5 text-sm outline-none transition-colors"
-                        />
-                      </div>
-                      {valorInicialNum > 0 && valorInicialNum < valorTotalR && (
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="bg-zinc-900 border border-amber-500/25 rounded-xl p-3 text-center">
-                            <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest mb-1">Agora</p>
-                            <p className="text-sm font-black text-white">{fmt(valorInicialNum)}</p>
-                          </div>
-                          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-center">
-                            <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Na devolução</p>
-                            <p className="text-sm font-black text-zinc-300">{fmt(valorFinalNum)}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="px-4 pb-4 pt-3 flex gap-2 border-t border-zinc-800">
-                <button
-                  onClick={() => setPlanoModal(null)}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-zinc-800 text-white hover:bg-zinc-700 transition"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={confirmarPlano}
-                  disabled={!valido}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-black bg-amber-400 text-zinc-950 hover:bg-amber-300 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                >
-                  Continuar
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* ── Modal de detalhes de reserva (tab Reservas) ── */}
       {reservaModal && (() => {
@@ -1104,38 +980,61 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                             status={r.status}
                             onAdvance={next => {
                               if (next === 'confirmada') {
-                                setPlanoModal(r);
-                                setPlanoTipo('total');
-                                setPlanoValorInicial(String(Math.round(r.deposito > 0 ? r.deposito : r.valorTotal * 0.5)));
+                                // Pagamento total obrigatório no início
+                                const today = new Date().toISOString().split('T')[0];
+                                const p: Prestacao = { numero: 1, dataVencimento: today, valor: r.valorTotal, paga: false };
+                                updateReservation(r.id, { prestacoes: [p] });
+                                setPagamentoModal({
+                                  reservationId: r.id,
+                                  prestacao: p,
+                                  titulo: 'Registar Pagamento Total do Aluguer',
+                                  onAfterSave: () => { updateReservation(r.id, { status: 'confirmada' }); setLastActedId(r.id); },
+                                });
                               } else if (next === 'concluida') {
                                 const multaAtraso = r.multaAtraso ?? 0;
-                                const totalComMulta = r.valorTotal + multaAtraso;
                                 const unpaid = r.prestacoes?.filter(p => !p.paga) ?? [];
-                                if (unpaid.length === 0 && pago >= totalComMulta) {
-                                  updateReservation(r.id, { status: 'concluida' });
-                                  setLastActedId(r.id);
+                                if (pago >= r.valorTotal) {
+                                  // Aluguer pago — multa é separada
+                                  if (multaAtraso > 0) {
+                                    const multaNum = (r.prestacoes?.length ?? 0) + 1;
+                                    const multaPrest: Prestacao = {
+                                      numero: multaNum,
+                                      dataVencimento: new Date().toISOString().split('T')[0],
+                                      valor: multaAtraso,
+                                      paga: false,
+                                    };
+                                    updateReservation(r.id, { prestacoes: [...(r.prestacoes ?? []), multaPrest] });
+                                    setPagamentoModal({
+                                      reservationId: r.id,
+                                      prestacao: multaPrest,
+                                      titulo: 'Registar Pagamento de Multa por Atraso',
+                                      onAfterSave: () => { updateReservation(r.id, { status: 'concluida' }); setLastActedId(r.id); },
+                                    });
+                                  } else {
+                                    updateReservation(r.id, { status: 'concluida' });
+                                    setLastActedId(r.id);
+                                  }
                                 } else if (unpaid.length > 0) {
                                   const finalPrest = unpaid.at(-1)!;
                                   setPagamentoModal({
                                     reservationId: r.id,
                                     prestacao: finalPrest,
-                                    titulo: multaAtraso > 0 ? 'Registar Pagamento Final + Multa' : 'Registar Pagamento Final',
+                                    titulo: 'Registar Pagamento do Aluguer',
                                     onAfterSave: () => { updateReservation(r.id, { status: 'concluida' }); setLastActedId(r.id); },
                                   });
                                 } else {
-                                  // Apenas multa pendente — criar prestação específica
-                                  const multaNum = (r.prestacoes?.length ?? 0) + 1;
-                                  const multaPrest: Prestacao = {
-                                    numero: multaNum,
+                                  const pendNum = (r.prestacoes?.length ?? 0) + 1;
+                                  const pendPrest: Prestacao = {
+                                    numero: pendNum,
                                     dataVencimento: new Date().toISOString().split('T')[0],
-                                    valor: Math.max(0, totalComMulta - pago),
+                                    valor: Math.max(0, r.valorTotal - pago),
                                     paga: false,
                                   };
-                                  updateReservation(r.id, { prestacoes: [...(r.prestacoes ?? []), multaPrest] });
+                                  updateReservation(r.id, { prestacoes: [...(r.prestacoes ?? []), pendPrest] });
                                   setPagamentoModal({
                                     reservationId: r.id,
-                                    prestacao: multaPrest,
-                                    titulo: 'Registar Pagamento de Multa por Atraso',
+                                    prestacao: pendPrest,
+                                    titulo: 'Registar Pagamento do Aluguer',
                                     onAfterSave: () => { updateReservation(r.id, { status: 'concluida' }); setLastActedId(r.id); },
                                   });
                                 }

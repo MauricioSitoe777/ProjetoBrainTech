@@ -104,7 +104,7 @@ export function RegistarPagamentoModal({ reservationId, prestacao: p, onClose, o
               />
             ) : (
               <p className="flex-1 text-[28px] font-black text-amber-400 tabular-nums leading-none">
-                {valorStr} MT
+                {valorValido ? fmtNum(valorNum).replace(',00', '') : valorStr} MT
               </p>
             )}
             <button
