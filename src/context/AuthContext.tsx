@@ -23,7 +23,7 @@ interface AuthContextType {
   register: (user: Omit<User, 'id' | 'dataCriacao' | 'ultimoAcesso' | 'totalAlugueres'>) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
-  addUser: (user: Omit<User, 'id' | 'dataCriacao' | 'ultimoAcesso' | 'totalAlugueres'>) => User;
+  addUser: (user: Omit<User, 'id' | 'dataCriacao' | 'ultimoAcesso' | 'totalAlugueres'>) => Promise<User>;
   updateUser: (id: string, data: Partial<User>) => void;
   deleteUser: (id: string) => void;
   loginById: (id: string) => void;
@@ -87,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           regularity:       (u.regularity as User['regularity']) ?? 'regular',
           restriction:      (u.restriction as User['restriction']) ?? 'nenhuma',
           category:         u.category as User['category'],
+          salario:          u.salario !== null && u.salario !== undefined ? Number(u.salario) : undefined,
           avatar:           u.avatar as string | undefined,
           bi:               u.bi as string | undefined,
           nuit:             u.nuit as string | undefined,
@@ -211,10 +212,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-  const addUser = (userData: Omit<User, 'id' | 'dataCriacao' | 'ultimoAcesso' | 'totalAlugueres'>): User => {
-    const newUser: User = {
+  const addUser = async (userData: Omit<User, 'id' | 'dataCriacao' | 'ultimoAcesso' | 'totalAlugueres'>): Promise<User> => {
+    const tempId = `u${Date.now()}`;
+    const optimisticUser: User = {
       ...userData,
-      id:            `u${Date.now()}`,
+      id:            tempId,
       status:        userData.status || 'ativo',
       regularity:    userData.regularity || 'regular',
       restriction:   userData.restriction || 'nenhuma',
@@ -222,10 +224,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ultimoAcesso:  new Date().toISOString().split('T')[0],
       totalAlugueres: 0,
     };
-    setAllUsers(prev => [...prev, newUser]);
-    // Persiste na API em background
-    api.post('/users', { name: newUser.nome, email: newUser.email, password: newUser.password ?? DEFAULT_PASSWORD, telefone: newUser.telefone, role: newUser.role, status: newUser.status, category: newUser.category, bi: newUser.bi, nuit: newUser.nuit, endereco: newUser.endereco }).catch(() => {});
-    return newUser;
+    setAllUsers(prev => [...prev, optimisticUser]);
+
+    // Persiste na API — aguarda para obter o ID real (necessário para reservas/vínculos
+    // criados logo a seguir, que exigem um user_id existente na base de dados)
+    try {
+      const saved = await api.post<Record<string, unknown>>('/users', { name: optimisticUser.nome, email: optimisticUser.email, password: optimisticUser.password ?? DEFAULT_PASSWORD, telefone: optimisticUser.telefone, role: optimisticUser.role, status: optimisticUser.status, category: optimisticUser.category, salario: optimisticUser.salario, bi: optimisticUser.bi, nuit: optimisticUser.nuit, endereco: optimisticUser.endereco });
+      const finalUser: User = { ...optimisticUser, id: String(saved.id ?? tempId) };
+      setAllUsers(prev => prev.map(u => u.id === tempId ? finalUser : u));
+      return finalUser;
+    } catch {
+      // API indisponível — mantém o utilizador só local, com o ID optimista
+      return optimisticUser;
+    }
   };
 
   const updateUser = (id: string, data: Partial<User>) => {
@@ -239,6 +250,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data.regularity)  patch.regularity  = data.regularity;
     if (data.restriction) patch.restriction = data.restriction;
     if (data.category)    patch.category    = data.category;
+    if (data.salario !== undefined) patch.salario = data.salario;
     if (data.avatar)      patch.avatar      = data.avatar;
     if (data.bi)          patch.bi          = data.bi;
     if (data.nuit)        patch.nuit        = data.nuit;

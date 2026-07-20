@@ -55,6 +55,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
     regularity: 'regular' as UserRegularity,
     restriction: 'nenhuma' as UserRestriction,
     category: 'func_publico' as UserCategory,
+    salario: '',
     bi: '',
     nuit: '',
     endereco: '',
@@ -74,6 +75,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
         regularity: user.regularity || 'regular',
         restriction: user.restriction || 'nenhuma',
         category: user.category || 'func_publico',
+        salario: user.salario !== undefined ? String(user.salario) : '',
         bi: user.bi || '',
         nuit: user.nuit || '',
         endereco: user.endereco || '',
@@ -97,6 +99,8 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
     if (!form.telefone.trim()) e.telefone = 'Telefone é obrigatório';
     if (form.status === 'suspenso' && !form.motivoSuspensao.trim())
       e.motivoSuspensao = 'Obrigatório indicar o motivo da suspensão';
+    if (form.salario.trim() && (Number.isNaN(Number(form.salario)) || Number(form.salario) < 0))
+      e.salario = 'Salário inválido';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -109,7 +113,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
     Object.entries(docFiles).forEach(([k, v]) => {
       if (v) (documentos as Record<string, string | boolean>)[k] = v;
     });
-    onSave({ ...form, documentos });
+    onSave({ ...form, documentos, salario: form.salario.trim() ? Number(form.salario) : undefined });
   };
 
   const handleDocFile = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -275,6 +279,12 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
                   <option key={val} value={val}>{label}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-xs text-white mb-1">Salário (MT)</label>
+              <input type="number" min="0" step="0.01" placeholder="Ex: 45000" {...field('salario')} className={inputClass} />
+              {errors.salario && <p className="text-red-400 text-xs mt-1">{errors.salario}</p>}
             </div>
 
             <div className="col-span-2">

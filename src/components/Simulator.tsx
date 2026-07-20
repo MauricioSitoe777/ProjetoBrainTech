@@ -221,8 +221,8 @@ export default function Simulator({
   const [horaLevantamento, setHoraLevantamento] = useState("09:00");
   const [horaDevolucao, setHoraDevolucao] = useState("17:00");
   const [motivoViagem, setMotivoViagem] = useState("");
-  const localLevantamento = "Escritório Central (Av. Julius Nyerere, Maputo)";
-  const localDevolucao    = "Escritório Central (Av. Julius Nyerere, Maputo)";
+  const localLevantamento = "Escritório Central (Av. 25 de Setembro, Maputo)";
+  const localDevolucao    = "Escritório Central (Av. 25 de Setembro, Maputo)";
   const [comMotorista, setComMotorista] = useState(false);
   const [motoristaId, setMotoristaId] = useState("");
   const [submitError, setSubmitError] = useState("");
@@ -510,7 +510,7 @@ export default function Simulator({
     return null;
   }, [isBlocked, submitted, clientName, authUser, contactValid, flow, dataInicio, dataFim, dateValidation, availability, vehiclePrice, eligivel]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setSubmitError("");
     if (!canSubmit) return;
 
@@ -526,7 +526,7 @@ export default function Simulator({
       if (existing) {
         transactionUserId = existing.id;
       } else {
-        const guest = addUser({
+        const guest = await addUser({
           nome: clientName.trim(),
           email: '',
           telefone: normalizedPhone,
@@ -962,7 +962,7 @@ export default function Simulator({
                     <div className="min-w-0">
                       <p className="text-[9px] text-white uppercase tracking-wider font-bold mb-0.5">Local</p>
                       <p className="text-xs font-semibold text-white truncate">Escritório Central</p>
-                      <p className="text-[10px] text-white/60 truncate">Av. Julius Nyerere</p>
+                      <p className="text-[10px] text-white/60 truncate">Av. 25 de Setembro</p>
                     </div>
                   </div>
 

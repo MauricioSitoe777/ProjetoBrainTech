@@ -10,6 +10,7 @@ import { BusinessRulesPanel } from '../components/reservations/BusinessRulesPane
 import { EditReservationModal } from '../components/reservations/EditReservationModal';
 import { ContratoModal } from '../components/reservations/ContratoModal';
 import { RegistarPagamentoModal } from '../components/reservations/RegistarPagamentoModal';
+import { RegistarDevolucaoModal } from '../components/reservations/RegistarDevolucaoModal';
 import { ReservationTracker } from '../components/ReservationTracker';
 import { ViaturaEmUsoPage } from './ViaturaEmUsoPage';
 import type { Prestacao, Reservation, ReservationStatus } from '../types/reservation';
@@ -47,6 +48,13 @@ const GRUPOS: Array<{
   { status: 'devolucao_pendente',  title: 'Devolução Pendente',      dot: 'bg-orange-400',  badge: 'bg-orange-400/10 text-orange-400 border-orange-400/20',  textColor: 'text-orange-400'  },
 ];
 
+// Estados de aluguer accionáveis pelo admin — usado para contar "acções pendentes"
+// de forma consistente com os grupos acima. Uma reserva ligada a uma viatura de
+// aluguer pode ter ficado com um estado de "compra" (ex: em_prestacao, liquidada)
+// se a viatura mudou de modo depois de criada; sem este filtro explícito ela
+// entraria na contagem total sem nunca aparecer em nenhum grupo da lista.
+const ALUGUER_ACTIONABLE_STATUSES = new Set(GRUPOS.map(g => g.status));
+
 export function AluguerPage({ onExit }: { onExit?: () => void }) {
   const { reservations, blocks, updateReservation, cancelReservation, removeBlock, marcarPrestacao, rules } = useReservations();
   const { motoristas } = useMotoristas();
@@ -81,6 +89,10 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
     prestacao: Prestacao;
     onAfterSave?: () => void;
     titulo?: string;
+  } | null>(null);
+  const [devolucaoModal, setDevolucaoModal] = useState<{
+    reservationId: string;
+    multaAtraso?: number;
   } | null>(null);
   const [extensaoRespostaId, setExtensaoRespostaId]       = useState<string | null>(null);
   const [extensaoRespostaTipo, setExtensaoRespostaTipo]   = useState<'aprovado' | 'rejeitado' | null>(null);
@@ -226,7 +238,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
 
   const vehicleName = (id: number) => allVehicles.find(v => v.id === id)?.name ?? VEHICLES.find(v => v.id === id)?.name ?? `Viatura #${id}`;
 
-  const accionaveisCount = aluguerReservations.filter(r => r.status !== 'cancelada' && r.status !== 'concluida').length;
+  const accionaveisCount = aluguerReservations.filter(r => ALUGUER_ACTIONABLE_STATUSES.has(r.status)).length;
 
   const acoesUrgente = kpis.pendentes > 0 || kpis.devolucaoPendente > 0;
 
@@ -273,6 +285,36 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
           onClose={() => setPagamentoModal(null)}
         />
       )}
+      {devolucaoModal && (() => {
+        const r = reservations.find(res => res.id === devolucaoModal.reservationId);
+        if (!r) return null;
+        return (
+          <RegistarDevolucaoModal
+            clienteName={r.clientName}
+            vehicleName={vehicleName(r.vehicleId)}
+            multaAtraso={devolucaoModal.multaAtraso}
+            caucaoDefault={rules.caucaoValor}
+            taxaLimpezaDefault={rules.taxaLimpeza}
+            onClose={() => setDevolucaoModal(null)}
+            onSave={(estadoViatura, reembolso) => {
+              const hoje = new Date().toISOString().split('T')[0];
+              updateReservation(r.id, {
+                status: 'devolucao_pendente',
+                estadoViaturaDevolucao: estadoViatura,
+                dataRegistoDevolucao: hoje,
+                ...(devolucaoModal.multaAtraso ? { multaAtraso: devolucaoModal.multaAtraso } : {}),
+                ...(reembolso ? {
+                  reembolsoValor: reembolso.valor,
+                  reembolsoDescricao: reembolso.descricao,
+                  dataReembolso: hoje,
+                } : {}),
+              });
+              setLastActedId(r.id);
+              setAcoesFilter('todos');
+            }}
+          />
+        );
+      })()}
 
       {/* ── Modal de detalhes de reserva (tab Reservas) ── */}
       {reservaModal && (() => {
@@ -456,6 +498,30 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                   </div>
                 )}
 
+                {/* Estado da viatura na devolução */}
+                {r.estadoViaturaDevolucao && (
+                  <div className="px-5 py-4 border-t border-zinc-800">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest">Estado da Viatura na Devolução</p>
+                      {r.dataRegistoDevolucao && (
+                        <span className="text-[9px] text-zinc-500 tabular-nums">· {r.dataRegistoDevolucao}</span>
+                      )}
+                    </div>
+                    <p className="text-sm font-semibold text-white bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2.5">{r.estadoViaturaDevolucao}</p>
+                  </div>
+                )}
+
+                {/* Reembolso */}
+                {r.reembolsoValor !== undefined && r.reembolsoValor > 0 && (
+                  <div className="px-5 py-4 border-t border-zinc-800">
+                    <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1.5">Reembolso ao Cliente</p>
+                    <div className="flex items-center justify-between bg-emerald-500/5 border border-emerald-500/20 rounded-xl px-3 py-2.5">
+                      <span className="text-xs text-zinc-300">{r.reembolsoDescricao}</span>
+                      <span className="text-sm font-black text-emerald-400">{fmt(r.reembolsoValor)}</span>
+                    </div>
+                  </div>
+                )}
+
               </div>
             </div>
           </div>
@@ -575,12 +641,13 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                     <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest hidden md:table-cell">Viatura</th>
                     <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest">Período</th>
                     <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest hidden sm:table-cell">Devolução</th>
+                    <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest hidden lg:table-cell">Estado Viatura</th>
                     <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest">Estado</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800">
                   {historico.length === 0 && (
-                    <tr><td colSpan={6} className="text-center py-12 text-white text-sm">Sem histórico de alugueres ainda</td></tr>
+                    <tr><td colSpan={7} className="text-center py-12 text-white text-sm">Sem histórico de alugueres ainda</td></tr>
                   )}
                   {historico.map((r, idx) => {
                     const st = STATUS_CFG[r.status];
@@ -604,6 +671,13 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                           <p className="text-sm text-white tabular-nums">{r.dataFim}</p>
                           <p className="text-xs text-zinc-400">{r.horaDevolucao}</p>
                         </td>
+                        <td className="px-5 py-4 hidden lg:table-cell max-w-[220px]">
+                          {r.estadoViaturaDevolucao ? (
+                            <p className="text-xs font-semibold text-white truncate" title={r.estadoViaturaDevolucao}>{r.estadoViaturaDevolucao}</p>
+                          ) : (
+                            <span className="text-xs text-zinc-600">—</span>
+                          )}
+                        </td>
                         <td className="px-5 py-4">
                           <span className={`text-xs border rounded-md px-2 py-0.5 font-semibold ${st.className}`}>{st.label}</span>
                         </td>
@@ -625,7 +699,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
         {tab === 'acoes' && (() => {
           const MESES_ABR = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
           const fmtD = (iso: string) => { const [,m,d] = iso.split('-'); return `${d} ${MESES_ABR[parseInt(m)-1]}`; };
-          const totalAcionaveis = aluguerReservations.filter(r => r.status !== 'cancelada' && r.status !== 'concluida').length;
+          const totalAcionaveis = aluguerReservations.filter(r => ALUGUER_ACTIONABLE_STATUSES.has(r.status)).length;
           const gruposVisiveis = GRUPOS.filter(g => acoesFilter === 'todos' || g.status === acoesFilter);
           const flatList = gruposVisiveis
             .flatMap(g => aluguerReservations.filter(r => r.status === g.status))
@@ -1046,12 +1120,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                                   const horasAtraso = Math.ceil((Date.now() - devTime.getTime()) / 3600000);
                                   multaFinal = Math.max(0, horasAtraso) * rules.penalizacaoAtrasoPorHora;
                                 }
-                                updateReservation(r.id, {
-                                  status: 'devolucao_pendente',
-                                  ...(multaFinal > 0 && { multaAtraso: multaFinal }),
-                                });
-                                setLastActedId(r.id);
-                                setAcoesFilter('todos');
+                                setDevolucaoModal({ reservationId: r.id, multaAtraso: multaFinal > 0 ? multaFinal : undefined });
                               } else {
                                 updateReservation(r.id, { status: next });
                                 setLastActedId(r.id);
@@ -1091,6 +1160,30 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                             )}
                           </div>
                         </div>
+
+                        {/* Estado da viatura na devolução */}
+                        {r.estadoViaturaDevolucao && (
+                          <div className="px-4 py-3 border-b border-zinc-800">
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest">Estado da Viatura na Devolução</p>
+                              {r.dataRegistoDevolucao && (
+                                <span className="text-[9px] text-zinc-500 tabular-nums">· {r.dataRegistoDevolucao}</span>
+                              )}
+                            </div>
+                            <p className="text-sm font-semibold text-white bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2.5">{r.estadoViaturaDevolucao}</p>
+                          </div>
+                        )}
+
+                        {/* Reembolso */}
+                        {r.reembolsoValor !== undefined && r.reembolsoValor > 0 && (
+                          <div className="px-4 py-3 border-b border-zinc-800">
+                            <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1.5">Reembolso ao Cliente</p>
+                            <div className="flex items-center justify-between bg-emerald-500/5 border border-emerald-500/20 rounded-xl px-3 py-2.5">
+                              <span className="text-xs text-zinc-300">{r.reembolsoDescricao}</span>
+                              <span className="text-sm font-black text-emerald-400">{fmt(r.reembolsoValor)}</span>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Pagamento */}
                         {r.valorTotal > 0 && (() => {

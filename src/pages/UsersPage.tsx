@@ -186,9 +186,9 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
   // Guest modal state
   const [reviewGuest, setReviewGuest] = useState<Guest | null>(null);
 
-  const handleColocarNosInternos = (g: Guest) => {
+  const handleColocarNosInternos = async (g: Guest) => {
     const senha = g.senhaGerada ?? Math.random().toString(36).slice(-8);
-    const newUser = addUser({
+    const newUser = await addUser({
       nome: g.nome,
       email: g.email,
       telefone: g.telefone,

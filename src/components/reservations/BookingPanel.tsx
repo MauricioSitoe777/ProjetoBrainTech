@@ -30,8 +30,8 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
   const [horaLevantamento, setHoraLevantamento] = useState('09:00');
   const [horaDevolucao, setHoraDevolucao] = useState('17:00');
   const [motivoViagem, setMotivoViagem] = useState('');
-  const localLevantamento = 'Escritório Central (Av. Julius Nyerere, Maputo)';
-  const localDevolucao    = 'Escritório Central (Av. Julius Nyerere, Maputo)';
+  const localLevantamento = 'Escritório Central (Av. 25 de Setembro, Maputo)';
+  const localDevolucao    = 'Escritório Central (Av. 25 de Setembro, Maputo)';
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientEmail, setClientEmail] = useState('');
@@ -309,7 +309,7 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
             <div className="flex-1 min-w-0">
               <p className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider mb-0.5">Local de levantamento e devolução</p>
               <p className="text-sm font-bold text-white truncate">Escritório Central</p>
-              <p className="text-xs text-zinc-400">Av. Julius Nyerere, Maputo</p>
+              <p className="text-xs text-zinc-400">Av. 25 de Setembro, Maputo</p>
             </div>
             <span className="shrink-0 text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-md px-2 py-0.5 font-bold">Fixo</span>
           </div>

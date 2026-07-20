@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost/api';
+const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api';
 
 function token(): string | null {
   return sessionStorage.getItem('rentcar:api_token');

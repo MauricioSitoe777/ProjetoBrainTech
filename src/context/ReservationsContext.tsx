@@ -82,6 +82,11 @@ function reservationToApi(r: Partial<Reservation>): Record<string, unknown> {
   if (r.motivoCancelamento  !== undefined) out.motivo_cancelamento  = r.motivoCancelamento;
   if (r.pedidoExtensao      !== undefined) out.pedido_extensao      = r.pedidoExtensao;
   if (r.multaAtraso         !== undefined) out.multa_atraso          = r.multaAtraso;
+  if (r.estadoViaturaDevolucao !== undefined) out.estado_viatura_devolucao = r.estadoViaturaDevolucao;
+  if (r.dataRegistoDevolucao   !== undefined) out.data_registo_devolucao   = r.dataRegistoDevolucao;
+  if (r.reembolsoValor         !== undefined) out.reembolso_valor          = r.reembolsoValor;
+  if (r.reembolsoDescricao     !== undefined) out.reembolso_descricao      = r.reembolsoDescricao;
+  if (r.dataReembolso          !== undefined) out.data_reembolso           = r.dataReembolso;
   return out;
 }
 

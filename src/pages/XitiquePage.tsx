@@ -117,7 +117,7 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
     setCopiado('tudo'); setTimeout(() => setCopiado(null), 2500);
   };
 
-  const handleAprovar = (insc: InscricaoXitique) => {
+  const handleAprovar = async (insc: InscricaoXitique) => {
     const existente = allUsers.find(u => u.email === insc.email || u.telefone === insc.telefone);
     if (existente) {
       // Utilizador já tem conta — apenas marcar como xitique e aprovar
@@ -128,7 +128,7 @@ function GrupoPanel({ grupo, onBack }: { grupo: GrupoXitique; onBack: () => void
       // Novo utilizador — criar conta e mostrar credenciais
       const senha = gerarSenha();
       const utilizador = insc.telefone.replace(/\D/g, '').replace(/^258/, '');
-      const novoUser = addUser({ nome: insc.nome, email: insc.email, telefone: insc.telefone, role: 'cliente', status: 'ativo', regularity: 'regular', restriction: 'nenhuma', password: senha, mustChangePassword: true, xitique: true });
+      const novoUser = await addUser({ nome: insc.nome, email: insc.email, telefone: insc.telefone, role: 'cliente', status: 'ativo', regularity: 'regular', restriction: 'nenhuma', password: senha, mustChangePassword: true, xitique: true });
       aprovarInscricao(insc.id, novoUser.id);
       setCredencial({ nome: insc.nome, utilizador, email: insc.email, senha });
     }

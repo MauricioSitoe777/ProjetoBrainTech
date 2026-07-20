@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from "react";
+﻿import { useState, useMemo } from "react";
 import type { Vehicle } from "../data/constants";
 import VehicleCard from "./VehicleCard";
 import { useScrollTo } from "../hooks";
@@ -34,8 +34,8 @@ const CAT_FILTERS: { key: Cat; label: string; img: string; blend?: boolean }[] =
   {
     key: "sedan",
     label: "Sedans",
-    img: "https://www.freeiconspng.com/uploads/black-sedan-car-png-2.png",
-    blend: true,
+    img: "/sedan_transparent.png",
+    blend: false,
   },
   {
     key: "hatchback",
@@ -72,8 +72,16 @@ export default function CatalogSection({
     setPage(1);
   };
 
-  // Volta à página 1 quando filtros/pesquisa mudam
-  useEffect(() => { setPage(1); }, [cat, searchTerm]);
+  // Volta à página 1 sempre que o filtro de categoria ou a pesquisa mudam
+  const handleCat = (c: Cat) => {
+    setCat(c);
+    setPage(1);
+  };
+
+  const handleSearch = (v: string) => {
+    setSearchTerm(v);
+    setPage(1);
+  };
 
   const allVehicles = dynamicVehicles as unknown as Vehicle[];
 
@@ -113,7 +121,14 @@ export default function CatalogSection({
 
   const goToPage = (p: number) => {
     setPage(p);
-    document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Espera o DOM reflectir a nova página (que pode ter muito menos cartões,
+    // encolhendo a secção) antes de calcular o alvo do scroll — caso contrário
+    // o alvo é medido com a altura antiga e a animação ultrapassa a secção.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
   };
 
   const handleAction = (vehicle: Vehicle) => {
@@ -185,11 +200,11 @@ export default function CatalogSection({
                 type="text"
                 placeholder="Pesquisar..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearch(e.target.value)}
                 className="bg-transparent border-none outline-none text-xs text-white placeholder:text-zinc-500 w-full"
               />
               {searchTerm && (
-                <button onClick={() => setSearchTerm("")} className="text-zinc-500 hover:text-white transition-colors shrink-0">
+                <button onClick={() => handleSearch("")} className="text-zinc-500 hover:text-white transition-colors shrink-0">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
                   </svg>
@@ -217,7 +232,7 @@ export default function CatalogSection({
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 mb-5 items-stretch">
               {/* Reset pill */}
               <button
-                onClick={() => setCat(null)}
+                onClick={() => handleCat(null)}
                 className={`w-full flex items-center gap-2 px-4 sm:px-5 py-3 rounded-2xl text-xs font-bold transition-all duration-200 border h-14 ${
                   cat === null
                     ? "bg-zinc-700 text-white border-zinc-500 shadow-lg shadow-zinc-900/50"
@@ -250,7 +265,7 @@ export default function CatalogSection({
               {CAT_FILTERS.map((f) => (
                 <button
                   key={f.key}
-                  onClick={() => setCat(f.key)}
+                  onClick={() => handleCat(f.key)}
                   className={`w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 rounded-2xl text-xs font-bold transition-all duration-200 border h-14 overflow-hidden relative ${
                     cat === f.key
                       ? "bg-zinc-700/80 text-white border-amber-500/60 shadow-lg shadow-amber-500/10"

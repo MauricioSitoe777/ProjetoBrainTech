@@ -31,6 +31,14 @@ const COMPRA_INACTIVE  = new Set(['cancelada', 'concluida', 'liquidada']);
 const ALUGUER_URGENT   = new Set(['pendente', 'devolucao_pendente']);
 const COMPRA_URGENT    = new Set(['pendente', 'prestacao_atraso']);
 
+// Whitelists dos estados válidos por modo — uma reserva ligada a uma viatura
+// pode ficar com um estado do "outro" modo (ex: aluguer com 'liquidada') se a
+// viatura mudar de modo depois de criada. Contar por "!inactive" sozinho
+// deixava essas reservas entrarem no total sem nunca aparecerem nas listas
+// correspondentes (o mesmo bug corrigido em AluguerPage.tsx).
+const ALUGUER_STATUSES = new Set(['pendente', 'confirmada', 'pronta_levantamento', 'ativa', 'devolucao_pendente', 'concluida', 'cancelada']);
+const COMPRA_STATUSES  = new Set(['compra_aprovada', 'entrada_paga', 'em_prestacao', 'prestacao_atraso', 'liquidada', 'cancelada']);
+
 export function AdminSidebar({ onClose }: Props) {
   const { path, navigate } = useRoute();
   const { user, allUsers, logout } = useAuth();
@@ -56,11 +64,11 @@ export function AdminSidebar({ onClose }: Props) {
 
   // Contadores de acções pendentes
   const aluguerPending = useMemo(
-    () => reservations.filter(r => aluguerIds.has(r.vehicleId) && !ALUGUER_INACTIVE.has(r.status)).length,
+    () => reservations.filter(r => aluguerIds.has(r.vehicleId) && ALUGUER_STATUSES.has(r.status) && !ALUGUER_INACTIVE.has(r.status)).length,
     [reservations, aluguerIds],
   );
   const compraPending = useMemo(
-    () => reservations.filter(r => compraIds.has(r.vehicleId) && !COMPRA_INACTIVE.has(r.status)).length,
+    () => reservations.filter(r => compraIds.has(r.vehicleId) && COMPRA_STATUSES.has(r.status) && !COMPRA_INACTIVE.has(r.status)).length,
     [reservations, compraIds],
   );
   const aluguerUrgent = useMemo(

@@ -110,11 +110,9 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
 
   /* ── Header background ────────────────────────────────────────────── */
   let bgClass = "bg-transparent border-transparent";
-  
+
   if (activeSection === "hero" || (!activeSection && !scrolled)) {
     bgClass = "bg-transparent border-transparent";
-  } else if (activeSection === "como-funciona") {
-    bgClass = "bg-zinc-900 border-zinc-800";
   } else {
     bgClass = "bg-zinc-950 border-zinc-900";
   }

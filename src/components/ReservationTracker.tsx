@@ -169,8 +169,8 @@ const CLIENT_MSG: Partial<Record<ReservationStatus, { title: string; body: strin
     body: 'A viatura está activa e a ser utilizada. Desfrute da viagem com segurança. Em caso de emergência, contacte-nos.',
   },
   devolucao_pendente: {
-    title: 'Devolução Solicitada',
-    body: 'Estamos a aguardar a devolução da viatura. Por favor dirija-se às instalações até à data acordada.',
+    title: 'Viatura Devolvida — Vistoria Concluída',
+    body: 'Recebemos a viatura e já realizámos a vistoria de regresso. Estamos agora a finalizar a liquidação do aluguer.',
   },
   concluida: {
     title: 'Aluguer Concluído',

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useReservations } from '../context/ReservationsContext';
+import { useGuests } from '../context/GuestsContext';
 import { useNotifications } from '../context/NotificationsContext';
 import { useVehicles } from '../context/VehiclesContext';
 import { VEHICLES } from '../data/constants';
@@ -19,6 +20,7 @@ function saveDedup(s: Set<string>) {
 export function useAdminNotifier() {
   const { user } = useAuth();
   const { reservations } = useReservations();
+  const { guests } = useGuests();
   const { addNotification, notifications } = useNotifications();
   const { vehicles } = useVehicles();
 
@@ -33,7 +35,7 @@ export function useAdminNotifier() {
 
     let changed = false;
     reservations
-      .filter(r => r.status === 'pendente' && !dedup.has(r.id) && !existingResIds.has(r.id))
+      .filter(r => r.status === 'pendente' && !dedup.has(`res:${r.id}`) && !existingResIds.has(r.id))
       .forEach(r => {
         const vehicle = vehicles.find(v => v.id === r.vehicleId) ?? VEHICLES.find(v => v.id === r.vehicleId);
         const isPurchase = vehicle?.mode === 'compra';
@@ -47,11 +49,27 @@ export function useAdminNotifier() {
           r.id,
           isPurchase ? '/admin/compra?tab=acoes' : '/admin/aluguer?tab=acoes'
         );
-        dedup.add(r.id);
+        dedup.add(`res:${r.id}`);
+        changed = true;
+      });
+
+    // Visitantes que registaram interesse e ainda aguardam validação de documentos
+    guests
+      .filter(g => g.status === 'aguarda_documentos' && !dedup.has(`guest:${g.id}`))
+      .forEach(g => {
+        addNotification(
+          'admin',
+          'Novo visitante em espera',
+          `"${g.nome}" solicitou ${g.intent === 'aluguer' ? 'um aluguer' : 'uma compra'}${g.vehicleName ? ` (${g.vehicleName})` : ''} e aguarda validação de documentos.`,
+          'warning',
+          undefined,
+          '/admin/visitantes/pendentes'
+        );
+        dedup.add(`guest:${g.id}`);
         changed = true;
       });
 
     if (changed) saveDedup(dedup);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, reservations]);
+  }, [user?.id, reservations, guests]);
 }

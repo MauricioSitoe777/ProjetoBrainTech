@@ -18,6 +18,7 @@ export interface User {
   regularity: UserRegularity;
   restriction: UserRestriction;
   category?: UserCategory;
+  salario?: number;
   avatar?: string;
   dataCriacao: string;
   ultimoAcesso: string;

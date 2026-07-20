@@ -69,6 +69,11 @@ export interface Reservation {
   referenciaPagamento?: string;
   pedidoExtensao?: PedidoExtensao;
   multaAtraso?: number; // multa por atraso na devolução (MT)
+  estadoViaturaDevolucao?: string; // observação sobre o estado da viatura registada na devolução
+  dataRegistoDevolucao?: string;   // data (ISO) em que a observação foi registada
+  reembolsoValor?: number;         // valor reembolsado ao cliente (caução/taxas) por a viatura ter voltado em bom estado
+  reembolsoDescricao?: string;     // itens reembolsados, ex: "Caução + Taxa de limpeza"
+  dataReembolso?: string;          // data (ISO) em que o reembolso foi registado
 }
 
 export interface BlockedPeriod {

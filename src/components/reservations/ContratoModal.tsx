@@ -172,6 +172,17 @@ export function ContratoModal({ reservation: r, onClose }: Props) {
             </div>
           )}
 
+          {/* Estado da viatura na devolução */}
+          {r.estadoViaturaDevolucao && (
+            <div>
+              <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-2">
+                Estado da Viatura na Devolução
+                {r.dataRegistoDevolucao && <span className="text-white font-normal normal-case tracking-normal"> · {r.dataRegistoDevolucao}</span>}
+              </p>
+              <p className="text-white text-xs bg-zinc-800/40 border border-zinc-700/40 rounded-xl px-4 py-3">{r.estadoViaturaDevolucao}</p>
+            </div>
+          )}
+
           {/* Assinaturas */}
           <div className="border-t border-zinc-800 pt-5">
             <div className="grid grid-cols-2 gap-8 text-xs text-center">

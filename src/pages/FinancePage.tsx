@@ -89,6 +89,12 @@ export function FinancePage() {
     return dyn?.name ?? sta?.name ?? `Viatura #${id}`;
   };
 
+  const getVehicleMatricula = (id: number) => {
+    const dyn = vehicles.find((v: { id: number }) => v.id === id) as { matricula?: string } | undefined;
+    const sta = VEHICLES_STATIC.find(v => v.id === id);
+    return dyn?.matricula ?? sta?.matricula ?? '—';
+  };
+
   // ── Reservas não canceladas ─────────────────────────────────────────────────
   const resActivas = useMemo(() =>
     reservations.filter(r => r.status !== 'cancelada'),
@@ -904,8 +910,8 @@ export function FinancePage() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-zinc-800/50 bg-zinc-800/20">
-                        {['#','Data Início','Data Fim','Viatura','Cliente','Duração','Valor','Estado'].map(h => (
-                          <th key={h} className={`text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ${h === '#' ? 'text-white/40 w-10' : 'text-white'}`}>{h}</th>
+                        {['#','Data Início','Data Fim','Viatura','Matrícula','Cliente','Duração','Valor','Estado Viatura','Estado'].map(h => (
+                          <th key={h} className={`text-left px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ${h === '#' ? 'text-white/40 w-10' : 'text-white'}`}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -915,14 +921,16 @@ export function FinancePage() {
                         const s = STATUS_ALUGUER[r.status] ?? { label: r.status, color: 'text-white', bg: 'bg-zinc-800 border-zinc-700' };
                         return (
                           <tr key={r.id} className="hover:bg-zinc-800/30 transition-colors">
-                            <td className="px-4 py-2.5 text-xs font-black text-white/30 tabular-nums w-10">{idx + 1}</td>
-                            <td className="px-5 py-4 text-xs text-white whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
-                            <td className="px-5 py-4 text-xs text-white whitespace-nowrap">{new Date(r.dataFim).toLocaleDateString('pt-PT')}</td>
-                            <td className="px-5 py-4 text-sm font-semibold text-white truncate max-w-[140px]">{getVehicleName(r.vehicleId)}</td>
-                            <td className="px-5 py-4 text-xs text-white truncate max-w-[120px]">{r.clientName ?? '—'}</td>
-                            <td className="px-5 py-4 text-xs text-white whitespace-nowrap">{dias} dia{dias !== 1 ? 's' : ''}</td>
-                            <td className="px-5 py-4 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(r.valorTotal)}</td>
-                            <td className="px-5 py-4">
+                            <td className="px-3 py-1.5 text-xs font-black text-white/30 tabular-nums w-10">{idx + 1}</td>
+                            <td className="px-3 py-1.5 text-xs text-white whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
+                            <td className="px-3 py-1.5 text-xs text-white whitespace-nowrap">{new Date(r.dataFim).toLocaleDateString('pt-PT')}</td>
+                            <td className="px-3 py-1.5 text-sm font-semibold text-white truncate max-w-[140px]">{getVehicleName(r.vehicleId)}</td>
+                            <td className="px-3 py-1.5 text-xs text-white whitespace-nowrap">{getVehicleMatricula(r.vehicleId)}</td>
+                            <td className="px-3 py-1.5 text-xs text-white truncate max-w-[120px]">{r.clientName ?? '—'}</td>
+                            <td className="px-3 py-1.5 text-xs text-white whitespace-nowrap">{dias} dia{dias !== 1 ? 's' : ''}</td>
+                            <td className="px-3 py-1.5 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(r.valorTotal)}</td>
+                            <td className="px-3 py-1.5 text-xs font-semibold text-white truncate max-w-[160px]" title={r.estadoViaturaDevolucao}>{r.estadoViaturaDevolucao ?? '—'}</td>
+                            <td className="px-3 py-1.5">
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${s.bg} ${s.color}`}>{s.label}</span>
                             </td>
                           </tr>
@@ -931,8 +939,9 @@ export function FinancePage() {
                     </tbody>
                     <tfoot>
                       <tr className="bg-zinc-800/40 border-t border-zinc-700">
-                        <td colSpan={6} className="px-5 py-4 text-xs font-black text-white uppercase">Total</td>
-                        <td className="px-5 py-4 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(receitaAluguer)}</td>
+                        <td colSpan={7} className="px-3 py-1.5 text-xs font-black text-white uppercase">Total</td>
+                        <td className="px-3 py-1.5 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(receitaAluguer)}</td>
+                        <td />
                         <td />
                       </tr>
                     </tfoot>
@@ -1027,8 +1036,8 @@ export function FinancePage() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-zinc-800/50 bg-zinc-800/20">
-                        {['Data','Viatura','Cliente','Prestações','Valor Total','Estado'].map(h => (
-                          <th key={h} className="text-left px-4 py-2.5 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                        {['Data','Viatura','Matrícula','Cliente','Prestações','Valor Total','Estado'].map(h => (
+                          <th key={h} className="text-left px-3 py-1.5 text-[10px] font-black text-amber-400 uppercase tracking-widest whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -1040,12 +1049,13 @@ export function FinancePage() {
                           : '—';
                         return (
                           <tr key={r.id} className="hover:bg-zinc-800/30 transition-colors">
-                            <td className="px-5 py-4 text-xs text-white whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
-                            <td className="px-5 py-4 text-sm font-semibold text-white truncate max-w-[140px]">{getVehicleName(r.vehicleId)}</td>
-                            <td className="px-5 py-4 text-xs text-white truncate max-w-[120px]">{r.clientName ?? '—'}</td>
-                            <td className="px-5 py-4 text-xs font-bold text-white whitespace-nowrap">{prestStr}</td>
-                            <td className="px-5 py-4 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(r.valorTotal)}</td>
-                            <td className="px-5 py-4">
+                            <td className="px-3 py-1.5 text-xs text-white whitespace-nowrap">{new Date(r.dataInicio).toLocaleDateString('pt-PT')}</td>
+                            <td className="px-3 py-1.5 text-sm font-semibold text-white truncate max-w-[140px]">{getVehicleName(r.vehicleId)}</td>
+                            <td className="px-3 py-1.5 text-xs text-white whitespace-nowrap">{getVehicleMatricula(r.vehicleId)}</td>
+                            <td className="px-3 py-1.5 text-xs text-white truncate max-w-[120px]">{r.clientName ?? '—'}</td>
+                            <td className="px-3 py-1.5 text-xs font-bold text-white whitespace-nowrap">{prestStr}</td>
+                            <td className="px-3 py-1.5 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(r.valorTotal)}</td>
+                            <td className="px-3 py-1.5">
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${s.bg} ${s.color}`}>{s.label}</span>
                             </td>
                           </tr>
@@ -1054,8 +1064,8 @@ export function FinancePage() {
                     </tbody>
                     <tfoot>
                       <tr className="bg-zinc-800/40 border-t border-zinc-700">
-                        <td colSpan={4} className="px-5 py-4 text-xs font-black text-white uppercase">Total</td>
-                        <td className="px-5 py-4 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(receitaCompra)}</td>
+                        <td colSpan={5} className="px-3 py-1.5 text-xs font-black text-white uppercase">Total</td>
+                        <td className="px-3 py-1.5 text-sm font-black text-amber-400 whitespace-nowrap">{fmt(receitaCompra)}</td>
                         <td />
                       </tr>
                     </tfoot>

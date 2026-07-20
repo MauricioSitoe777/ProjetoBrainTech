@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { Guest } from '../types/guest';
 import { useNotifications } from './NotificationsContext';
+import { useAuth } from './AuthContext';
 import { api } from '../lib/api';
 
 const STORAGE_KEY = 'rentcar:guests:v1';
@@ -28,16 +29,18 @@ function persist(list: Guest[]) {
 export function GuestsProvider({ children }: { children: ReactNode }) {
   const [guests, setGuests] = useState<Guest[]>(load);
   const { addNotification } = useNotifications();
+  const { user: authUser } = useAuth();
 
   const set = (list: Guest[]) => { setGuests(list); persist(list); };
 
-  // Carrega visitantes da API no mount
+  // Carrega visitantes da API sempre que o admin autenticado muda (login/logout)
   useEffect(() => {
+    if (!authUser || authUser.role !== 'admin') return;
     api.get<Guest[]>('/guests')
-      .then(data => { if (Array.isArray(data) && data.length > 0) set(data); })
+      .then(data => { if (Array.isArray(data)) set(data); })
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authUser?.id]);
 
   const addGuest = (data: Omit<Guest, 'id' | 'dataCriacao' | 'status'>) => {
     const guest: Guest = {
