@@ -14,11 +14,6 @@ const fmtK = (n: number) => n >= 1_000_000 ? (n / 1_000_000).toFixed(1) + 'M MT'
 const parsePrice = (price: string) => Number(price.replace(/[^\d]/g, '')) || 0;
 
 // ── Ícones ────────────────────────────────────────────────────────────────────
-const IconWallet = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>
-  </svg>
-);
 const IconReceive = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10"/><path d="M12 8v8m-3-3 3 3 3-3"/>
@@ -119,7 +114,7 @@ function KpiCard({ icon, iconBg, iconColor, label, value, valueColor, sub, subCo
         <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${iconBg}`}>
           <span className={iconColor}>{icon}</span>
         </div>
-        <p className="text-xs font-bold text-white flex-1 min-w-0 leading-tight">{label}</p>
+        <p className="text-xs font-bold text-amber-400 flex-1 min-w-0 leading-tight">{label}</p>
         {onClick && <span className="text-white/20 group-hover:text-amber-400 transition-colors shrink-0"><ArrowRight /></span>}
       </div>
       <div>
@@ -145,11 +140,10 @@ export function DashboardPage() {
   const { users }        = useUsers();
   const { reservations } = useReservations();
   const { vehicles }     = useVehicles();
-  const { transacoes, totalEntradas, totalSaidas, lucroLiquido, totalDividasPendentes } = useFinance();
+  const { transacoes, lucroLiquido } = useFinance();
   const { navigate }     = useRoute();
 
   const today = new Date();
-  const todayISO = today.toISOString().split('T')[0];
   const dataFormatada = today.toLocaleDateString('pt-PT', { day: 'numeric', month: 'long', year: 'numeric' });
 
   const s = useMemo(() => {
@@ -159,7 +153,11 @@ export function DashboardPage() {
     const receitaAluguer = aluguerRes.reduce((sum, r) => sum + r.valorTotal, 0);
     const receitaCompra  = compraRes.reduce((sum, r) => sum + r.valorTotal, 0);
     const receitaTotal   = receitaAluguer + receitaCompra;
-    const valorArrecadado = receitaTotal + totalEntradas - totalSaidas;
+
+    // Mesma fonte de verdade dos Movimentos Financeiros — nunca deriva de reservas.
+    const dinheiroPorReceber = transacoes
+      .filter(t => t.tipo === 'entrada' && t.status === 'pendente')
+      .reduce((sum, t) => sum + t.valor, 0);
 
     const vendasLiquidadas = compraRes.filter(r => r.status === 'liquidada');
     const valorMedioVenda  = vendasLiquidadas.length > 0 ? receitaCompra / vendasLiquidadas.length : 0;
@@ -193,7 +191,7 @@ export function DashboardPage() {
     const aluguerAtivos      = aluguerRes.filter(r => r.status === 'ativa').length;
 
     return {
-      valorArrecadado, receitaTotal, lucroLiquido, totalDividasPendentes,
+      receitaTotal, lucroLiquido, dinheiroPorReceber,
       clientesRegistados, clientesNovosMes,
       disponiveis, alugados, vendidos, manutencao, totalVeiculos: vehicles.length,
       vendasMesQty: vendasMes.length, vendasMesVal,
@@ -201,7 +199,7 @@ export function DashboardPage() {
       reservasPendentes, pagamentosAtraso, contratosActivos, aluguerAtivos,
       crescimentoMes,
     };
-  }, [reservations, vehicles, users, totalEntradas, totalSaidas, today]);
+  }, [reservations, vehicles, users, transacoes, lucroLiquido, today]);
 
   const atividadeRecente = useMemo(() =>
     [...transacoes].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 6),
@@ -226,14 +224,11 @@ export function DashboardPage() {
         {/* ── Resumo Financeiro ───────────────────────────────────────────────── */}
         <div className="space-y-3">
           <SectionTitle>Resumo Financeiro</SectionTitle>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <KpiCard icon={<IconWallet />} iconBg="bg-amber-500/15" iconColor="text-amber-400"
-              label="Dinheiro em Caixa" value={fmt(s.valorArrecadado)} valueColor="text-amber-400"
-              sub="Disponível para usar" subColor="text-emerald-400" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <KpiCard icon={<IconReceive />} iconBg="bg-amber-500/15" iconColor="text-amber-400"
-              label="Dinheiro por Receber" value={fmt(s.totalDividasPendentes)}
-              sub="Pagamentos pendentes dos clientes" subColor="text-white"
-              onClick={() => navigate('/admin/financas?tab=transacoes')} />
+              label="Dinheiro por Receber" value={fmt(s.dinheiroPorReceber)}
+              sub="Receitas registadas por cobrar" subColor="text-white"
+              onClick={() => navigate('/admin/financeiro')} />
             <KpiCard icon={<IconBank />} iconBg="bg-amber-500/15" iconColor="text-amber-400"
               label="Património da Empresa" value={fmtK(s.patrimonioEmpresa)}
               sub="Valor total da empresa" subColor="text-white"
@@ -241,7 +236,7 @@ export function DashboardPage() {
             <KpiCard icon={<IconChart />} iconBg="bg-amber-500/15" iconColor="text-amber-400"
               label="Lucro Total" value={fmt(s.lucroLiquido)} valueColor="text-emerald-400"
               sub="Ganhos acumulados até hoje" subColor="text-white"
-              onClick={() => navigate('/admin/financas?tab=transacoes')} />
+              onClick={() => navigate('/admin/financeiro')} />
           </div>
         </div>
 
@@ -258,7 +253,7 @@ export function DashboardPage() {
               className="text-left w-full bg-zinc-900 border border-amber-500/20 rounded-2xl p-4 flex flex-col gap-2 hover:border-amber-500/40 transition-colors group">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0 text-amber-400"><IconCar /></div>
-                <p className="text-xs font-bold text-white flex-1 min-w-0 truncate">Veículos Registados</p>
+                <p className="text-xs font-bold text-amber-400 flex-1 min-w-0 truncate">Veículos Registados</p>
                 <span className="text-white/20 group-hover:text-amber-400 transition-colors shrink-0"><ArrowRight /></span>
               </div>
               <div className="flex items-center justify-between gap-2">
@@ -335,7 +330,7 @@ export function DashboardPage() {
         <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800/70">
             <SectionTitle>Actividade Recente</SectionTitle>
-            <button onClick={() => navigate('/admin/financas?tab=transacoes')}
+            <button onClick={() => navigate('/admin/financeiro')}
               className="flex items-center gap-1.5 text-xs font-black text-amber-400 hover:text-amber-300 transition-colors">
               Ver tudo <ArrowRight />
             </button>

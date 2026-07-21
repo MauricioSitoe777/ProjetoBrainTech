@@ -11,7 +11,7 @@ const fmtK = (n: number) => n >= 1_000_000 ? (n / 1_000_000).toFixed(1) + 'M MT'
 const MESES_ABR  = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-type Tab = 'geral' | 'mensal' | 'transacoes' | 'aluguer' | 'compra';
+type Tab = 'geral' | 'mensal' | 'aluguer' | 'compra';
 
 const compraIds = new Set(VEHICLES_STATIC.filter(v => v.mode === 'compra').map(v => v.id));
 
@@ -76,7 +76,7 @@ export function FinancePage() {
   const { reservations }                                      = useReservations();
   const { vehicles }                                          = useVehicles();
   const { grupos, inscricoes }                                = useXitique();
-  const { transacoes, totalEntradas, totalSaidas, lucroLiquido, totalDividasPendentes } = useFinance();
+  const { transacoes, totalEntradas, totalSaidas } = useFinance();
 
   const [tab,    setTab]    = useState<Tab>('geral');
   const [anoSel, setAnoSel] = useState(() => new Date().getFullYear());
@@ -114,7 +114,6 @@ export function FinancePage() {
   const receitaTotal      = receitaAluguer + receitaCompra + receitaXitique;
   const totalEntradas_op  = receitaTotal + totalEntradas;   // reservas + entradas manuais
   const valorArrecadado   = totalEntradas_op - totalSaidas; // resultado líquido real
-  const margem            = totalEntradas_op > 0 ? Math.round((valorArrecadado / totalEntradas_op) * 100) : 0;
 
   // ── Dados mensais ────────────────────────────────────────────────────────────
   const dadosMensais = useMemo(() => {
@@ -207,15 +206,6 @@ export function FinancePage() {
     [...aluguerRes].sort((a, b) => b.dataInicio.localeCompare(a.dataInicio)),
   [aluguerRes]);
 
-  const avgDiasAluguer = useMemo(() => {
-    if (aluguerRes.length === 0) return 0;
-    const total = aluguerRes.reduce((s, r) => {
-      const dias = Math.round((new Date(r.dataFim).getTime() - new Date(r.dataInicio).getTime()) / 86_400_000);
-      return s + Math.max(1, dias);
-    }, 0);
-    return Math.round(total / aluguerRes.length);
-  }, [aluguerRes]);
-
   const aluguerByStatus = useMemo(() => {
     const mapa: Record<string, number> = {};
     for (const r of aluguerRes) mapa[r.status] = (mapa[r.status] ?? 0) + 1;
@@ -232,9 +222,6 @@ export function FinancePage() {
     for (const r of compraRes) mapa[r.status] = (mapa[r.status] ?? 0) + 1;
     return mapa;
   }, [compraRes]);
-
-  const totalPrestacoesPagas  = useMemo(() => compraRes.reduce((s, r) => s + (r.prestacoesPagas  ?? 0), 0), [compraRes]);
-  const totalPrestacoesTotal  = useMemo(() => compraRes.reduce((s, r) => s + (r.totalPrestacoes  ?? 0), 0), [compraRes]);
 
   return (
     <div className="bg-zinc-950 text-white">
@@ -253,7 +240,6 @@ export function FinancePage() {
           {([
             { key: 'geral',      label: 'Visão Geral' },
             { key: 'mensal',     label: 'Por Mês' },
-            { key: 'transacoes', label: 'Transações' },
             { key: 'aluguer',    label: 'Alugueres' },
             { key: 'compra',     label: 'Compras' },
           ] as { key: Tab; label: string }[]).map(t => (
@@ -811,61 +797,6 @@ export function FinancePage() {
                 })()}
               </>
             )}
-          </div>
-        )}
-
-        {/* ══════════════════════════════════════════════════════ TAB: TRANSAÇÕES ══ */}
-        {tab === 'transacoes' && (
-          <div className="space-y-4">
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <KpiCard label="Total Entradas"  value={fmt(totalEntradas)}         color="text-emerald-400" />
-              <KpiCard label="Total Saídas"    value={fmt(totalSaidas)}           color="text-red-400" />
-              <KpiCard label="Lucro"            value={fmt(lucroLiquido)}          color={lucroLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'} />
-              <KpiCard label="Dívidas Activas" value={fmt(totalDividasPendentes)} color="text-amber-400" />
-            </div>
-
-            <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-800/30 flex items-center justify-between">
-                <h2 className="text-white font-black text-sm uppercase tracking-wider">Transações Manuais</h2>
-                <span className="text-[10px] text-white">{transacoes.length} registos</span>
-              </div>
-              {transacoes.length === 0 ? (
-                <p className="text-center text-white text-sm py-12">Sem transações manuais registadas.</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-zinc-800/50">
-                        {['#','Data','Descrição','Categoria','Tipo','Valor'].map(h => (
-                          <th key={h} className={`text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider ${h === '#' ? 'text-white/40 w-10' : 'text-white'}`}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-800/40">
-                      {[...transacoes].sort((a, b) => b.data.localeCompare(a.data)).map((t, idx) => (
-                        <tr key={t.id} className="hover:bg-zinc-800/20 transition-colors">
-                          <td className="px-4 py-2.5 text-xs font-black text-white/30 tabular-nums w-10">{idx + 1}</td>
-                          <td className="px-5 py-4 text-xs text-white whitespace-nowrap">{new Date(t.data).toLocaleDateString('pt-PT')}</td>
-                          <td className="px-5 py-4 text-sm text-white font-medium truncate max-w-[200px]">{t.descricao}</td>
-                          <td className="px-5 py-4 text-xs text-white">{CATEGORIA_LABEL[t.categoria] ?? t.categoria}</td>
-                          <td className="px-5 py-4">
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                              t.tipo === 'entrada'
-                                ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20'
-                                : 'bg-red-400/10 text-red-400 border-red-400/20'
-                            }`}>{t.tipo === 'entrada' ? '↑ Entrada' : '↓ Saída'}</span>
-                          </td>
-                          <td className={`px-4 py-3 text-sm font-black whitespace-nowrap ${t.tipo === 'entrada' ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {t.tipo === 'entrada' ? '+' : '-'}{fmt(t.valor)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
           </div>
         )}
 

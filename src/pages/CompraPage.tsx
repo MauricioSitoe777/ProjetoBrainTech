@@ -39,6 +39,7 @@ const fmtDate = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('pt-
 const compraVehicles = VEHICLES.filter(v => v.mode === 'compra');
 const compraIds      = new Set(compraVehicles.map(v => v.id));
 const vehicleName    = (id: number) => VEHICLES.find(v => v.id === id)?.name ?? `Viatura #${id}`;
+const vehicleMatricula = (id: number) => VEHICLES.find(v => v.id === id)?.matricula ?? '';
 const isFinal        = (s: ReservationStatus) => s === 'cancelada' || s === 'liquidada';
 
 // ── Modal de gestão de prestações ────────────────────────────────────────────
@@ -311,6 +312,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
     getUrlParams().get('status')
   );
   const [selectedVehicle,  setSelectedVehicle]  = useState<number | null>(null);
+  const [historicoSearch,  setHistoricoSearch]  = useState('');
   const [updating,         setUpdating]         = useState<string | null>(null);
   const [modalAberto,      setModalAberto]      = useState<string | null>(null);
   const [gerarConfig,      setGerarConfig]      = useState<{ id: string; semEntrada: boolean } | null>(null);
@@ -404,8 +406,17 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
     compraReservations
       .filter(r => r.status === 'liquidada' || r.status === 'cancelada')
       .filter(r => selectedVehicle === null || r.vehicleId === selectedVehicle)
+      .filter(r => {
+        if (!historicoSearch.trim()) return true;
+        const q = historicoSearch.toLowerCase();
+        return r.clientName.toLowerCase().includes(q)
+          || vehicleName(r.vehicleId).toLowerCase().includes(q)
+          || vehicleMatricula(r.vehicleId).toLowerCase().includes(q)
+          || (r.clientPhone ?? '').toLowerCase().includes(q)
+          || (r.clientEmail ?? '').toLowerCase().includes(q);
+      })
       .sort((a, b) => b.dataInicio.localeCompare(a.dataInicio)),
-    [compraReservations, selectedVehicle]);
+    [compraReservations, selectedVehicle, historicoSearch]);
 
   const modalReservation = modalAberto ? reservations.find(r => r.id === modalAberto) : null;
 
@@ -495,9 +506,21 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
         {tab === 'compras' && <>
 
         {/* Filtro por viatura */}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[240px]">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-400 pointer-events-none">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              type="text"
+              placeholder="Pesquisar por nome, matrícula ou contacto..."
+              value={historicoSearch}
+              onChange={e => setHistoricoSearch(e.target.value)}
+              className="w-full bg-zinc-900 border-2 border-amber-500/40 text-white rounded-xl pl-11 pr-4 py-2.5 text-sm font-medium placeholder-white/40 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-colors shadow-[0_0_0_1px_rgba(245,158,11,0.08)]"
+            />
+          </div>
           <select value={selectedVehicle ?? ''} onChange={e => setSelectedVehicle(e.target.value ? Number(e.target.value) : null)}
-            className="bg-zinc-900 border border-zinc-800 text-white rounded-lg px-3 py-2 text-sm">
+            className="bg-zinc-900 border border-zinc-800 text-white rounded-lg px-3 py-2.5 text-sm shrink-0">
             <option value="">Todas as viaturas</option>
             {compraVehicles.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
           </select>

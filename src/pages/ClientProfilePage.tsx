@@ -63,25 +63,30 @@ function diffDias(inicio: string, fim: string) {
   return Math.max(1, Math.round(ms / 86_400_000));
 }
 
+const FORMA_PAGAMENTO_LABEL: Record<string, string> = {
+  mpesa: 'M-Pesa', emola: 'e-Mola', dinheiro: 'Dinheiro',
+  transferencia: 'Transferência', cheque: 'Cheque', outros: 'Outros',
+};
+
 // ── Geração de PDF (impressão de HTML estilizado) ───────────────────────────
 const DOC_SHARED_CSS = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Arial, Helvetica, sans-serif; color: #18181b; }
   .doc-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #f59e0b; padding-bottom: 14px; margin-bottom: 22px; }
   .doc-logo img { height: 36px; width: auto; display: block; }
-  .doc-meta { text-align: right; font-size: 11px; color: #71717a; }
+  .doc-meta { text-align: right; font-size: 11px; color: #18181b; }
   .doc-title { font-size: 18px; font-weight: 900; color: #18181b; margin-bottom: 2px; }
-  .doc-sub { font-size: 12px; color: #71717a; }
+  .doc-sub { font-size: 12px; color: #92400e; font-weight: 700; }
   .section-title { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.3px; color: #b45309; margin: 20px 0 8px; }
   .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 6px; }
-  .info-box { border: 1px solid #e4e4e7; border-radius: 8px; padding: 10px 12px; }
-  .info-label { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #a1a1aa; margin-bottom: 3px; letter-spacing: 0.5px; }
+  .info-box { border: 1px solid #f3d9a8; border-radius: 8px; padding: 10px 12px; }
+  .info-label { font-size: 9px; font-weight: 800; text-transform: uppercase; color: #92400e; margin-bottom: 3px; letter-spacing: 0.5px; }
   .info-value { font-size: 13px; font-weight: 700; color: #18181b; }
-  .info-sub { font-size: 11px; color: #71717a; margin-top: 2px; }
+  .info-sub { font-size: 11px; color: #18181b; margin-top: 2px; }
   table { width: 100%; border-collapse: collapse; }
-  thead tr { background: #fafafa; }
-  th { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #71717a; padding: 8px 10px; text-align: left; border-bottom: 2px solid #e4e4e7; }
-  td { font-size: 12px; padding: 9px 10px; border-bottom: 1px solid #f4f4f5; color: #18181b; vertical-align: top; }
+  thead tr { background: #fdf3e0; }
+  th { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #92400e; padding: 8px 10px; text-align: left; border-bottom: 2px solid #f3d9a8; }
+  td { font-size: 12px; padding: 9px 10px; border-bottom: 1px solid #f3d9a8; color: #18181b; vertical-align: top; }
   .val-green { font-weight: 800; color: #059669; }
   .val-red   { font-weight: 800; color: #dc2626; }
   .val-amber { font-weight: 800; color: #b45309; }
@@ -90,12 +95,18 @@ const DOC_SHARED_CSS = `
   .badge-compra  { background: #d1fae5; color: #065f46; }
   .badge-xitique { background: #fef3c7; color: #78350f; }
   .badge-divida  { background: #fee2e2; color: #991b1b; }
-  .summary-box { border: 1px solid #e4e4e7; border-radius: 8px; overflow: hidden; margin-bottom: 6px; }
-  .summary-row { display: flex; justify-content: space-between; padding: 9px 14px; border-bottom: 1px solid #f4f4f5; font-size: 12px; }
+  .summary-box { border: 1px solid #f3d9a8; border-radius: 8px; overflow: hidden; margin-bottom: 6px; }
+  .summary-row { display: flex; justify-content: space-between; padding: 9px 14px; border-bottom: 1px solid #f3d9a8; font-size: 12px; }
   .summary-row:last-child { border-bottom: none; }
-  .summary-row.total { font-weight: 800; background: #fafafa; }
-  .total-row td { font-weight: 900; background: #fafafa; border-top: 2px solid #e4e4e7; }
-  .doc-footer { margin-top: 32px; text-align: center; font-size: 10px; color: #a1a1aa; border-top: 1px solid #e4e4e7; padding-top: 14px; }
+  .summary-row.total { font-weight: 800; background: #fdf3e0; }
+  .total-row td { font-weight: 900; background: #fdf3e0; border-top: 2px solid #f3d9a8; }
+  .doc-footer { margin-top: 32px; text-align: center; font-size: 10px; color: #18181b; border-top: 1px solid #f3d9a8; padding-top: 14px; }
+  .clause-title { font-size: 12px; font-weight: 900; color: #b45309; margin: 14px 0 4px; }
+  .clause-text { font-size: 11px; color: #18181b; line-height: 1.6; text-align: justify; }
+  .sign-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 28px; text-align: center; }
+  .sign-line { border-top: 1px solid #18181b; margin-bottom: 6px; padding-top: 6px; }
+  .sign-name { font-size: 11px; font-weight: 700; color: #18181b; }
+  .sign-role { font-size: 10px; color: #92400e; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
 `;
 
 const DOC_BODY = (bodyHtml: string) => `
@@ -320,25 +331,20 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
     const diasMulta    = Math.floor(horasMulta / 24);
     const horasRest    = horasMulta % 24;
 
-    const FORMA_MAP: Record<string, string> = {
-      mpesa: 'M-Pesa', emola: 'e-Mola', dinheiro: 'Dinheiro',
-      transferencia: 'Transferência', cheque: 'Cheque', outros: 'Outros',
-    };
-
     const linhasPrestacoes = (r.prestacoes && r.prestacoes.length > 0)
       ? `<tr style="background:#fafafa">
-           <td style="font-size:9px;font-weight:800;text-transform:uppercase;color:#71717a;padding:8px 10px;border-bottom:2px solid #e4e4e7;">Nº</td>
-           <td style="font-size:9px;font-weight:800;text-transform:uppercase;color:#71717a;padding:8px 10px;border-bottom:2px solid #e4e4e7;">Vencimento</td>
-           <td style="font-size:9px;font-weight:800;text-transform:uppercase;color:#71717a;padding:8px 10px;border-bottom:2px solid #e4e4e7;">Valor</td>
-           <td style="font-size:9px;font-weight:800;text-transform:uppercase;color:#71717a;padding:8px 10px;border-bottom:2px solid #e4e4e7;">Forma</td>
-           <td style="font-size:9px;font-weight:800;text-transform:uppercase;color:#71717a;padding:8px 10px;border-bottom:2px solid #e4e4e7;">Estado</td>
+           <td style="font-size:9px;font-weight:800;text-transform:uppercase;color:#92400e;padding:8px 10px;border-bottom:2px solid #f3d9a8;">Nº</td>
+           <td style="font-size:9px;font-weight:800;text-transform:uppercase;color:#92400e;padding:8px 10px;border-bottom:2px solid #f3d9a8;">Vencimento</td>
+           <td style="font-size:9px;font-weight:800;text-transform:uppercase;color:#92400e;padding:8px 10px;border-bottom:2px solid #f3d9a8;">Valor</td>
+           <td style="font-size:9px;font-weight:800;text-transform:uppercase;color:#92400e;padding:8px 10px;border-bottom:2px solid #f3d9a8;">Forma</td>
+           <td style="font-size:9px;font-weight:800;text-transform:uppercase;color:#92400e;padding:8px 10px;border-bottom:2px solid #f3d9a8;">Estado</td>
          </tr>
          ${r.prestacoes.map(p => `
            <tr>
              <td style="padding:8px 10px;border-bottom:1px solid #f4f4f5;font-size:12px;">${p.numero}ª</td>
              <td style="padding:8px 10px;border-bottom:1px solid #f4f4f5;font-size:12px;">${p.dataPagamento ?? p.dataVencimento}</td>
              <td style="padding:8px 10px;border-bottom:1px solid #f4f4f5;font-size:12px;font-weight:800;color:${p.paga ? '#059669' : '#18181b'};">${fmt(p.valorPago ?? p.valor)}</td>
-             <td style="padding:8px 10px;border-bottom:1px solid #f4f4f5;font-size:12px;color:#71717a;">${p.paga && (p as any).formaPagamento ? (FORMA_MAP[(p as any).formaPagamento] ?? (p as any).formaPagamento) : '—'}</td>
+             <td style="padding:8px 10px;border-bottom:1px solid #f4f4f5;font-size:12px;color:#44403c;">${p.paga && (p as any).formaPagamento ? (FORMA_PAGAMENTO_LABEL[(p as any).formaPagamento] ?? (p as any).formaPagamento) : '—'}</td>
              <td style="padding:8px 10px;border-bottom:1px solid #f4f4f5;">
                <span style="display:inline-block;font-size:9px;font-weight:800;padding:2px 8px;border-radius:10px;background:${p.paga ? '#d1fae5' : '#fef3c7'};color:${p.paga ? '#065f46' : '#92400e'};">${p.paga ? 'PAGO' : 'PENDENTE'}</span>
              </td>
@@ -375,7 +381,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
         ${totalPago > 0 ? `<div class="summary-row"><span>Total Pago</span><span class="val-green">${fmt(totalPago)}</span></div>` : ''}
         ${(valorBase > 0 || multa > 0)
           ? `<div class="summary-row total"><span>Restante a Pagar</span><span class="${restante > 0 ? 'val-red' : 'val-green'}">${fmt(restante)}</span></div>`
-          : `<div class="summary-row"><span>Valor</span><span style="color:#71717a;font-style:italic;">A confirmar com o administrador</span></div>`}
+          : `<div class="summary-row"><span>Valor</span><span style="color:#92400e;font-style:italic;">A confirmar com o administrador</span></div>`}
       </div>
 
       ${linhasPrestacoes ? `
@@ -1750,26 +1756,77 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
             const downloadComprovativo = (c: Reservation, veh: ReturnType<typeof getVehicle>) => {
               const st  = RES_STATUS[c.status]?.label ?? c.status;
               const gar = garantiaInfo(c.dataInicio, veh?.year);
+              const isParcelado = (c.totalPrestacoes ?? 0) > 0;
+              const formaPagLabel = c.formaPagamento
+                ? (FORMA_PAGAMENTO_LABEL[c.formaPagamento] ?? c.formaPagamento)
+                : (isParcelado ? 'Prestações' : 'Não informado');
+              const compradorNome = fullUser?.nome ?? c.clientName;
+
               const body = `
-                <div class="doc-title">Comprovativo de Compra</div>
-                <div class="doc-sub">ID Operação ${c.id}</div>
-                <div class="section-title">Viatura</div>
+                <div class="doc-title">Contrato de Compra e Venda de Veículo</div>
+                <div class="doc-sub">Ref. Operação ${c.id.slice(0, 8).toUpperCase()}</div>
+
+                <div class="section-title">Vendedor</div>
+                <div class="summary-box">
+                  <div class="summary-row"><span>Nome / Razão Social</span><span><b>SOS Motors Lda.</b></span></div>
+                  <div class="summary-row"><span>NUIT</span><span>400XXXXXXX</span></div>
+                  <div class="summary-row"><span>Endereço</span><span>Av. Julius Nyerere, Maputo</span></div>
+                  <div class="summary-row"><span>Telefone</span><span>+258 84 000 0000</span></div>
+                </div>
+
+                <div class="section-title">Comprador</div>
+                <div class="summary-box">
+                  <div class="summary-row"><span>Nome</span><span><b>${compradorNome}</b></span></div>
+                  <div class="summary-row"><span>BI</span><span>${fullUser?.bi ?? 'Não informado'}</span></div>
+                  <div class="summary-row"><span>NUIT</span><span>${fullUser?.nuit ?? 'Não informado'}</span></div>
+                  <div class="summary-row"><span>Telefone</span><span>${c.clientPhone ?? fullUser?.telefone ?? 'Não informado'}</span></div>
+                  <div class="summary-row"><span>Endereço</span><span>${fullUser?.endereco ?? 'Não informado'}</span></div>
+                </div>
+
+                <div class="section-title">Dados do Veículo</div>
                 <div class="summary-box">
                   <div class="summary-row"><span>Viatura</span><span><b>${veh?.name ?? `#${c.vehicleId}`}</b></span></div>
                   <div class="summary-row"><span>Marca</span><span>${veh?.brand ?? '—'}</span></div>
-                  <div class="summary-row"><span>Tipo</span><span>${CAT_LABEL[veh?.cat ?? ''] ?? '—'}</span></div>
-                  <div class="summary-row"><span>Matrícula</span><span>${veh?.matricula ?? '—'}</span></div>
+                  <div class="summary-row"><span>Categoria</span><span>${CAT_LABEL[veh?.cat ?? ''] ?? '—'}</span></div>
+                  <div class="summary-row"><span>Combustível</span><span>${veh?.fuel ?? '—'}</span></div>
                   <div class="summary-row"><span>Ano</span><span>${veh?.year ?? '—'}</span></div>
+                  <div class="summary-row"><span>Matrícula</span><span>${veh?.matricula ?? '—'}</span></div>
                 </div>
-                <div class="section-title">Compra</div>
+
+                <div class="section-title">Informações da Venda</div>
                 <div class="summary-box">
-                  <div class="summary-row"><span>Data da compra</span><span>${fmtData(c.dataInicio)}</span></div>
-                  <div class="summary-row"><span>Estado</span><span><b>${st}</b></span></div>
-                  <div class="summary-row"><span>Garantia</span><span class="${gar.ativa ? 'val-green' : 'val-red'}">${gar.ativa ? `Activa até ${fmtData(gar.expira)}` : 'Expirada'}</span></div>
-                  <div class="summary-row total"><span>Valor</span><span class="val-amber">${veh?.price ?? fmt(c.valorTotal)}</span></div>
+                  <div class="summary-row"><span>Valor a Pagar</span><span class="val-amber">${veh?.price ?? fmt(c.valorTotal)}</span></div>
+                  <div class="summary-row"><span>Forma de Pagamento</span><span>${formaPagLabel}</span></div>
+                  <div class="summary-row"><span>Data da Venda</span><span>${fmtData(c.dataInicio)}</span></div>
+                  ${isParcelado ? `<div class="summary-row"><span>Plano de Prestações</span><span>${c.prestacoesPagas ?? 0} de ${c.totalPrestacoes} pagas</span></div>` : ''}
+                  <div class="summary-row total"><span>Estado</span><span><b>${st}</b></span></div>
+                </div>
+
+                <div class="clause-title">Cláusulas de Garantia</div>
+                <p class="clause-text">O veículo é entregue com garantia de 2 (dois) anos a partir da data de compra, ${gar.ativa ? `válida até ${fmtData(gar.expira)}` : `expirada em ${fmtData(gar.expira)}`}, cobrindo defeitos de fabrico e de montagem dos componentes internos do motor e da caixa de velocidades. Excluem-se desta garantia as peças de desgaste natural, tais como pneus, pastilhas e discos de travão, baterias, filtros e fluídos.</p>
+
+                <div class="clause-title">Cláusulas do Contrato</div>
+                <p class="clause-text">
+                  1. A propriedade do veículo transfere-se para o Comprador ${isParcelado ? 'apenas após a liquidação integral do valor acordado' : 'no acto do pagamento integral do valor acordado'}.<br>
+                  2. O Comprador declara ter inspeccionado o veículo e aceita o seu estado actual, ressalvados os termos de garantia acima descritos.<br>
+                  3. É da responsabilidade do Comprador tratar da transferência de registo e demais formalidades legais junto das entidades competentes.<br>
+                  4. Qualquer litígio resultante deste contrato será resolvido nos termos da legislação da República de Moçambique.
+                </p>
+
+                <div class="sign-grid">
+                  <div>
+                    <div class="sign-line"></div>
+                    <div class="sign-name">SOS Motors Lda.</div>
+                    <div class="sign-role">Vendedor</div>
+                  </div>
+                  <div>
+                    <div class="sign-line"></div>
+                    <div class="sign-name">${compradorNome}</div>
+                    <div class="sign-role">Comprador</div>
+                  </div>
                 </div>
               `;
-              printAsPDF(body, `Compra ${c.id}`);
+              printAsPDF(body, `Contrato de Compra ${c.id}`);
             };
 
             return (
@@ -1960,7 +2017,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                   className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-sm font-bold transition-all active:scale-[0.98]"
                                 >
                                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                  Baixar comprovativo
+                                  Baixar contrato de compra
                                 </button>
                                 {(c.status === 'pendente' || c.status === 'compra_aprovada') && cancelConfirm !== c.id && (
                                   <button
@@ -1973,35 +2030,53 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                                 )}
                               </div>
                               {cancelConfirm === c.id && (
-                                <div className="border border-red-500/20 bg-red-500/5 rounded-xl px-4 py-4 space-y-3">
-                                  <div>
-                                    <p className="text-sm text-white font-bold mb-0.5">Cancelar compra?</p>
-                                    <p className="text-xs text-white/70">Esta ação não pode ser desfeita. O pedido de compra de <span className="text-white font-bold">{veh?.name ?? getVehicleName(c.vehicleId)}</span> será cancelado.</p>
-                                  </div>
-                                  <div>
-                                    <label className="text-xs text-white font-bold block mb-1">Motivo do Cancelamento <span className="text-red-400">*</span></label>
-                                    <textarea
-                                      value={cancelMotivo}
-                                      onChange={e => setCancelMotivo(e.target.value)}
-                                      placeholder="Descreva o motivo (ex: mudança de decisão, dificuldade financeira…)"
-                                      rows={3}
-                                      className="w-full bg-zinc-900 border border-zinc-700 focus:border-red-400 rounded-lg px-3 py-2 text-xs text-white placeholder-white/30 resize-none outline-none transition-colors"
-                                    />
-                                  </div>
-                                  <div className="flex gap-2">
-                                    <button
-                                      onClick={() => handleCancelCompra(c.id)}
-                                      disabled={!cancelMotivo.trim()}
-                                      className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-black transition-colors"
-                                    >
-                                      Sim, cancelar
-                                    </button>
-                                    <button
-                                      onClick={() => { setCancelConfirm(null); setCancelMotivo(''); }}
-                                      className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-xs font-bold transition-colors"
-                                    >
-                                      Não, manter
-                                    </button>
+                                <div
+                                  className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm"
+                                  onClick={() => { setCancelConfirm(null); setCancelMotivo(''); }}
+                                >
+                                  <div
+                                    className="bg-zinc-900 border border-amber-500/30 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl"
+                                    onClick={e => e.stopPropagation()}
+                                  >
+                                    <div className="bg-amber-500 px-5 py-4 flex items-center justify-between">
+                                      <h2 className="text-zinc-950 font-black text-base">Cancelar Compra</h2>
+                                      <button
+                                        onClick={() => { setCancelConfirm(null); setCancelMotivo(''); }}
+                                        className="w-7 h-7 flex items-center justify-center rounded-lg text-zinc-950 hover:bg-black/10 transition-colors"
+                                      >
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                      </button>
+                                    </div>
+                                    <div className="p-5 space-y-4">
+                                      <p className="text-sm text-white leading-snug">
+                                        Deseja cancelar o pedido de compra de <span className="font-black text-white">{veh?.name ?? getVehicleName(c.vehicleId)}</span>? Esta acção não pode ser desfeita.
+                                      </p>
+                                      <div>
+                                        <label className="text-xs text-white font-bold block mb-1">Motivo do Cancelamento <span className="text-amber-400">*</span></label>
+                                        <textarea
+                                          value={cancelMotivo}
+                                          onChange={e => setCancelMotivo(e.target.value)}
+                                          placeholder="Descreva o motivo (ex: mudança de decisão, dificuldade financeira…)"
+                                          rows={3}
+                                          className="w-full bg-zinc-800 border border-zinc-700 focus:border-amber-500 rounded-lg px-3 py-2 text-xs text-white placeholder-white/40 resize-none outline-none transition-colors"
+                                        />
+                                      </div>
+                                      <div className="flex gap-3 pt-1">
+                                        <button
+                                          onClick={() => { setCancelConfirm(null); setCancelMotivo(''); }}
+                                          className="flex-1 py-2.5 rounded-xl text-sm font-black text-zinc-950 bg-emerald-500 hover:bg-emerald-400 transition-colors"
+                                        >
+                                          Cancelar
+                                        </button>
+                                        <button
+                                          onClick={() => handleCancelCompra(c.id)}
+                                          disabled={!cancelMotivo.trim()}
+                                          className="flex-1 py-2.5 rounded-xl text-sm font-black text-white bg-red-500 hover:bg-red-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                          Confirmar
+                                        </button>
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               )}
@@ -2096,7 +2171,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                     ${historico.map(ev => `
                       <tr>
                         <td>${ev.data.length === 10 ? fmtData(ev.data) : (ev.data || '—')}</td>
-                        <td>${ev.sub}<br><span style="font-size:10px;color:#71717a;">${ev.label}</span></td>
+                        <td>${ev.sub}<br><span style="font-size:10px;color:#92400e;">${ev.label}</span></td>
                         <td><span class="badge badge-${ev.tipo}">${tipoLabel[ev.tipo]}</span></td>
                         <td class="val-green" style="text-align:right">${fmt(ev.valor)}</td>
                       </tr>
@@ -2437,7 +2512,7 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                       </div>
                       <div class="section-title">Facturas em Aberto</div>
                       <table><thead><tr><th>Factura</th><th>Descrição</th><th>Vencimento</th><th>Valor</th><th>Estado</th></tr></thead>
-                      <tbody>${rows || '<tr><td colspan="5" style="text-align:center;color:#a1a1aa">Sem dívidas em aberto</td></tr>'}</tbody></table>
+                      <tbody>${rows || '<tr><td colspan="5" style="text-align:center;color:#92400e">Sem dívidas em aberto</td></tr>'}</tbody></table>
                     `;
                     printAsPDF(body, 'Resumo de Dívida');
                   };
@@ -2450,9 +2525,9 @@ export function ClientProfilePage({ onExit: _onExit }: { onExit?: () => void }) 
                       <div class="doc-title">Comprovativo de Contratos</div>
                       <div class="doc-sub">Gerado a ${hoje}</div>
                       <div class="section-title">Alugueres</div>
-                      <table><thead><tr><th>Viatura</th><th>Início</th><th>Fim</th><th>Valor</th><th>Estado</th></tr></thead><tbody>${rowsA || '<tr><td colspan="5" style="text-align:center;color:#a1a1aa">Sem alugueres</td></tr>'}</tbody></table>
+                      <table><thead><tr><th>Viatura</th><th>Início</th><th>Fim</th><th>Valor</th><th>Estado</th></tr></thead><tbody>${rowsA || '<tr><td colspan="5" style="text-align:center;color:#92400e">Sem alugueres</td></tr>'}</tbody></table>
                       <div class="section-title">Compras</div>
-                      <table><thead><tr><th>Viatura</th><th>Data</th><th>—</th><th>Prestação</th><th>Estado</th></tr></thead><tbody>${rowsC || '<tr><td colspan="5" style="text-align:center;color:#a1a1aa">Sem compras</td></tr>'}</tbody></table>
+                      <table><thead><tr><th>Viatura</th><th>Data</th><th>—</th><th>Prestação</th><th>Estado</th></tr></thead><tbody>${rowsC || '<tr><td colspan="5" style="text-align:center;color:#92400e">Sem compras</td></tr>'}</tbody></table>
                     `;
                     printAsPDF(body, 'Comprovativo de Contratos');
                   };

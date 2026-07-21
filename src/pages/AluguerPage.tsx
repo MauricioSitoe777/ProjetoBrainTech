@@ -64,6 +64,9 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
   const aluguerVehicles = useMemo(() => allVehicles.filter(v => v.mode === 'aluguer'), [allVehicles]);
   const aluguerIds = useMemo(() => new Set(aluguerVehicles.map(v => v.id)), [aluguerVehicles]);
 
+  const vehicleName = (id: number) => allVehicles.find(v => v.id === id)?.name ?? VEHICLES.find(v => v.id === id)?.name ?? `Viatura #${id}`;
+  const vehicleMatricula = (id: number) => allVehicles.find(v => v.id === id)?.matricula ?? VEHICLES.find(v => v.id === id)?.matricula ?? '';
+
   const getUrlParams = () => new URLSearchParams(window.location.search);
 
   const [tab, setTab] = useState<Tab>(() => {
@@ -83,6 +86,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
 
   const [gerirId,      setGerirId]      = useState<string | null>(null);
   const [acoesSearch,  setAcoesSearch]  = useState('');
+  const [historicoSearch, setHistoricoSearch] = useState('');
   const [reservaModal, setReservaModal] = useState<Reservation | null>(null);
   const [pagamentoModal, setPagamentoModal] = useState<{
     reservationId: string;
@@ -224,8 +228,17 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
     aluguerReservations
       .filter(r => r.status === 'concluida' || r.status === 'cancelada')
       .filter(r => selectedVehicle === null || r.vehicleId === selectedVehicle)
+      .filter(r => {
+        if (!historicoSearch.trim()) return true;
+        const q = historicoSearch.toLowerCase();
+        return r.clientName.toLowerCase().includes(q)
+          || vehicleName(r.vehicleId).toLowerCase().includes(q)
+          || vehicleMatricula(r.vehicleId).toLowerCase().includes(q)
+          || (r.clientPhone ?? '').toLowerCase().includes(q)
+          || (r.clientEmail ?? '').toLowerCase().includes(q);
+      })
       .sort((a, b) => b.dataFim.localeCompare(a.dataFim)),
-    [aluguerReservations, selectedVehicle]
+    [aluguerReservations, selectedVehicle, historicoSearch] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const kpis = useMemo(() => ({
@@ -235,8 +248,6 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
     devolucaoPendente: aluguerReservations.filter(r => r.status === 'devolucao_pendente').length,
     cancelamentos:     aluguerReservations.filter(r => r.status === 'cancelada').length,
   }), [aluguerReservations]);
-
-  const vehicleName = (id: number) => allVehicles.find(v => v.id === id)?.name ?? VEHICLES.find(v => v.id === id)?.name ?? `Viatura #${id}`;
 
   const accionaveisCount = aluguerReservations.filter(r => ALUGUER_ACTIONABLE_STATUSES.has(r.status)).length;
 
@@ -621,9 +632,21 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
         {/* TAB: Histórico */}
         {tab === 'reservas' && (
           <div className="space-y-4">
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative flex-1 min-w-[240px]">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-400 pointer-events-none">
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Pesquisar por nome, matrícula ou contacto..."
+                  value={historicoSearch}
+                  onChange={e => setHistoricoSearch(e.target.value)}
+                  className="w-full bg-zinc-900 border-2 border-amber-500/40 text-white rounded-xl pl-11 pr-4 py-2.5 text-sm font-medium placeholder-white/40 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-colors shadow-[0_0_0_1px_rgba(245,158,11,0.08)]"
+                />
+              </div>
               <select value={selectedVehicle ?? ''} onChange={e => setSelectedVehicle(e.target.value ? Number(e.target.value) : null)}
-                className="bg-zinc-900 border border-zinc-800 text-white rounded-lg px-3 py-2 text-sm">
+                className="bg-zinc-900 border border-zinc-800 text-white rounded-lg px-3 py-2.5 text-sm shrink-0">
                 <option value="">Todas as viaturas</option>
                 {aluguerVehicles.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
               </select>

@@ -10,7 +10,10 @@ const FUELS = ['Diesel', 'Gasolina', 'Híbrido', 'Eléctrico'];
 
 const emptyForm: Omit<VehicleData, 'id'> = {
   name: '', brand: '', cat: 'suv', mode: 'aluguer', price: '', description: '', img: '', images: [], fuel: 'Gasolina', seats: 5, year: 2024, discount: 0, available: true, matricula: '', motivoIndisponibilidade: '', dataDisponibilidade: '',
+  km: undefined, cor: '', custoAquisicao: undefined, precoVenda: undefined,
 };
+
+const fmtMT = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' MT';
 
 export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
   const { vehicles, addVehicle, updateVehicle, removeVehicle } = useVehicles();
@@ -99,6 +102,11 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
       matricula: v.matricula ?? '',
       motivoIndisponibilidade: v.motivoIndisponibilidade ?? '',
       dataDisponibilidade: v.dataDisponibilidade ?? '',
+      km: v.km,
+      cor: v.cor ?? '',
+      custoAquisicao: v.custoAquisicao,
+      precoVenda: v.precoVenda,
+      dataCadastro: v.dataCadastro,
     });
     setImageInput('');
     setShowForm(true);
@@ -382,6 +390,9 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
               </div>
 
               <div className="p-6 flex flex-col gap-4">
+
+                <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest pb-2 border-b border-zinc-800">Dados do Veículo</p>
+
                 {/* Marca (Campo Único) */}
                 <div>
                   <label className="text-white text-sm font-medium block mb-1.5">Marca / Modelo *</label>
@@ -487,6 +498,30 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
                   />
                 </div>
 
+                {/* KM + Cor */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-white text-sm font-medium block mb-1.5">Quilometragem (KM)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={form.km ?? ''}
+                      onChange={e => setForm(f => ({ ...f, km: e.target.value ? Math.max(0, parseInt(e.target.value) || 0) : undefined }))}
+                      placeholder="Ex: 15000"
+                      className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-white outline-none focus:border-zinc-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-white text-sm font-medium block mb-1.5">Cor</label>
+                    <input
+                      value={form.cor ?? ''}
+                      onChange={e => setForm(f => ({ ...f, cor: e.target.value }))}
+                      placeholder="Ex: Branco"
+                      className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-white outline-none focus:border-zinc-600"
+                    />
+                  </div>
+                </div>
+
                 {/* Desconto + Disponibilidade */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -542,6 +577,56 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
                     className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-white outline-none focus:border-zinc-600 resize-none"
                   />
                 </div>
+
+                <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest pb-2 pt-2 border-b border-zinc-800">Dados de Entrada</p>
+
+                {/* Custo de Aquisição + Preço de Venda */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-white text-sm font-medium block mb-1.5">Custo de Aquisição (MT)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={form.custoAquisicao ?? ''}
+                      onChange={e => setForm(f => ({ ...f, custoAquisicao: e.target.value ? Math.max(0, parseFloat(e.target.value) || 0) : undefined }))}
+                      placeholder="Ex: 3.000.000"
+                      className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-white outline-none focus:border-zinc-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-white text-sm font-medium block mb-1.5">Preço de Venda (MT)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={form.precoVenda ?? ''}
+                      onChange={e => setForm(f => ({ ...f, precoVenda: e.target.value ? Math.max(0, parseFloat(e.target.value) || 0) : undefined }))}
+                      placeholder="Ex: 3.800.000"
+                      className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-white outline-none focus:border-zinc-600"
+                    />
+                  </div>
+                </div>
+
+                {/* Lucro estimado (calculado) + Data de Cadastro (somente leitura) */}
+                {(form.custoAquisicao !== undefined || form.precoVenda !== undefined || form.dataCadastro) && (
+                  <div className="grid grid-cols-2 gap-3">
+                    {(form.custoAquisicao !== undefined && form.precoVenda !== undefined) && (
+                      <div className="rounded-xl bg-zinc-950/40 border border-amber-500/20 px-4 py-2.5">
+                        <p className="text-[11px] text-amber-400 font-bold uppercase tracking-wide mb-0.5">Valor Estimado do Lucro</p>
+                        <p className={`text-sm font-black ${form.precoVenda - form.custoAquisicao >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {fmtMT(form.precoVenda - form.custoAquisicao)}
+                        </p>
+                      </div>
+                    )}
+                    {form.dataCadastro && (
+                      <div className="rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5">
+                        <p className="text-[11px] text-white font-bold uppercase tracking-wide mb-0.5">Data de Cadastro</p>
+                        <p className="text-sm font-semibold text-white">{new Date(form.dataCadastro + 'T00:00:00').toLocaleDateString('pt-PT')}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest pb-2 pt-2 border-b border-zinc-800">Documentos</p>
 
                 {/* Imagens */}
                 <div>

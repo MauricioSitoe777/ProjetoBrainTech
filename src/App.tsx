@@ -29,6 +29,7 @@ import { XitiqueProvider } from "./context/XitiqueContext";
 import { XitiquePage } from "./pages/XitiquePage";
 import { FinanceProvider } from "./context/FinanceContext";
 import { FinancePage } from "./pages/FinancePage";
+import { MovimentosFinanceirosPage } from "./pages/MovimentosFinanceirosPage";
 import { AluguerPage } from "./pages/AluguerPage";
 import { CompraPage } from "./pages/CompraPage";
 import { MotoristasProvider } from "./context/MotoristasContext";
@@ -172,7 +173,8 @@ function AppInner() {
           if (path.startsWith("/admin/compra"))     return <CompraPage />;
           if (path.startsWith("/admin/veiculos"))   return <VehiclesPage />;
           if (path.startsWith("/admin/xitique"))    return <XitiquePage />;
-          if (path.startsWith("/admin/financas"))   return <FinancePage />;
+          if (path.startsWith("/admin/financas"))    return <FinancePage />;
+          if (path.startsWith("/admin/financeiro"))  return <MovimentosFinanceirosPage />;
           if (path.startsWith("/admin/motoristas"))     return <MotoristasPage />;
           if (path.startsWith("/admin/notificacoes"))   return <NotificacoesAdminPage />;
           if (path.startsWith("/admin/viaturas-em-uso")) return <ViaturaEmUsoPage />;

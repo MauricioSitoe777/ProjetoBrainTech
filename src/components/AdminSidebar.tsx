@@ -174,6 +174,16 @@ export function AdminSidebar({ onClose }: Props) {
 
         <div className="my-1.5 h-px bg-zinc-800/80" />
 
+        <p className="px-3 pt-1 pb-1 text-[10px] font-black text-amber-400/70 uppercase tracking-widest">Financeiro</p>
+        <NavLink
+          active={isSectionActive('/admin/financeiro')}
+          onClick={() => go('/admin/financeiro')}
+          label="Movimentos Financeiros"
+          icon={<Icon d="M21 12V7H5a2 2 0 0 1 0-4h14v4" d2="M3 5v14a2 2 0 0 0 2 2h16v-5" extra="M18 12a2 2 0 0 0 0 4h4v-4z" />}
+        />
+
+        <div className="my-1.5 h-px bg-zinc-800/80" />
+
         <NavLink
           active={isSectionActive('/admin/notificacoes')}
           onClick={() => go('/admin/notificacoes')}

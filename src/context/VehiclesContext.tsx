@@ -21,6 +21,11 @@ export interface VehicleData {
   motivoIndisponibilidade?: string;
   dataDisponibilidade?: string;
   matricula?: string;
+  km?: number;
+  cor?: string;
+  custoAquisicao?: number;
+  precoVenda?: number;
+  dataCadastro?: string;
 }
 
 interface ApiVehicle {
@@ -31,6 +36,11 @@ interface ApiVehicle {
   matricula?: string;
   motivo_indisponibilidade?: string;
   data_disponibilidade?: string;
+  km?: number;
+  cor?: string;
+  custo_aquisicao?: number | string;
+  preco_venda?: number | string;
+  created_at?: string;
 }
 
 function fromApi(v: ApiVehicle): VehicleData {
@@ -52,6 +62,11 @@ function fromApi(v: ApiVehicle): VehicleData {
     matricula:              v.matricula,
     motivoIndisponibilidade: v.motivo_indisponibilidade,
     dataDisponibilidade:     v.data_disponibilidade,
+    km:                     v.km,
+    cor:                    v.cor,
+    custoAquisicao:         v.custo_aquisicao !== undefined && v.custo_aquisicao !== null ? Number(v.custo_aquisicao) : undefined,
+    precoVenda:             v.preco_venda !== undefined && v.preco_venda !== null ? Number(v.preco_venda) : undefined,
+    dataCadastro:           v.created_at ? v.created_at.slice(0, 10) : undefined,
   };
 }
 
@@ -59,6 +74,9 @@ function toApi(v: Partial<VehicleData>): Record<string, unknown> {
   const out: Record<string, unknown> = { ...v };
   if ('motivoIndisponibilidade' in v) { out.motivo_indisponibilidade = v.motivoIndisponibilidade; delete out.motivoIndisponibilidade; }
   if ('dataDisponibilidade' in v)     { out.data_disponibilidade = v.dataDisponibilidade; delete out.dataDisponibilidade; }
+  if ('custoAquisicao' in v)          { out.custo_aquisicao = v.custoAquisicao; delete out.custoAquisicao; }
+  if ('precoVenda' in v)              { out.preco_venda = v.precoVenda; delete out.precoVenda; }
+  if ('dataCadastro' in v)            { delete out.dataCadastro; } // somente leitura — gerido pelo servidor (created_at)
   return out;
 }
 
