@@ -253,7 +253,7 @@ export default function VehicleDetailsPage({
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
                   Descrição do Veículo
                 </p>
-                <p className="max-w-[56ch] text-[13px] leading-6 text-zinc-300">
+                <p className="max-w-[56ch] text-[13px] leading-6 text-white">
                   {vehicle.description || "Nenhuma descrição detalhada disponível para este veículo no momento."}
                 </p>
               </div>

@@ -100,7 +100,6 @@ const DOC_SHARED_CSS = `
   .summary-row:last-child { border-bottom: none; }
   .summary-row.total { font-weight: 800; background: #fdf3e0; }
   .total-row td { font-weight: 900; background: #fdf3e0; border-top: 2px solid #f3d9a8; }
-  .doc-footer { margin-top: 32px; text-align: center; font-size: 10px; color: #18181b; border-top: 1px solid #f3d9a8; padding-top: 14px; }
   .clause-title { font-size: 12px; font-weight: 900; color: #b45309; margin: 14px 0 4px; }
   .clause-text { font-size: 11px; color: #18181b; line-height: 1.6; text-align: justify; }
   .sign-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 28px; text-align: center; }
@@ -115,7 +114,6 @@ const DOC_BODY = (bodyHtml: string) => `
     <div class="doc-meta">Documento gerado pela plataforma<br>SOS Motors</div>
   </div>
   ${bodyHtml}
-  <div class="doc-footer">SOS Motors &middot; Este documento foi gerado automaticamente</div>
 `;
 
 // Abre o documento em nova aba com toolbar de visualização e botão de descarregar

@@ -16,6 +16,7 @@ import {
 } from '../data/reservationsMock';
 import {
   isVehicleAvailable,
+  isSoldVehicle,
   validateDateRange,
 } from '../lib/availability';
 import { calculateRentalTotal, parseDailyRateFromPrice } from '../lib/rentalPricing';
@@ -27,6 +28,7 @@ import { api } from '../lib/api';
 
 interface ReservationsContextType {
   reservations: Reservation[];
+  availabilityReservations: Reservation[];
   blocks: BlockedPeriod[];
   rules: BusinessRules;
   updateRules: (data: Partial<BusinessRules>) => void;
@@ -82,6 +84,7 @@ function reservationToApi(r: Partial<Reservation>): Record<string, unknown> {
   if (r.motivoCancelamento  !== undefined) out.motivo_cancelamento  = r.motivoCancelamento;
   if (r.pedidoExtensao      !== undefined) out.pedido_extensao      = r.pedidoExtensao;
   if (r.multaAtraso         !== undefined) out.multa_atraso          = r.multaAtraso;
+  if (r.dataLiquidacao      !== undefined) out.data_liquidacao       = r.dataLiquidacao;
   if (r.estadoViaturaDevolucao !== undefined) out.estado_viatura_devolucao = r.estadoViaturaDevolucao;
   if (r.dataRegistoDevolucao   !== undefined) out.data_registo_devolucao   = r.dataRegistoDevolucao;
   if (r.reembolsoValor         !== undefined) out.reembolso_valor          = r.reembolsoValor;
@@ -152,6 +155,42 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
+  // Disponibilidade pública (datas + estado, sem dados do cliente) — carregada
+  // sempre, mesmo sem sessão iniciada, para que "vendido"/"reservado" fique
+  // correcto para visitantes anónimos a navegar no catálogo público.
+  const [publicAvailability, setPublicAvailability] = useState<
+    { id: string; vehicleId: number; status: ReservationStatus; dataInicio: string; dataFim: string }[]
+  >([]);
+
+  useEffect(() => {
+    api.get<typeof publicAvailability>('/reservations-availability')
+      .then(data => { if (Array.isArray(data)) setPublicAvailability(data); })
+      .catch(() => { /* API indisponível — mantém apenas o que já estiver em reservations */ });
+  }, []);
+
+  // Vista efectiva para cálculos de disponibilidade: enriquece as reservas já
+  // conhecidas (completas, quando há sessão) com as entradas públicas cujo id
+  // ainda não existe localmente — nunca substitui uma reserva já carregada.
+  const availabilityReservations = useMemo(() => {
+    const knownIds = new Set(reservations.map(r => r.id));
+    const extra: Reservation[] = publicAvailability
+      .filter(p => !knownIds.has(p.id))
+      .map(p => ({
+        id: p.id,
+        vehicleId: p.vehicleId,
+        clientName: '',
+        dataInicio: p.dataInicio,
+        dataFim: p.dataFim,
+        horaLevantamento: '00:00',
+        horaDevolucao: '00:00',
+        status: p.status,
+        valorTotal: 0,
+        deposito: 0,
+        createdAt: p.dataInicio,
+      }));
+    return extra.length > 0 ? [...reservations, ...extra] : reservations;
+  }, [reservations, publicAvailability]);
+
   // Sincroniza com a API quando o utilizador faz login
   useEffect(() => {
     if (!authUser) return;
@@ -190,7 +229,7 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
   }, [reservations, authUser]);
 
   const checkAvailability = (vehicleId: number, start: string, end: string, excludeId?: string) =>
-    isVehicleAvailable(vehicleId, start, end, reservations, blocks, excludeId);
+    isVehicleAvailable(vehicleId, start, end, availabilityReservations, blocks, excludeId);
 
   const validateDates = (start: string, end: string, horaLevantamento?: string) =>
     validateDateRange(start, end, rules, new Date(), horaLevantamento);
@@ -205,6 +244,8 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
 
       const avail = checkAvailability(data.vehicleId, data.dataInicio, data.dataFim);
       if (!avail.available) return { ok: false, error: avail.conflicts[0] ?? 'Viatura indisponível.' };
+    } else if (isSoldVehicle(data.vehicleId, availabilityReservations)) {
+      return { ok: false, error: 'Esta viatura já foi vendida ou tem uma compra em curso.' };
     }
 
     const newRes: Reservation = {
@@ -495,6 +536,7 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
     <ReservationsContext.Provider
       value={{
         reservations: visibleReservations,
+        availabilityReservations,
         blocks: authUser?.role === 'admin' ? blocks : [],
         rules,
         updateRules,

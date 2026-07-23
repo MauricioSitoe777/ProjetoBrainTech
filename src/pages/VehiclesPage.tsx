@@ -1,7 +1,6 @@
 ﻿import { useState, useMemo, useRef } from 'react';
 import { useVehicles, type VehicleData } from '../context/VehiclesContext';
 import { useReservations } from '../context/ReservationsContext';
-import { useRoute } from '../hooks/useRoute';
 import { processImage } from '../lib/imageUtils';
 
 const CATEGORIES = ['suv', 'pickup', 'sedan', 'hatchback', 'van'];
@@ -18,7 +17,6 @@ const fmtMT = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\
 export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
   const { vehicles, addVehicle, updateVehicle, removeVehicle } = useVehicles();
   const { reservations, blocks } = useReservations();
-  const { navigate } = useRoute();
   const [showForm, setShowForm] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
 
@@ -328,18 +326,6 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
                   </div>
                   <div className="flex flex-col gap-2">
                     <button
-                      onClick={() => navigate('/admin/aluguer')}
-                      className="w-full py-2 rounded-xl text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition text-left px-3"
-                    >
-                      Alugar
-                    </button>
-                    <button
-                      onClick={() => navigate('/admin/compra')}
-                      className="w-full py-2 rounded-xl text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition text-left px-3"
-                    >
-                      Colocar à Venda
-                    </button>
-                    <button
                       onClick={() => openEdit(sv)}
                       className="w-full py-2 rounded-xl text-xs font-semibold border border-zinc-700 text-white hover:bg-zinc-800 transition text-left px-3"
                     >
@@ -421,7 +407,7 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
                     <label className="text-white text-sm font-medium block mb-1.5">Modalidade</label>
                     <select
                       value={form.mode}
-                      onChange={e => setForm(f => ({ ...f, mode: e.target.value }))}
+                      onChange={e => setForm(f => ({ ...f, mode: e.target.value, precoVenda: e.target.value === 'aluguer' ? undefined : f.precoVenda }))}
                       className="w-full appearance-none rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white outline-none focus:border-zinc-600 cursor-pointer"
                     >
                       {MODES.map(m => <option key={m} value={m} className="bg-zinc-900">{m.charAt(0).toUpperCase() + m.slice(1)}</option>)}
@@ -493,7 +479,7 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
                   <input
                     value={form.matricula ?? ''}
                     onChange={e => setForm(f => ({ ...f, matricula: e.target.value.toUpperCase() }))}
-                    placeholder="Ex: MZ-12-AB-34"
+                    placeholder="Ex: ABJ 768 MP"
                     className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-white outline-none focus:border-zinc-600 font-mono tracking-widest uppercase"
                   />
                 </div>
@@ -580,30 +566,44 @@ export function VehiclesPage({ onExit: _onExit }: { onExit?: () => void }) {
 
                 <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest pb-2 pt-2 border-b border-zinc-800">Dados de Entrada</p>
 
-                {/* Custo de Aquisição + Preço de Venda */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* Custo de Aquisição + Preço de Venda (só para compra — um carro de aluguer não é vendido) */}
+                <div className={form.mode === 'compra' ? 'grid grid-cols-2 gap-3' : ''}>
                   <div>
                     <label className="text-white text-sm font-medium block mb-1.5">Custo de Aquisição (MT)</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={form.custoAquisicao ?? ''}
-                      onChange={e => setForm(f => ({ ...f, custoAquisicao: e.target.value ? Math.max(0, parseFloat(e.target.value) || 0) : undefined }))}
-                      placeholder="Ex: 3.000.000"
-                      className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-white outline-none focus:border-zinc-600"
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={form.custoAquisicao !== undefined ? form.custoAquisicao.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ''}
+                        onChange={e => {
+                          const digits = e.target.value.replace(/\D/g, '');
+                          setForm(f => ({ ...f, custoAquisicao: digits ? parseInt(digits, 10) : undefined }));
+                        }}
+                        placeholder="Ex: 3.000.000"
+                        className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 pl-4 pr-12 py-2.5 text-sm text-white placeholder:text-white outline-none focus:border-zinc-600"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-black text-amber-400 pointer-events-none">,00</span>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-white text-sm font-medium block mb-1.5">Preço de Venda (MT)</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={form.precoVenda ?? ''}
-                      onChange={e => setForm(f => ({ ...f, precoVenda: e.target.value ? Math.max(0, parseFloat(e.target.value) || 0) : undefined }))}
-                      placeholder="Ex: 3.800.000"
-                      className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 px-4 py-2.5 text-sm text-white placeholder:text-white outline-none focus:border-zinc-600"
-                    />
-                  </div>
+                  {form.mode === 'compra' && (
+                    <div>
+                      <label className="text-white text-sm font-medium block mb-1.5">Preço de Venda (MT)</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={form.precoVenda !== undefined ? form.precoVenda.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ''}
+                          onChange={e => {
+                            const digits = e.target.value.replace(/\D/g, '');
+                            setForm(f => ({ ...f, precoVenda: digits ? parseInt(digits, 10) : undefined }));
+                          }}
+                          placeholder="Ex: 3.800.000"
+                          className="w-full rounded-xl bg-zinc-950/40 border border-zinc-800 pl-4 pr-12 py-2.5 text-sm text-white placeholder:text-white outline-none focus:border-zinc-600"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-black text-amber-400 pointer-events-none">,00</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Lucro estimado (calculado) + Data de Cadastro (somente leitura) */}

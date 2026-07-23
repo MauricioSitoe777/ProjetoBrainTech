@@ -18,7 +18,7 @@ export default function VehicleCard({ vehicle, isSold = false }: VehicleCardProp
   const dataDisp = (vehicle as any).dataDisponibilidade as string | undefined;
 
   const formatDate = (iso: string) => {
-    const [y, m, d] = iso.split('-').map(Number);
+    const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
     const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
     return `${d} ${months[m - 1]} ${y}`;
   };

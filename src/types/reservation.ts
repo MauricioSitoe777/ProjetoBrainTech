@@ -69,6 +69,7 @@ export interface Reservation {
   referenciaPagamento?: string;
   pedidoExtensao?: PedidoExtensao;
   multaAtraso?: number; // multa por atraso na devolução (MT)
+  dataLiquidacao?: string; // data (ISO) em que a compra foi liquidada — usada na vitrine "Vendidos"
   estadoViaturaDevolucao?: string; // observação sobre o estado da viatura registada na devolução
   dataRegistoDevolucao?: string;   // data (ISO) em que a observação foi registada
   reembolsoValor?: number;         // valor reembolsado ao cliente (caução/taxas) por a viatura ter voltado em bom estado
