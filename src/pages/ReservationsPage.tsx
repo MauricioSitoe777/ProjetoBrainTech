@@ -1,9 +1,10 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { VEHICLES } from '../data/constants';
 import { AvailabilityCalendar } from '../components/reservations/AvailabilityCalendar';
 import { BlockPeriodModal } from '../components/reservations/BlockPeriodModal';
 import { BusinessRulesPanel } from '../components/reservations/BusinessRulesPanel';
 import { useReservations } from '../context/ReservationsContext';
+import { useVehicles } from '../context/VehiclesContext';
 import type { ReservationStatus } from '../types/reservation';
 
 const STATUS_CFG: Record<ReservationStatus, { label: string; className: string }> = {
@@ -27,6 +28,7 @@ type Tab = 'calendario' | 'reservas' | 'bloqueios' | 'regras';
 
 export function ReservationsPage({ onExit }: { onExit?: () => void }) {
   const { reservations, blocks, updateReservation, cancelReservation, removeBlock } = useReservations();
+  const { vehicles } = useVehicles();
   const [tab, setTab] = useState<Tab>('calendario');
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
   const [showBlockModal, setShowBlockModal] = useState(false);
@@ -44,7 +46,7 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
     setTimeout(() => setUpdatingPrestacao(null), 800);
   };
 
-  const rentalVehicles = useMemo(() => VEHICLES.filter(v => v.mode === 'aluguer'), []);
+  const rentalVehicles = useMemo(() => vehicles.filter(v => v.mode === 'aluguer'), [vehicles]);
 
   const filteredReservations = useMemo(() => {
     return reservations
@@ -60,7 +62,7 @@ export function ReservationsPage({ onExit }: { onExit?: () => void }) {
     bloqueios: blocks.length,
   }), [reservations, blocks]);
 
-  const vehicleName = (id: number) => VEHICLES.find(v => v.id === id)?.name ?? `Viatura #${id}`;
+  const vehicleName = (id: number) => vehicles.find(v => v.id === id)?.name ?? VEHICLES.find(v => v.id === id)?.name ?? `Viatura #${id}`;
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'calendario', label: 'Calendário' },

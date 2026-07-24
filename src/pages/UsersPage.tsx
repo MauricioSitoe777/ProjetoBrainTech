@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useUsers } from '../context/UsersContext';
 import { useAuth } from '../context/AuthContext';
 import { useMotoristas } from '../context/MotoristasContext';
@@ -41,7 +41,7 @@ const restrictionConfig = {
 };
 
 type MainTab = 'utilizadores' | 'motoristas' | 'visitantes';
-type UserSubFilter = 'todos' | 'admins' | 'clientes';
+type UserSubFilter = 'todos' | 'admins' | 'clientes' | 'motoristas';
 type GuestSubFilter = 'todos' | 'pendentes' | 'aprovado' | 'aguarda_documentos' | 'documentos_submetidos' | 'em_analise' | 'rejeitado';
 type Row = { kind: 'user'; data: User } | { kind: 'motorista'; data: Motorista } | { kind: 'guest'; data: Guest };
 
@@ -241,6 +241,12 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
     const q = search.toLowerCase();
 
     if (mainTab === 'utilizadores') {
+      if (userSub === 'motoristas') {
+        return motoristas
+          .filter(m => !q || m.nome.toLowerCase().includes(q) || m.telefone.includes(q))
+          .sort((a, b) => (b.dataCriacao ?? '').localeCompare(a.dataCriacao ?? ''))
+          .map(m => ({ kind: 'motorista', data: m } as Row));
+      }
       return activePool
         .filter(u => {
           const matchSearch = !q || u.nome.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.telefone.includes(q);
@@ -291,12 +297,22 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
 
   // ── Stats por tab ─────────────────────────────────────────────────────────
   const kpiCards = useMemo(() => {
-    if (mainTab === 'utilizadores') return [
-      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, value: activePool.length, label: 'Total', sub: 'Utilizadores', col: 'text-white', bg: 'bg-zinc-700/40 border-zinc-600' },
-      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>, value: activePool.filter(u => u.status === 'ativo').length, label: 'Activos', sub: 'Utilizadores', col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30' },
-      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, value: activePool.filter(u => u.status === 'suspenso').length, label: 'Suspensos', sub: 'Utilizadores', col: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' },
-      { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>, value: activePool.filter(u => u.status === 'inativo').length, label: 'Inactivos', sub: 'Utilizadores', col: 'text-white', bg: 'bg-zinc-700/40 border-zinc-600' },
-    ];
+    if (mainTab === 'utilizadores') {
+      if (userSub === 'motoristas') {
+        return [
+          { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="7" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg>, value: motoristas.length, label: 'Total', sub: 'Motoristas', col: 'text-white', bg: 'bg-zinc-700/40 border-zinc-600' },
+          { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="7" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/><polyline points="16 11 18 13 22 9"/></svg>, value: motoristas.filter(m => m.status === 'disponivel').length, label: 'Disponíveis', sub: 'Motoristas', col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30' },
+          { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>, value: motoristas.filter(m => m.status === 'em_servico').length, label: 'Em Serviço', sub: 'Motoristas', col: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' },
+          { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>, value: motoristas.filter(m => m.status === 'inativo').length, label: 'Inactivos', sub: 'Motoristas', col: 'text-white', bg: 'bg-zinc-700/40 border-zinc-600' },
+        ];
+      }
+      return [
+        { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, value: activePool.length, label: 'Total', sub: 'Utilizadores', col: 'text-white', bg: 'bg-zinc-700/40 border-zinc-600' },
+        { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>, value: activePool.filter(u => u.status === 'ativo').length, label: 'Activos', sub: 'Utilizadores', col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30' },
+        { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, value: activePool.filter(u => u.status === 'suspenso').length, label: 'Suspensos', sub: 'Utilizadores', col: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' },
+        { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>, value: activePool.filter(u => u.status === 'inativo').length, label: 'Inactivos', sub: 'Utilizadores', col: 'text-white', bg: 'bg-zinc-700/40 border-zinc-600' },
+      ];
+    }
     if (mainTab === 'motoristas') return [
       { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="7" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg>, value: motoristas.length, label: 'Total', sub: 'Motoristas', col: 'text-white', bg: 'bg-zinc-700/40 border-zinc-600' },
       { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="7" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/><polyline points="16 11 18 13 22 9"/></svg>, value: motoristas.filter(m => m.status === 'disponivel').length, label: 'Disponíveis', sub: 'Motoristas', col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30' },
@@ -309,7 +325,7 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
       { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>, value: guests.filter(g => g.status === 'aprovado').length, label: 'Aprovados', sub: 'Visitantes', col: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30' },
       { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>, value: guests.filter(g => g.status === 'rejeitado').length, label: 'Rejeitados', sub: 'Visitantes', col: 'text-white', bg: 'bg-zinc-700/40 border-zinc-600' },
     ];
-  }, [mainTab, activePool, motoristas, guests]);
+  }, [mainTab, activePool, motoristas, guests, userSub]);
 
   return (
     <div className="bg-zinc-950 text-white">
@@ -363,6 +379,7 @@ export function UsersPage({ onExit: _onExit }: { onExit?: () => void }) {
             { value: 'todos',    label: 'Todos' },
             { value: 'admins',   label: 'Administradores' },
             { value: 'clientes', label: 'Clientes' },
+            { value: 'motoristas', label: 'Motoristas' },
           ] as { value: UserSubFilter; label: string }[]).map(sf => (
             <button key={sf.value}
               onClick={() => setUserSub(sf.value)}

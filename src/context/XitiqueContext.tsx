@@ -234,7 +234,7 @@ export function XitiqueProvider({ children }: { children: ReactNode }) {
         dados.userId ?? 'client',
         'Inscrição Recusada',
         `Não foi possível inscrevê-lo no grupo "${grupo?.nome ?? ''}": ${motivo}`,
-        'error',
+        'alert',
         undefined,
         '/cliente/xitique'
       );

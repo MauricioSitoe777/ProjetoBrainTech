@@ -4,10 +4,9 @@ import VehicleCard from "./VehicleCard";
 import { useScrollTo } from "../hooks";
 import { useVehicles } from "../context/VehiclesContext";
 import { useReservations } from "../context/ReservationsContext";
-import { isSoldVehicle } from "../lib/availability";
+import { getSoldVehicleIds, isSoldVehicle } from "../lib/availability";
 
 const ITEMS_PER_PAGE = 8;
-const DIAS_VITRINE_VENDIDOS = 15;
 
 type Mode = "todos" | "aluguer" | "compra" | "vendidos";
 type SimulatorFlow = "aluguer" | "compra";
@@ -102,26 +101,16 @@ export default function CatalogSection({
     return pages;
   };
 
-  // Viaturas vendidas (liquidada) nos últimos 15 dias — vitrine "Vendidos".
-  // Passado esse período deixam de aparecer para o cliente; o histórico
-  // completo continua sempre visível para o admin (Relatórios / Compra).
-  const soldRecentlyIds = useMemo(() => {
-    const today = new Date();
-    const ids = new Set<number>();
-    for (const r of availabilityReservations) {
-      if (r.status !== "liquidada") continue;
-      const refDate = r.dataLiquidacao ?? r.dataFim ?? r.dataInicio;
-      if (!refDate) continue;
-      const diffDays = Math.floor((today.getTime() - new Date(refDate).getTime()) / 86_400_000);
-      if (diffDays >= 0 && diffDays <= DIAS_VITRINE_VENDIDOS) ids.add(r.vehicleId);
-    }
-    return ids;
-  }, [availabilityReservations]);
+  // Viaturas vendidas ou em processo de compra — mesma regra do badge "Vendido" nos cards.
+  const soldVehicleIds = useMemo(
+    () => getSoldVehicleIds(availabilityReservations),
+    [availabilityReservations],
+  );
 
   const filtered = useMemo(() => allVehicles.filter((v) => {
     if (!v) return false;
     if (mode === "vendidos") {
-      if (!soldRecentlyIds.has(v.id)) return false;
+      if (!soldVehicleIds.has(v.id)) return false;
     } else if (mode !== "todos" && v.mode !== mode) {
       return false;
     }
@@ -133,7 +122,7 @@ export default function CatalogSection({
       if (!nameMatch && !brandMatch) return false;
     }
     return true;
-  }), [allVehicles, mode, cat, searchTerm, soldRecentlyIds]);
+  }), [allVehicles, mode, cat, searchTerm, soldVehicleIds]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginatedVehicles = useMemo(
@@ -340,7 +329,7 @@ export default function CatalogSection({
             </h3>
             <p className="text-zinc-500 text-sm max-w-xs mx-auto">
               {mode === "vendidos"
-                ? `As viaturas vendidas ficam visíveis aqui durante ${DIAS_VITRINE_VENDIDOS} dias após a venda.`
+                ? "Não há viaturas vendidas ou em processo de compra neste momento."
                 : "Tente ajustar os filtros ou a sua pesquisa para encontrar o que procura."}
             </p>
           </div>

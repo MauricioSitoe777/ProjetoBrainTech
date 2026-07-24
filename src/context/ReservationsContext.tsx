@@ -24,6 +24,7 @@ import { useAuth } from './AuthContext';
 import { VEHICLES } from '../data/constants';
 import { useVehicles } from './VehiclesContext';
 import { useNotifications } from './NotificationsContext';
+import { useFinance } from './FinanceContext';
 import { api } from '../lib/api';
 
 interface ReservationsContextType {
@@ -51,6 +52,7 @@ interface ReservationsContextType {
     referenciaPagamento?: string;
     notasPagamento?: string;
   }) => void;
+  alterarDataVencimento: (reservationId: string, numero: number, novaData: string) => void;
 }
 
 const ReservationsContext = createContext<ReservationsContextType | null>(null);
@@ -115,6 +117,7 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
   const { user: authUser } = useAuth();
   const { addNotification } = useNotifications();
   const { vehicles: allVehicles } = useVehicles();
+  const { addTransacao } = useFinance();
   
   const [reservations, setReservations] = useState<Reservation[]>(() => {
     const saved = localStorage.getItem('rentcar:reservations:v2');
@@ -454,67 +457,103 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
   }) => {
     if (authUser?.role !== 'admin') return;
     const today = new Date().toISOString().split('T')[0];
+
+    // Get current reservation
+    const reservation = reservations.find(r => r.id === reservationId);
+    if (!reservation) return;
+
+    // Mark the target installment with payment details
+    let prestacoes = (reservation.prestacoes ?? []).map(p =>
+      p.numero === numero
+        ? {
+            ...p,
+            paga,
+            valorPago:            paga ? (valorPago ?? p.valor) : undefined,
+            dataPagamento:        paga ? (detalhes?.dataPagamento ?? today) : undefined,
+            horaPagamento:        paga ? detalhes?.horaPagamento : undefined,
+            formaPagamento:       paga ? detalhes?.formaPagamento : undefined,
+            referenciaPagamento:  paga ? detalhes?.referenciaPagamento : undefined,
+            notasPagamento:       paga ? detalhes?.notasPagamento : undefined,
+          }
+        : p
+    );
+
+    let efectivo = 0;
+    // If paid with an amount higher than the agreed value, redistribute the surplus
+    if (paga) {
+      efectivo = valorPago ?? prestacoes.find(p => p.numero === numero)?.valor ?? 0;
+      const acordado = reservation.prestacoes?.find(p => p.numero === numero)?.valor ?? 0;
+      const surplus  = Math.max(0, efectivo - acordado);
+
+      if (surplus > 0) {
+        const unpaid = prestacoes.filter(p => !p.paga);
+        if (unpaid.length > 0) {
+          const totalUnpaid = unpaid.reduce((s, p) => s + p.valor, 0);
+          const newTotal    = Math.max(0, totalUnpaid - surplus);
+          if (newTotal === 0) {
+            // Excedente cobre todas as restantes — fechá-las automaticamente
+            prestacoes = prestacoes.map(p =>
+              p.paga ? p : {
+                ...p,
+                valor: 0,
+                paga: true,
+                valorPago: 0,
+                dataPagamento: today,
+                notasPagamento: 'Liquidado antecipadamente',
+              }
+            );
+          } else {
+            const novoValor = Math.round(newTotal / unpaid.length);
+            prestacoes = prestacoes.map(p => !p.paga ? { ...p, valor: novoValor } : p);
+          }
+        }
+      }
+
+      // Add transaction to finance
+      const vehicle = allVehicles.find(v => v.id === reservation.vehicleId) ?? VEHICLES.find(v => v.id === reservation.vehicleId);
+      const isPurchase = vehicle?.mode === 'compra';
+      const category = isPurchase ? 'compra_venda' : 'aluguer';
+      const vehicleName = vehicle?.name || `Viatura #${reservation.vehicleId}`;
+      addTransacao({
+        tipo: 'entrada',
+        categoria: category,
+        descricao: `Pagamento de prestação #${numero} — ${vehicleName}`,
+        valor: efectivo,
+        data: detalhes?.dataPagamento ?? today,
+        status: 'pago',
+        clienteNome: reservation.clientName,
+        referencia: detalhes?.referenciaPagamento,
+      });
+    }
+
+    const prestacoesPagas = prestacoes.filter(p => p.paga).length;
+    const todasPagas = prestacoes.every(p => p.paga);
+    const newStatus  = todasPagas ? ('liquidada' as ReservationStatus) : reservation.status;
+
+    const updated = { ...reservation, prestacoes, prestacoesPagas, status: newStatus };
+    // fire-and-forget sync
+    api.put(`/reservations/${reservationId}`, {
+      prestacoes,
+      prestacoes_pagas: prestacoesPagas,
+      status: newStatus,
+    }).catch(() => {});
+
+    setReservations(prev => prev.map(r => r.id === reservationId ? updated : r));
+  };
+
+  const alterarDataVencimento = (reservationId: string, numero: number, novaData: string) => {
     setReservations(prev =>
       prev.map(r => {
         if (r.id !== reservationId) return r;
+        if (!r.prestacoes) return r;
 
-        // Mark the target installment with payment details
-        let prestacoes = (r.prestacoes ?? []).map(p =>
-          p.numero === numero
-            ? {
-                ...p,
-                paga,
-                valorPago:            paga ? (valorPago ?? p.valor) : undefined,
-                dataPagamento:        paga ? (detalhes?.dataPagamento ?? today) : undefined,
-                horaPagamento:        paga ? detalhes?.horaPagamento : undefined,
-                formaPagamento:       paga ? detalhes?.formaPagamento : undefined,
-                referenciaPagamento:  paga ? detalhes?.referenciaPagamento : undefined,
-                notasPagamento:       paga ? detalhes?.notasPagamento : undefined,
-              }
-            : p
+        const prestacoes = r.prestacoes.map(p => 
+          p.numero === numero ? { ...p, dataVencimento: novaData } : p
         );
 
-        // If paid with an amount higher than the agreed value, redistribute the surplus
-        if (paga) {
-          const efectivo = valorPago ?? prestacoes.find(p => p.numero === numero)?.valor ?? 0;
-          const acordado = r.prestacoes?.find(p => p.numero === numero)?.valor ?? 0;
-          const surplus  = Math.max(0, efectivo - acordado);
-
-          if (surplus > 0) {
-            const unpaid = prestacoes.filter(p => !p.paga);
-            if (unpaid.length > 0) {
-              const totalUnpaid = unpaid.reduce((s, p) => s + p.valor, 0);
-              const newTotal    = Math.max(0, totalUnpaid - surplus);
-              if (newTotal === 0) {
-                // Excedente cobre todas as restantes — fechá-las automaticamente
-                prestacoes = prestacoes.map(p =>
-                  p.paga ? p : {
-                    ...p,
-                    valor: 0,
-                    paga: true,
-                    valorPago: 0,
-                    dataPagamento: today,
-                    notasPagamento: 'Liquidado antecipadamente',
-                  }
-                );
-              } else {
-                const novoValor = Math.round(newTotal / unpaid.length);
-                prestacoes = prestacoes.map(p => !p.paga ? { ...p, valor: novoValor } : p);
-              }
-            }
-          }
-        }
-
-        const prestacoesPagas = prestacoes.filter(p => p.paga).length;
-        const todasPagas = prestacoes.every(p => p.paga);
-        const newStatus  = todasPagas ? ('liquidada' as ReservationStatus) : r.status;
-
-        const updated = { ...r, prestacoes, prestacoesPagas, status: newStatus };
-        // fire-and-forget sync (computed outside setState for correctness)
+        const updated = { ...r, prestacoes };
         api.put(`/reservations/${reservationId}`, {
           prestacoes,
-          prestacoes_pagas: prestacoesPagas,
-          status: newStatus,
         }).catch(() => {});
 
         return updated;
@@ -554,6 +593,7 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
         gerarPrestacoes: (id, semEntrada, dataInicioCustom, numPrestacoesCustom) =>
           gerarPrestacoes(id, semEntrada, dataInicioCustom, numPrestacoesCustom),
         marcarPrestacao,
+        alterarDataVencimento,
       }}
     >
       {children}

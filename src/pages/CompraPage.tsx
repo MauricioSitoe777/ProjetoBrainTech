@@ -1,7 +1,9 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { VEHICLES } from '../data/constants';
 import { useReservations } from '../context/ReservationsContext';
+import { useVehicles } from '../context/VehiclesContext';
 import type { Prestacao, Reservation, ReservationStatus } from '../types/reservation';
+import type { VehicleData } from '../context/VehiclesContext';
 import { RegistarPagamentoModal } from '../components/reservations/RegistarPagamentoModal';
 
 
@@ -36,23 +38,24 @@ function stepIndex(status: ReservationStatus) {
 const fmt     = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',00 MT';
 const fmtDate = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' });
 
-const compraVehicles = VEHICLES.filter(v => v.mode === 'compra');
-const compraIds      = new Set(compraVehicles.map(v => v.id));
-const vehicleName    = (id: number) => VEHICLES.find(v => v.id === id)?.name ?? `Viatura #${id}`;
-const vehicleMatricula = (id: number) => VEHICLES.find(v => v.id === id)?.matricula ?? '';
 const isFinal        = (s: ReservationStatus) => s === 'cancelada' || s === 'liquidada';
 
 // ── Modal de gestão de prestações ────────────────────────────────────────────
 function PrestacoeModal({
-  r, today, onClose, onToggle, onOpenPagar, isBlocked,
+  r, today, onClose, onToggle, onOpenPagar, isBlocked, alterarDataVencimento
 }: {
   r: Reservation;
   today: string;
   onClose: () => void;
   onToggle: (numero: number, paga: boolean, valorPago?: number) => void;
-  onOpenPagar: (prestacao: Prestacao) => void;
+  onOpenPagar: (p: Prestacao) => void;
   isBlocked: boolean;
+  alterarDataVencimento?: (reservationId: string, numero: number, novaData: string) => void;
 }) {
+  const { vehicles } = useVehicles();
+  const vehicleName = (id: number) => vehicles.find(v => v.id === id)?.name ?? VEHICLES.find(v => v.id === id)?.name ?? `Viatura #${id}`;
+  
+  const [editDataVencimento, setEditDataVencimento] = useState<{ numero: number; date: string } | null>(null);
   const prestacoes    = r.prestacoes ?? [];
   const pagas         = prestacoes.filter(p => p.paga).length;
   const total         = prestacoes.length;
@@ -148,14 +151,57 @@ function PrestacoeModal({
                   </span>
 
                   {/* Data vencimento */}
-                  <span className={`text-xs tabular-nums w-28 shrink-0 ${
-                    p.paga                   ? 'text-white line-through'
-                    : isProxima && isOverdue ? 'text-red-400 font-semibold'
-                    : isProxima              ? 'text-zinc-200 font-semibold'
-                    : 'text-white'
-                  }`}>
-                    {fmtDate(p.dataVencimento)}
-                  </span>
+                  <div className="flex items-center gap-2 w-32 shrink-0 group">
+                    {editDataVencimento?.numero === p.numero ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="date"
+                          value={editDataVencimento.date}
+                          onChange={(e) => setEditDataVencimento({ numero: p.numero, date: e.target.value })}
+                          className="w-24 text-xs bg-zinc-800 border border-zinc-700 rounded px-1 py-0.5 text-white outline-none"
+                        />
+                        <button
+                          onClick={() => {
+                            if (alterarDataVencimento && editDataVencimento.date) {
+                              alterarDataVencimento(r.id, p.numero, editDataVencimento.date);
+                            }
+                            setEditDataVencimento(null);
+                          }}
+                          className="text-emerald-400 hover:text-emerald-300"
+                          title="Guardar"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          onClick={() => setEditDataVencimento(null)}
+                          className="text-zinc-400 hover:text-zinc-200"
+                          title="Cancelar"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className={`text-xs tabular-nums ${
+                          p.paga                   ? 'text-white line-through'
+                          : isProxima && isOverdue ? 'text-red-400 font-semibold'
+                          : isProxima              ? 'text-zinc-200 font-semibold'
+                          : 'text-white'
+                        }`}>
+                          {fmtDate(p.dataVencimento)}
+                        </span>
+                        {!p.paga && (
+                          <button
+                            onClick={() => setEditDataVencimento({ numero: p.numero, date: p.dataVencimento })}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity text-amber-500/70 hover:text-amber-500 text-xs"
+                            title="Alterar data de vencimento"
+                          >
+                            ✎
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
 
                   {/* Valor */}
                   <span className={`text-sm font-bold tabular-nums flex-1 ${
@@ -301,7 +347,13 @@ type Tab = 'compras' | 'acoes';
 
 // ── Página principal ──────────────────────────────────────────────────────────
 export function CompraPage({ onExit }: { onExit?: () => void }) {
-  const { reservations, updateReservation, cancelReservation, gerarPrestacoes, marcarPrestacao } = useReservations();
+  const { reservations, updateReservation, createReservation, deleteReservation, cancelReservation, gerarPrestacoes, alterarDataVencimento, marcarPrestacao } = useReservations();
+  const { vehicles } = useVehicles();
+
+  const compraVehicles = vehicles.filter(v => v.mode === 'compra');
+  const compraIds      = new Set(compraVehicles.map(v => v.id));
+  const vehicleName    = (id: number) => vehicles.find(v => v.id === id)?.name ?? VEHICLES.find(v => v.id === id)?.name ?? `Viatura #${id}`;
+  const vehicleMatricula = (id: number) => vehicles.find(v => v.id === id)?.matricula ?? VEHICLES.find(v => v.id === id)?.matricula ?? '';
 
   const getUrlParams = () => new URLSearchParams(window.location.search);
 
@@ -430,6 +482,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
           onClose={() => setModalAberto(null)}
           onToggle={(numero, paga, valorPago) => togglePrestacao(modalReservation.id, numero, paga, valorPago)}
           onOpenPagar={p => setPagamentoModal({ reservationId: modalReservation.id, prestacao: p })}
+          alterarDataVencimento={alterarDataVencimento}
           isBlocked={updating === modalReservation.id}
         />
       )}

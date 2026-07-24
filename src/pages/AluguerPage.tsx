@@ -1,4 +1,4 @@
-﻿import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { VEHICLES } from '../data/constants';
 import { useReservations } from '../context/ReservationsContext';
 import { useMotoristas } from '../context/MotoristasContext';
@@ -56,7 +56,7 @@ const GRUPOS: Array<{
 const ALUGUER_ACTIONABLE_STATUSES = new Set(GRUPOS.map(g => g.status));
 
 export function AluguerPage({ onExit }: { onExit?: () => void }) {
-  const { reservations, blocks, updateReservation, cancelReservation, removeBlock, marcarPrestacao, rules } = useReservations();
+  const { reservations, blocks, updateReservation, cancelReservation, removeBlock, marcarPrestacao, alterarDataVencimento, rules } = useReservations();
   const { motoristas } = useMotoristas();
   const { vehicles: allVehicles } = useVehicles();
   const { addNotification } = useNotifications();
@@ -101,6 +101,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
   const [extensaoRespostaId, setExtensaoRespostaId]       = useState<string | null>(null);
   const [extensaoRespostaTipo, setExtensaoRespostaTipo]   = useState<'aprovado' | 'rejeitado' | null>(null);
   const [extensaoRespostaTexto, setExtensaoRespostaTexto] = useState('');
+  const [editDataVencimento, setEditDataVencimento] = useState<{ reservaId: string; numero: number; date: string } | null>(null);
 
 
   // Sync tab + status with URL on navigation
@@ -1305,9 +1306,50 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                                             {p.paga && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
                                           </div>
                                           <span className="text-xs font-black text-white">{p.numero}ª</span>
-                                          <span className={`text-[10px] ${p.paga ? 'text-emerald-400/70' : new Date(p.dataVencimento) < new Date() ? 'text-red-400' : 'text-white'}`}>
-                                            {p.dataPagamento ?? p.dataVencimento}
-                                          </span>
+                                          {editDataVencimento?.reservaId === r.id && editDataVencimento?.numero === p.numero ? (
+                                            <div className="flex items-center gap-1 group-hover/edit:flex">
+                                              <input
+                                                type="date"
+                                                value={editDataVencimento.date}
+                                                onChange={(e) => setEditDataVencimento({ reservaId: r.id, numero: p.numero, date: e.target.value })}
+                                                className="w-24 text-xs bg-zinc-800 border border-zinc-700 rounded px-1 py-0.5 text-white outline-none"
+                                              />
+                                              <button
+                                                onClick={() => {
+                                                  if (alterarDataVencimento && editDataVencimento.date) {
+                                                    alterarDataVencimento(r.id, p.numero, editDataVencimento.date);
+                                                  }
+                                                  setEditDataVencimento(null);
+                                                }}
+                                                className="text-emerald-400 hover:text-emerald-300 ml-1"
+                                                title="Guardar"
+                                              >
+                                                ✓
+                                              </button>
+                                              <button
+                                                onClick={() => setEditDataVencimento(null)}
+                                                className="text-zinc-400 hover:text-zinc-200"
+                                                title="Cancelar"
+                                              >
+                                                ✕
+                                              </button>
+                                            </div>
+                                          ) : (
+                                            <div className="flex items-center gap-2 group">
+                                              <span className={`text-[10px] ${p.paga ? 'text-emerald-400/70' : new Date(p.dataVencimento) < new Date() ? 'text-red-400' : 'text-white'}`}>
+                                                {p.dataPagamento ?? p.dataVencimento}
+                                              </span>
+                                              {!p.paga && (
+                                                <button
+                                                  onClick={() => setEditDataVencimento({ reservaId: r.id, numero: p.numero, date: p.dataVencimento })}
+                                                  className="opacity-0 group-hover:opacity-100 transition-opacity text-amber-500/70 hover:text-amber-500 text-[10px]"
+                                                  title="Alterar data de vencimento"
+                                                >
+                                                  ✎
+                                                </button>
+                                              )}
+                                            </div>
+                                          )}
                                         </div>
                                         <div className="flex items-center gap-2 shrink-0">
                                           <span className={`text-xs font-black ${p.paga ? 'text-emerald-400' : 'text-white'}`}>

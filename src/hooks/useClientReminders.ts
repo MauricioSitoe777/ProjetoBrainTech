@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useReservations } from '../context/ReservationsContext';
 import { useNotifications } from '../context/NotificationsContext';
+import { useVehicles } from '../context/VehiclesContext';
 
 const REMINDER_KEY = 'rentcar:reminders:v1';
 const ALERT_DAYS   = 3; // avisar quando faltam ≤ 3 dias
@@ -37,8 +38,9 @@ function fmtMT(valor: number): string {
  */
 export function useClientReminders() {
   const { user }           = useAuth();
-  const { reservations }   = useReservations();
+  const { reservations, rules } = useReservations();
   const { addNotification } = useNotifications();
+  const { vehicles } = useVehicles();
 
   // Referência estável para evitar dependência circular no useEffect
   const addRef = useRef(addNotification);
@@ -67,9 +69,25 @@ export function useClientReminders() {
     for (const r of minhas) {
       // ── 1. Data de devolução da viatura ──────────────────────────────────
       const devKey = `${r.id}_dev_${hoje}`;
-      if (!store[devKey]) {
+      if (!store[devKey] && r.status !== 'compra_aprovada' && r.status !== 'em_prestacao' && r.status !== 'liquidada' && r.status !== 'entrada_paga' && r.status !== 'prestacao_atraso') {
         const diff = diffDays(r.dataFim);
-        if (diff >= 0 && diff <= ALERT_DAYS) {
+        if (diff < 0) {
+          const diasAtraso = Math.abs(diff);
+          const horasAtraso = diasAtraso * 24;
+          const multaAcumulada = horasAtraso * rules.penalizacaoAtrasoPorHora;
+          const veiculo = vehicles.find(v => v.id === r.vehicleId)?.name ?? `Viatura #${r.vehicleId}`;
+          const msg = `O seu aluguer do ${veiculo} está em atraso há ${diasAtraso} dia${diasAtraso !== 1 ? 's' : ''}. Multa acumulada: ${fmtMT(multaAcumulada)} (${fmtMT(rules.penalizacaoAtrasoPorHora)}/hora). Contacte-nos urgentemente.`;
+          addRef.current(
+            user.id,
+            `Carro em atraso — ${veiculo}`,
+            msg,
+            'alert',
+            r.id,
+            '/perfil?section=reservas',
+          );
+          store[devKey] = true;
+          changed = true;
+        } else if (diff >= 0 && diff <= ALERT_DAYS) {
           const msg =
             diff === 0 ? 'A devolução da viatura é hoje. Por favor, dirija-se ao balcão.' :
             diff === 1 ? 'A devolução da viatura é amanhã.' :
@@ -80,7 +98,7 @@ export function useClientReminders() {
             msg,
             diff === 0 ? 'alert' : 'warning',
             r.id,
-            '/perfil',
+            '/perfil?section=reservas',
           );
           store[devKey] = true;
           changed = true;
@@ -93,8 +111,21 @@ export function useClientReminders() {
         const pagKey = `${r.id}_prest${p.numero}_${hoje}`;
         if (!store[pagKey]) {
           const diff = diffDays(p.dataVencimento);
-          if (diff >= 0 && diff <= ALERT_DAYS) {
-            const valorFmt = fmtMT(p.valor);
+          const valorFmt = fmtMT(p.valor);
+          if (diff < 0) {
+            const diasAtraso = Math.abs(diff);
+            const msg = `A prestação nº ${p.numero} (${valorFmt}) está em atraso há ${diasAtraso} dia${diasAtraso !== 1 ? 's' : ''}. Por favor, regularize a sua situação para evitar penalizações.`;
+            addRef.current(
+              user.id,
+              `Pagamento em Atraso`,
+              msg,
+              'alert',
+              r.id,
+              '/perfil?section=financas',
+            );
+            store[pagKey] = true;
+            changed = true;
+          } else if (diff >= 0 && diff <= ALERT_DAYS) {
             const msg =
               diff === 0
                 ? `A prestação nº ${p.numero} (${valorFmt}) vence hoje.`
@@ -107,7 +138,7 @@ export function useClientReminders() {
               msg,
               diff === 0 ? 'alert' : 'warning',
               r.id,
-              '/perfil',
+              '/perfil?section=financas',
             );
             store[pagKey] = true;
             changed = true;

@@ -329,8 +329,8 @@ export default function App() {
         <NotificationsProvider>
           <GuestsProvider>
             <VehiclesProvider>
-              <ReservationsProvider>
-                <FinanceProvider>
+              <FinanceProvider>
+                <ReservationsProvider>
                   <MotoristasProvider>
                     <XitiqueProvider>
                       <InvitesProvider>
@@ -338,8 +338,8 @@ export default function App() {
                       </InvitesProvider>
                     </XitiqueProvider>
                   </MotoristasProvider>
-                </FinanceProvider>
-              </ReservationsProvider>
+                </ReservationsProvider>
+              </FinanceProvider>
             </VehiclesProvider>
           </GuestsProvider>
         </NotificationsProvider>

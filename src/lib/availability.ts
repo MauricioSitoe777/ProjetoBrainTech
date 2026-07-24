@@ -141,8 +141,16 @@ export function isVehicleAvailable(
   return { available: conflicts.length === 0, conflicts };
 }
 
+export function getSoldVehicleIds(reservations: Reservation[]): Set<number> {
+  const ids = new Set<number>();
+  for (const r of reservations) {
+    if (SOLD_STATUSES.includes(r.status)) ids.add(r.vehicleId);
+  }
+  return ids;
+}
+
 export function isSoldVehicle(vehicleId: number, reservations: Reservation[]): boolean {
-  return reservations.some(r => r.vehicleId === vehicleId && SOLD_STATUSES.includes(r.status));
+  return getSoldVehicleIds(reservations).has(vehicleId);
 }
 
 export function getDatesInMonth(year: number, month: number): string[] {
