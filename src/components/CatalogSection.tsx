@@ -4,7 +4,7 @@ import VehicleCard from "./VehicleCard";
 import { useScrollTo } from "../hooks";
 import { useVehicles } from "../context/VehiclesContext";
 
-type Mode = "todos" | "aluguer" | "compra";
+type Mode = "todos" | "aluguer" | "compra" | "vendidos";
 type SimulatorFlow = "aluguer" | "compra";
 type Cat  = "suv" | "pickup" | "sedan" | "hatchback" | "van" | null;
 
@@ -12,6 +12,7 @@ const MODE_FILTERS: { key: Mode; label: string }[] = [
   { key: "todos", label: "Todos" },
   { key: "compra", label: "Compra" },
   { key: "aluguer", label: "Aluguer" },
+  { key: "vendidos", label: "Vendidos" },
 ];
 
 const CAT_FILTERS: { key: Cat; label: string; img: string; blend?: boolean }[] = [
@@ -79,7 +80,15 @@ export default function CatalogSection({
 
   const uniqueBrands = Array.from(new Set(
     allVehicles
-      .filter(v => v && (mode === "todos" || v.mode === mode))
+      .filter(v => {
+        if (!v) return false;
+        const isSold = v.mode === "compra" && v.available === false;
+        if (mode === "todos") return !isSold;
+        if (mode === "compra") return v.mode === "compra" && !isSold;
+        if (mode === "aluguer") return v.mode === "aluguer";
+        if (mode === "vendidos") return isSold;
+        return false;
+      })
       .map(v => v.brand)
       .filter(Boolean) // Remove null/undefined/empty brands
   )).sort();
@@ -88,8 +97,17 @@ export default function CatalogSection({
     // Safety check for vehicle data
     if (!v) return false;
 
-    // Mode filter
-    if (mode !== "todos" && v.mode !== mode) return false;
+    // Mode & Sold filter
+    const isSold = v.mode === "compra" && v.available === false;
+    if (mode === "todos") {
+      if (isSold) return false;
+    } else if (mode === "compra") {
+      if (v.mode !== "compra" || isSold) return false;
+    } else if (mode === "aluguer") {
+      if (v.mode !== "aluguer") return false;
+    } else if (mode === "vendidos") {
+      if (!isSold) return false;
+    }
 
     // Type filter
     if (cat && v.cat !== cat) return false;

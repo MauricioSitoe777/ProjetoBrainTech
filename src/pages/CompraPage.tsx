@@ -19,18 +19,26 @@ const STATUS_CFG: Record<ReservationStatus, { label: string; className: string }
   concluida:           { label: 'Concluído',              className: 'bg-zinc-700 text-white border-zinc-600' },
 };
 
-const FLOW_STEPS = [
-  { key: 'pendente',        label: 'Pendente'  },
-  { key: 'compra_aprovada', label: 'Aprovada'  },
-  { key: 'entrada_paga',    label: 'Entrada'   },
-  { key: 'em_prestacao',    label: 'Prestação' },
-  { key: 'liquidada',       label: 'Liquidada' },
-] as const;
-
-function stepIndex(status: ReservationStatus) {
-  if (status === 'prestacao_atraso') return 3;
-  return FLOW_STEPS.findIndex(s => s.key === status);
+function getStatusCfg(r: Reservation) {
+  const st = STATUS_CFG[r.status];
+  if (r.status === 'entrada_paga' && !r.totalPrestacoes) {
+    return { label: 'Pagamento Realizado', className: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' };
+  }
+  return st;
 }
+
+// const FLOW_STEPS = [
+//   { key: 'pendente',        label: 'Pendente'  },
+//   { key: 'compra_aprovada', label: 'Aprovada'  },
+//   { key: 'entrada_paga',    label: 'Entrada'   },
+//   { key: 'em_prestacao',    label: 'Prestação' },
+//   { key: 'liquidada',       label: 'Liquidada' },
+// ] as const;
+
+// function stepIndex(status: ReservationStatus) {
+//   if (status === 'prestacao_atraso') return 3;
+//   return FLOW_STEPS.findIndex(s => s.key === status);
+// }
 
 const fmt     = (n: number) => new Intl.NumberFormat('pt-PT').format(Math.round(n)) + ' MT';
 const fmtDate = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -71,8 +79,8 @@ function PrestacoeModal({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <p className="text-white font-black text-base">{r.clientName}</p>
-              <span className={`text-xs border rounded-md px-2 py-0.5 font-semibold ${STATUS_CFG[r.status].className}`}>
-                {STATUS_CFG[r.status].label}
+              <span className={`text-xs border rounded-md px-2 py-0.5 font-semibold ${getStatusCfg(r).className}`}>
+                {getStatusCfg(r).label}
               </span>
               {isAtraso && (
                 <span className="text-[10px] font-black text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-md">
@@ -220,7 +228,7 @@ function PrestacoeModal({
 type Tab = 'compras' | 'acoes';
 
 // ── Página principal ──────────────────────────────────────────────────────────
-export function CompraPage({ onExit }: { onExit?: () => void }) {
+export function CompraPage() {
   const { reservations, updateReservation, cancelReservation, gerarPrestacoes, marcarPrestacao } = useReservations();
   const [tab,         setTab]          = useState<Tab>('compras');
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
@@ -369,7 +377,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                 </tr>
               )}
               {historico.map(r => {
-                const st = STATUS_CFG[r.status];
+                const st = getStatusCfg(r);
                 const prestacoes = r.prestacoes ?? [];
                 const pagas = prestacoes.filter(p => p.paga).length;
                 const total = prestacoes.length || (r.totalPrestacoes ?? 0);
@@ -427,7 +435,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                 </div>
               )}
               {accionaveis.map(r => {
-                const st         = STATUS_CFG[r.status];
+                const st         = getStatusCfg(r);
                 const prestacoes = r.prestacoes ?? [];
                 const pagas      = prestacoes.filter(p => p.paga).length;
                 const total      = prestacoes.length;
@@ -464,21 +472,37 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                         </button>
                       )}
                       {r.status === 'compra_aprovada' && (<>
-                        <button disabled={isBlocked} onClick={() => advance(r.id, 'entrada_paga')}
-                          className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-teal-400/10 text-teal-400 border border-teal-400/20 hover:bg-teal-400/20 disabled:opacity-50 transition-all">
-                          Entrada Recebida
-                        </button>
-                        <button disabled={isBlocked} onClick={() => iniciarPrestacoes(r.id, true)}
-                          className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-zinc-700 text-zinc-300 border border-zinc-600 hover:bg-zinc-600 disabled:opacity-50 transition-all"
-                          title="Funcionário público — sem entrada">
-                          Sem Entrada
-                        </button>
+                        {r.totalPrestacoes ? (
+                          <>
+                            <button disabled={isBlocked} onClick={() => advance(r.id, 'entrada_paga')}
+                              className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-teal-400/10 text-teal-400 border border-teal-400/20 hover:bg-teal-400/20 disabled:opacity-50 transition-all">
+                              Entrada Recebida
+                            </button>
+                            <button disabled={isBlocked} onClick={() => iniciarPrestacoes(r.id, true)}
+                              className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-zinc-700 text-zinc-300 border border-zinc-600 hover:bg-zinc-600 disabled:opacity-50 transition-all"
+                              title="Funcionário público — sem entrada">
+                              Sem Entrada
+                            </button>
+                          </>
+                        ) : (
+                          <button disabled={isBlocked} onClick={() => advance(r.id, 'entrada_paga')}
+                            className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-teal-400/10 text-teal-400 border border-teal-400/20 hover:bg-teal-400/20 disabled:opacity-50 transition-all">
+                            Pagamento Recebido
+                          </button>
+                        )}
                       </>)}
                       {r.status === 'entrada_paga' && (
-                        <button disabled={isBlocked} onClick={() => iniciarPrestacoes(r.id, false)}
-                          className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-blue-400/10 text-blue-400 border border-blue-400/20 hover:bg-blue-400/20 disabled:opacity-50 transition-all">
-                          Gerar Plano de Prestações
-                        </button>
+                        r.totalPrestacoes ? (
+                          <button disabled={isBlocked} onClick={() => iniciarPrestacoes(r.id, false)}
+                            className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-blue-400/10 text-blue-400 border border-blue-400/20 hover:bg-blue-400/20 disabled:opacity-50 transition-all">
+                            Gerar Plano de Prestações
+                          </button>
+                        ) : (
+                          <button disabled={isBlocked} onClick={() => advance(r.id, 'liquidada')}
+                            className="text-xs px-3 py-1.5 rounded-lg font-black bg-emerald-500 text-white hover:bg-emerald-400 disabled:opacity-50 transition-all">
+                            ✓ Liquidar Contrato
+                          </button>
+                        )
                       )}
                       {(r.status === 'em_prestacao' || r.status === 'prestacao_atraso') && (<>
                         {allPaid && (

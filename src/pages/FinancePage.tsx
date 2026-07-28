@@ -1,22 +1,16 @@
 import { useState, useMemo } from 'react';
-import { useFinance, CATEGORIA_LABEL } from '../context/FinanceContext';
+import { useFinance } from '../context/FinanceContext';
 import { useReservations } from '../context/ReservationsContext';
 import { useVehicles } from '../context/VehiclesContext';
 import { useXitique } from '../context/XitiqueContext';
-import type { CategoriaTransacao } from '../types/finance';
 
 const fmt = (n: number) => new Intl.NumberFormat('pt-PT').format(Math.round(n)) + ' MT';
 
 type Tab = 'historico' | 'viaturas';
 
-const CATEGORIAS: CategoriaTransacao[] = [
-  'aluguer','compra_venda','xitique','manutencao','salario','combustivel','seguro','outro'
-];
-
 // ── Página principal ──────────────────────────────────────────────────────────
-export function FinancePage({ onExit }: { onExit?: () => void }) {
+export function FinancePage() {
   const {
-    transacoes,
     totalEntradas, totalSaidas, lucroLiquido, totalDividasPendentes,
   } = useFinance();
 
@@ -25,6 +19,138 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
   const { membros, sorteios, inscricoes, quotaMT, premioMT, numMembros, estadoGrupo, mesAtual } = useXitique();
 
   const [tab, setTab] = useState<Tab>('historico');
+
+  // ── Dados calculados para relatórios/exportações ─────────────────────────
+  const aluguerAtivos = useMemo(() => {
+    return reservations.filter(r =>
+      !['cancelada','concluida','liquidada'].includes(r.status) &&
+      vehicles.find((v: { id: number; mode?: string }) => v.id === r.vehicleId && v.mode !== 'compra')
+    );
+  }, [reservations, vehicles]);
+
+  const aluguerConcluidos = useMemo(() => {
+    return reservations.filter(r =>
+      r.status === 'concluida' &&
+      vehicles.find((v: { id: number; mode?: string }) => v.id === r.vehicleId && v.mode !== 'compra')
+    );
+  }, [reservations, vehicles]);
+
+  const totalAluguer = useMemo(() => {
+    return aluguerConcluidos.reduce((s, r) => s + r.valorTotal, 0) + aluguerAtivos.reduce((s, r) => s + r.valorTotal, 0);
+  }, [aluguerAtivos, aluguerConcluidos]);
+
+  const compraAtivos = useMemo(() => {
+    return reservations.filter(r =>
+      !['cancelada','liquidada'].includes(r.status) &&
+      vehicles.find((v: { id: number; mode?: string }) => v.id === r.vehicleId && v.mode === 'compra')
+    );
+  }, [reservations, vehicles]);
+
+  const compraLiquidadas = useMemo(() => {
+    return reservations.filter(r =>
+      r.status === 'liquidada' &&
+      vehicles.find((v: { id: number; mode?: string }) => v.id === r.vehicleId && v.mode === 'compra')
+    );
+  }, [reservations, vehicles]);
+
+  const totalCompra = useMemo(() => {
+    return compraLiquidadas.reduce((s, r) => s + r.valorTotal, 0) + compraAtivos.reduce((s, r) => s + r.valorTotal, 0);
+  }, [compraLiquidadas, compraAtivos]);
+
+  const membrosAceites = useMemo(() => {
+    return membros.filter(m => m.estado === 'Aceite' || m.estado === 'Sorteado');
+  }, [membros]);
+
+  const totalArrecadado = useMemo(() => {
+    return membrosAceites.length * quotaMT;
+  }, [membrosAceites, quotaMT]);
+
+  const totalDistribuido = useMemo(() => {
+    return sorteios.length * premioMT;
+  }, [sorteios, premioMT]);
+
+  const inscricoesPendentes = useMemo(() => {
+    return inscricoes.filter(i => i.status === 'aguarda_validacao').length;
+  }, [inscricoes]);
+
+  // ── Funções de Exportação ────────────────────────────────────────────────
+  const exportToPDF = () => {
+    window.print();
+  };
+
+  const exportToExcel = () => {
+    let csvContent = "";
+
+    if (tab === 'historico') {
+      csvContent += "RELATÓRIO FINANCEIRO - HISTÓRICO GERAL\n\n";
+
+      csvContent += "TOTAIS GERAIS\n";
+      csvContent += "Métrica;Valor\n";
+      csvContent += `Total Entradas;${fmt(totalEntradas)}\n`;
+      csvContent += `Total Saídas;${fmt(totalSaidas)}\n`;
+      csvContent += `Lucro Líquido;${fmt(lucroLiquido)}\n`;
+      csvContent += `Dívidas Activas;${fmt(totalDividasPendentes)}\n\n`;
+
+      csvContent += "RESUMO XITIQUE\n";
+      csvContent += "Membros;Mês Actual;Total Arrecadado;Total Distribuído;Prémio Mensal;Quota\n";
+      csvContent += `"${membros.length} / ${numMembros}";"${mesAtual} / ${numMembros}";"${fmt(totalArrecadado)}";"${fmt(totalDistribuido)}";"${fmt(premioMT)}";"${fmt(quotaMT)}"\n\n`;
+
+      csvContent += "ALUGUERES ACTIVOS\n";
+      csvContent += "Viatura;Cliente;Valor\n";
+      if (aluguerAtivos.length === 0) {
+        csvContent += "Nenhum aluguer activo registrado.-\n";
+      } else {
+        aluguerAtivos.forEach(r => {
+          const v = vehicles.find((vv: { id: number }) => vv.id === r.vehicleId);
+          csvContent += `"${v?.name ?? `Viatura #${r.vehicleId}`}";"${r.clientName ?? '—'}";"${fmt(r.valorTotal)}"\n`;
+        });
+      }
+      csvContent += "\n";
+
+      csvContent += "COMPRAS EM CURSO\n";
+      csvContent += "Viatura;Cliente;Estado;Valor\n";
+      if (compraAtivos.length === 0) {
+        csvContent += "Nenhuma compra em curso registrada.-\n";
+      } else {
+        compraAtivos.forEach(r => {
+          const v = vehicles.find((vv: { id: number }) => vv.id === r.vehicleId);
+          csvContent += `"${v?.name ?? `Viatura #${r.vehicleId}`}";"${r.clientName ?? '—'}";"${r.status.replace(/_/g, ' ')}";"${fmt(r.valorTotal)}"\n`;
+        });
+      }
+    } else if (tab === 'viaturas') {
+      csvContent += "RELATÓRIO DE VIATURAS\n\n";
+
+      csvContent += "VIATURAS VENDIDAS\n";
+      csvContent += "Viatura;Cliente;Data Venda;Valor;Estado\n";
+      if (viaturasVendidas.length === 0) {
+        csvContent += "Nenhuma venda registada.-\n";
+      } else {
+        viaturasVendidas.forEach(v => {
+          csvContent += `"${v.nome}";"${v.cliente}";"${new Date(v.data).toLocaleDateString('pt-PT')}";"${fmt(v.valor)}";"${v.status}"\n`;
+        });
+      }
+      csvContent += "\n";
+
+      csvContent += "VIATURAS ALUGADAS\n";
+      csvContent += "Viatura;Cliente;Período;Valor;Estado\n";
+      if (viaturasAlugadas.length === 0) {
+        csvContent += "Nenhum aluguer registado.-\n";
+      } else {
+        viaturasAlugadas.forEach(v => {
+          csvContent += `"${v.nome}";"${v.cliente}";"${new Date(v.dataInicio).toLocaleDateString('pt-PT')} -> ${new Date(v.dataFim).toLocaleDateString('pt-PT')}";"${fmt(v.valor)}";"${v.status}"\n`;
+        });
+      }
+    }
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `relatorio_${tab}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // ── Dados de viaturas ────────────────────────────────────────────────────
   const viaturasVendidas = useMemo(() => {
@@ -75,8 +201,40 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
     <div className="bg-zinc-950 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
 
+        {/* ── Cabeçalho com botões de exportação ── */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-zinc-900 print:pb-2">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white">Relatórios Financeiros</h1>
+            <p className="text-xs text-zinc-500 mt-1">Gestão, controlo financeiro, histórico de alugueres e vendas</p>
+          </div>
+          <div className="flex items-center gap-3 print:hidden">
+            {/* Botão Exportar Excel */}
+            <button
+              onClick={exportToExcel}
+              className="flex items-center gap-2 px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition duration-200 border border-emerald-500/30 shadow-lg shadow-emerald-950/20 cursor-pointer"
+              title="Exportar para Excel (CSV)"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Excel
+            </button>
+            {/* Botão Exportar PDF */}
+            <button
+              onClick={exportToPDF}
+              className="flex items-center gap-2 px-4 py-2 text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white rounded-xl transition duration-200 border border-amber-500/30 shadow-lg shadow-amber-950/20 cursor-pointer"
+              title="Exportar para PDF / Imprimir"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h6z" />
+              </svg>
+              PDF
+            </button>
+          </div>
+        </div>
+
         {/* ── Tabs ── */}
-        <div className="flex gap-1 border-b border-zinc-800 flex-wrap">
+        <div className="flex gap-1 border-b border-zinc-800 flex-wrap print:hidden">
           {([
             { key: 'historico', label: 'Histórico Geral' },
             { key: 'viaturas',  label: 'Viaturas'  },
@@ -93,19 +251,6 @@ export function FinancePage({ onExit }: { onExit?: () => void }) {
 
         {/* ══ TAB: Resumo ══ */}
         {tab === 'historico' && (() => {
-          const aluguerAtivos     = reservations.filter(r => !['cancelada','concluida','liquidada'].includes(r.status) && vehicles.find((v: { id: number; mode?: string }) => v.id === r.vehicleId && v.mode !== 'compra'));
-          const aluguerConcluidos = reservations.filter(r => r.status === 'concluida' && vehicles.find((v: { id: number; mode?: string }) => v.id === r.vehicleId && v.mode !== 'compra'));
-          const totalAluguer      = aluguerConcluidos.reduce((s, r) => s + r.valorTotal, 0) + aluguerAtivos.reduce((s, r) => s + r.valorTotal, 0);
-
-          const compraAtivos     = reservations.filter(r => !['cancelada','liquidada'].includes(r.status) && vehicles.find((v: { id: number; mode?: string }) => v.id === r.vehicleId && v.mode === 'compra'));
-          const compraLiquidadas = reservations.filter(r => r.status === 'liquidada' && vehicles.find((v: { id: number; mode?: string }) => v.id === r.vehicleId && v.mode === 'compra'));
-          const totalCompra      = compraLiquidadas.reduce((s, r) => s + r.valorTotal, 0) + compraAtivos.reduce((s, r) => s + r.valorTotal, 0);
-
-          const membrosAceites     = membros.filter(m => m.estado === 'Aceite' || m.estado === 'Sorteado');
-          const totalArrecadado    = membrosAceites.length * quotaMT;
-          const totalDistribuido   = sorteios.length * premioMT;
-          const inscricoesPendentes = inscricoes.filter(i => i.status === 'aguarda_validacao').length;
-
           return (
             <div className="space-y-6">
 
