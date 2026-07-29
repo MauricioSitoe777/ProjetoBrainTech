@@ -80,16 +80,17 @@ function AppInner() {
   const [simulatorFlowLock, setSimulatorFlowLock]  = useState<SimulatorFlow | undefined>();
 
   // ── Route flags ────────────────────────────────────────────────────────────
-  const isRecuperar      = path === "/recuperar-senha";
-  const isRedefinir      = path.startsWith("/recuperar-senha/") && path.length > "/recuperar-senha/".length;
-  const isInvite         = path.startsWith("/convite/");
-  const isAdminPath      = path.startsWith("/admin");
-  const isVehicleDetails = path.startsWith("/veiculo/");
-  const isXitiqueInfo    = path === "/xitique";
+  const currentPath = path.split("?")[0];
+  const isRecuperar      = currentPath === "/recuperar-senha";
+  const isRedefinir      = currentPath.startsWith("/recuperar-senha/") && currentPath.length > "/recuperar-senha/".length;
+  const isInvite         = currentPath.startsWith("/convite/");
+  const isAdminPath      = currentPath.startsWith("/admin");
+  const isVehicleDetails = currentPath.startsWith("/veiculo/");
+  const isXitiqueInfo    = currentPath === "/xitique";
 
-  const vehicleId    = isVehicleDetails ? (path.split("/veiculo/")[1]  ?? "") : "";
-  const inviteToken  = isInvite         ? (path.split("/convite/")[1]  ?? "") : "";
-  const resetToken   = isRedefinir      ? (path.split("/recuperar-senha/")[1] ?? "") : "";
+  const vehicleId    = isVehicleDetails ? (currentPath.split("/veiculo/")[1]  ?? "") : "";
+  const inviteToken  = isInvite         ? (currentPath.split("/convite/")[1]  ?? "") : "";
+  const resetToken   = isRedefinir      ? (currentPath.split("/recuperar-senha/")[1] ?? "") : "";
 
   const isAdmin  = user?.role === "admin";
   const isClient = user?.role === "cliente";
@@ -98,7 +99,7 @@ function AppInner() {
   const showHeader = !isRecuperar && !isRedefinir && !isInvite;
 
   const goBack = () => {
-    const shouldReturnToLast = path.startsWith("/veiculo/");
+    const shouldReturnToLast = currentPath.startsWith("/veiculo/");
     const lastRoute = shouldReturnToLast ? sessionStorage.getItem("rentcar:last-route") : null;
     navigate(lastRoute || "/");
     restoreScroll();
