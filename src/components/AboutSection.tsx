@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 
 
 export default function AboutSection() {
@@ -81,7 +81,7 @@ export default function AboutSection() {
               texto: "Ser a empresa de referência em serviços de mobilidade automóvel em Moçambique, expandindo a nossa rede de balcões a todas as províncias",
             },
           ].map((c) => (
-            <div key={c.titulo} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-amber-500/30 transition-colors group">
+            <div key={c.titulo} className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-6 hover:border-amber-500/30 transition-colors group">
               <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 mb-4 group-hover:bg-amber-500/15 transition-colors">
                 {c.icon}
               </div>

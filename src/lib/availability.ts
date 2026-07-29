@@ -6,7 +6,13 @@ import type {
   ReservationStatus,
 } from '../types/reservation';
 
-const BLOCKING_STATUSES: ReservationStatus[] = ['pendente', 'confirmada', 'ativa'];
+const BLOCKING_STATUSES: ReservationStatus[] = ['pendente', 'confirmada', 'pronta_levantamento', 'ativa', 'devolucao_pendente'];
+const SOLD_STATUSES: ReservationStatus[] = ['compra_aprovada', 'entrada_paga', 'em_prestacao', 'prestacao_atraso', 'liquidada'];
+
+function fmtPT(iso: string): string {
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
 
 export function parseDate(iso: string): Date {
   const [y, m, d] = iso.split('-').map(Number);
@@ -58,6 +64,7 @@ export function validateDateRange(
   end: string,
   rules: BusinessRules,
   now = new Date(),
+  horaLevantamento?: string,
 ): DateValidationResult {
   const errors: string[] = [];
   if (!start || !end) {
@@ -79,10 +86,11 @@ export function validateDateRange(
     errors.push('Reservas ao fim de semana não estão permitidas pelas regras actuais.');
   }
 
+  const horaRef = horaLevantamento ?? rules.horaLevantamento;
   const startAt = parseDate(start);
   startAt.setHours(
-    Number(rules.horaLevantamento.split(':')[0]) || 8,
-    Number(rules.horaLevantamento.split(':')[1]) || 0,
+    Number(horaRef.split(':')[0]) || 8,
+    Number(horaRef.split(':')[1]) || 0,
     0,
     0,
   );
@@ -115,7 +123,7 @@ export function isVehicleAvailable(
     if (r.vehicleId !== vehicleId) continue;
     if (!BLOCKING_STATUSES.includes(r.status)) continue;
     if (rangesOverlap(start, end, r.dataInicio, r.dataFim)) {
-      conflicts.push(`Reserva ${r.status}: ${r.clientName} (${r.dataInicio} → ${r.dataFim})`);
+      conflicts.push(`Viatura indisponível de ${fmtPT(r.dataInicio)} a ${fmtPT(r.dataFim)} — já reservada para esse período.`);
     }
   }
 
@@ -131,6 +139,18 @@ export function isVehicleAvailable(
   }
 
   return { available: conflicts.length === 0, conflicts };
+}
+
+export function getSoldVehicleIds(reservations: Reservation[]): Set<number> {
+  const ids = new Set<number>();
+  for (const r of reservations) {
+    if (SOLD_STATUSES.includes(r.status)) ids.add(r.vehicleId);
+  }
+  return ids;
+}
+
+export function isSoldVehicle(vehicleId: number, reservations: Reservation[]): boolean {
+  return getSoldVehicleIds(reservations).has(vehicleId);
 }
 
 export function getDatesInMonth(year: number, month: number): string[] {

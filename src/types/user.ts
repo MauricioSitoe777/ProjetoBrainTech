@@ -18,6 +18,7 @@ export interface User {
   regularity: UserRegularity;
   restriction: UserRestriction;
   category?: UserCategory;
+  salario?: number;
   avatar?: string;
   dataCriacao: string;
   ultimoAcesso: string;
@@ -36,6 +37,8 @@ export interface User {
   password?: string;
   xitique?: boolean;
   motivoSuspensao?: string;
+  mustChangePassword?: boolean;
+  passwordChangedByUser?: boolean;
 }
 
 export interface Aluguer {

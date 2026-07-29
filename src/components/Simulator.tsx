@@ -1,13 +1,14 @@
 
 import { useEffect, useMemo, useState } from "react";
-import { AddressSearch } from "./AddressSearch";
 import { useCurrencyFormatter } from "../hooks";
 import { useAuth } from "../context/AuthContext";
 import { useReservations } from "../context/ReservationsContext";
 import { useUsers } from "../context/UsersContext";
 import { useMotoristas } from "../context/MotoristasContext";
-import { CATEGORY_LABEL, VEHICLES } from "../data/constants";
+import { useVehicles } from "../context/VehiclesContext";
+import { VEHICLES } from "../data/constants";
 import { GuestRequestModal } from "./GuestRequestModal";
+import { IconCar, IconKey } from "./Icons";
 
 const TAXA_MENSAL = 0.015;
 const MAX_MESES_PADRAO = 12;
@@ -17,14 +18,6 @@ type FlowType = "compra" | "aluguer";
 type Category = "func_publico" | "func_privado" | "empreendedor";
 type PaymentPlan = "pronto" | "prestacoes";
 
-const RENTAL_LOCATIONS = [
-  "Aeroporto de Maputo (MPM)",
-  "Escritório Central (Av. Julius Nyerere, Maputo)",
-  "Matola (Bairro Central)",
-  "Entrega ao Domicílio (Maputo)",
-  "Entrega ao Domicílio (Matola)",
-] as const;
-
 function NumberField({
   label,
   value,
@@ -32,6 +25,8 @@ function NumberField({
   min,
   suffix,
   disabled,
+  zeroAsEmpty,
+  placeholder,
 }: {
   label: string;
   value: number;
@@ -40,10 +35,13 @@ function NumberField({
   step?: number;
   suffix?: string;
   disabled?: boolean;
+  zeroAsEmpty?: boolean;
+  placeholder?: string;
 }) {
   const formatNumber = (num: number) => {
-    if (!Number.isFinite(num)) return "0";
-    return new Intl.NumberFormat("pt-PT").format(num);
+    if (!Number.isFinite(num)) return "";
+    if (zeroAsEmpty && num === 0) return "";
+    return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
 
   const [raw, setRaw] = useState(formatNumber(value));
@@ -74,8 +72,8 @@ function NumberField({
 
   return (
     <div>
-      <label className="text-white text-xs font-bold block mb-1.5">{label}</label>
-      <div className={`flex items-center gap-2 rounded-xl bg-zinc-950 border border-zinc-700 px-3 py-2 ${disabled ? 'opacity-70 cursor-not-allowed' : 'focus-within:border-amber-500/50 focus-within:ring-1 focus-within:ring-amber-500/20'}`}>
+      <label className="text-white text-sm font-normal block mb-1.5">{label}</label>
+      <div className={`flex items-center gap-2 rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2 ${disabled ? 'opacity-70 cursor-not-allowed' : 'focus-within:border-amber-500/50 focus-within:ring-1 focus-within:ring-amber-500/20'}`}>
         <input
           type="text"
           value={raw}
@@ -83,9 +81,10 @@ function NumberField({
           onBlur={handleBlur}
           onFocus={(e) => !disabled && e.currentTarget.select()}
           disabled={disabled}
-          className={`w-full bg-transparent text-sm text-white font-medium outline-none ${disabled ? 'cursor-not-allowed' : ''}`}
+          placeholder={placeholder}
+          className={`w-full bg-transparent text-sm text-white font-medium outline-none placeholder:text-zinc-500 ${disabled ? 'cursor-not-allowed' : ''}`}
         />
-        {suffix ? <span className="text-white text-xs font-bold">{suffix}</span> : null}
+        {suffix ? <span className="text-white text-xs font-normal">{suffix}</span> : null}
       </div>
     </div>
   );
@@ -99,6 +98,26 @@ function pmtMonthly(principal: number, months: number, monthlyRate: number): num
   return (principal * r * pow) / (pow - 1);
 }
 
+const HOURS   = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+const MINUTES = ['00','05','10','15','20','25','30','35','40','45','50','55'];
+
+function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [h, m] = value.split(':');
+  const minute = MINUTES.includes(m) ? m : '00';
+  const cls = "bg-zinc-950 border border-zinc-700 text-white text-sm font-normal rounded-lg px-2 py-2 outline-none focus:border-amber-500 cursor-pointer";
+  return (
+    <div className="flex items-center gap-1.5">
+      <select value={h} onChange={e => onChange(`${e.target.value}:${minute}`)} className={`${cls} flex-1`}>
+        {HOURS.map(hh => <option key={hh} value={hh}>{hh}</option>)}
+      </select>
+      <span className="text-white font-normal text-sm">:</span>
+      <select value={minute} onChange={e => onChange(`${h}:${e.target.value}`)} className={`${cls} flex-1`}>
+        {MINUTES.map(mm => <option key={mm} value={mm}>{mm}</option>)}
+      </select>
+    </div>
+  );
+}
+
 export default function Simulator({
   showClose = true,
   lockedFlow,
@@ -110,6 +129,7 @@ export default function Simulator({
   const { user: authUser, allUsers, addUser } = useAuth();
   const { updateUser, getUser } = useUsers();
   const { motoristas } = useMotoristas();
+  const { vehicles: allVehicles } = useVehicles();
   const {
     createReservation,
     validateDates,
@@ -135,7 +155,13 @@ export default function Simulator({
     return MAX_MESES_PADRAO;
   }, [category]);
 
-  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(() => {
+    try {
+      const raw = sessionStorage.getItem("rentcar:selectedVehicle:v1") ?? localStorage.getItem("rentcar:selectedVehicle:v1");
+      if (raw) { const p = JSON.parse(raw); if (p.id) return p.id as number; }
+    } catch {}
+    return null;
+  });
 
   const formatContact = (val: string) => {
     const digits = val.replace(/\D/g, '').slice(0, 9);
@@ -149,18 +175,42 @@ export default function Simulator({
   const [clientName, setClientName] = useState("");
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [clientContact, setClientContact] = useState("");
+  const [clientContact2, setClientContact2] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   // Compra
-  const [vehiclePrice, setVehiclePrice] = useState(1_500_000);
+  const [vehiclePrice, setVehiclePrice] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem("rentcar:selectedVehicle:v1") ?? localStorage.getItem("rentcar:selectedVehicle:v1");
+      if (raw) { const p = JSON.parse(raw); if (p.mode === 'compra' && typeof p.vehiclePrice === 'number' && p.vehiclePrice > 0) return p.vehiclePrice as number; }
+    } catch {}
+    return 0;
+  });
   const [income, setIncome] = useState(80_000);
   const [downPayment, setDownPayment] = useState(0);
   const [paymentPlan, setPaymentPlan] = useState<PaymentPlan>("prestacoes");
   const [mesesPrestacoes, setMesesPrestacoes] = useState(12);
 
   // Aluguer
+  const aluguerVehicles = useMemo(() => allVehicles.filter(v => v.mode === 'aluguer'), [allVehicles]);
+  const [rentalVehicleIdState, setRentalVehicleIdState] = useState<number>(() => {
+    try {
+      const raw = sessionStorage.getItem("rentcar:selectedVehicle:v1") ?? localStorage.getItem("rentcar:selectedVehicle:v1");
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (p.id && p.mode === 'aluguer') return p.id as number;
+      }
+    } catch {}
+    return VEHICLES.find(v => v.mode === 'aluguer')?.id ?? 4;
+  });
   const [days, setDays] = useState(3);
-  const [dailyRate, setDailyRate] = useState(8_500);
+  const [dailyRate, setDailyRate] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem("rentcar:selectedVehicle:v1") ?? localStorage.getItem("rentcar:selectedVehicle:v1");
+      if (raw) { const p = JSON.parse(raw); if (p.mode === 'aluguer' && typeof p.dailyRate === 'number' && p.dailyRate > 0) return p.dailyRate as number; }
+    } catch {}
+    return 8_500;
+  });
   const [discountPct, setDiscountPct] = useState(10);
   const [cleaningFee, setCleaningFee] = useState(500);
   const [deposit, setDeposit] = useState(() => rules.caucaoValor);
@@ -171,11 +221,13 @@ export default function Simulator({
   const [horaLevantamento, setHoraLevantamento] = useState("09:00");
   const [horaDevolucao, setHoraDevolucao] = useState("17:00");
   const [motivoViagem, setMotivoViagem] = useState("");
-  const [localLevantamento, setLocalLevantamento] = useState("");
-  const [localDevolucao, setLocalDevolucao] = useState("");
+  const localLevantamento = "Escritório Central (Av. 25 de Setembro, Maputo)";
+  const localDevolucao    = "Escritório Central (Av. 25 de Setembro, Maputo)";
   const [comMotorista, setComMotorista] = useState(false);
   const [motoristaId, setMotoristaId] = useState("");
   const [submitError, setSubmitError] = useState("");
+  const [submitted,   setSubmitted]   = useState(false);
+  const [eligibilityExpanded, setEligibilityExpanded] = useState(false);
 
   // Auto-preencher dados se o utilizador logado for alterado/carregado
   useEffect(() => {
@@ -222,6 +274,25 @@ export default function Simulator({
   }, [currentUser?.category]);
 
   useEffect(() => {
+    const handler = (e: Event) => {
+      const { id, mode, dailyRate, vehiclePrice: vp } = (e as CustomEvent<{
+        id: number; mode: "aluguer" | "compra"; dailyRate?: number; vehiclePrice?: number;
+      }>).detail;
+      setSelectedVehicleId(id);
+      if (mode === "aluguer") {
+        setRentalVehicleIdState(id);
+        if (typeof dailyRate === "number" && dailyRate > 0) setDailyRate(dailyRate);
+        if (!lockedFlow) setFlow("aluguer");
+      } else if (mode === "compra") {
+        if (typeof vp === "number" && vp > 0) setVehiclePrice(vp);
+        if (!lockedFlow) setFlow("compra");
+      }
+    };
+    window.addEventListener("rentcar:vehicle-selected", handler as EventListener);
+    return () => window.removeEventListener("rentcar:vehicle-selected", handler as EventListener);
+  }, [lockedFlow]);
+
+  useEffect(() => {
     try {
       const raw =
         sessionStorage.getItem("rentcar:selectedVehicle:v1") ??
@@ -236,6 +307,7 @@ export default function Simulator({
 
       if (parsed.id) {
         setSelectedVehicleId(parsed.id);
+        if (parsed.mode === 'aluguer') setRentalVehicleIdState(parsed.id);
       }
 
       if (lockedFlow) {
@@ -279,55 +351,79 @@ export default function Simulator({
   const maxPmt = income * 0.3;
 
   const financingStatus = useMemo(() => {
-    if (flow !== "compra" || paymentPlan !== "prestacoes") return { ok: true, msg: "" };
+    if (flow !== "compra" || paymentPlan !== "prestacoes") return { ok: true, title: "", why: "", fix: "" };
 
-    const pctEntry = (downPayment / vehiclePrice) * 100;
+    const pctEntry = vehiclePrice > 0 ? (downPayment / vehiclePrice) * 100 : 0;
 
     if (category === "func_publico") {
       if (purchasePMT > maxPmt) {
-        return { 
-          ok: false, 
-          msg: `A prestação (${fmt(purchasePMT)} MT) excede o limite de 30% do rendimento mensal (${fmt(maxPmt)} MT). É necessária uma entrada para prosseguir.` 
+        return {
+          ok: false,
+          title: "A prestação mensal excede o limite de comprometimento de rendimento",
+          why: `A política de financiamento limita o encargo mensal a 30% do rendimento declarado. Com base no salário indicado (${fmt(income)} MT), o limite máximo por mês é ${fmt(maxPmt)} MT. A prestação calculada de ${fmt(purchasePMT)} MT ultrapassa esse tecto.`,
+          fix: `Aumente o valor de entrada para reduzir o capital financiado, ou alargue o prazo do financiamento para reduzir o valor de cada prestação mensal.`,
         };
       }
-      return { ok: true, msg: "Elegível: Sem entrada obrigatória (respeitando taxa de esforço)." };
+      return { ok: true, title: "Simulação dentro dos parâmetros", why: "A prestação mensal está dentro do limite de 30% do rendimento declarado.", fix: "" };
     }
 
     if (category === "func_privado") {
-      if (pctEntry < 10 || pctEntry > 50) {
-        return { 
-          ok: false, 
-          msg: `Entrada fora do intervalo obrigatório (10% a 50%). Valor mínimo: ${fmt(vehiclePrice * 0.1)} MT.` 
+      if (pctEntry < 10) {
+        return {
+          ok: false,
+          title: "Entrada insuficiente — mínimo de 10% exigido",
+          why: `Para esta categoria, é obrigatório um valor de entrada mínimo de 10% sobre o preço do veículo. Com base no valor indicado (${fmt(vehiclePrice)} MT), a entrada mínima exigida é ${fmt(Math.round(vehiclePrice * 0.1))} MT. O valor atual de ${fmt(downPayment)} MT não satisfaz este requisito.`,
+          fix: `Defina uma entrada de pelo menos ${fmt(Math.round(vehiclePrice * 0.1))} MT. Utilize o botão "Mín 10%" para aplicar o valor mínimo automaticamente.`,
+        };
+      }
+      if (pctEntry > 50) {
+        return {
+          ok: false,
+          title: "Entrada acima do limite máximo de 50%",
+          why: `Para funcionários do sector privado, a entrada não pode exceder 50% do valor do veículo (${fmt(Math.round(vehiclePrice * 0.5))} MT). O valor introduzido ultrapassa este limite máximo permitido.`,
+          fix: `Reduza a entrada para no máximo ${fmt(Math.round(vehiclePrice * 0.5))} MT. Utilize o botão "Máx 50%" para ajustar automaticamente.`,
         };
       }
       if (purchasePMT > maxPmt) {
-        return { 
-          ok: false, 
-          msg: `A prestação (${fmt(purchasePMT)} MT) excede o limite de 30% do rendimento mensal (${fmt(maxPmt)} MT).` 
+        return {
+          ok: false,
+          title: "A prestação mensal excede o limite de comprometimento de rendimento",
+          why: `A política de financiamento limita o encargo mensal a 30% do rendimento declarado (${fmt(income)} MT), correspondendo a um máximo de ${fmt(maxPmt)} MT/mês. A prestação calculada de ${fmt(purchasePMT)} MT ultrapassa esse tecto.`,
+          fix: `Aumente o valor de entrada para reduzir o capital financiado, ou alargue o prazo para distribuir o encargo por mais meses.`,
         };
       }
-      return { ok: true, msg: "Elegível: Entrada e taxa de esforço dentro dos parâmetros." };
+      return { ok: true, title: "Simulação dentro dos parâmetros", why: "A entrada e a prestação mensal cumprem os requisitos definidos para esta categoria.", fix: "" };
     }
 
     if (category === "empreendedor") {
       if (pctEntry < 75) {
-        return { 
-          ok: false, 
-          msg: `Entrada insuficiente. A posse da viatura para empreendedores requer no mínimo 75% (${fmt(vehiclePrice * 0.75)} MT).` 
+        return {
+          ok: false,
+          title: "Entrada insuficiente — mínimo de 75% exigido",
+          why: `Para a categoria de empreendedor, a política exige uma entrada mínima de 75% sobre o valor do veículo. Com base no preço indicado (${fmt(vehiclePrice)} MT), o valor mínimo requerido é ${fmt(Math.round(vehiclePrice * 0.75))} MT. A entrada atual de ${fmt(downPayment)} MT não cumpre este requisito.`,
+          fix: `Defina uma entrada de pelo menos ${fmt(Math.round(vehiclePrice * 0.75))} MT. Clique em "Usar mínimo (75%)" para aplicar o valor automaticamente.`,
         };
       }
-      return { ok: true, msg: "Elegível: Entrada superior a 75% confirmada." };
+      return { ok: true, title: "Simulação dentro dos parâmetros", why: "Entrada superior a 75% confirmada. Os requisitos desta categoria estão satisfeitos.", fix: "" };
     }
 
-    return { ok: true, msg: "" };
-  }, [flow, paymentPlan, category, downPayment, vehiclePrice, purchasePMT, maxPmt, fmt]);
+    return { ok: true, title: "", why: "", fix: "" };
+  }, [flow, paymentPlan, category, downPayment, vehiclePrice, purchasePMT, maxPmt, income, fmt]);
 
   const eligivel = financingStatus.ok;
 
-  const rentalVehicleId = selectedVehicleId ?? 4;
+  const rentalVehicleId = rentalVehicleIdState;
+
+  const purchaseVehicleId = (() => {
+    if (selectedVehicleId) {
+      const v = allVehicles.find(v => v.id === selectedVehicleId);
+      if (v?.mode === 'compra') return selectedVehicleId;
+    }
+    return 2; // BMW X5 — compra por defeito
+  })();
   const dateValidation = useMemo(
-    () => (dataInicio && dataFim ? validateDates(dataInicio, dataFim) : null),
-    [dataInicio, dataFim, validateDates],
+    () => (dataInicio && dataFim ? validateDates(dataInicio, dataFim, horaLevantamento) : null),
+    [dataInicio, dataFim, horaLevantamento, validateDates],
   );
   const availability = useMemo(
     () =>
@@ -379,53 +475,58 @@ export default function Simulator({
   const isInadimplente = currentUser?.regularity === 'inadimplente';
   const isBlocked = isRestricted || isInadimplente;
 
+  const contactValid = !!authUser || clientContact.replace(/\D/g, "").length >= 9;
+
   const canSubmit =
     !isBlocked &&
     clientName.trim().length >= 2 &&
+    contactValid &&
     rentalDetailsOk &&
-    (flow === "aluguer" || eligivel) &&
-    true;
+    (flow === "aluguer" || (eligivel && vehiclePrice > 0));
 
-  const handleSubmit = () => {
+  // Razão clara do primeiro bloqueio — mostrada no painel de resultado
+  const blockReason = useMemo(() => {
+    if (isBlocked || submitted) return null;
+    if (clientName.trim().length < 2)
+      return { msg: "Preencha o nome completo do cliente antes de continuar.", icon: "user" as const };
+    if (authUser && !contactValid)
+      return { msg: "Contacto principal obrigatório. Insira pelo menos 9 dígitos.", icon: "phone" as const };
+    if (flow === "aluguer") {
+      if (!dataInicio && !dataFim)
+        return { msg: "Selecione as datas de levantamento e devolução.", icon: "calendar" as const };
+      if (!dataInicio)
+        return { msg: "Selecione a data de levantamento.", icon: "calendar" as const };
+      if (!dataFim)
+        return { msg: "Selecione a data de devolução.", icon: "calendar" as const };
+      if (dateValidation && !dateValidation.valid)
+        return { msg: dateValidation.errors[0], icon: "calendar" as const };
+      if (availability && !availability.available)
+        return { msg: availability.conflicts[0] ?? "A viatura está indisponível para as datas seleccionadas.", icon: "car" as const };
+    }
+    if (flow === "compra" && vehiclePrice <= 0)
+      return { msg: "Indique o valor do veículo para continuar.", icon: "car" as const };
+    if (flow === "compra" && !eligivel)
+      return { msg: "A simulação não cumpre os requisitos de financiamento. Reveja os parâmetros acima.", icon: "warn" as const };
+    return null;
+  }, [isBlocked, submitted, clientName, authUser, contactValid, flow, dataInicio, dataFim, dateValidation, availability, vehiclePrice, eligivel]);
+
+  const handleSubmit = async () => {
     setSubmitError("");
     if (!canSubmit) return;
 
-    const values: Record<string, number> =
-      flow === "compra"
-        ? { vehiclePrice, income, downPayment, purchasePMT, purchaseTotal }
-        : {
-          days: Math.max(1, Math.round(days)),
-          dailyRate,
-          discountPct: Math.min(100, Math.max(0, discountPct)),
-          rentDailySubtotal,
-          rentDiscount,
-          rentDailyAfterDiscount,
-          cleaningFee,
-          logisticsFee,
-          otherFees,
-          deposit: rentalDeposit,
-          rentTotalPayNow: rentalTotal,
-        };
-
-    // Resolve which user record to link the reservation to
-    const normalizedPhone = clientContact.trim() ? `+258 ${clientContact.trim()}` : "";
+    const normalizedPhone  = clientContact.trim()  ? `+258 ${clientContact.trim()}`  : "";
+    const normalizedPhone2 = clientContact2.trim() ? `+258 ${clientContact2.trim()}` : "";
     let transactionUserId: string;
 
     if (authUser) {
       transactionUserId = authUser.id;
-      updateUser(authUser.id, {
-        category,
-        telefone: normalizedPhone || undefined,
-      });
+      updateUser(authUser.id, { category, telefone: normalizedPhone || undefined });
     } else {
-      // Guest: reuse existing account if email/phone matches, otherwise create pending
-      const existing = allUsers.find(
-        (u) => normalizedPhone && u.telefone === normalizedPhone,
-      );
+      const existing = allUsers.find(u => normalizedPhone && u.telefone === normalizedPhone);
       if (existing) {
         transactionUserId = existing.id;
       } else {
-        const guest = addUser({
+        const guest = await addUser({
           nome: clientName.trim(),
           email: '',
           telefone: normalizedPhone,
@@ -446,6 +547,7 @@ export default function Simulator({
         clientName: clientName.trim(),
         clientEmail: authUser?.email ?? '',
         clientPhone: normalizedPhone || undefined,
+        clientPhone2: normalizedPhone2 || undefined,
         dataInicio,
         dataFim,
         horaLevantamento,
@@ -461,30 +563,46 @@ export default function Simulator({
         setSubmitError(result.error ?? "Não foi possível criar a reserva.");
         return;
       }
+      try {
+        sessionStorage.removeItem("rentcar:selectedVehicle:v1");
+        localStorage.removeItem("rentcar:selectedVehicle:v1");
+      } catch { /* ignore */ }
+      setSubmitted(true);
     } else if (flow === "compra") {
       const start = new Date();
-      createReservation({
-        vehicleId: selectedVehicleId ?? 2,
+      const result = createReservation({
+        vehicleId: purchaseVehicleId,
         userId: transactionUserId,
         clientName: clientName.trim(),
         clientEmail: authUser?.email ?? '',
+        clientPhone: normalizedPhone || undefined,
+        clientPhone2: normalizedPhone2 || undefined,
         dataInicio: start.toISOString().split("T")[0],
         dataFim: start.toISOString().split("T")[0],
         horaLevantamento: "09:00",
         horaDevolucao: "09:00",
         status: "pendente",
         valorTotal: purchaseTotal,
-        deposito: paymentPlan === "prestacoes" ? purchasePMT : purchaseTotal,
+        deposito: paymentPlan === "prestacoes" ? downPayment : purchaseTotal,
         notas: `Compra via plano: ${paymentPlan === "prestacoes" ? `${mesesPrestacoes} prestações` : "Pronto pagamento"}`,
-        totalPrestacoes: paymentPlan === "prestacoes" ? mesesPrestacoes : undefined,
-        prestacoesPagas: paymentPlan === "prestacoes" ? 0 : undefined,
+        totalPrestacoes: paymentPlan === "prestacoes" ? mesesPrestacoes : 0,
+        prestacoesPagas: 0,
       });
+      if (!result.ok) {
+        setSubmitError(result.error ?? "Não foi possível submeter o pedido de compra.");
+        return;
+      }
+      try {
+        sessionStorage.removeItem("rentcar:selectedVehicle:v1");
+        localStorage.removeItem("rentcar:selectedVehicle:v1");
+      } catch { /* ignore */ }
+      setSubmitted(true);
     }
   };
 
   return (
     <>
-    <section id="simulador" className="py-8 bg-zinc-950 relative overflow-hidden">
+    <section id="simulador" className="min-h-screen bg-zinc-900 relative overflow-hidden flex flex-col justify-center py-16">
       {/* Ambient glow */}
       <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-5 pointer-events-none"
@@ -511,90 +629,81 @@ export default function Simulator({
 
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-2">
-            {lockedFlow === "aluguer" ? "Aluguer" : "Compra & Aluguer"}
+          <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/25 rounded-full px-4 py-1 mb-3">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+            <span className="text-amber-400 text-[10px] font-black uppercase tracking-widest">
+              {lockedFlow === "aluguer" ? "Aluguer de Viatura" : "Simulador de Compra & Aluguer"}
+            </span>
           </div>
-          <h2
-            className="text-white text-2xl md:text-3xl font-bold"
-          >
-            Simulador
+          <h2 className="text-white text-3xl md:text-4xl font-black tracking-tight leading-none">
+            Simule o seu <span className="text-amber-400">contrato</span>
           </h2>
+          <p className="text-white/60 text-sm mt-2">Preencha os campos e veja o valor estimado em tempo real.</p>
         </div>
 
-        <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-5">
+        <div className="grid lg:grid-cols-[3fr_2fr] gap-4 items-stretch">
 
           {/* ── Controls panel ── */}
-          <div className="bg-zinc-900 rounded-2xl border border-zinc-700 p-5 flex flex-col gap-3 shadow-2xl self-start">
+          <div className="bg-zinc-800/50 backdrop-blur-md rounded-2xl border border-white/10 p-4 flex flex-col gap-2 shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)]">
 
-            {/* Serviço + Funcionário (Funcionário só aparece em Compra) */}
-            <div className={`grid gap-3 ${flow === 'compra' ? 'grid-cols-2' : 'grid-cols-1'}`}>
-              <div>
-                <label className="text-white text-xs font-bold block mb-1.5 uppercase tracking-tight">Serviço</label>
-                {lockedFlow ? (
-                  <div className="py-2 rounded-lg text-xs font-bold text-center bg-amber-500 text-zinc-950">
-                    {lockedFlow === "aluguer" ? "Aluguer" : "Compra"}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {([
-                      { key: "compra", label: "Compra" },
-                      { key: "aluguer", label: "Aluguer" },
-                    ] as const).map((o) => (
-                      <button
-                        key={o.key}
-                        onClick={() => setFlow(o.key)}
-                        className={`py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${flow === o.key
-                          ? "bg-amber-500 text-zinc-950"
-                          : "bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700"
-                        }`}
-                      >
-                        {o.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {flow === 'compra' && (
+            {/* Row 1: Tipo de Serviço + [Tipo de Funcionário (compra)] + Cliente */}
+            <div className={`grid gap-2 ${flow === 'compra' ? 'grid-cols-3' : 'grid-cols-2'}`}>
+              {/* Serviço */}
+              {!lockedFlow ? (
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-white text-xs font-bold block">Funcionário</label>
-                    {currentUser?.category && (
-                      <span className="text-[10px] text-emerald-400 font-bold bg-emerald-400/20 px-1.5 py-0.5 rounded border border-emerald-400/30">
-                        Perfil
-                      </span>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <select
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value as Category)}
-                      disabled={!!currentUser?.category}
-                      className={`w-full appearance-none rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2 text-xs text-white font-bold outline-none focus:border-amber-500 ${
-                        currentUser?.category ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'
-                      }`}
-                    >
-                      {(Object.keys(CATEGORY_LABEL) as Category[]).map((k) => (
-                        <option key={k} value={k} className="bg-zinc-900 text-white font-bold">
-                          {CATEGORY_LABEL[k]}
-                        </option>
-                      ))}
-                    </select>
-                    {!currentUser?.category && (
-                      <div className="absolute inset-y-0 right-2 flex items-center pointer-events-none text-amber-500">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                          <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
+                  <label className="text-white text-xs font-normal block mb-1 uppercase tracking-tight">Tipo de Serviço</label>
+                  <select
+                    value={flow}
+                    onChange={(e) => setFlow(e.target.value as FlowType)}
+                    className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-1.5 text-sm text-white font-normal outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 cursor-pointer"
+                  >
+                    <option value="compra">🚗  Compra</option>
+                    <option value="aluguer">🔑  Aluguer</option>
+                  </select>
+                </div>
+              ) : (
+                <div className="py-1.5 rounded-lg text-sm font-bold flex items-center justify-center gap-1.5 bg-amber-500 text-zinc-950">
+                  {lockedFlow === "aluguer" ? <><IconKey size={13} /> Aluguer</> : <><IconCar size={13} /> Compra</>}
                 </div>
               )}
-            </div>
 
-            {/* Cliente */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Tipo de Funcionário — só aparece para compra */}
+              {flow === 'compra' && (() => {
+                const PROFILES = [
+                  { key: 'func_publico', emoji: '🏛️', label: 'Func. Público',        rules: 'Sem entrada · até 48 prestações' },
+                  { key: 'func_privado', emoji: '💼', label: 'Func. Privado',         rules: 'Entrada 10–50% · até 48 prestações' },
+                  { key: 'empreendedor', emoji: '🏢', label: 'Empresário / Indep.',   rules: 'Entrada mín. 75% · até 12 prestações' },
+                ] as const;
+                const locked = !!currentUser?.category;
+                const active = PROFILES.find(p => p.key === category);
+                return (
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-white text-xs font-normal uppercase tracking-tight">Tipo de Funcionário</label>
+                      {currentUser?.category && (
+                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-1.5 py-0.5 rounded-full">Perfil</span>
+                      )}
+                    </div>
+                    <select
+                      value={category}
+                      disabled={locked}
+                      onChange={(e) => !locked && setCategory(e.target.value as Category)}
+                      className={`w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-1.5 text-sm text-white font-normal outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 ${locked ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
+                    >
+                      {PROFILES.map(p => (
+                        <option key={p.key} value={p.key}>{p.emoji}  {p.label}</option>
+                      ))}
+                    </select>
+                    {active && (
+                      <p className="text-[10px] text-white/60 mt-1 leading-snug">{active.rules}</p>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Cliente — mesma linha */}
               <div className="relative">
-                <label className="text-white text-xs font-bold block mb-1.5">Cliente</label>
+                <label className="text-white text-xs font-normal block mb-1">Cliente</label>
                 <input
                   value={clientName}
                   onChange={(e) => {
@@ -604,274 +713,310 @@ export default function Simulator({
                   }}
                   onFocus={() => !authUser && setShowSuggestions(true)}
                   onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                  placeholder="Ex: Ana Mussa"
+                  placeholder="Nome do cliente"
                   readOnly={!!authUser}
-                  className={`w-full rounded-xl bg-zinc-950 border border-zinc-700 px-3 py-2 text-sm text-white font-bold placeholder:text-zinc-500 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 ${
+                  className={`w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-1.5 text-sm text-white font-medium placeholder:text-zinc-500 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 ${
                     authUser ? 'opacity-70 cursor-not-allowed' : ''
                   }`}
                 />
                 {showSuggestions && suggestions.length > 0 && !authUser && (
-                  <div className="absolute left-0 right-0 mt-2 bg-zinc-900 border border-zinc-700 rounded-xl max-h-60 overflow-y-auto z-20 shadow-2xl divide-y divide-zinc-800">
+                  <div className="absolute left-0 right-0 mt-2 bg-zinc-900 border border-zinc-700 rounded-xl max-h-48 overflow-y-auto z-20 shadow-2xl divide-y divide-zinc-800">
                     {suggestions.map(u => (
                       <button
                         key={u.id}
                         type="button"
                         onClick={() => handleSelectUser(u)}
-                        className="w-full text-left px-4 py-3 text-xs hover:bg-zinc-800/80 flex items-center justify-between transition-colors"
+                        className="w-full text-left px-3 py-2.5 text-sm hover:bg-zinc-800/80 flex items-center justify-between transition-colors gap-2"
                       >
-                        <div>
-                          <p className="font-bold text-white">{u.nome}</p>
-                          <p className="text-[11px] text-white font-medium">{u.email}</p>
+                        <div className="min-w-0">
+                          <p className="font-medium text-white truncate">{u.nome}</p>
+                          <p className="text-xs text-white/60 truncate">{u.email}</p>
                         </div>
-                        <span className="text-[10px] text-amber-400 bg-amber-400/10 px-2 py-1 rounded-lg border border-amber-400/20 font-bold">
-                          {u.telefone || 'Sem Telefone'}
+                        <span className="text-[10px] text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20 shrink-0">
+                          {u.telefone || '—'}
                         </span>
                       </button>
                     ))}
                   </div>
                 )}
               </div>
-              <div className="relative">
-                <label className="text-white text-xs font-bold block mb-1.5">Contacto</label>
-                <div className={`flex items-center w-full rounded-xl bg-zinc-950 border border-zinc-700 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500/20 overflow-hidden ${authUser ? 'opacity-70' : ''}`}>
-                  <div className="pl-4 pr-3 py-2 text-sm text-amber-500 font-bold bg-zinc-900 border-r border-zinc-700">
+            </div>
+
+            {/* Row 3: Contacto * | Contacto alternativo — 2 colunas */}
+            <div className="grid grid-cols-2 gap-2">
+              {/* Contacto principal */}
+              <div>
+                <label className="text-white text-xs font-normal block mb-1">
+                  Contacto <span className="text-amber-500">*</span>
+                </label>
+                <div className={`flex items-center w-full rounded-lg bg-zinc-950 border border-zinc-700 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500/20 overflow-hidden ${authUser ? 'opacity-70' : ''}`}>
+                  <div className="pl-2.5 pr-2 py-1.5 text-xs text-amber-500 font-bold bg-zinc-900 border-r border-zinc-700 shrink-0">
                     +258
                   </div>
                   <input
                     value={clientContact}
                     onChange={(e) => !authUser && setClientContact(formatContact(e.target.value))}
-                    placeholder="Ex: 84..."
+                    placeholder="84 123 4567"
                     readOnly={!!authUser}
-                    className={`w-full bg-transparent px-3 py-2 text-sm text-white font-bold placeholder:text-zinc-500 outline-none ${
+                    className={`w-full bg-transparent px-2 py-1.5 text-sm text-white font-medium placeholder:text-zinc-500 outline-none ${
                       authUser ? 'cursor-not-allowed' : ''
                     }`}
+                  />
+                </div>
+              </div>
+
+              {/* Contacto alternativo */}
+              <div>
+                <label className="text-white text-xs font-normal block mb-1">
+                  Alt. <span className="text-white/50 text-[10px]">(opcional)</span>
+                </label>
+                <div className="flex items-center w-full rounded-lg bg-zinc-950 border border-zinc-700 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500/20 overflow-hidden">
+                  <div className="pl-2.5 pr-2 py-1.5 text-xs text-amber-500 font-bold bg-zinc-900 border-r border-zinc-700 shrink-0">
+                    +258
+                  </div>
+                  <input
+                    value={clientContact2}
+                    onChange={(e) => setClientContact2(formatContact(e.target.value))}
+                    placeholder="86 987 6543"
+                    className="w-full bg-transparent px-2 py-1.5 text-sm text-white font-medium placeholder:text-zinc-500 outline-none"
                   />
                 </div>
               </div>
             </div>
 
 
-            {/* Compra */}
+            {/* ══ COMPRA ══ */}
             {flow === "compra" ? (
               <>
-                <div className="grid grid-cols-2 gap-3">
-                  <NumberField
-                    label="Valor do Veículo"
-                    value={vehiclePrice}
-                    onChange={(v) => setVehiclePrice(Math.min(8_000_000, Math.max(0, v)))}
-                    min={0}
-                    step={50_000}
-                    suffix="MT"
-                  />
-                  <NumberField
-                    label="Rendimento Mensal"
-                    value={income}
-                    onChange={(v) => setIncome(Math.min(100_000_000, Math.max(0, v)))}
-                    min={0}
-                    step={5_000}
-                    suffix="MT"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-white text-xs font-bold block mb-1.5">Plano de Pagamento</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {([
-                      { key: "pronto", label: "Pronto pagamento" },
-                      { key: "prestacoes", label: "Por prestações" },
-                    ] as const).map((o) => (
-                      <button
-                        key={o.key}
-                        onClick={() => setPaymentPlan(o.key)}
-                        className={`py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${paymentPlan === o.key
-                          ? "bg-amber-500 text-zinc-950"
-                          : "bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700"
-                        }`}
-                      >
-                        {o.label}
-                      </button>
-                    ))}
+                {/* Row 3: Preço + (Salário se prestações) + Como pagar */}
+                <div className={`grid gap-3 ${paymentPlan === "prestacoes" ? "grid-cols-3" : "grid-cols-2"}`}>
+                  <NumberField label="Preço do Veículo" value={vehiclePrice}
+                    onChange={(v) => setVehiclePrice(Math.min(8_000_000, Math.max(0, v)))} min={0} suffix="MT"
+                    disabled={!!selectedVehicleId && !isAdmin}
+                    zeroAsEmpty placeholder="Insira o valor" />
+                  {paymentPlan === "prestacoes" && (
+                    <NumberField label="O Meu Salário" value={income}
+                      onChange={(v) => setIncome(Math.min(100_000_000, Math.max(0, v)))} min={0} suffix="MT/mês"
+                      disabled={!isAdmin} />
+                  )}
+                  <div>
+                    <label className="text-white text-sm font-normal block mb-1.5">Como pagar?</label>
+                    <select
+                      value={paymentPlan}
+                      onChange={(e) => setPaymentPlan(e.target.value as PaymentPlan)}
+                      className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2.5 text-sm text-white font-normal outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 cursor-pointer"
+                    >
+                      <option value="pronto">💵  À Vista</option>
+                      <option value="prestacoes">📅  Prestações ({maxMonthsForCategory}m)</option>
+                    </select>
                   </div>
-                  <p className="text-white text-[10px] mt-1">Máximo {maxMonthsForCategory} meses · Garantia 15 dias</p>
                 </div>
 
+                {/* 4. Entrada + Meses — só para prestações */}
                 {paymentPlan === "prestacoes" && (
-                  <div className="space-y-4">
-                    <NumberField
-                      label="Valor de Entrada"
-                      value={downPayment}
-                      onChange={(v) => setDownPayment(Math.min(vehiclePrice, Math.max(0, v)))}
-                      min={0}
-                      step={10_000}
-                      suffix="MT"
-                    />
+                  <>
+                    {/* Dica contextual de entrada */}
+                    <div className={`rounded-xl px-4 py-3 border text-sm leading-relaxed ${
+                      category === 'func_publico' ? 'bg-emerald-500/8 border-emerald-500/25 text-emerald-300'
+                      : category === 'func_privado' ? 'bg-blue-500/8 border-blue-500/25 text-blue-300'
+                      : 'bg-amber-500/8 border-amber-500/25 text-amber-300'
+                    }`}>
+                      {category === 'func_publico' && <span>✅ <b>Funcionário Público:</b> não precisa de dar entrada. Pode começar a pagar já na 1ª prestação.</span>}
+                      {category === 'func_privado' && <span>ℹ️ <b>Funcionário Privado:</b> entrada obrigatória entre <b>10%</b> ({fmt(vehiclePrice * 0.1)} MT) e <b>50%</b> ({fmt(vehiclePrice * 0.5)} MT).</span>}
+                      {category === 'empreendedor'  && <span>ℹ️ <b>Empresário:</b> entrada mínima de <b>75%</b> do valor = <b>{fmt(vehiclePrice * 0.75)} MT</b>.</span>}
+                    </div>
 
-                    {/* Slider de meses */}
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <label className="text-white text-xs font-bold uppercase tracking-tight">Meses em Prestação</label>
-                        <div className="flex items-baseline gap-1.5 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1">
-                          <span className="text-xl font-black text-amber-400 leading-none">{mesesPrestacoes}</span>
-                          <span className="text-[10px] text-white font-bold">meses</span>
+                    <div className="grid grid-cols-2 gap-3 items-start">
+                      {/* Entrada */}
+                      <div>
+                        <NumberField label="Valor de Entrada" value={downPayment}
+                          onChange={(v) => setDownPayment(Math.min(vehiclePrice, Math.max(0, v)))} min={0} suffix="MT" />
+                        <div className="flex gap-1.5 mt-2 flex-wrap">
+                          {category === 'func_publico' && (
+                            <button type="button" onClick={() => setDownPayment(0)}
+                              className="text-xs font-medium px-2.5 py-1 rounded bg-zinc-800 text-zinc-200 border border-zinc-700 transition-all">
+                              Sem entrada (0 MT)
+                            </button>
+                          )}
+                          {category === 'func_privado' && (<>
+                            <button type="button" onClick={() => setDownPayment(Math.round(vehiclePrice * 0.10))}
+                              className="text-xs font-medium px-2.5 py-1 rounded bg-zinc-800 text-zinc-200 hover:text-amber-400 border border-zinc-700 hover:border-amber-500/40 transition-all">Mín 10%</button>
+                            <button type="button" onClick={() => setDownPayment(Math.round(vehiclePrice * 0.30))}
+                              className="text-xs font-medium px-2.5 py-1 rounded bg-zinc-800 text-zinc-200 hover:text-amber-400 border border-zinc-700 hover:border-amber-500/40 transition-all">30%</button>
+                            <button type="button" onClick={() => setDownPayment(Math.round(vehiclePrice * 0.50))}
+                              className="text-xs font-medium px-2.5 py-1 rounded bg-zinc-800 text-zinc-200 hover:text-amber-400 border border-zinc-700 hover:border-amber-500/40 transition-all">Máx 50%</button>
+                          </>)}
+                          {category === 'empreendedor' && (
+                            <button type="button" onClick={() => setDownPayment(Math.round(vehiclePrice * 0.75))}
+                              className="text-xs font-medium px-2.5 py-1 rounded bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 border border-amber-500/30 transition-all">Usar mínimo (75%)</button>
+                          )}
                         </div>
                       </div>
 
-                      <input
-                        type="range"
-                        className="months-slider w-full"
-                        min={1}
-                        max={maxMonthsForCategory}
-                        step={1}
-                        value={mesesPrestacoes}
-                        onChange={e => setMesesPrestacoes(Number(e.target.value))}
-                        style={{
-                          background: `linear-gradient(to right, #d8a020 ${((mesesPrestacoes - 1) / (maxMonthsForCategory - 1)) * 100}%, #3f3f46 ${((mesesPrestacoes - 1) / (maxMonthsForCategory - 1)) * 100}%)`
-                        }}
-                      />
-
-                      {/* Marcas rápidas clicáveis */}
-                      <div className="flex justify-between mt-2.5">
-                        {(maxMonthsForCategory <= 12
-                          ? [1, 3, 6, 9, 12]
-                          : [1, 12, 24, 36, 48]
-                        ).filter(v => v <= maxMonthsForCategory).map(v => (
-                          <button
-                            key={v}
-                            type="button"
-                            onClick={() => setMesesPrestacoes(v)}
-                            className={`text-[10px] font-black px-1.5 py-0.5 rounded transition-all ${
-                              mesesPrestacoes === v
-                                ? 'text-amber-400 bg-amber-400/10 border border-amber-400/30'
-                                : 'text-zinc-500 hover:text-white'
-                            }`}
-                          >
-                            {v}
-                          </button>
-                        ))}
+                      {/* Slider de meses */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-white text-sm font-normal">Nº de Meses</label>
+                          <div className="flex items-baseline gap-1 bg-zinc-800 border border-zinc-700 rounded-md px-2.5 py-1">
+                            <span className="text-lg font-black text-amber-400 leading-none">{mesesPrestacoes}</span>
+                            <span className="text-xs text-white font-normal">m</span>
+                          </div>
+                        </div>
+                        <input type="range" className="months-slider w-full"
+                          min={1} max={maxMonthsForCategory} step={1} value={mesesPrestacoes}
+                          onChange={e => setMesesPrestacoes(Number(e.target.value))}
+                          style={{ background: `linear-gradient(to right, #E4B42E ${((mesesPrestacoes - 1) / (maxMonthsForCategory - 1)) * 100}%, #3f3f46 ${((mesesPrestacoes - 1) / (maxMonthsForCategory - 1)) * 100}%)` }}
+                        />
+                        <div className="flex justify-between mt-2">
+                          {(maxMonthsForCategory <= 12 ? [1, 6, 12] : [1, 12, 24, 48])
+                            .filter(v => v <= maxMonthsForCategory).map(v => (
+                            <button key={v} type="button" onClick={() => setMesesPrestacoes(v)}
+                              className={`text-xs font-medium px-1.5 py-0.5 rounded transition-all ${mesesPrestacoes === v ? 'text-amber-400 bg-amber-400/10 border border-amber-400/30' : 'text-white'}`}>{v}</button>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </>
                 )}
               </>
             ) : (
               <>
-                {/* Aluguer — datas e horas */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-white text-xs font-bold block mb-1.5">Data início</label>
-                    <input
-                      type="date"
-                      value={dataInicio}
-                      onChange={(e) => setDataInicio(e.target.value)}
-                      className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2 text-xs text-white font-bold outline-none focus:border-amber-500"
-                    />
+                {/* Viatura selecionada — sempre visível, sem fallback silencioso */}
+                <div>
+                  <label className="text-white text-xs font-normal block mb-1 uppercase tracking-tight">Viatura</label>
+                  <select
+                    value={rentalVehicleIdState}
+                    onChange={e => setRentalVehicleIdState(Number(e.target.value))}
+                    disabled={!isAdmin && aluguerVehicles.some(v => v.id === selectedVehicleId)}
+                    className="w-full rounded-lg bg-zinc-950 border border-amber-500/40 px-3 py-1.5 text-sm text-white font-medium outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 cursor-pointer disabled:opacity-80 disabled:cursor-not-allowed"
+                  >
+                    {aluguerVehicles.map(v => (
+                      <option key={v.id} value={v.id}>{v.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Datas — Levantamento | Devolução, cada um com data+hora inline */}
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Levantamento */}
+                  <div className="bg-zinc-900/60 border border-zinc-700/60 rounded-xl p-2.5 space-y-1.5">
+                    <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest">Levantamento</p>
+                    <div className="grid grid-cols-[3fr_2fr] gap-1.5">
+                      <div>
+                        <label className="text-white text-[10px] font-normal block mb-1">Data</label>
+                        <input
+                          type="date"
+                          value={dataInicio}
+                          onChange={(e) => setDataInicio(e.target.value)}
+                          className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-2 py-1.5 text-xs text-white font-medium outline-none focus:border-amber-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-white text-[10px] font-normal block mb-1">Hora</label>
+                        <TimeSelect value={horaLevantamento} onChange={setHoraLevantamento} />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-white text-xs font-bold block mb-1.5">Hora levantamento</label>
-                    <input
-                      type="time"
-                      value={horaLevantamento}
-                      onChange={(e) => setHoraLevantamento(e.target.value)}
-                      className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2 text-xs text-white font-bold outline-none focus:border-amber-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-white text-xs font-bold block mb-1.5">Data fim</label>
-                    <input
-                      type="date"
-                      value={dataFim}
-                      onChange={(e) => setDataFim(e.target.value)}
-                      className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2 text-xs text-white font-bold outline-none focus:border-amber-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-white text-xs font-bold block mb-1.5">Hora devolução</label>
-                    <input
-                      type="time"
-                      value={horaDevolucao}
-                      onChange={(e) => setHoraDevolucao(e.target.value)}
-                      className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2 text-xs text-white font-bold outline-none focus:border-amber-500"
-                    />
+
+                  {/* Devolução */}
+                  <div className="bg-zinc-900/60 border border-zinc-700/60 rounded-xl p-2.5 space-y-1.5">
+                    <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest">Devolução</p>
+                    <div className="grid grid-cols-[3fr_2fr] gap-1.5">
+                      <div>
+                        <label className="text-white text-[10px] font-normal block mb-1">Data</label>
+                        <input
+                          type="date"
+                          value={dataFim}
+                          onChange={(e) => setDataFim(e.target.value)}
+                          className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-2 py-1.5 text-xs text-white font-medium outline-none focus:border-amber-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-white text-[10px] font-normal block mb-1">Hora</label>
+                        <TimeSelect value={horaDevolucao} onChange={setHoraDevolucao} />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-white text-xs font-bold block mb-1.5">Motivo da viagem</label>
-                  <textarea
+                  <label className="text-white text-xs font-normal block mb-1">Motivo da viagem</label>
+                  <input
+                    type="text"
                     value={motivoViagem}
                     onChange={(e) => setMotivoViagem(e.target.value)}
                     placeholder="Ex: Viagem de negócios à Beira, férias em Bilene..."
-                    rows={1}
-                    className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2 text-xs text-white font-bold placeholder:text-zinc-500 outline-none focus:border-amber-500 resize-none"
+                    className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-1.5 text-sm text-white font-medium placeholder:text-zinc-500 outline-none focus:border-amber-500"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <AddressSearch
-                    label="Local levantamento"
-                    value={localLevantamento}
-                    onChange={setLocalLevantamento}
-                    placeholder="Ex: Av. 24 de Julho…"
-                  />
-                  <AddressSearch
-                    label="Local devolução"
-                    value={localDevolucao}
-                    onChange={setLocalDevolucao}
-                    placeholder="Ex: Aeroporto…"
-                  />
-                </div>
-
-                {/* Solicitar motorista */}
-                {(() => {
-                  const disponiveis = motoristas.filter(m => m.status === 'disponivel');
-                  return (
-                    <div className={`rounded-xl border transition-all ${comMotorista ? 'border-amber-400/30 bg-amber-400/5' : 'border-zinc-700/60 bg-zinc-800/30'}`}>
-                      <button
-                        type="button"
-                        onClick={() => { setComMotorista(v => !v); setMotoristaId(''); }}
-                        className="w-full flex items-center justify-between px-4 py-3"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <span className="text-base">🧑‍✈️</span>
-                          <div className="text-left">
-                            <p className={`text-xs font-bold ${comMotorista ? 'text-amber-400' : 'text-white'}`}>Com ou sem motorista</p>
-                            <p className="text-[10px] text-white">Condutor profissional incluído na reserva</p>
-                          </div>
-                        </div>
-                        <div className={`w-9 h-5 rounded-full flex items-center transition-all px-0.5 shrink-0 ${comMotorista ? 'bg-amber-400 justify-end' : 'bg-zinc-700 justify-start'}`}>
-                          <div className="w-4 h-4 rounded-full bg-white shadow" />
-                        </div>
-                      </button>
-                      {comMotorista && (
-                        <div className="px-4 pb-3">
-                          {disponiveis.length === 0 ? (
-                            <p className="text-xs text-white italic">Sem motoristas disponíveis no momento.</p>
-                          ) : (
-                            <select
-                              value={motoristaId}
-                              onChange={e => setMotoristaId(e.target.value)}
-                              className="w-full bg-zinc-900 border border-zinc-700 text-white rounded-lg px-3 py-2 text-xs focus:border-amber-400 outline-none"
-                            >
-                              <option value="">Selecionar motorista (opcional)</option>
-                              {disponiveis.map(m => (
-                                <option key={m.id} value={m.id}>{m.nome} · {m.telefone}</option>
-                              ))}
-                            </select>
-                          )}
-                        </div>
-                      )}
+                {/* Local + Motorista — lado a lado */}
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Local fixo */}
+                  <div className="rounded-xl border border-zinc-700/70 bg-zinc-900/60 px-3 py-2 flex items-center gap-2.5">
+                    <div className="shrink-0 w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                      </svg>
                     </div>
-                  );
-                })()}
+                    <div className="min-w-0">
+                      <p className="text-[9px] text-white uppercase tracking-wider font-bold mb-0.5">Local</p>
+                      <p className="text-xs font-semibold text-white truncate">Escritório Central</p>
+                      <p className="text-[10px] text-white/60 truncate">Av. 25 de Setembro</p>
+                    </div>
+                  </div>
 
-                {dateValidation && !dateValidation.valid ? (
-                  <div className="text-xs text-red-100 bg-red-600 border border-red-500 rounded-lg p-2 font-bold">
+                  {/* Motorista toggle */}
+                  {(() => {
+                    const disponiveis = motoristas.filter(m => m.status === 'disponivel');
+                    return (
+                      <div className={`rounded-xl border transition-all ${comMotorista ? 'border-amber-400/30 bg-amber-400/5' : 'border-zinc-700/70 bg-zinc-900/60'}`}>
+                        <button
+                          type="button"
+                          onClick={() => { setComMotorista(v => !v); setMotoristaId(''); }}
+                          className="w-full flex items-center justify-between px-3 py-2"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-[9px] text-white uppercase tracking-wider font-bold mb-0.5">Motorista</p>
+                            <p className={`text-xs font-semibold truncate ${comMotorista ? 'text-amber-400' : 'text-white'}`}>
+                              {comMotorista ? 'Com motorista' : 'Sem motorista'}
+                            </p>
+                          </div>
+                          <div className={`w-9 h-5 rounded-full flex items-center transition-all px-0.5 shrink-0 ml-2 ${comMotorista ? 'bg-amber-400 justify-end' : 'bg-zinc-700 justify-start'}`}>
+                            <div className="w-3.5 h-3.5 rounded-full bg-white shadow" />
+                          </div>
+                        </button>
+                        {comMotorista && (
+                          <div className="px-3 pb-2.5">
+                            {disponiveis.length === 0 ? (
+                              <p className="text-xs text-white italic">Sem motoristas disponíveis.</p>
+                            ) : (
+                              <select
+                                value={motoristaId}
+                                onChange={e => setMotoristaId(e.target.value)}
+                                className="w-full bg-zinc-900 border border-zinc-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:border-amber-400 outline-none"
+                              >
+                                <option value="">Selecionar (opcional)</option>
+                                {disponiveis.map(m => (
+                                  <option key={m.id} value={m.id}>{m.nome}</option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {flow === 'aluguer' && dateValidation && !dateValidation.valid ? (
+                  <div className="text-sm text-red-100 bg-red-600 border border-red-500 rounded-lg p-3">
                     {dateValidation.errors[0]}
                   </div>
                 ) : null}
 
-                {availability && !availability.available && dateValidation?.valid ? (
-                  <div className="text-xs text-red-100 bg-red-600 border border-red-500 rounded-lg p-2 font-bold">
+                {flow === 'aluguer' && availability && !availability.available && dateValidation?.valid ? (
+                  <div className="text-sm text-red-100 bg-red-600 border border-red-500 rounded-lg p-3">
                     {availability.conflicts[0]}
                   </div>
                 ) : null}
@@ -907,7 +1052,7 @@ export default function Simulator({
                         suffix="%"
                       />
                       {days >= 7 && (
-                        <div className="absolute top-0 right-0 -translate-y-1 bg-emerald-500 text-zinc-950 text-[9px] font-black px-1.5 py-0.5 rounded shadow-lg animate-bounce">
+                        <div className="absolute top-0 right-0 -translate-y-1 bg-emerald-500 text-zinc-950 text-xs font-black px-1.5 py-0.5 rounded shadow-lg animate-bounce">
                           {days >= 30 ? rules.descontoMensalPercentual : days >= 15 ? rules.descontoQuinzenalPercentual : rules.descontoSemanalPercentual}%
                         </div>
                       )}
@@ -957,12 +1102,12 @@ export default function Simulator({
           </div>
 
           {/* ── Result panel ── */}
-          <div className="bg-zinc-900 rounded-2xl border border-amber-500/30 p-5 flex flex-col justify-between shadow-[0_0_50px_-12px_rgba(216,160,32,0.15)] relative overflow-hidden h-fit">
+          <div className="bg-zinc-800/50 backdrop-blur-md rounded-2xl border border-white/10 p-5 flex flex-col justify-between shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06),0_0_40px_-12px_rgba(228,180,46,0.12)] relative overflow-hidden sticky top-6">
             {/* Decoration */}
             <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 blur-3xl -mr-12 -mt-12" />
             
             <div className="relative z-10">
-              <div className="text-white text-[10px] mb-2 font-bold uppercase tracking-widest opacity-80">
+              <div className="text-white text-xs mb-2 font-normal uppercase tracking-widest">
                 {flow === "compra"
                   ? paymentPlan === "prestacoes"
                     ? "Prestação Mensal"
@@ -970,15 +1115,15 @@ export default function Simulator({
                   : "Total a pagar"}
               </div>
               <div className="flex items-baseline gap-3 flex-wrap mb-1">
-                <span className="text-3xl font-black text-white tracking-tighter">
+                <span className="text-3xl font-black text-white tracking-tight">
                   {flow === "compra"
                     ? paymentPlan === "prestacoes"
                       ? fmt(purchasePMT)
                       : fmt(vehiclePrice)
                     : fmt(rentalTotal)}
-                  <span className="text-lg text-amber-500 ml-1 font-black">MT</span>
+                  <span className="text-lg text-amber-500 ml-1.5 font-black">MT</span>
                 </span>
-                <span className="text-white text-[10px] font-bold bg-white/5 px-2 py-1 rounded-md border border-white/10">
+                <span className="text-white text-xs font-normal bg-white/5 px-2.5 py-1 rounded-md border border-white/10">
                   {flow === "compra" && paymentPlan === "prestacoes"
                     ? `${(TAXA_MENSAL * 100).toFixed(1)}%/mês · ${Math.min(maxMonthsForCategory, Math.max(1, Math.round(mesesPrestacoes)))} meses`
                     : flow === "compra"
@@ -990,23 +1135,51 @@ export default function Simulator({
 
             {/* Elegibilidade */}
             {flow === "compra" && paymentPlan === "prestacoes" ? (
-              <div
-                className={`mt-6 rounded-xl p-4 border-2 shadow-md relative z-10 ${eligivel
-                  ? "bg-emerald-500/5 border-emerald-500/20"
-                  : "bg-red-500/5 border-red-500/20"
-                  }`}
-              >
-                <div className={`text-xs font-bold mb-1 uppercase tracking-tight flex items-center gap-2 ${eligivel ? "text-emerald-400" : "text-red-400"}`}>
+              <div className={`mt-3 rounded-xl border-2 shadow-md relative z-10 overflow-hidden ${eligivel ? "border-emerald-500/20" : "border-red-500/30"}`}>
+                {/* Cabeçalho — clicável para expandir/recolher */}
+                <button
+                  type="button"
+                  onClick={() => setEligibilityExpanded(v => !v)}
+                  className={`w-full flex items-center gap-2 px-3 py-2 ${eligivel ? "bg-emerald-500/10" : "bg-red-500/10"}`}
+                >
                   {eligivel ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                   ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="3"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                   )}
-                  {eligivel ? "Simulação Válida" : "Requisitos não atendidos"}
-                </div>
-                <div className="text-white text-[11px] leading-tight font-medium opacity-90">
-                  {financingStatus.msg}
-                </div>
+                  <span className={`flex-1 text-left text-sm font-semibold ${eligivel ? "text-emerald-400" : "text-red-400"}`}>
+                    {eligivel ? "Simulação Válida" : "Requisitos não atendidos"}
+                  </span>
+                  <svg
+                    width="13" height="13" viewBox="0 0 24 24" fill="none"
+                    stroke={eligivel ? "#4ade80" : "#f87171"}
+                    strokeWidth="2.5" strokeLinecap="round"
+                    className={`shrink-0 transition-transform duration-200 ${eligibilityExpanded ? "rotate-180" : ""}`}
+                  >
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+
+                {/* Corpo — colapsável */}
+                {eligibilityExpanded && (
+                  <div className="px-3 py-2.5 space-y-2 bg-zinc-900/60">
+                    <p className={`text-sm font-medium ${eligivel ? "text-emerald-300" : "text-red-300"}`}>
+                      {financingStatus.title}
+                    </p>
+                    {financingStatus.why && (
+                      <div className="bg-zinc-800/70 rounded-lg px-2.5 py-2 border border-zinc-700/50">
+                        <p className="text-xs text-white font-normal mb-1">O que acontece?</p>
+                        <p className="text-xs text-white leading-relaxed">{financingStatus.why}</p>
+                      </div>
+                    )}
+                    {!eligivel && financingStatus.fix && (
+                      <div className="bg-amber-500/8 rounded-lg px-2.5 py-2 border border-amber-500/20">
+                        <p className="text-xs text-amber-400/80 font-normal mb-1">Como resolver?</p>
+                        <p className="text-xs text-white leading-relaxed">{financingStatus.fix}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ) : null}
 
@@ -1026,43 +1199,115 @@ export default function Simulator({
                 : ([] as [string, string][])
               ).map(([label, val]) => (
                 <div key={label} className="bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-3">
-                  <div className="text-white text-[10px] font-bold uppercase tracking-tighter mb-0.5">{label}</div>
-                  <div className="text-white font-bold text-sm truncate">{val}</div>
+                  <div className="text-white text-xs font-normal uppercase tracking-wider mb-1">{label}</div>
+                  <div className="text-white font-medium text-base truncate">{val}</div>
                 </div>
               ))}
             </div>
 
+            {/* Razão de bloqueio — aparece quando o botão está desabilitado */}
+            {!canSubmit && !isBlocked && !submitted && blockReason && (
+              <div className="mt-4 flex items-start gap-3 p-3.5 rounded-xl bg-amber-500/8 border border-amber-500/25">
+                <div className="shrink-0 mt-0.5">
+                  {blockReason.icon === "calendar" && (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  )}
+                  {blockReason.icon === "phone" && (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12.6 19.79 19.79 0 0 1 1.65 4a2 2 0 0 1 1.99-2H6.5a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.4a16 16 0 0 0 6.29 6.29l1.36-1.36a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                  )}
+                  {blockReason.icon === "user" && (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  )}
+                  {(blockReason.icon === "car" || blockReason.icon === "warn") && (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  )}
+                </div>
+                <p className="text-sm text-amber-200 leading-relaxed">{blockReason.msg}</p>
+              </div>
+            )}
+
             {submitError ? (
-              <div className="mt-4 p-3 rounded-lg bg-red-600/90 text-white text-[11px] font-bold text-center shadow-lg animate-bounce">
+              <div className="mt-4 flex items-start gap-2.5 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm leading-relaxed">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                 {submitError}
               </div>
             ) : null}
 
-            {isBlocked && (
+            {isBlocked && !submitted && (
               <div className="mt-6 rounded-xl p-4 bg-red-600 border border-red-500 shadow-lg relative z-10 animate-pulse">
-                <div className="flex items-center gap-2 text-white font-bold text-xs uppercase mb-1">
+                <div className="flex items-center gap-2 text-white font-semibold text-sm mb-1.5">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                   Acesso Restrito
                 </div>
-                <p className="text-white text-[11px] leading-tight font-medium opacity-95">
-                  {isRestricted 
-                    ? "Esta conta foi suspensa permanentemente por violação das políticas de segurança (Blacklisted)." 
-                    : "Operação bloqueada devido a pendências financeiras ou irregularidades cadastrais. Por favor, contacte a administração."}
+                <p className="text-white text-sm leading-snug font-medium opacity-95">
+                  {isRestricted
+                    ? "Esta conta foi suspensa permanentemente por violação das políticas de segurança (Blacklisted)."
+                    : "Operação bloqueada devido a pendências financeiras ou irregularidades de registo."}
+                </p>
+                <p className="text-white/80 text-sm leading-snug mt-1.5">
+                  Contacte o administrador para resolver a situação.
                 </p>
               </div>
             )}
 
-            <button
-              onClick={!authUser ? () => setShowGuestModal(true) : handleSubmit}
-              disabled={!authUser ? clientName.trim().length < 2 : !canSubmit}
-              className={`mt-5 w-full py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all duration-300 shadow-lg relative z-10 ${
-                (!authUser ? clientName.trim().length >= 2 : canSubmit)
-                  ? "bg-amber-500 text-zinc-950 hover:bg-amber-400 hover:scale-[1.01] active:scale-[0.99]"
-                  : "bg-zinc-800 text-white cursor-not-allowed border border-zinc-700"
-              }`}
-            >
-              {!authUser ? "Registar Interesse" : isBlocked ? "Bloqueado" : "Confirmar Operação"}
-            </button>
+            {submitted ? (
+              /* ── Painel de sucesso ── */
+              <div className="mt-5 rounded-xl border border-emerald-500/30 bg-emerald-500/8 overflow-hidden relative z-10">
+                <div className="flex items-center gap-3 px-4 py-4 border-b border-emerald-500/20">
+                  <div className="w-9 h-9 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <div>
+                    <p className="text-emerald-400 font-black text-base">
+                      {flow === "compra" ? "Pedido de compra enviado!" : "Reserva submetida!"}
+                    </p>
+                    <p className="text-white text-xs mt-1">O administrador foi notificado e entrará em contacto.</p>
+                  </div>
+                </div>
+                <div className="px-4 py-3 space-y-1.5">
+                  {[
+                    ["Viatura", flow === "compra"
+                      ? (allVehicles.find(v => v.id === purchaseVehicleId)?.name ?? "Viatura seleccionada")
+                      : (aluguerVehicles.find(v => v.id === rentalVehicleId)?.name ?? "Viatura seleccionada")],
+                    ["Cliente", clientName.trim() || authUser?.nome || "—"],
+                    ["Estado", "Aguarda confirmação de pagamento"],
+                    ["Próximo passo", "Aguarde contacto da SOS Motors para instruções de pagamento."],
+                  ].map(([label, val]) => (
+                    <div key={label} className="flex gap-2 text-xs">
+                      <span className="text-white font-normal w-28 shrink-0">{label}</span>
+                      <span className="text-white">{val}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="px-4 pb-4">
+                  <button
+                    onClick={() => window.dispatchEvent(new CustomEvent("rentcar:close-flow-modal"))}
+                    className="w-full py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-sm font-bold transition-colors"
+                  >
+                    Concluído
+                  </button>
+                </div>
+              </div>
+            ) : !authUser && !selectedVehicleId ? (
+              <div className="mt-5 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-4 text-center relative z-10">
+                <p className="text-white text-xs font-semibold mb-1">Simulação de exploração</p>
+                <p className="text-white text-xs leading-relaxed">
+                  Nenhum pedido será enviado. Para avançar, escolha uma viatura no catálogo e clique em <span className="text-amber-400 font-semibold">Reservar</span> ou <span className="text-amber-400 font-semibold">Comprar</span>.
+                </p>
+              </div>
+            ) : (
+              <button
+                onClick={!authUser ? () => setShowGuestModal(true) : handleSubmit}
+                disabled={!authUser ? clientName.trim().length < 2 : !canSubmit}
+                className={`mt-5 w-full py-3.5 rounded-xl font-bold text-sm uppercase tracking-widest transition-all duration-300 shadow-lg relative z-10 ${
+                  (!authUser ? clientName.trim().length >= 2 : canSubmit)
+                    ? "bg-amber-500 text-zinc-950 hover:bg-amber-400 hover:scale-[1.01] active:scale-[0.99]"
+                    : "bg-zinc-800 text-white cursor-not-allowed border border-zinc-700"
+                }`}
+              >
+                {!authUser ? "Registar Interesse" : isBlocked ? "Bloqueado" : "Confirmar Operação"}
+              </button>
+            )}
 
           </div>
 
@@ -1074,11 +1319,14 @@ export default function Simulator({
       {showGuestModal && (
         <GuestRequestModal
           intent={flow as 'aluguer' | 'compra'}
-          vehicleName={VEHICLES.find(v => v.id === selectedVehicleId)?.name}
+          vehicleName={allVehicles.find(v => v.id === selectedVehicleId)?.name}
           prefill={{ nome: clientName, telefone: clientContact || undefined }}
           preCategory={flow === 'compra' ? (category as import('../types/guest').GuestCategory) : undefined}
           withDriver={flow === 'aluguer' ? comMotorista : undefined}
-          onClose={() => setShowGuestModal(false)}
+          onClose={() => {
+            setShowGuestModal(false);
+            window.dispatchEvent(new CustomEvent('rentcar:close-simulator'));
+          }}
         />
       )}
     </>
