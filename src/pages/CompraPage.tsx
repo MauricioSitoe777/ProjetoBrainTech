@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { VEHICLES } from '../data/constants';
 import { useReservations } from '../context/ReservationsContext';
 import { useVehicles } from '../context/VehiclesContext';
+import { useRoute } from '../hooks/useRoute';
 import type { Prestacao, Reservation, ReservationStatus } from '../types/reservation';
 import type { VehicleData } from '../context/VehiclesContext';
 import { RegistarPagamentoModal } from '../components/reservations/RegistarPagamentoModal';
@@ -349,6 +350,7 @@ type Tab = 'compras' | 'acoes';
 export function CompraPage({ onExit }: { onExit?: () => void }) {
   const { reservations, updateReservation, createReservation, deleteReservation, cancelReservation, gerarPrestacoes, alterarDataVencimento, marcarPrestacao } = useReservations();
   const { vehicles } = useVehicles();
+  const { navigate } = useRoute();
 
   const compraVehicles = vehicles.filter(v => v.mode === 'compra');
   const compraIds      = new Set(compraVehicles.map(v => v.id));
@@ -594,12 +596,13 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                 <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest hidden sm:table-cell">Valor Total</th>
                 <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest">Data</th>
                 <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest">Estado</th>
+                <th className="text-left px-5 py-4 text-xs text-amber-400 font-black uppercase tracking-widest">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800">
               {historico.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-white text-sm">
+                  <td colSpan={7} className="text-center py-12 text-white text-sm">
                     Sem contratos concluídos ainda
                   </td>
                 </tr>
@@ -630,6 +633,12 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                     </td>
                     <td className="px-5 py-4">
                       <span className={`text-xs border rounded-md px-2 py-0.5 font-semibold ${st.className}`}>{st.label}</span>
+                    </td>
+                    <td className="px-5 py-4">
+                      <button type="button" onClick={() => navigate(`/veiculo/${r.vehicleId}`)}
+                        className="text-xs font-bold text-white bg-zinc-900 border border-zinc-700 px-3 py-2 rounded-xl hover:bg-zinc-800 transition-all">
+                        Detalhes
+                      </button>
                     </td>
                   </tr>
                 );
@@ -752,7 +761,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                       )}
 
                       {/* 2. Definir Plano (determina entrada automaticamente pelo valor do depósito do simulador) */}
-                      {r.status === 'compra_aprovada' && (
+                      {r.status === 'compra_aprovada' && (r.valorTotal > (r.deposito ?? 0)) && (
                         <button disabled={isBlocked} onClick={() => {
                           const temEntrada = (r.deposito ?? 0) > 0;
                           if (temEntrada) advance(r.id, 'entrada_paga');
@@ -763,13 +772,27 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                           Definir Plano
                         </button>
                       )}
+                      {r.status === 'compra_aprovada' && (r.valorTotal <= (r.deposito ?? 0)) && (
+                        <button disabled={isBlocked} onClick={() => advance(r.id, 'liquidada')}
+                          className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-black bg-emerald-500 text-white hover:bg-emerald-400 disabled:opacity-50 transition-all">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                          Liquidar Contrato
+                        </button>
+                      )}
 
                       {/* 4. Definir Plano */}
-                      {r.status === 'entrada_paga' && gerarConfig?.id !== r.id && (
+                      {r.status === 'entrada_paga' && gerarConfig?.id !== r.id && (r.valorTotal > (r.deposito ?? 0)) && (
                         <button disabled={isBlocked} onClick={() => openGerarConfig(r.id, false)}
                           className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 disabled:opacity-50 transition-all">
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                           Definir Plano
+                        </button>
+                      )}
+                      {r.status === 'entrada_paga' && (r.valorTotal <= (r.deposito ?? 0)) && (
+                        <button disabled={isBlocked} onClick={() => advance(r.id, 'liquidada')}
+                          className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-black bg-emerald-500 text-white hover:bg-emerald-400 disabled:opacity-50 transition-all">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                          Liquidar Contrato
                         </button>
                       )}
 
@@ -812,6 +835,11 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                           Cancelar
                         </button>
                       )}
+                      <button type="button" onClick={() => navigate(`/veiculo/${r.vehicleId}`)}
+                        className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-bold bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 transition-all">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M3 12h18"/><path d="M12 3l7 9-7 9-7-9 7-9z"/></svg>
+                        Detalhes da Viatura
+                      </button>
                     </div>
 
                     {/* ── Painel de confirmação de cancelamento ── */}

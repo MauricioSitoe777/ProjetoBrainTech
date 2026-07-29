@@ -103,17 +103,33 @@ export default function CatalogSection({
 
   // Viaturas vendidas ou em processo de compra — mesma regra do badge "Vendido" nos cards.
   const soldVehicleIds = useMemo(
-    () => getSoldVehicleIds(availabilityReservations),
-    [availabilityReservations],
+    () => {
+      const byReservations = getSoldVehicleIds(availabilityReservations);
+      // Também considera viaturas com `precoVenda` como vendidas (marcação manual pelo admin).
+      const byMarkedSale = new Set<number>();
+      for (const v of allVehicles) {
+        // precoVenda pode ser number | undefined
+        if ((v as any).precoVenda !== undefined && (v as any).precoVenda !== null) {
+          byMarkedSale.add(Number(v.id));
+        }
+      }
+      // União
+      const union = new Set<number>(byReservations);
+      for (const id of byMarkedSale) union.add(id);
+      return union;
+    },
+    [availabilityReservations, allVehicles],
   );
 
   const filtered = useMemo(() => allVehicles.filter((v) => {
     if (!v) return false;
-    if (mode === "vendidos") {
-      if (!soldVehicleIds.has(v.id)) return false;
-    } else if (mode !== "todos" && v.mode !== mode) {
-      return false;
-    }
+
+    const isSold = soldVehicleIds.has(v.id);
+
+    // Carros marcados como vendidos só aparecem no filtro dedicado.
+    if (isSold) return mode === "vendidos";
+    if (mode !== "todos" && v.mode !== mode) return false;
+
     if (cat && v.cat !== cat) return false;
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();

@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useUsers } from '../context/UsersContext';
 import { useReservations } from '../context/ReservationsContext';
@@ -205,6 +205,153 @@ export function DashboardPage() {
     [...transacoes].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 6),
   [transacoes]);
 
+  const [showExtraCards, setShowExtraCards] = useState(false);
+  const [kpiFilter, setKpiFilter] = useState<'all' | 'finance' | 'vehicles' | 'customers'>('all');
+
+  const activityItems = [
+    {
+      id: 'clientes',
+      category: 'customers',
+      extra: false,
+      node: (
+        <KpiCard icon={<IconUsers />} iconBg="bg-amber-500/15" iconColor="text-amber-400"
+          label="Clientes Registados" value={s.clientesRegistados}
+          sub={`Novos este mês: ${s.clientesNovosMes}`} subColor="text-amber-400"
+          onClick={() => navigate('/admin/utilizadores')} />
+      ),
+    },
+    {
+      id: 'veiculos',
+      category: 'vehicles',
+      extra: false,
+      node: (
+        <button type="button" onClick={() => navigate('/admin/veiculos')}
+          className="text-left w-full bg-zinc-900 border border-amber-500/20 rounded-2xl p-4 flex flex-col gap-2 hover:border-amber-500/40 transition-colors group">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0 text-amber-400"><IconCar /></div>
+            <p className="text-xs font-bold text-amber-400 flex-1 min-w-0 truncate">Veículos Registados</p>
+            <span className="text-white/20 group-hover:text-amber-400 transition-colors shrink-0"><ArrowRight /></span>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xl font-black leading-tight tabular-nums text-white">{s.totalVeiculos}</p>
+            <div className="space-y-0.5 text-right">
+              {[
+                { label: 'Disponíveis', value: s.disponiveis, dot: 'bg-emerald-400' },
+                { label: 'Alugados',    value: s.alugados,    dot: 'bg-amber-400' },
+                { label: 'Vendidos',    value: s.vendidos,    dot: 'bg-blue-400' },
+                { label: 'Manutenção',  value: s.manutencao,  dot: 'bg-red-400' },
+              ].map(row => (
+                <div key={row.label} className="flex items-center justify-end gap-1.5 text-[10px]">
+                  <span className="text-white">{row.label}:</span>
+                  <span className="font-black text-white tabular-nums w-4 text-right">{row.value}</span>
+                  <span className={`w-1.5 h-1.5 rounded-full ${row.dot}`} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </button>
+      ),
+    },
+    {
+      id: 'vendas-mes',
+      category: 'finance',
+      extra: true,
+      node: (
+        <KpiCard icon={<IconCart />} iconBg="bg-amber-500/15" iconColor="text-amber-400"
+          label="Vendas do Mês" value={`${s.vendasMesQty} veículos`}
+          sub={`Valor: ${fmt(s.vendasMesVal)}`} subColor="text-amber-400"
+          onClick={() => navigate('/admin/compra')} />
+      ),
+    },
+    {
+      id: 'receita-total',
+      category: 'finance',
+      extra: true,
+      node: (
+        <KpiCard icon={<IconDollar />} iconBg="bg-amber-500/15" iconColor="text-amber-400"
+          label="Receita Total" value={fmt(s.receitaTotal)} valueColor="text-amber-400"
+          sub="Total recebido pela empresa" subColor="text-white"
+          onClick={() => navigate('/admin/financas')} />
+      ),
+    },
+  ];
+
+  const indicatorItems = [
+    {
+      id: 'alugueres-ativos',
+      category: 'operations',
+      extra: false,
+      node: (
+        <KpiCard icon={<IconClock />} iconBg="bg-amber-500/15" iconColor="text-amber-400"
+          label="Alugueres Activos" value={s.aluguerAtivos}
+          sub="Em curso neste momento" subColor="text-white"
+          onClick={() => navigate('/admin/aluguer')} />
+      ),
+    },
+    {
+      id: 'reservas-pendentes',
+      category: 'operations',
+      extra: false,
+      node: (
+        <KpiCard icon={<IconCalendar />} iconBg="bg-amber-500/15" iconColor="text-amber-400"
+          label="Reservas Pendentes" value={s.reservasPendentes}
+          sub="À espera de confirmação" subColor="text-white"
+          onClick={() => navigate('/admin/aluguer?tab=acoes')} />
+      ),
+    },
+    {
+      id: 'manutencao',
+      category: 'vehicles',
+      extra: false,
+      node: (
+        <KpiCard icon={<IconWrench />} iconBg="bg-red-500/15" iconColor="text-red-400"
+          label="Veículos em Manutenção" value={s.manutencao} valueColor={s.manutencao > 0 ? 'text-red-400' : 'text-white'}
+          sub="Indisponíveis" subColor="text-white"
+          onClick={() => navigate('/admin/veiculos')} />
+      ),
+    },
+    {
+      id: 'pagamentos-atraso',
+      category: 'finance',
+      extra: false,
+      node: (
+        <KpiCard icon={<IconAlert />} iconBg="bg-red-500/15" iconColor="text-red-400"
+          label="Pagamentos em Atraso" value={s.pagamentosAtraso} valueColor={s.pagamentosAtraso > 0 ? 'text-red-400' : 'text-white'}
+          sub="Clientes com prestações em atraso" subColor="text-white"
+          onClick={() => navigate('/admin/compra?tab=acoes')} />
+      ),
+    },
+    {
+      id: 'contratos-activos',
+      category: 'operations',
+      extra: true,
+      node: (
+        <KpiCard icon={<IconDoc />} iconBg="bg-amber-500/15" iconColor="text-amber-400"
+          label="Contratos Activos" value={s.contratosActivos}
+          sub="Aluguer + Venda" subColor="text-white"
+          onClick={() => navigate('/admin/financas?tab=aluguer')} />
+      ),
+    },
+    {
+      id: 'valor-disponivel',
+      category: 'vehicles',
+      extra: true,
+      node: (
+        <KpiCard icon={<IconPie />} iconBg="bg-amber-500/15" iconColor="text-amber-400"
+          label="Valor dos Veículos Disponíveis" value={fmtK(s.valorDisponivel)}
+          sub="Valor dos veículos disponíveis" subColor="text-white"
+          onClick={() => navigate('/admin/veiculos')} />
+      ),
+    },
+  ];
+
+  const filteredActivityItems = activityItems.filter(item =>
+    (kpiFilter === 'all' || item.category === kpiFilter) && (showExtraCards || !item.extra)
+  );
+  const filteredIndicatorItems = indicatorItems.filter(item =>
+    (kpiFilter === 'all' || item.category === kpiFilter) && (showExtraCards || !item.extra)
+  );
+
   return (
     <div className="bg-zinc-950 text-white min-h-screen">
       <div className="px-6 py-6 space-y-6">
@@ -242,47 +389,27 @@ export function DashboardPage() {
 
         {/* ── Actividade ───────────────────────────────────────────────────────── */}
         <div className="space-y-3">
-          <SectionTitle>Actividade</SectionTitle>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <SectionTitle>Actividade</SectionTitle>
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => setShowExtraCards(prev => !prev)}
+                className="rounded-full border border-zinc-800/80 bg-zinc-900/70 px-4 py-2 text-xs font-black uppercase tracking-widest text-white hover:border-amber-400 hover:text-amber-400 transition-colors">
+                {showExtraCards ? 'Ocultar indicadores' : 'Mostrar indicadores'}
+              </button>
+              <select value={kpiFilter} onChange={e => setKpiFilter(e.target.value as any)}
+                className="rounded-full border border-zinc-800/80 bg-zinc-900/70 px-4 py-2 text-xs font-black uppercase tracking-widest text-white outline-none focus:border-amber-400 transition-colors">
+                <option value="all">Todos</option>
+                <option value="finance">Financeiros</option>
+                <option value="vehicles">Veículos</option>
+                <option value="customers">Clientes</option>
+                <option value="operations">Operações</option>
+              </select>
+            </div>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <KpiCard icon={<IconUsers />} iconBg="bg-amber-500/15" iconColor="text-amber-400"
-              label="Clientes Registados" value={s.clientesRegistados}
-              sub={`Novos este mês: ${s.clientesNovosMes}`} subColor="text-amber-400"
-              onClick={() => navigate('/admin/utilizadores')} />
-
-            <button type="button" onClick={() => navigate('/admin/veiculos')}
-              className="text-left w-full bg-zinc-900 border border-amber-500/20 rounded-2xl p-4 flex flex-col gap-2 hover:border-amber-500/40 transition-colors group">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0 text-amber-400"><IconCar /></div>
-                <p className="text-xs font-bold text-amber-400 flex-1 min-w-0 truncate">Veículos Registados</p>
-                <span className="text-white/20 group-hover:text-amber-400 transition-colors shrink-0"><ArrowRight /></span>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xl font-black leading-tight tabular-nums text-white">{s.totalVeiculos}</p>
-                <div className="space-y-0.5 text-right">
-                  {[
-                    { label: 'Disponíveis', value: s.disponiveis, dot: 'bg-emerald-400' },
-                    { label: 'Alugados',    value: s.alugados,    dot: 'bg-amber-400' },
-                    { label: 'Vendidos',    value: s.vendidos,    dot: 'bg-blue-400' },
-                    { label: 'Manutenção',  value: s.manutencao,  dot: 'bg-red-400' },
-                  ].map(row => (
-                    <div key={row.label} className="flex items-center justify-end gap-1.5 text-[10px]">
-                      <span className="text-white">{row.label}:</span>
-                      <span className="font-black text-white tabular-nums w-4 text-right">{row.value}</span>
-                      <span className={`w-1.5 h-1.5 rounded-full ${row.dot}`} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </button>
-
-            <KpiCard icon={<IconCart />} iconBg="bg-amber-500/15" iconColor="text-amber-400"
-              label="Vendas do Mês" value={`${s.vendasMesQty} veículos`}
-              sub={`Valor: ${fmt(s.vendasMesVal)}`} subColor="text-amber-400"
-              onClick={() => navigate('/admin/compra')} />
-            <KpiCard icon={<IconDollar />} iconBg="bg-amber-500/15" iconColor="text-amber-400"
-              label="Receita Total" value={fmt(s.receitaTotal)} valueColor="text-amber-400"
-              sub="Total recebido pela empresa" subColor="text-white"
-              onClick={() => navigate('/admin/financas')} />
+            {filteredActivityItems.map(item => (
+              <div key={item.id}>{item.node}</div>
+            ))}
           </div>
         </div>
 
@@ -290,39 +417,9 @@ export function DashboardPage() {
         <div className="space-y-3">
           <SectionTitle>Indicadores Principais</SectionTitle>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <KpiCard icon={<IconClock />} iconBg="bg-amber-500/15" iconColor="text-amber-400"
-              label="Alugueres Activos" value={s.aluguerAtivos}
-              sub="Em curso neste momento" subColor="text-white"
-              onClick={() => navigate('/admin/aluguer')} />
-            <KpiCard icon={<IconCalendar />} iconBg="bg-amber-500/15" iconColor="text-amber-400"
-              label="Reservas Pendentes" value={s.reservasPendentes}
-              sub="À espera de confirmação" subColor="text-white"
-              onClick={() => navigate('/admin/aluguer?tab=acoes')} />
-            <KpiCard icon={<IconWrench />} iconBg="bg-red-500/15" iconColor="text-red-400"
-              label="Veículos em Manutenção" value={s.manutencao} valueColor={s.manutencao > 0 ? 'text-red-400' : 'text-white'}
-              sub="Indisponíveis" subColor="text-white"
-              onClick={() => navigate('/admin/veiculos')} />
-            <KpiCard icon={<IconAlert />} iconBg="bg-red-500/15" iconColor="text-red-400"
-              label="Pagamentos em Atraso" value={s.pagamentosAtraso} valueColor={s.pagamentosAtraso > 0 ? 'text-red-400' : 'text-white'}
-              sub="Clientes com prestações em atraso" subColor="text-white"
-              onClick={() => navigate('/admin/compra?tab=acoes')} />
-
-            <KpiCard icon={<IconDoc />} iconBg="bg-amber-500/15" iconColor="text-amber-400"
-              label="Contratos Activos" value={s.contratosActivos}
-              sub="Aluguer + Venda" subColor="text-white"
-              onClick={() => navigate('/admin/financas?tab=aluguer')} />
-            <KpiCard icon={<IconTrend />} iconBg="bg-emerald-500/15" iconColor="text-emerald-400"
-              label="Crescimento do Mês" value={s.crescimentoMes !== null ? `${s.crescimentoMes >= 0 ? '+' : ''}${s.crescimentoMes}%` : '—'}
-              valueColor={s.crescimentoMes === null ? 'text-white' : s.crescimentoMes >= 0 ? 'text-emerald-400' : 'text-red-400'}
-              sub="Comparado com o mês anterior" subColor="text-white" />
-            <KpiCard icon={<IconTag />} iconBg="bg-amber-500/15" iconColor="text-amber-400"
-              label="Valor Médio por Venda" value={fmt(s.valorMedioVenda)}
-              sub="Média recebida por cada venda" subColor="text-white"
-              onClick={() => navigate('/admin/compra')} />
-            <KpiCard icon={<IconPie />} iconBg="bg-amber-500/15" iconColor="text-amber-400"
-              label="Valor dos Veículos Disponíveis" value={fmtK(s.valorDisponivel)}
-              sub="Valor dos veículos disponíveis" subColor="text-white"
-              onClick={() => navigate('/admin/veiculos')} />
+            {filteredIndicatorItems.map(item => (
+              <div key={item.id}>{item.node}</div>
+            ))}
           </div>
         </div>
 

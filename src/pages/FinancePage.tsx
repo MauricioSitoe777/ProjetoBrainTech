@@ -122,7 +122,7 @@ export function FinancePage() {
     }
 
     return Object.entries(mapa)
-      .map(([key, d]) => ({ key, year: parseInt(key.slice(0, 4)), month: parseInt(key.slice(5, 7)) - 1, totalReceita: d.aluguerVal + d.compraVal, saidasVal: d.saidasVal, ...d }))
+      .map(([key, d]) => ({ key, year: parseInt(key.slice(0, 4)), month: parseInt(key.slice(5, 7)) - 1, totalReceita: d.aluguerVal + d.compraVal, ...d }))
       .sort((a, b) => a.year - b.year || a.month - b.month);
   }, [resFiltradas, transacoesFiltradas, startDate, endDate]);
 

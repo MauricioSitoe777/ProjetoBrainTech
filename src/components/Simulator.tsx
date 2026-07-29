@@ -585,8 +585,8 @@ export default function Simulator({
         valorTotal: purchaseTotal,
         deposito: paymentPlan === "prestacoes" ? downPayment : purchaseTotal,
         notas: `Compra via plano: ${paymentPlan === "prestacoes" ? `${mesesPrestacoes} prestações` : "Pronto pagamento"}`,
-        totalPrestacoes: paymentPlan === "prestacoes" ? mesesPrestacoes : undefined,
-        prestacoesPagas: paymentPlan === "prestacoes" ? 0 : undefined,
+        totalPrestacoes: paymentPlan === "prestacoes" ? mesesPrestacoes : 0,
+        prestacoesPagas: 0,
       });
       if (!result.ok) {
         setSubmitError(result.error ?? "Não foi possível submeter o pedido de compra.");

@@ -400,12 +400,25 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
       ? new Date(dataInicioCustom + 'T00:00:00')
       : (() => { const d = new Date(); d.setMonth(d.getMonth() + 1); d.setDate(1); return d; })();
 
+    const entradaPaga = semEntrada ? 0 : (existing?.deposito ?? 0);
+    const restante = Math.max(0, (existing?.valorTotal ?? 0) - entradaPaga);
+    const today = new Date().toISOString().split('T')[0];
+
     let plano: Prestacao[] = [];
     setReservations(prev =>
       prev.map(r => {
         if (r.id !== id) return r;
-        const entradaPaga = semEntrada ? 0 : (r.deposito ?? 0);
-        const restante = Math.max(0, r.valorTotal - entradaPaga);
+        if (restante === 0) {
+          return {
+            ...r,
+            status: 'liquidada' as ReservationStatus,
+            totalPrestacoes: 0,
+            prestacoesPagas: 0,
+            prestacoes: [],
+            dataLiquidacao: today,
+          };
+        }
+
         const valorPrestacao = Math.round(restante / n);
         plano = Array.from({ length: n }, (_, i) => {
           const due = new Date(startDate.getFullYear(), startDate.getMonth() + i, startDate.getDate());
@@ -425,26 +438,44 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
         };
       })
     );
-    api.put(`/reservations/${id}`, {
+
+    api.put(`/reservations/${id}`, restante === 0 ? {
+      status: 'liquidada',
+      total_prestacoes: 0,
+      prestacoes_pagas: 0,
+      prestacoes: [],
+      data_liquidacao: today,
+    } : {
       status: 'em_prestacao',
       total_prestacoes: n,
       prestacoes_pagas: 0,
       prestacoes: plano,
     }).catch(() => {});
 
-    // Notificar o cliente com o calendário de pagamentos
+    // Notificar o cliente com o calendário de pagamentos ou com a liquidação à vista
     if (existing?.userId) {
       const vehicle = allVehicles.find(v => v.id === existing.vehicleId) ?? VEHICLES.find(v => v.id === existing.vehicleId);
       const vehicleName = vehicle?.name || `Viatura #${existing.vehicleId}`;
-      const primeiraData = startDate.toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' });
-      addNotification(
-        existing.userId,
-        'Plano de Pagamentos Definido',
-        `O seu plano de prestações para "${vehicleName}" foi criado: ${n} prestação${n !== 1 ? 'ões' : ''}, com a primeira a vencer a ${primeiraData}. Consulte "Pagamentos" para ver o calendário completo.`,
-        'info',
-        id,
-        '/profile'
-      );
+      if (restante === 0) {
+        addNotification(
+          existing.userId,
+          'Compra Liquidada',
+          `A compra de "${vehicleName}" foi registada como liquidada — não há prestações pendentes.`,
+          'success',
+          id,
+          '/profile'
+        );
+      } else {
+        const primeiraData = startDate.toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' });
+        addNotification(
+          existing.userId,
+          'Plano de Pagamentos Definido',
+          `O seu plano de prestações para "${vehicleName}" foi criado: ${n} prestação${n !== 1 ? 'ões' : ''}, com a primeira a vencer a ${primeiraData}. Consulte "Pagamentos" para ver o calendário completo.`,
+          'info',
+          id,
+          '/profile'
+        );
+      }
     }
   };
 

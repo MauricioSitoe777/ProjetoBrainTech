@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 
+const VEHICLE_RETURN_KEY = "rentcar:last-route";
+
 /**
  * Minimal client-side router based on window.location.pathname.
  * Supports: "/" (landing), "/admin" (users) and "/admin/reservas" (reservations).
@@ -14,6 +16,9 @@ export function useRoute() {
   }, []);
 
   const navigate = (to: string) => {
+    if (to.startsWith("/veiculo/") && !path.startsWith("/veiculo/")) {
+      sessionStorage.setItem(VEHICLE_RETURN_KEY, path);
+    }
     window.history.pushState({}, "", to);
     setPath(to);
     window.dispatchEvent(new PopStateEvent("popstate"));

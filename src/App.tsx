@@ -97,7 +97,12 @@ function AppInner() {
   // Show header everywhere except special auth flows
   const showHeader = !isRecuperar && !isRedefinir && !isInvite;
 
-  const goBack = () => { navigate("/"); restoreScroll(); };
+  const goBack = () => {
+    const shouldReturnToLast = path.startsWith("/veiculo/");
+    const lastRoute = shouldReturnToLast ? sessionStorage.getItem("rentcar:last-route") : null;
+    navigate(lastRoute || "/");
+    restoreScroll();
+  };
 
   // ── Global window events ───────────────────────────────────────────────────
   useEffect(() => {
