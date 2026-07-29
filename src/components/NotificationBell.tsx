@@ -123,7 +123,7 @@ export function NotificationBell() {
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-white uppercase tracking-wider">Notificações</span>
               {unreadCount > 0 && (
-                <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full font-bold border border-amber-500/20">
+                <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-md font-bold border border-amber-500/20">
                   {unreadCount} novas
                 </span>
               )}

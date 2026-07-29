@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import type { User, UserRole, UserStatus, UserCategory, UserRegularity, UserRestriction } from '../types/user';
 import { CATEGORY_LABEL, DOC_LABEL } from '../data/constants';
 
@@ -14,8 +14,8 @@ const ROLES: { value: UserRole; label: string }[] = [
 ];
 
 const STATUSES: { value: UserStatus; label: string }[] = [
-  { value: 'ativo', label: 'Ativo' },
-  { value: 'inativo', label: 'Inativo' },
+  { value: 'ativo', label: 'Activo' },
+  { value: 'inativo', label: 'Inactivo' },
   { value: 'suspenso', label: 'Suspenso' },
   { value: 'pendente', label: 'Pendente' },
 ];
@@ -55,6 +55,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
     regularity: 'regular' as UserRegularity,
     restriction: 'nenhuma' as UserRestriction,
     category: 'func_publico' as UserCategory,
+    salario: '',
     bi: '',
     nuit: '',
     endereco: '',
@@ -74,6 +75,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
         regularity: user.regularity || 'regular',
         restriction: user.restriction || 'nenhuma',
         category: user.category || 'func_publico',
+        salario: user.salario !== undefined ? String(user.salario) : '',
         bi: user.bi || '',
         nuit: user.nuit || '',
         endereco: user.endereco || '',
@@ -97,6 +99,8 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
     if (!form.telefone.trim()) e.telefone = 'Telefone é obrigatório';
     if (form.status === 'suspenso' && !form.motivoSuspensao.trim())
       e.motivoSuspensao = 'Obrigatório indicar o motivo da suspensão';
+    if (form.salario.trim() && (Number.isNaN(Number(form.salario)) || Number(form.salario) < 0))
+      e.salario = 'Salário inválido';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -109,7 +113,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
     Object.entries(docFiles).forEach(([k, v]) => {
       if (v) (documentos as Record<string, string | boolean>)[k] = v;
     });
-    onSave({ ...form, documentos });
+    onSave({ ...form, documentos, salario: form.salario.trim() ? Number(form.salario) : undefined });
   };
 
   const handleDocFile = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -166,7 +170,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg shadow-2xl">
+      <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl w-full max-w-lg shadow-2xl">
         <div className="flex items-center justify-between p-6 border-b border-zinc-800">
           <h2 className="text-lg font-semibold text-white">
             {user ? 'Editar utilizador' : 'Novo utilizador'}
@@ -278,7 +282,13 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
             </div>
 
             <div className="col-span-2">
-              <label className="block text-xs text-white mb-1">Endereço</label>
+              <label className="block text-xs text-white mb-1">Salário (MT)</label>
+              <input type="number" min="0" step="0.01" placeholder="Ex: 45000" {...field('salario')} className={inputClass} />
+              {errors.salario && <p className="text-red-400 text-xs mt-1">{errors.salario}</p>}
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-xs text-white mb-1">Morada</label>
               <input {...field('endereco')} placeholder="Av. ..., Maputo" className={inputClass} />
             </div>
 

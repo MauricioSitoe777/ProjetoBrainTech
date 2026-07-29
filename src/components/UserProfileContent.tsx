@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import type { User } from '../types/user';
 import { useReservations } from '../context/ReservationsContext';
 import { VEHICLES, CATEGORY_LABEL, DOC_LABEL } from '../data/constants';
@@ -10,9 +10,9 @@ interface UserProfileContentProps {
 }
 
 const STATUS_RESERVA: Record<string, { label: string; cls: string; dot: string }> = {
-  pendente:  { label: 'Pendente',   cls: 'bg-amber-400/10 text-amber-400 border-amber-400/20',   dot: 'bg-amber-400' },
+  pendente:  { label: 'Ag. Pagamento', cls: 'bg-amber-400/10 text-amber-400 border-amber-400/20', dot: 'bg-amber-400' },
   confirmada:{ label: 'Confirmada', cls: 'bg-blue-400/10 text-blue-400 border-blue-400/20',       dot: 'bg-blue-400' },
-  ativa:     { label: 'Ativa',      cls: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20', dot: 'bg-emerald-400' },
+  ativa:     { label: 'Activa',     cls: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20', dot: 'bg-emerald-400' },
   concluida: { label: 'Concluída',  cls: 'bg-zinc-700 text-white border-zinc-600',                dot: 'bg-zinc-400' },
   cancelada: { label: 'Cancelada',  cls: 'bg-red-400/10 text-red-400 border-red-400/20',          dot: 'bg-red-400' },
 };
@@ -20,7 +20,7 @@ const STATUS_RESERVA: Record<string, { label: string; cls: string; dot: string }
 const ROLE_LABEL  = { admin: 'Administrador', cliente: 'Cliente' };
 const REG_LABEL   = { regular: 'Regular', pendente: 'Pendente', inadimplente: 'Inadimplente' };
 const REST_LABEL  = { nenhuma: 'Nenhuma', blacklisted: 'Lista Negra' };
-const STATUS_LABEL = { ativo: 'Ativo', inativo: 'Inativo', suspenso: 'Suspenso', pendente: 'Pendente' };
+const STATUS_LABEL = { ativo: 'Activo', inativo: 'Inactivo', suspenso: 'Suspenso', pendente: 'Pendente' };
 
 function initials(nome: string) {
   return nome.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
@@ -52,12 +52,24 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
   // H3/H5 — confirmação antes de acção destrutiva
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  // H1 — feedback claro de cópia com label textual
+  const fallbackCopy = (texto: string) => {
+    const el = document.createElement('textarea');
+    el.value = texto;
+    el.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+  };
+
   const copiar = (texto: string, chave: string) => {
-    navigator.clipboard.writeText(texto).then(() => {
-      setCopiado(chave);
-      setTimeout(() => setCopiado(null), 2000);
-    });
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(texto).catch(() => fallbackCopy(texto));
+    } else {
+      fallbackCopy(texto);
+    }
+    setCopiado(chave);
+    setTimeout(() => setCopiado(null), 2000);
   };
 
   const userReservations = reservations.filter(r => r.userId === user.id);
@@ -159,10 +171,10 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
         {[
           { label: 'Alugueres',      value: alugueres.length,                         color: 'text-white' },
           { label: 'Compras',        value: compras.length,                            color: 'text-white' },
-          { label: 'Total investido',value: `${totalGasto.toLocaleString('pt-PT')} MT`, color: 'text-amber-400', small: true },
+          { label: 'Total investido',value: `${Math.round(totalGasto).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')},00 MT`, color: 'text-amber-400', small: true },
         ].map(k => (
           <div key={k.label} className="bg-zinc-800/50 rounded-xl p-3 border border-zinc-800 text-center">
-            <p className="text-[9px] text-white uppercase font-bold tracking-wider mb-1">{k.label}</p>
+            <p className="text-[9px] text-amber-400 uppercase font-bold tracking-wider mb-1">{k.label}</p>
             <p className={`font-black leading-tight ${k.small ? 'text-sm' : 'text-2xl'} ${k.color}`}>{k.value}</p>
           </div>
         ))}
@@ -172,7 +184,7 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
       <div>
         <p className="text-[10px] font-black text-white uppercase tracking-widest mb-3">Informações</p>
         {/* H6 — ícone + label para reconhecimento imediato do campo */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden divide-y divide-zinc-800">
+        <div className="bg-zinc-900 border border-amber-500/20 rounded-xl overflow-hidden divide-y divide-zinc-800">
           {[
             { icon: 'M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.99 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.92 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z', label: 'Telefone', value: user.telefone || '—' },
             { icon: 'M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM1 7l11 8 11-8', label: 'Categoria', value: user.category ? CATEGORY_LABEL[user.category] : 'Não definida' },
@@ -266,45 +278,53 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
                 </button>
               </div>
             )}
-            {/* Senha */}
+            {/* Palavra-passe */}
             <div className="flex items-center justify-between px-4 py-3 gap-3">
               <div className="min-w-0">
-                <p className="text-[9px] text-white uppercase font-bold tracking-wider mb-0.5">Senha</p>
-                <div className="flex items-center gap-2">
-                  <span className={`text-sm font-black tracking-widest ${user.password ? 'text-amber-400' : 'text-zinc-400'}`}>
-                    {showPass ? (user.password || '123') : '••••••••'}
-                  </span>
-                  {!user.password && (
-                    <span className="text-[9px] text-zinc-500 font-bold uppercase bg-zinc-800 border border-zinc-700 px-1.5 py-0.5 rounded">padrão</span>
-                  )}
+                <p className="text-[9px] text-white uppercase font-bold tracking-wider mb-0.5">Palavra-passe</p>
+                {user.passwordChangedByUser ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-zinc-500 italic">Definida pelo utilizador</span>
+                    <span className="text-[9px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-1.5 py-0.5 rounded uppercase tracking-wide">Privada</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-black tracking-widest ${user.password ? 'text-amber-400' : 'text-zinc-400'}`}>
+                      {showPass ? (user.password || '123') : '••••••••'}
+                    </span>
+                    {!user.password && (
+                      <span className="text-[9px] text-zinc-500 font-bold uppercase bg-zinc-800 border border-zinc-700 px-1.5 py-0.5 rounded">padrão</span>
+                    )}
+                  </div>
+                )}
+              </div>
+              {!user.passwordChangedByUser && (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() => setShowPass(v => !v)}
+                    title={showPass ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'}
+                    aria-label={showPass ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'}
+                    className={`p-1.5 rounded-lg transition ${showPass ? 'text-amber-400 bg-amber-400/10' : 'text-white hover:text-white hover:bg-zinc-700'}`}
+                  >
+                    {showPass ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => copiar(user.password || '123', 'pass')}
+                    title="Copiar palavra-passe"
+                    className={`text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all ${
+                      copiado === 'pass'
+                        ? 'bg-emerald-400/15 text-emerald-400 border border-emerald-400/30'
+                        : 'bg-zinc-700 text-white hover:bg-zinc-600'
+                    }`}
+                  >
+                    {copiado === 'pass' ? 'Copiado!' : 'Copiar'}
+                  </button>
                 </div>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                {/* H4/H7 — título descritivo em todos os botões de ícone */}
-                <button
-                  onClick={() => setShowPass(v => !v)}
-                  title={showPass ? 'Ocultar senha' : 'Mostrar senha'}
-                  aria-label={showPass ? 'Ocultar senha' : 'Mostrar senha'}
-                  className={`p-1.5 rounded-lg transition ${showPass ? 'text-amber-400 bg-amber-400/10' : 'text-white hover:text-white hover:bg-zinc-700'}`}
-                >
-                  {showPass ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                  )}
-                </button>
-                <button
-                  onClick={() => copiar(user.password || '123', 'pass')}
-                  title="Copiar senha"
-                  className={`text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all ${
-                    copiado === 'pass'
-                      ? 'bg-emerald-400/15 text-emerald-400 border border-emerald-400/30'
-                      : 'bg-zinc-700 text-white hover:bg-zinc-600'
-                  }`}
-                >
-                  {copiado === 'pass' ? 'Copiado!' : 'Copiar'}
-                </button>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -339,7 +359,7 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
               const isInstallment = (a.notas || '')?.includes('prestações');
 
               return (
-                <div key={a.id} className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 hover:border-zinc-700 transition-colors">
+                <div key={a.id} className="bg-zinc-900 border border-amber-500/20 rounded-xl px-4 py-3 hover:border-zinc-700 transition-colors">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       {/* H6 — badge de tipo + nome da viatura juntos */}
@@ -376,14 +396,13 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
                     {/* Direita: estado + valor + acção */}
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
                       {/* H1 — ponto de cor + label de estado */}
-                      <span className={`flex items-center gap-1.5 text-[10px] border rounded-full px-2 py-0.5 font-bold ${st.cls}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
+                      <span className={`text-[10px] border rounded-md px-2 py-0.5 font-bold ${st.cls}`}>
                         {st.label}
                       </span>
                       <p className="text-sm font-black text-white">
                         {isPurchase && isInstallment
-                          ? `${a.deposito.toLocaleString('pt-PT')} MT/mês`
-                          : `${a.valorTotal.toLocaleString('pt-PT')} MT`}
+                          ? `${Math.round(a.deposito).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')},00 MT/mês`
+                          : `${Math.round(a.valorTotal).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')},00 MT`}
                       </p>
                       {isAdmin && (
                         /* H3/H5 — pede confirmação antes de eliminar */
@@ -416,7 +435,7 @@ export function UserProfileContent({ user, showRole = true }: UserProfileContent
           style={{ backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
           onClick={e => { if (e.target === e.currentTarget) setConfirmDelete(null); }}
         >
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+          <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-9 h-9 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2">

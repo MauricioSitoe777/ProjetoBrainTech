@@ -4,7 +4,7 @@ import { useAuth } from './AuthContext';
 
 interface UsersContextType {
   users: User[];
-  addUser: (user: Omit<User, 'id' | 'dataCriacao' | 'ultimoAcesso' | 'totalAlugueres'>) => User;
+  addUser: (user: Omit<User, 'id' | 'dataCriacao' | 'ultimoAcesso' | 'totalAlugueres'>) => Promise<User>;
   updateUser: (id: string, data: Partial<User>) => void;
   deleteUser: (id: string) => void;
   getUser: (id: string) => User | undefined;

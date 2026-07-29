@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import { AlertTriangle, Lock, FileText, Shield, UserCheck, Landmark } from "lucide-react";
 
 interface XitiqueRegulationsModalProps {
   onClose: () => void;
@@ -9,7 +9,7 @@ export default function XitiqueRegulationsModal({ onClose }: XitiqueRegulationsM
     <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={onClose} />
       
-      <div className="relative bg-zinc-900 border border-zinc-800 rounded-[32px] w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      <div className="relative bg-zinc-900 border border-amber-500/20 rounded-[32px] w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-8 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50 backdrop-blur-xl sticky top-0 z-10">
           <div>
@@ -32,9 +32,7 @@ export default function XitiqueRegulationsModal({ onClose }: XitiqueRegulationsM
           {/* AVISO IMPORTANTE DE PAGAMENTO */}
           <div className="bg-amber-500/10 border border-amber-500/30 p-6 rounded-3xl">
             <div className="flex items-center gap-3 mb-3 text-amber-500">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
+              <AlertTriangle size={24} strokeWidth={2.5} />
               <h3 className="font-black text-lg uppercase tracking-tight">Aviso de Pagamento</h3>
             </div>
             <p className="text-white text-sm leading-relaxed font-bold">
@@ -50,7 +48,7 @@ export default function XitiqueRegulationsModal({ onClose }: XitiqueRegulationsM
                 <h4 className="text-white font-black uppercase tracking-wider">Objectivo do Grupo</h4>
               </div>
               <p className="text-white text-sm leading-relaxed pl-11">
-                O Xitique SOS Motors é uma modalidade de poupança colectiva composta por grupos de 10 membros, com o objectivo de facilitar a aquisição de viaturas ou o pagamento de entradas para financiamento.
+                O Xitique SOS Motors é uma modalidade de poupança colectiva onde o administrador cria grupos com número de membros e quota mensal variáveis, com o objectivo de facilitar a aquisição de viaturas ou o pagamento de entradas para financiamento.
               </p>
             </section>
 
@@ -62,11 +60,11 @@ export default function XitiqueRegulationsModal({ onClose }: XitiqueRegulationsM
               <ul className="text-white text-sm space-y-3 pl-11">
                 <li className="flex gap-2">
                   <span className="text-amber-500 font-bold">•</span>
-                  <span>Cada membro contribui com uma quota mensal fixa de 30.000 MT.</span>
+                  <span>Cada membro contribui mensalmente com a quota definida pelo administrador para o grupo em que está inscrito.</span>
                 </li>
                 <li className="flex gap-2">
                   <span className="text-amber-500 font-bold">•</span>
-                  <span>O ciclo tem a duração total de 10 meses.</span>
+                  <span>A duração do ciclo é igual ao número de membros do grupo — cada mês um membro é contemplado.</span>
                 </li>
                 <li className="flex gap-2">
                   <span className="text-amber-500 font-bold">•</span>
@@ -81,7 +79,7 @@ export default function XitiqueRegulationsModal({ onClose }: XitiqueRegulationsM
                 <h4 className="text-white font-black uppercase tracking-wider">Sorteios e Contemplação</h4>
               </div>
               <p className="text-white text-sm leading-relaxed pl-11">
-                Mensalmente, será realizado um sorteio entre os membros que efectuaram o pagamento. O contemplado recebe um crédito de 300.000 MT para ser aplicado na viatura escolhida na SOS Motors.
+                Mensalmente, é realizado um sorteio entre os membros que efectuaram o pagamento. O contemplado recebe o fundo total acumulado do grupo (quota × número de membros) para aplicar na viatura escolhida na SOS Motors.
               </p>
             </section>
 
@@ -122,9 +120,7 @@ export default function XitiqueRegulationsModal({ onClose }: XitiqueRegulationsM
               </div>
               <div className="bg-red-500/5 border border-red-500/20 p-5 rounded-2xl ml-11 space-y-3">
                 <div className="flex items-center gap-2 text-red-400 mb-2">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                  </svg>
+                  <Lock size={18} strokeWidth={2.5} />
                   <span className="text-[10px] font-black uppercase tracking-[0.2em]">Alienação Fiduciária</span>
                 </div>
                 <ul className="text-white text-sm space-y-3">
@@ -138,7 +134,7 @@ export default function XitiqueRegulationsModal({ onClose }: XitiqueRegulationsM
                   </li>
                   <li className="flex gap-2">
                     <span className="text-red-400 font-bold">•</span>
-                    <span>A transferência total e definitiva do veículo para o cliente ocorre <strong className="text-amber-500">apenas após o pagamento integral da 10ª prestação</strong>.</span>
+                    <span>A transferência total e definitiva do veículo para o cliente ocorre <strong className="text-amber-500">apenas após o pagamento integral da última prestação do ciclo</strong>.</span>
                   </li>
                 </ul>
               </div>
@@ -151,15 +147,13 @@ export default function XitiqueRegulationsModal({ onClose }: XitiqueRegulationsM
               </div>
               <div className="bg-blue-500/5 border border-blue-500/20 p-5 rounded-2xl ml-11 space-y-3">
                 <div className="flex items-center gap-2 text-blue-400 mb-2">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
-                  </svg>
+                  <FileText size={18} strokeWidth={2.5} />
                   <span className="text-[10px] font-black uppercase tracking-[0.2em]">Força Executiva</span>
                 </div>
                 <ul className="text-white text-sm space-y-3">
                   <li className="flex gap-2">
                     <span className="text-blue-400 font-bold">•</span>
-                    <span>Antes do início do ciclo, <strong className="text-white">todos os 10 participantes assinam um contrato legal</strong> com força executiva.</span>
+                    <span>Antes do início do ciclo, <strong className="text-white">todos os participantes do grupo assinam um contrato legal</strong> com força executiva.</span>
                   </li>
                   <li className="flex gap-2">
                     <span className="text-blue-400 font-bold">•</span>
@@ -180,9 +174,7 @@ export default function XitiqueRegulationsModal({ onClose }: XitiqueRegulationsM
               </div>
               <div className="bg-emerald-500/5 border border-emerald-500/20 p-5 rounded-2xl ml-11 space-y-3">
                 <div className="flex items-center gap-2 text-emerald-400 mb-2">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                  </svg>
+                  <Shield size={18} strokeWidth={2.5} />
                   <span className="text-[10px] font-black uppercase tracking-[0.2em]">Fiador ou Cheque Visado</span>
                 </div>
                 <p className="text-white text-sm leading-relaxed">
@@ -190,12 +182,12 @@ export default function XitiqueRegulationsModal({ onClose }: XitiqueRegulationsM
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                   <div className="bg-zinc-950 border border-emerald-500/10 rounded-xl p-4 text-center space-y-2">
-                    <div className="text-emerald-400 text-2xl">👤</div>
+                    <div className="flex justify-center text-emerald-400"><UserCheck size={28} strokeWidth={1.8} /></div>
                     <h5 className="text-white font-black text-xs uppercase tracking-wider">Fiador (Garante)</h5>
                     <p className="text-white text-[11px] leading-snug">Pessoa com rendimentos comprovados que se responsabiliza solidariamente pelo cumprimento das prestações.</p>
                   </div>
                   <div className="bg-zinc-950 border border-emerald-500/10 rounded-xl p-4 text-center space-y-2">
-                    <div className="text-emerald-400 text-2xl">🏦</div>
+                    <div className="flex justify-center text-emerald-400"><Landmark size={28} strokeWidth={1.8} /></div>
                     <h5 className="text-white font-black text-xs uppercase tracking-wider">Garantia Financeira</h5>
                     <p className="text-white text-[11px] leading-snug">Cheque visado ou depósito caução como garantia financeira para assegurar o cumprimento das obrigações.</p>
                   </div>
