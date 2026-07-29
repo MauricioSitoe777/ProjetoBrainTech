@@ -190,6 +190,11 @@ export default function Simulator({
   const [downPayment, setDownPayment] = useState(0);
   const [paymentPlan, setPaymentPlan] = useState<PaymentPlan>("prestacoes");
   const [mesesPrestacoes, setMesesPrestacoes] = useState(12);
+  const effectiveMonths = Math.min(maxMonthsForCategory, Math.max(1, mesesPrestacoes));
+
+  useEffect(() => {
+    setMesesPrestacoes((prev) => Math.min(maxMonthsForCategory, Math.max(1, prev)));
+  }, [maxMonthsForCategory]);
 
   // Aluguer
   const aluguerVehicles = useMemo(() => allVehicles.filter(v => v.mode === 'aluguer'), [allVehicles]);
@@ -336,17 +341,15 @@ export default function Simulator({
   const purchasePMT = useMemo(() => {
     if (flow !== "compra") return 0;
     if (paymentPlan !== "prestacoes") return 0;
-    const n = Math.min(maxMonthsForCategory, Math.max(1, Math.round(mesesPrestacoes)));
     const financed = Math.max(0, vehiclePrice - downPayment);
-    return pmtMonthly(financed, n, TAXA_MENSAL);
-  }, [flow, paymentPlan, mesesPrestacoes, vehiclePrice, downPayment, maxMonthsForCategory]);
+    return pmtMonthly(financed, effectiveMonths, TAXA_MENSAL);
+  }, [flow, paymentPlan, effectiveMonths, vehiclePrice, downPayment]);
 
   const purchaseTotal = useMemo(() => {
     if (flow !== "compra") return 0;
     if (paymentPlan === "pronto") return vehiclePrice;
-    const n = Math.min(maxMonthsForCategory, Math.max(1, Math.round(mesesPrestacoes)));
-    return downPayment + (purchasePMT * n);
-  }, [flow, paymentPlan, vehiclePrice, purchasePMT, mesesPrestacoes, downPayment, maxMonthsForCategory]);
+    return downPayment + (purchasePMT * effectiveMonths);
+  }, [flow, paymentPlan, vehiclePrice, purchasePMT, effectiveMonths, downPayment]);
 
   const maxPmt = income * 0.3;
 
@@ -584,8 +587,8 @@ export default function Simulator({
         status: "pendente",
         valorTotal: purchaseTotal,
         deposito: paymentPlan === "prestacoes" ? downPayment : purchaseTotal,
-        notas: `Compra via plano: ${paymentPlan === "prestacoes" ? `${mesesPrestacoes} prestações` : "Pronto pagamento"}`,
-        totalPrestacoes: paymentPlan === "prestacoes" ? mesesPrestacoes : 0,
+        notas: `Compra via plano: ${paymentPlan === "prestacoes" ? `${effectiveMonths} prestações` : "Pronto pagamento"}`,
+        totalPrestacoes: paymentPlan === "prestacoes" ? effectiveMonths : 0,
         prestacoesPagas: 0,
       });
       if (!result.ok) {
@@ -806,9 +809,16 @@ export default function Simulator({
                       onChange={(e) => setPaymentPlan(e.target.value as PaymentPlan)}
                       className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2.5 text-sm text-white font-normal outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 cursor-pointer"
                     >
-                      <option value="pronto">💵  À Vista</option>
-                      <option value="prestacoes">📅  Prestações ({maxMonthsForCategory}m)</option>
+                      <option value="pronto">💵 À Vista</option>
+                      <option value="prestacoes">📅 Prestações</option>
                     </select>
+                    <div className="mt-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-2.5 py-2">
+                      <p className="text-[11px] leading-relaxed text-amber-200">
+                        {paymentPlan === "pronto"
+                          ? "Pagamento total de uma vez, sem parcelas mensais."
+                          : "Divida o valor em parcelas mensais de acordo com o plano disponível."}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -858,21 +868,30 @@ export default function Simulator({
                         <div className="flex items-center justify-between mb-2">
                           <label className="text-white text-sm font-normal">Nº de Meses</label>
                           <div className="flex items-baseline gap-1 bg-zinc-800 border border-zinc-700 rounded-md px-2.5 py-1">
-                            <span className="text-lg font-black text-amber-400 leading-none">{mesesPrestacoes}</span>
+                            <span className="text-lg font-black text-amber-400 leading-none">{effectiveMonths}</span>
                             <span className="text-xs text-white font-normal">m</span>
                           </div>
                         </div>
                         <input type="range" className="months-slider w-full"
-                          min={1} max={maxMonthsForCategory} step={1} value={mesesPrestacoes}
+                          min={1} max={maxMonthsForCategory} step={1} value={effectiveMonths}
                           onChange={e => setMesesPrestacoes(Number(e.target.value))}
-                          style={{ background: `linear-gradient(to right, #E4B42E ${((mesesPrestacoes - 1) / (maxMonthsForCategory - 1)) * 100}%, #3f3f46 ${((mesesPrestacoes - 1) / (maxMonthsForCategory - 1)) * 100}%)` }}
+                          style={{ background: `linear-gradient(to right, #E4B42E ${((effectiveMonths - 1) / Math.max(1, maxMonthsForCategory - 1)) * 100}%, #3f3f46 ${((effectiveMonths - 1) / Math.max(1, maxMonthsForCategory - 1)) * 100}%)` }}
                         />
-                        <div className="flex justify-between mt-2">
-                          {(maxMonthsForCategory <= 12 ? [1, 6, 12] : [1, 12, 24, 48])
-                            .filter(v => v <= maxMonthsForCategory).map(v => (
-                            <button key={v} type="button" onClick={() => setMesesPrestacoes(v)}
-                              className={`text-xs font-medium px-1.5 py-0.5 rounded transition-all ${mesesPrestacoes === v ? 'text-amber-400 bg-amber-400/10 border border-amber-400/30' : 'text-white'}`}>{v}</button>
-                          ))}
+                        <div className="relative mt-2 pt-3">
+                          <div className="relative h-8">
+                            {(maxMonthsForCategory <= 12 ? [1, 6, 12] : [1, 12, 24, 48])
+                              .filter(v => v <= maxMonthsForCategory).map(v => {
+                                const denom = Math.max(1, maxMonthsForCategory - 1);
+                                const leftPct = denom === 0 ? 0 : ((v - 1) / denom) * 100;
+                                return (
+                                  <button key={v} type="button" onClick={() => setMesesPrestacoes(v)}
+                                    style={{ left: `${leftPct}%`, transform: 'translateX(-50%)' }}
+                                    className={`absolute top-0 text-xs font-medium px-1.5 py-0.5 rounded transition-all ${effectiveMonths === v ? 'text-amber-400 bg-amber-400/10 border border-amber-400/30' : 'text-white'}`}>
+                                    {v}
+                                  </button>
+                                );
+                              })}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1125,7 +1144,7 @@ export default function Simulator({
                 </span>
                 <span className="text-white text-xs font-normal bg-white/5 px-2.5 py-1 rounded-md border border-white/10">
                   {flow === "compra" && paymentPlan === "prestacoes"
-                    ? `${(TAXA_MENSAL * 100).toFixed(1)}%/mês · ${Math.min(maxMonthsForCategory, Math.max(1, Math.round(mesesPrestacoes)))} meses`
+                    ? `${(TAXA_MENSAL * 100).toFixed(1)}%/mês · ${effectiveMonths} meses`
                     : flow === "compra"
                       ? "Pagamento à vista."
                       : "Inclui diárias, taxas e caução."}

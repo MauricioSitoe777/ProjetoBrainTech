@@ -6,7 +6,7 @@ import { AppHeader } from "./components/AppHeader";
 import Hero            from "./components/Hero";
 import CatalogSection  from "./components/CatalogSection";
 import HowItWorks      from "./components/HowItWorks";
-import AboutModal      from "./components/AboutModal";
+import AboutSection    from "./components/AboutSection";
 import XitiqueModal    from "./components/XitiqueModal";
 import XitiqueRegulationsModal from "./components/XitiqueRegulationsModal";
 import Simulator       from "./components/Simulator";
@@ -73,7 +73,6 @@ function AppInner() {
   const [passwordChanged, setPasswordChanged] = useState(false);
 
   // Shared modal state (dispatched via window events)
-  const [showAbout,         setShowAbout]         = useState(false);
   const [showXitiqueModal,  setShowXitiqueModal]  = useState(false);
   const [showXitiqueRegs,   setShowXitiqueRegs]   = useState(false);
   const [flowModalOpen,     setFlowModalOpen]      = useState(false);
@@ -107,7 +106,7 @@ function AppInner() {
 
   // ── Global window events ───────────────────────────────────────────────────
   useEffect(() => {
-    const onAbout     = () => setShowAbout(true);
+    const onAbout     = () => navigate('/sobre');
     const onXitique   = () => setShowXitiqueModal(true);
     const onRegs      = () => setShowXitiqueRegs(true);
     const onFlow      = (e: Event) => {
@@ -209,6 +208,13 @@ function AppInner() {
       </div>
     );
 
+    // About page
+    if (currentPath === "/sobre") return (
+      <div className="pt-16">
+        <AboutSection />
+      </div>
+    );
+
     // Vehicle detail
     if (isVehicleDetails) return (
       <div className="pt-16">
@@ -291,7 +297,6 @@ function AppInner() {
       {renderPage()}
 
       {/* Global modals */}
-      {showAbout        && <AboutModal onClose={() => setShowAbout(false)} />}
       {showXitiqueModal && <XitiqueModal onClose={() => setShowXitiqueModal(false)} />}
       {showXitiqueRegs  && <XitiqueRegulationsModal onClose={() => setShowXitiqueRegs(false)} />}
 

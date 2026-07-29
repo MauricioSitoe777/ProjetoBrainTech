@@ -63,7 +63,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
 
           {/* Brand */}
-          <div className="md:col-span-2">
+          <div>
             <div className="flex items-center mb-4">
               <BrandLogo className="h-14 w-auto max-w-[200px]" />
             </div>
@@ -93,10 +93,12 @@ export default function Footer() {
             {CONTACTS.map((c) => (
               <div key={c} className="text-white text-base mb-2">{c}</div>
             ))}
+          </div>
 
-            {/* Redes sociais */}
-            <div className="mt-4 flex items-center gap-2.5 flex-wrap">
-              <p className="text-amber-400 text-xs font-semibold">Siga-nos:</p>
+          {/* Follow Us */}
+          <div>
+            <div className="text-white font-semibold text-base mb-4">Siga-nos</div>
+            <div className="flex items-center gap-3 flex-wrap">
               {SOCIALS.map(({ label, href, textColor, bgColor, borderColor, glowColor, path }) => (
                 <a
                   key={label}
@@ -104,7 +106,7 @@ export default function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={label}
-                  className={`flex items-center justify-center w-9 h-9 rounded-xl border ${bgColor} ${borderColor} ${textColor} transition-all duration-200 hover:scale-110 active:scale-95`}
+                  className={`flex items-center justify-center w-11 h-11 rounded-xl border ${bgColor} ${borderColor} ${textColor} transition-all duration-200 hover:scale-110 active:scale-95`}
                   style={{ boxShadow: `0 0 12px ${glowColor}` }}
                 >
                   <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" aria-hidden="true">

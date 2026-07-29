@@ -285,6 +285,15 @@ input[type="range"].months-slider::-moz-range-thumb {
   box-shadow: 0 0 0 4px rgba(228, 180, 46, 0.18);
 }
 
+/* Align tick labels placed absolutely above the range track */
+.months-slider-tick-label {
+  pointer-events: auto;
+}
+.months-slider-tick-label[style] {
+  position: absolute;
+  top: 0;
+}
+
 /* ── 9. Scrollbar ────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar        { width: 5px; }
 ::-webkit-scrollbar-track  { background: #0D0D0D; border-radius: 3px; }
