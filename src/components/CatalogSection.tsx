@@ -4,11 +4,11 @@ import VehicleCard from "./VehicleCard";
 import { useScrollTo } from "../hooks";
 import { useVehicles } from "../context/VehiclesContext";
 import { useReservations } from "../context/ReservationsContext";
-import { getSoldVehicleIds, isSoldVehicle } from "../lib/availability";
+import { isSoldVehicle } from "../lib/availability";
 
 const ITEMS_PER_PAGE = 8;
 
-type Mode = "todos" | "aluguer" | "compra" | "vendidos";
+type Mode = "todos" | "aluguer" | "compra";
 type SimulatorFlow = "aluguer" | "compra";
 type Cat  = "suv" | "pickup" | "sedan" | "hatchback" | "van" | null;
 
@@ -16,7 +16,6 @@ const MODE_FILTERS: { key: Mode; label: string }[] = [
   { key: "todos", label: "Todos" },
   { key: "compra", label: "Compra" },
   { key: "aluguer", label: "Aluguer" },
-  { key: "vendidos", label: "Vendidos" },
 ];
 
 const CAT_FILTERS: { key: Cat; label: string; img: string; blend?: boolean }[] = [
@@ -61,7 +60,7 @@ export default function CatalogSection({
 }) {
   const scrollTo = useScrollTo();
   const { vehicles: dynamicVehicles, searchTerm, setSearchTerm } = useVehicles();
-  const { availabilityReservations } = useReservations();
+  const { reservations } = useReservations();
   const [mode, setMode] = useState<Mode>("todos");
   const [cat,  setCat]  = useState<Cat>(null);
   const [page, setPage] = useState(1);
@@ -101,35 +100,9 @@ export default function CatalogSection({
     return pages;
   };
 
-  // Viaturas vendidas ou em processo de compra — mesma regra do badge "Vendido" nos cards.
-  const soldVehicleIds = useMemo(
-    () => {
-      const byReservations = getSoldVehicleIds(availabilityReservations);
-      // Também considera viaturas com `precoVenda` como vendidas (marcação manual pelo admin).
-      const byMarkedSale = new Set<number>();
-      for (const v of allVehicles) {
-        // precoVenda pode ser number | undefined
-        if ((v as any).precoVenda !== undefined && (v as any).precoVenda !== null) {
-          byMarkedSale.add(Number(v.id));
-        }
-      }
-      // União
-      const union = new Set<number>(byReservations);
-      for (const id of byMarkedSale) union.add(id);
-      return union;
-    },
-    [availabilityReservations, allVehicles],
-  );
-
   const filtered = useMemo(() => allVehicles.filter((v) => {
     if (!v) return false;
-
-    const isSold = soldVehicleIds.has(v.id);
-
-    // Carros marcados como vendidos só aparecem no filtro dedicado.
-    if (isSold) return mode === "vendidos";
     if (mode !== "todos" && v.mode !== mode) return false;
-
     if (cat && v.cat !== cat) return false;
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
@@ -138,7 +111,7 @@ export default function CatalogSection({
       if (!nameMatch && !brandMatch) return false;
     }
     return true;
-  }), [allVehicles, mode, cat, searchTerm, soldVehicleIds]);
+  }), [allVehicles, mode, cat, searchTerm]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginatedVehicles = useMemo(
@@ -331,7 +304,7 @@ export default function CatalogSection({
               key={v.id}
               vehicle={v}
               onAction={handleAction}
-              isSold={isSoldVehicle(v.id, availabilityReservations)}
+              isSold={isSoldVehicle(v.id, reservations)}
             />
           ))}
         </div>
@@ -340,13 +313,9 @@ export default function CatalogSection({
         {filtered.length === 0 && (
           <div className="py-14 text-center bg-zinc-900/30 rounded-2xl border border-zinc-800/50">
             <div className="text-3xl mb-3 grayscale opacity-50">🔍</div>
-            <h3 className="text-white font-bold text-base mb-1.5">
-              {mode === "vendidos" ? "Nenhuma viatura vendida recentemente" : "Nenhum veículo encontrado"}
-            </h3>
+            <h3 className="text-white font-bold text-base mb-1.5">Nenhum veículo encontrado</h3>
             <p className="text-zinc-500 text-sm max-w-xs mx-auto">
-              {mode === "vendidos"
-                ? "Não há viaturas vendidas ou em processo de compra neste momento."
-                : "Tente ajustar os filtros ou a sua pesquisa para encontrar o que procura."}
+              Tente ajustar os filtros ou a sua pesquisa para encontrar o que procura.
             </p>
           </div>
         )}
