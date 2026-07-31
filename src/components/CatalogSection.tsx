@@ -8,7 +8,7 @@ import { isSoldVehicle } from "../lib/availability";
 
 const ITEMS_PER_PAGE = 8;
 
-type Mode = "todos" | "aluguer" | "compra";
+type Mode = "todos" | "aluguer" | "compra" | "vendidos";
 type SimulatorFlow = "aluguer" | "compra";
 type Cat  = "suv" | "pickup" | "sedan" | "hatchback" | "van" | null;
 
@@ -16,6 +16,7 @@ const MODE_FILTERS: { key: Mode; label: string }[] = [
   { key: "todos", label: "Todos" },
   { key: "compra", label: "Compra" },
   { key: "aluguer", label: "Aluguer" },
+  { key: "vendidos", label: "Vendidos" },
 ];
 
 const CAT_FILTERS: { key: Cat; label: string; img: string; blend?: boolean }[] = [
@@ -60,7 +61,7 @@ export default function CatalogSection({
 }) {
   const scrollTo = useScrollTo();
   const { vehicles: dynamicVehicles, searchTerm, setSearchTerm } = useVehicles();
-  const { reservations } = useReservations();
+  const { availabilityReservations } = useReservations();
   const [mode, setMode] = useState<Mode>("todos");
   const [cat,  setCat]  = useState<Cat>(null);
   const [page, setPage] = useState(1);
@@ -102,6 +103,9 @@ export default function CatalogSection({
 
   const filtered = useMemo(() => allVehicles.filter((v) => {
     if (!v) return false;
+    const sold = isSoldVehicle(v.id, availabilityReservations);
+    if (mode === "vendidos" && !sold) return false;
+    if (mode !== "vendidos" && sold) return false;
     if (mode !== "todos" && v.mode !== mode) return false;
     if (cat && v.cat !== cat) return false;
     if (searchTerm) {
@@ -111,7 +115,7 @@ export default function CatalogSection({
       if (!nameMatch && !brandMatch) return false;
     }
     return true;
-  }), [allVehicles, mode, cat, searchTerm]);
+  }), [allVehicles, mode, cat, searchTerm, availabilityReservations]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginatedVehicles = useMemo(
@@ -227,7 +231,7 @@ export default function CatalogSection({
         )}
 
         {/* ── Category pills (visible only for Aluguer / Compra) ── */}
-        {mode !== "todos" && (
+        {mode !== "todos" && mode !== "vendidos" && (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 mb-5 items-stretch">
               {/* Reset pill */}
@@ -304,7 +308,7 @@ export default function CatalogSection({
               key={v.id}
               vehicle={v}
               onAction={handleAction}
-              isSold={isSoldVehicle(v.id, reservations)}
+              isSold={isSoldVehicle(v.id, availabilityReservations)}
             />
           ))}
         </div>

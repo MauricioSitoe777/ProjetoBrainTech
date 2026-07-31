@@ -229,6 +229,10 @@ export default function Simulator({
   const [submitted,   setSubmitted]   = useState(false);
   const [eligibilityExpanded, setEligibilityExpanded] = useState(false);
 
+  useEffect(() => {
+    setMesesPrestacoes((months) => Math.min(maxMonthsForCategory, Math.max(1, Math.round(months))));
+  }, [maxMonthsForCategory]);
+
   // Auto-preencher dados se o utilizador logado for alterado/carregado
   useEffect(() => {
     if (currentUser) {
@@ -347,6 +351,15 @@ export default function Simulator({
     const n = Math.min(maxMonthsForCategory, Math.max(1, Math.round(mesesPrestacoes)));
     return downPayment + (purchasePMT * n);
   }, [flow, paymentPlan, vehiclePrice, purchasePMT, mesesPrestacoes, downPayment, maxMonthsForCategory]);
+
+  const clampedMesesPrestacoes = useMemo(
+    () => Math.min(maxMonthsForCategory, Math.max(1, Math.round(mesesPrestacoes))),
+    [maxMonthsForCategory, mesesPrestacoes],
+  );
+  const mesesProgress = maxMonthsForCategory <= 1
+    ? 0
+    : ((clampedMesesPrestacoes - 1) / (maxMonthsForCategory - 1)) * 100;
+  const mesesTicks = maxMonthsForCategory <= 12 ? [1, 6, 12] : [1, 12, 24, 48];
 
   const maxPmt = income * 0.3;
 
@@ -584,8 +597,8 @@ export default function Simulator({
         status: "pendente",
         valorTotal: purchaseTotal,
         deposito: paymentPlan === "prestacoes" ? downPayment : purchaseTotal,
-        notas: `Compra via plano: ${paymentPlan === "prestacoes" ? `${mesesPrestacoes} prestações` : "Pronto pagamento"}`,
-        totalPrestacoes: paymentPlan === "prestacoes" ? mesesPrestacoes : undefined,
+        notas: `Compra via plano: ${paymentPlan === "prestacoes" ? `${clampedMesesPrestacoes} prestações` : "Pronto pagamento"}`,
+        totalPrestacoes: paymentPlan === "prestacoes" ? clampedMesesPrestacoes : undefined,
         prestacoesPagas: paymentPlan === "prestacoes" ? 0 : undefined,
       });
       if (!result.ok) {
@@ -807,7 +820,7 @@ export default function Simulator({
                       className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2.5 text-sm text-white font-normal outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 cursor-pointer"
                     >
                       <option value="pronto">💵  À Vista</option>
-                      <option value="prestacoes">📅  Prestações ({maxMonthsForCategory}m)</option>
+                      <option value="prestacoes">📅  Prestações</option>
                     </select>
                   </div>
                 </div>
@@ -858,21 +871,30 @@ export default function Simulator({
                         <div className="flex items-center justify-between mb-2">
                           <label className="text-white text-sm font-normal">Nº de Meses</label>
                           <div className="flex items-baseline gap-1 bg-zinc-800 border border-zinc-700 rounded-md px-2.5 py-1">
-                            <span className="text-lg font-black text-amber-400 leading-none">{mesesPrestacoes}</span>
+                            <span className="text-lg font-black text-amber-400 leading-none">{clampedMesesPrestacoes}</span>
                             <span className="text-xs text-white font-normal">m</span>
                           </div>
                         </div>
                         <input type="range" className="months-slider w-full"
-                          min={1} max={maxMonthsForCategory} step={1} value={mesesPrestacoes}
+                          min={1} max={maxMonthsForCategory} step={1} value={clampedMesesPrestacoes}
                           onChange={e => setMesesPrestacoes(Number(e.target.value))}
-                          style={{ background: `linear-gradient(to right, #E4B42E ${((mesesPrestacoes - 1) / (maxMonthsForCategory - 1)) * 100}%, #3f3f46 ${((mesesPrestacoes - 1) / (maxMonthsForCategory - 1)) * 100}%)` }}
+                          style={{ background: `linear-gradient(to right, #E4B42E ${mesesProgress}%, #3f3f46 ${mesesProgress}%)` }}
                         />
-                        <div className="flex justify-between mt-2">
-                          {(maxMonthsForCategory <= 12 ? [1, 6, 12] : [1, 12, 24, 48])
-                            .filter(v => v <= maxMonthsForCategory).map(v => (
-                            <button key={v} type="button" onClick={() => setMesesPrestacoes(v)}
-                              className={`text-xs font-medium px-1.5 py-0.5 rounded transition-all ${mesesPrestacoes === v ? 'text-amber-400 bg-amber-400/10 border border-amber-400/30' : 'text-white'}`}>{v}</button>
-                          ))}
+                        <div className="relative mt-2 h-7">
+                          {mesesTicks.filter(v => v <= maxMonthsForCategory).map(v => {
+                            const left = maxMonthsForCategory <= 1 ? 0 : ((v - 1) / (maxMonthsForCategory - 1)) * 100;
+                            return (
+                              <button
+                                key={v}
+                                type="button"
+                                onClick={() => setMesesPrestacoes(v)}
+                                className={`months-slider-tick-label text-xs font-medium px-1.5 py-0.5 rounded transition-all ${clampedMesesPrestacoes === v ? 'text-amber-400 bg-amber-400/10 border border-amber-400/30' : 'text-white'}`}
+                                style={{ left: `${left}%`, transform: left === 0 ? 'translateX(0)' : left === 100 ? 'translateX(-100%)' : 'translateX(-50%)' }}
+                              >
+                                {v}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>

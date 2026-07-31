@@ -3,10 +3,10 @@ import { useRoute } from "../hooks/useRoute";
 import { useScrollTo } from "../hooks";
 
 const SERVICES: { label: string; section: string }[] = [
-  { label: "Aluguer de Viaturas",  section: "catalogo" },
-  { label: "Venda de Veículos",    section: "catalogo" },
-  { label: "Como Funciona",        section: "como-funciona" },
-  { label: "Xitique",              section: "xitique" },
+  { label: "Aluguer de Viaturas", section: "catalogo" },
+  { label: "Venda de Veículos", section: "catalogo" },
+  { label: "Como Funciona", section: "como-funciona" },
+  { label: "Xitique", section: "xitique" },
 ];
 
 const CONTACTS = [
@@ -15,12 +15,10 @@ const CONTACTS = [
   "info@rentcar.co.mz",
 ] as const;
 
-/* ── Ícones de redes sociais (SVG paths do Simple Icons — simpleicons.org) ── */
 const SOCIALS = [
   {
     label: "Instagram",
     href: "https://www.instagram.com/sos_motors_mz?igsh=MXN3OTcxOGhjbHlmcA==",
-    color: "#E1306C",
     textColor: "text-[#E1306C]",
     bgColor: "bg-[#E1306C]/15",
     borderColor: "border-[#E1306C]/35",
@@ -30,7 +28,6 @@ const SOCIALS = [
   {
     label: "TikTok",
     href: "https://www.tiktok.com/@sosmortors",
-    color: "#ffffff",
     textColor: "text-white",
     bgColor: "bg-white/12",
     borderColor: "border-white/30",
@@ -48,22 +45,21 @@ export default function Footer() {
       navigate("/xitique");
       return;
     }
+
     if (path !== "/") {
       navigate("/");
       setTimeout(() => scrollTo(section), 100);
-    } else {
-      scrollTo(section);
+      return;
     }
+
+    scrollTo(section);
   };
 
   return (
     <footer className="bg-zinc-900 border-t border-zinc-800 py-10">
       <div className="max-w-7xl mx-auto px-6">
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
-
-          {/* Brand */}
-          <div className="md:col-span-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[1.6fr_1fr_1fr_.8fr] gap-6 md:gap-8 mb-10 items-start">
+          <div>
             <div className="flex items-center mb-4">
               <BrandLogo className="h-14 w-auto max-w-[200px]" />
             </div>
@@ -73,7 +69,6 @@ export default function Footer() {
             </p>
           </div>
 
-          {/* Services */}
           <div>
             <div className="text-white font-semibold text-base mb-4">Serviços</div>
             {SERVICES.map(({ label, section }) => (
@@ -87,16 +82,18 @@ export default function Footer() {
             ))}
           </div>
 
-          {/* Contact */}
           <div>
             <div className="text-white font-semibold text-base mb-4">Contacto</div>
-            {CONTACTS.map((c) => (
-              <div key={c} className="text-white text-base mb-2">{c}</div>
+            {CONTACTS.map((contact) => (
+              <div key={contact} className="text-white text-base mb-2">
+                {contact}
+              </div>
             ))}
+          </div>
 
-            {/* Redes sociais */}
-            <div className="mt-4 flex items-center gap-2.5 flex-wrap">
-              <p className="text-amber-400 text-xs font-semibold">Siga-nos:</p>
+          <div>
+            <div className="text-white font-semibold text-base mb-4">Siga-nos</div>
+            <div className="flex items-center gap-2.5 flex-wrap">
               {SOCIALS.map(({ label, href, textColor, bgColor, borderColor, glowColor, path }) => (
                 <a
                   key={label}
@@ -114,17 +111,16 @@ export default function Footer() {
               ))}
             </div>
           </div>
-
         </div>
 
-        {/* Bottom bar */}
         <div className="border-t border-zinc-800 pt-6 flex items-center justify-between gap-4">
           <p className="text-white text-sm">
             © 2026 SOS Motors e Vendas Moçambique. Todos os direitos reservados.
           </p>
-          <img src="/braintech-logo.png" alt="Braintech" className="h-10 w-auto shrink-0 opacity-80 hover:opacity-100 transition-opacity" />
+          <span className="text-zinc-400 text-xs font-semibold uppercase tracking-widest shrink-0">
+            BrainTech
+          </span>
         </div>
-
       </div>
     </footer>
   );
