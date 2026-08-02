@@ -4,7 +4,11 @@ import VehicleCard from "./VehicleCard";
 import { useScrollTo } from "../hooks";
 import { useVehicles } from "../context/VehiclesContext";
 import { useReservations } from "../context/ReservationsContext";
+<<<<<<< HEAD
 import { getSoldVehicleIds, isSoldVehicle } from "../lib/availability";
+=======
+import { isSoldVehicle } from "../lib/availability";
+>>>>>>> recuperacao
 
 const ITEMS_PER_PAGE = 8;
 
@@ -101,6 +105,7 @@ export default function CatalogSection({
     return pages;
   };
 
+<<<<<<< HEAD
   // Viaturas vendidas ou em processo de compra — mesma regra do badge "Vendido" nos cards.
   const soldVehicleIds = useMemo(
     () => {
@@ -130,6 +135,14 @@ export default function CatalogSection({
     if (isSold) return mode === "vendidos";
     if (mode !== "todos" && v.mode !== mode) return false;
 
+=======
+  const filtered = useMemo(() => allVehicles.filter((v) => {
+    if (!v) return false;
+    const sold = isSoldVehicle(v.id, availabilityReservations);
+    if (mode === "vendidos" && !sold) return false;
+    if (mode !== "vendidos" && sold) return false;
+    if (mode !== "todos" && v.mode !== mode) return false;
+>>>>>>> recuperacao
     if (cat && v.cat !== cat) return false;
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
@@ -138,7 +151,11 @@ export default function CatalogSection({
       if (!nameMatch && !brandMatch) return false;
     }
     return true;
+<<<<<<< HEAD
   }), [allVehicles, mode, cat, searchTerm, soldVehicleIds]);
+=======
+  }), [allVehicles, mode, cat, searchTerm, availabilityReservations]);
+>>>>>>> recuperacao
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginatedVehicles = useMemo(
@@ -254,7 +271,11 @@ export default function CatalogSection({
         )}
 
         {/* ── Category pills (visible only for Aluguer / Compra) ── */}
+<<<<<<< HEAD
         {mode !== "todos" && (
+=======
+        {mode !== "todos" && mode !== "vendidos" && (
+>>>>>>> recuperacao
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 mb-5 items-stretch">
               {/* Reset pill */}
@@ -340,6 +361,7 @@ export default function CatalogSection({
         {filtered.length === 0 && (
           <div className="py-14 text-center bg-zinc-900/30 rounded-2xl border border-zinc-800/50">
             <div className="text-3xl mb-3 grayscale opacity-50">🔍</div>
+<<<<<<< HEAD
             <h3 className="text-white font-bold text-base mb-1.5">
               {mode === "vendidos" ? "Nenhuma viatura vendida recentemente" : "Nenhum veículo encontrado"}
             </h3>
@@ -347,6 +369,11 @@ export default function CatalogSection({
               {mode === "vendidos"
                 ? "Não há viaturas vendidas ou em processo de compra neste momento."
                 : "Tente ajustar os filtros ou a sua pesquisa para encontrar o que procura."}
+=======
+            <h3 className="text-white font-bold text-base mb-1.5">Nenhum veículo encontrado</h3>
+            <p className="text-zinc-500 text-sm max-w-xs mx-auto">
+              Tente ajustar os filtros ou a sua pesquisa para encontrar o que procura.
+>>>>>>> recuperacao
             </p>
           </div>
         )}

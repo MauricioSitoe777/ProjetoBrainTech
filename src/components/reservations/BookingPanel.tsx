@@ -17,7 +17,11 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
   const { user, allUsers } = useAuth();
   const { motoristas } = useMotoristas();
   const {
+<<<<<<< HEAD
     availabilityReservations,
+=======
+    reservations,
+>>>>>>> recuperacao
     validateDates,
     checkAvailability,
     createReservation,
@@ -61,7 +65,11 @@ export function BookingPanel({ vehicle, onClose, onSuccess }: BookingPanelProps)
   const isRestricted = fullUser?.restriction === 'blacklisted';
   const isInadimplente = fullUser?.regularity === 'inadimplente';
   const isBlocked = isRestricted || isInadimplente;
+<<<<<<< HEAD
   const isSold = isSoldVehicle(vehicle.id, availabilityReservations);
+=======
+  const isSold = isSoldVehicle(vehicle.id, reservations);
+>>>>>>> recuperacao
 
   const suggestions = useMemo(() => {
     if (!allUsers) return [];
