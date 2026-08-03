@@ -3,17 +3,10 @@ import { useRoute } from "../hooks/useRoute";
 import { useScrollTo } from "../hooks";
 
 const SERVICES: { label: string; section: string }[] = [
-<<<<<<< HEAD
-  { label: "Aluguer de Viaturas",  section: "catalogo" },
-  { label: "Venda de Veículos",    section: "catalogo" },
-  { label: "Como Funciona",        section: "como-funciona" },
-  { label: "Xitique",              section: "xitique" },
-=======
   { label: "Aluguer de Viaturas", section: "catalogo" },
   { label: "Venda de Veículos", section: "catalogo" },
   { label: "Como Funciona", section: "como-funciona" },
   { label: "Xitique", section: "xitique" },
->>>>>>> recuperacao
 ];
 
 const CONTACTS = [
@@ -22,18 +15,10 @@ const CONTACTS = [
   "info@rentcar.co.mz",
 ] as const;
 
-<<<<<<< HEAD
-/* ── Ícones de redes sociais (SVG paths do Simple Icons — simpleicons.org) ── */
-=======
->>>>>>> recuperacao
 const SOCIALS = [
   {
     label: "Instagram",
     href: "https://www.instagram.com/sos_motors_mz?igsh=MXN3OTcxOGhjbHlmcA==",
-<<<<<<< HEAD
-    color: "#E1306C",
-=======
->>>>>>> recuperacao
     textColor: "text-[#E1306C]",
     bgColor: "bg-[#E1306C]/15",
     borderColor: "border-[#E1306C]/35",
@@ -43,10 +28,6 @@ const SOCIALS = [
   {
     label: "TikTok",
     href: "https://www.tiktok.com/@sosmortors",
-<<<<<<< HEAD
-    color: "#ffffff",
-=======
->>>>>>> recuperacao
     textColor: "text-white",
     bgColor: "bg-white/12",
     borderColor: "border-white/30",
@@ -64,14 +45,6 @@ export default function Footer() {
       navigate("/xitique");
       return;
     }
-<<<<<<< HEAD
-    if (path !== "/") {
-      navigate("/");
-      setTimeout(() => scrollTo(section), 100);
-    } else {
-      scrollTo(section);
-    }
-=======
 
     if (path !== "/") {
       navigate("/");
@@ -80,20 +53,12 @@ export default function Footer() {
     }
 
     scrollTo(section);
->>>>>>> recuperacao
   };
 
   return (
     <footer className="bg-zinc-900 border-t border-zinc-800 py-10">
       <div className="max-w-7xl mx-auto px-6">
-<<<<<<< HEAD
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
-
-          {/* Brand */}
-=======
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[1.6fr_1fr_1fr_.8fr] gap-6 md:gap-8 mb-10 items-start">
->>>>>>> recuperacao
           <div>
             <div className="flex items-center mb-4">
               <BrandLogo className="h-14 w-auto max-w-[200px]" />
@@ -104,10 +69,6 @@ export default function Footer() {
             </p>
           </div>
 
-<<<<<<< HEAD
-          {/* Services */}
-=======
->>>>>>> recuperacao
           <div>
             <div className="text-white font-semibold text-base mb-4">Serviços</div>
             {SERVICES.map(({ label, section }) => (
@@ -121,20 +82,6 @@ export default function Footer() {
             ))}
           </div>
 
-<<<<<<< HEAD
-          {/* Contact */}
-          <div>
-            <div className="text-white font-semibold text-base mb-4">Contacto</div>
-            {CONTACTS.map((c) => (
-              <div key={c} className="text-white text-base mb-2">{c}</div>
-            ))}
-          </div>
-
-          {/* Follow Us */}
-          <div>
-            <div className="text-white font-semibold text-base mb-4">Siga-nos</div>
-            <div className="flex items-center gap-3 flex-wrap">
-=======
           <div>
             <div className="text-white font-semibold text-base mb-4">Contacto</div>
             {CONTACTS.map((contact) => (
@@ -147,7 +94,6 @@ export default function Footer() {
           <div>
             <div className="text-white font-semibold text-base mb-4">Siga-nos</div>
             <div className="flex items-center gap-2.5 flex-wrap">
->>>>>>> recuperacao
               {SOCIALS.map(({ label, href, textColor, bgColor, borderColor, glowColor, path }) => (
                 <a
                   key={label}
@@ -155,11 +101,7 @@ export default function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={label}
-<<<<<<< HEAD
-                  className={`flex items-center justify-center w-11 h-11 rounded-xl border ${bgColor} ${borderColor} ${textColor} transition-all duration-200 hover:scale-110 active:scale-95`}
-=======
                   className={`flex items-center justify-center w-9 h-9 rounded-xl border ${bgColor} ${borderColor} ${textColor} transition-all duration-200 hover:scale-110 active:scale-95`}
->>>>>>> recuperacao
                   style={{ boxShadow: `0 0 12px ${glowColor}` }}
                 >
                   <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" aria-hidden="true">
@@ -169,29 +111,16 @@ export default function Footer() {
               ))}
             </div>
           </div>
-<<<<<<< HEAD
-
         </div>
 
-        {/* Bottom bar */}
-=======
-        </div>
-
->>>>>>> recuperacao
         <div className="border-t border-zinc-800 pt-6 flex items-center justify-between gap-4">
           <p className="text-white text-sm">
             © 2026 SOS Motors e Vendas Moçambique. Todos os direitos reservados.
           </p>
-<<<<<<< HEAD
-          <img src="/braintech-logo.png" alt="Braintech" className="h-10 w-auto shrink-0 opacity-80 hover:opacity-100 transition-opacity" />
-        </div>
-
-=======
           <span className="text-zinc-400 text-xs font-semibold uppercase tracking-widest shrink-0">
             BrainTech
           </span>
         </div>
->>>>>>> recuperacao
       </div>
     </footer>
   );

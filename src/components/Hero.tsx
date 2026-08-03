@@ -484,11 +484,7 @@ export default function Hero() {
   const scrollTo = useScrollTo();
 
   return (
-<<<<<<< HEAD
     <section id="hero" className="relative min-h-screen overflow-hidden bg-zinc-900">
-=======
-    <section id="hero" className="relative min-h-screen overflow-hidden">
->>>>>>> recuperacao
       {/* Vídeo */}
       <video
         autoPlay
@@ -505,11 +501,7 @@ export default function Hero() {
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-<<<<<<< HEAD
             "linear-gradient(135deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.40) 60%, rgba(0,0,0,0.60) 100%)",
-=======
-            "linear-gradient(135deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.10) 60%, rgba(0,0,0,0.30) 100%)",
->>>>>>> recuperacao
         }}
       />
 

@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
+import { useRoute } from '../hooks/useRoute';
 import { VEHICLES } from '../data/constants';
 import { useReservations } from '../context/ReservationsContext';
 import { useMotoristas } from '../context/MotoristasContext';
@@ -20,7 +21,7 @@ const fmt = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d)
 const STATUS_CFG: Record<ReservationStatus, { label: string; className: string }> = {
   pendente:            { label: 'Aguarda Pagamento',      className: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
   confirmada:          { label: 'Reserva Confirmada',     className: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
-  pronta_levantamento: { label: 'Pronta p/ Levantamento', className: 'bg-sky-400/10 text-sky-400 border-sky-400/20' },
+  pronta_levantamento: { label: 'Pronta p/ Levantamento', className: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
   ativa:               { label: 'Aluguer Activo',         className: 'bg-blue-400/10 text-blue-400 border-blue-400/20' },
   devolucao_pendente:  { label: 'Devolução Pendente',     className: 'bg-orange-400/10 text-orange-400 border-orange-400/20' },
   concluida:           { label: 'Concluído',              className: 'bg-zinc-700 text-white border-zinc-600' },
@@ -32,7 +33,7 @@ const STATUS_CFG: Record<ReservationStatus, { label: string; className: string }
   liquidada:           { label: 'Liquidada',              className: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' },
 };
 
-type Tab = 'reservas' | 'acoes' | 'em_uso' | 'calendario' | 'bloqueios' | 'regras';
+type Tab = 'reservas' | 'acoes' | 'em_uso' | 'calendario' | 'bloqueios' | 'regras' | 'presencial';
 
 const GRUPOS: Array<{
   status: ReservationStatus;
@@ -43,7 +44,7 @@ const GRUPOS: Array<{
 }> = [
   { status: 'pendente',            title: 'Aguarda Pagamento',       dot: 'bg-amber-400',   badge: 'bg-amber-400/10 text-amber-400 border-amber-400/20',     textColor: 'text-amber-400'   },
   { status: 'confirmada',          title: 'Reservas Confirmadas',    dot: 'bg-emerald-400', badge: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20',textColor: 'text-emerald-400' },
-  { status: 'pronta_levantamento', title: 'Prontas p/ Levantamento', dot: 'bg-sky-400',     badge: 'bg-sky-400/10 text-sky-400 border-sky-400/20',           textColor: 'text-sky-400'     },
+  { status: 'pronta_levantamento', title: 'Prontas p/ Levantamento', dot: 'bg-amber-400',     badge: 'bg-amber-400/10 text-amber-400 border-amber-400/20',           textColor: 'text-amber-400'     },
   { status: 'ativa',               title: 'Alugueres Activos',        dot: 'bg-blue-400',    badge: 'bg-blue-400/10 text-blue-400 border-blue-400/20',        textColor: 'text-blue-400'    },
   { status: 'devolucao_pendente',  title: 'Devolução Pendente',      dot: 'bg-orange-400',  badge: 'bg-orange-400/10 text-orange-400 border-orange-400/20',  textColor: 'text-orange-400'  },
 ];
@@ -56,6 +57,7 @@ const GRUPOS: Array<{
 const ALUGUER_ACTIONABLE_STATUSES = new Set(GRUPOS.map(g => g.status));
 
 export function AluguerPage({ onExit }: { onExit?: () => void }) {
+  const { navigate } = useRoute();
   const { reservations, blocks, updateReservation, cancelReservation, removeBlock, marcarPrestacao, alterarDataVencimento, rules } = useReservations();
   const { motoristas } = useMotoristas();
   const { vehicles: allVehicles } = useVehicles();
@@ -78,6 +80,12 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
 
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
   const [selectedCalDate, setSelectedCalDate] = useState<string | null>(null);
+  const [presencialVehicleId, setPresencialVehicleId] = useState<number | null>(null);
+  const [presencialClientName, setPresencialClientName] = useState('');
+  const [presencialClientPhone, setPresencialClientPhone] = useState('');
+  const [presencialClientEmail, setPresencialClientEmail] = useState('');
+  const [showVehicleModal, setShowVehicleModal] = useState(false);
+  const [vehicleSearch, setVehicleSearch] = useState('');
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [editingReservation, setEditingReservation] = useState<Reservation | null>(null);
   const [contractReservation, setContractReservation] = useState<Reservation | null>(null);
@@ -259,10 +267,18 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
     [reservations, aluguerIds],
   );
 
+  const selectedPresencialVehicle = aluguerVehicles.find(v => v.id === presencialVehicleId) ?? aluguerVehicles[0] ?? null;
+
+  useEffect(() => {
+    if (presencialVehicleId !== null) return;
+    if (aluguerVehicles.length > 0) setPresencialVehicleId(aluguerVehicles[0].id);
+  }, [aluguerVehicles, presencialVehicleId]);
+
   const tabList: { key: Tab; label: string; urgent?: boolean }[] = [
     { key: 'reservas',   label: `Histórico (${historico.length})` },
     { key: 'acoes',      label: `Ações (${accionaveisCount})`,     urgent: acoesUrgente },
     { key: 'em_uso',     label: `Em Uso (${emUsoCount})` },
+    { key: 'presencial', label: 'Aluguer Presencial' },
     { key: 'calendario', label: 'Calendário' },
     { key: 'bloqueios',  label: `Bloqueios (${blocks.length})` },
     { key: 'regras',     label: 'Regras' },
@@ -327,6 +343,7 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
           />
         );
       })()}
+
 
       {/* ── Modal de detalhes de reserva (tab Reservas) ── */}
       {reservaModal && (() => {
@@ -1664,6 +1681,150 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
 
         {/* TAB: Regras */}
         {tab === 'regras' && <BusinessRulesPanel />}
+
+        {/* TAB: Presencial */}
+        {tab === 'presencial' && (
+          <div className="w-full px-5 sm:px-8 py-8">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 sm:p-8 max-w-4xl mx-auto shadow-2xl relative overflow-hidden">
+              <div className="absolute -top-32 -right-32 w-64 h-64 bg-amber-500/10 blur-[80px] rounded-full pointer-events-none" />
+              
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+                <div>
+                  <p className="text-lg text-amber-400 uppercase font-black tracking-[0.15em]">ALUGUER PRESENCIAL</p>
+                  <p className="text-white/70 text-sm mt-1 max-w-xl">Painel de acompanhamento para processos de aluguer físicos. Selecione uma viatura, valide os dados do cliente e avance para as ações de gestão.</p>
+                </div>
+                <button onClick={() => navigate('/admin/aluguer?tab=acoes')}
+                  className="shrink-0 text-sm font-black uppercase tracking-widest px-6 py-3 rounded-full bg-amber-500 text-zinc-950 hover:bg-amber-400 hover:scale-105 transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)]">
+                  Ver Ações
+                </button>
+              </div>
+
+              {/* Form Content */}
+              <div className="space-y-6 relative z-10">
+                {/* Select Vehicle Button */}
+                <button 
+                  onClick={() => setShowVehicleModal(true)}
+                  className="w-full p-4 rounded-2xl bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-500 text-zinc-950 font-black text-lg tracking-widest uppercase transition-all shadow-lg hover:shadow-amber-500/25 flex items-center justify-center gap-3"
+                >
+                  [ SELECCIONAR VIATURA DO CATÁLOGO ]
+                </button>
+
+                {/* Inputs */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <input value={presencialClientName} onChange={e => setPresencialClientName(e.target.value)}
+                    placeholder="Nome do cliente" className="w-full bg-zinc-950/80 border border-zinc-800 rounded-full px-6 py-3.5 text-sm text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-zinc-600" />
+                  <input value={presencialClientPhone} onChange={e => setPresencialClientPhone(e.target.value)}
+                    placeholder="Telefone" className="w-full bg-zinc-950/80 border border-zinc-800 rounded-full px-6 py-3.5 text-sm text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-zinc-600" />
+                  <input value={presencialClientEmail} onChange={e => setPresencialClientEmail(e.target.value)}
+                    placeholder="Email" className="w-full bg-zinc-950/80 border border-zinc-800 rounded-full px-6 py-3.5 text-sm text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-zinc-600" />
+                </div>
+
+                {/* Selected Vehicle Card */}
+                {selectedPresencialVehicle && (
+                  <div className="mt-8 bg-zinc-950/80 border border-zinc-800/80 rounded-3xl p-5 flex flex-col sm:flex-row items-center gap-6">
+                    <img src={selectedPresencialVehicle.img} alt={selectedPresencialVehicle.name} className="w-full sm:w-48 h-32 object-cover rounded-2xl shadow-lg" />
+                    <div className="flex-1">
+                      <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">Viatura Seleccionada</p>
+                      <h4 className="text-xl font-black text-white">{selectedPresencialVehicle.name}</h4>
+                      <div className="flex items-center gap-3 mt-2 text-sm text-zinc-400 flex-wrap">
+                        <span>{selectedPresencialVehicle.brand} · {selectedPresencialVehicle.year}</span>
+                        <span className="w-1 h-1 rounded-full bg-zinc-700"></span>
+                        <span className="text-amber-400 font-bold">{selectedPresencialVehicle.price}</span>
+                        <span className="w-1 h-1 rounded-full bg-zinc-700"></span>
+                        <span>Matrícula: {selectedPresencialVehicle.matricula}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Confirm Button */}
+                <div className="pt-4">
+                  <button 
+                    onClick={() => navigate(`/admin/aluguer?tab=acoes&vehicle=${selectedPresencialVehicle?.id ?? ''}`)}
+                    disabled={!selectedPresencialVehicle}
+                    className="w-full p-4 rounded-2xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:hover:scale-100 disabled:cursor-not-allowed text-zinc-950 font-black text-lg tracking-widest uppercase transition-all flex items-center justify-center gap-3"
+                  >
+                    [ CONFIRMAR SELEÇÃO E IR PARA AÇÕES ]
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal for Vehicle Selection */}
+            {showVehicleModal && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => { setShowVehicleModal(false); setVehicleSearch(''); }}>
+                <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+                  {/* Modal Header */}
+                  <div className="p-6 border-b border-zinc-800 bg-zinc-900/50">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-black text-white uppercase tracking-widest">Catálogo de Viaturas</h3>
+                        <p className="text-xs text-zinc-400 mt-1">{aluguerVehicles.length} viaturas disponíveis para aluguer presencial.</p>
+                      </div>
+                      <button onClick={() => { setShowVehicleModal(false); setVehicleSearch(''); }} className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                      </button>
+                    </div>
+                    {/* Search Bar */}
+                    <div className="relative">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-400 pointer-events-none">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                      </svg>
+                      <input
+                        autoFocus
+                        type="text"
+                        value={vehicleSearch}
+                        onChange={e => setVehicleSearch(e.target.value)}
+                        placeholder="Pesquisar por nome, marca ou matrícula..."
+                        className="w-full bg-zinc-950 border border-zinc-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/40 text-white rounded-xl pl-10 pr-4 py-3 text-sm outline-none transition-all placeholder:text-white/40"
+                      />
+                      {vehicleSearch && (
+                        <button onClick={() => setVehicleSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full bg-zinc-700 text-zinc-400 hover:text-white text-xs transition-colors">
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {/* Vehicle Grid */}
+                  <div className="p-6 overflow-y-auto">
+                    {(() => {
+                      const q = vehicleSearch.toLowerCase().trim();
+                      const filtered = aluguerVehicles.filter(v =>
+                        !q ||
+                        v.name.toLowerCase().includes(q) ||
+                        v.brand.toLowerCase().includes(q) ||
+                        (v.matricula ?? '').toLowerCase().includes(q)
+                      );
+                      if (filtered.length === 0) return (
+                        <div className="col-span-full flex flex-col items-center justify-center py-16 text-zinc-500">
+                          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mb-3 opacity-40"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                          <p className="text-sm font-medium">Nenhuma viatura encontrada</p>
+                          <p className="text-xs mt-1">Tente outra pesquisa</p>
+                        </div>
+                      );
+                      return (
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                          {filtered.map(vehicle => (
+                            <button key={vehicle.id} onClick={() => { setPresencialVehicleId(vehicle.id); setShowVehicleModal(false); setVehicleSearch(''); }}
+                              className="group flex flex-col bg-zinc-900 border border-zinc-800 rounded-2xl p-3 hover:border-amber-500 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition-all text-left">
+                              <div className="relative w-full aspect-video rounded-xl overflow-hidden mb-3">
+                                <img src={vehicle.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                              </div>
+                              <p className="font-bold text-white text-sm truncate w-full">{vehicle.name}</p>
+                              <p className="text-xs text-zinc-400 truncate">{vehicle.brand} · {vehicle.year}</p>
+                              <p className="text-amber-400 font-bold text-xs mt-1">{vehicle.price}</p>
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
       </div>
     </div>

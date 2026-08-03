@@ -190,14 +190,10 @@ export default function Simulator({
   const [downPayment, setDownPayment] = useState(0);
   const [paymentPlan, setPaymentPlan] = useState<PaymentPlan>("prestacoes");
   const [mesesPrestacoes, setMesesPrestacoes] = useState(12);
-<<<<<<< HEAD
-  const effectiveMonths = Math.min(maxMonthsForCategory, Math.max(1, mesesPrestacoes));
 
   useEffect(() => {
-    setMesesPrestacoes((prev) => Math.min(maxMonthsForCategory, Math.max(1, prev)));
+    setMesesPrestacoes((prev) => Math.min(maxMonthsForCategory, Math.max(1, Math.round(prev))));
   }, [maxMonthsForCategory]);
-=======
->>>>>>> recuperacao
 
   // Aluguer
   const aluguerVehicles = useMemo(() => allVehicles.filter(v => v.mode === 'aluguer'), [allVehicles]);
@@ -237,13 +233,10 @@ export default function Simulator({
   const [submitted,   setSubmitted]   = useState(false);
   const [eligibilityExpanded, setEligibilityExpanded] = useState(false);
 
-<<<<<<< HEAD
-=======
   useEffect(() => {
     setMesesPrestacoes((months) => Math.min(maxMonthsForCategory, Math.max(1, Math.round(months))));
   }, [maxMonthsForCategory]);
 
->>>>>>> recuperacao
   // Auto-preencher dados se o utilizador logado for alterado/carregado
   useEffect(() => {
     if (currentUser) {
@@ -348,40 +341,28 @@ export default function Simulator({
     }
   }, [lockedFlow]);
 
-  const purchasePMT = useMemo(() => {
-    if (flow !== "compra") return 0;
-    if (paymentPlan !== "prestacoes") return 0;
-<<<<<<< HEAD
-    const financed = Math.max(0, vehiclePrice - downPayment);
-    return pmtMonthly(financed, effectiveMonths, TAXA_MENSAL);
-  }, [flow, paymentPlan, effectiveMonths, vehiclePrice, downPayment]);
-=======
-    const n = Math.min(maxMonthsForCategory, Math.max(1, Math.round(mesesPrestacoes)));
-    const financed = Math.max(0, vehiclePrice - downPayment);
-    return pmtMonthly(financed, n, TAXA_MENSAL);
-  }, [flow, paymentPlan, mesesPrestacoes, vehiclePrice, downPayment, maxMonthsForCategory]);
->>>>>>> recuperacao
-
-  const purchaseTotal = useMemo(() => {
-    if (flow !== "compra") return 0;
-    if (paymentPlan === "pronto") return vehiclePrice;
-<<<<<<< HEAD
-    return downPayment + (purchasePMT * effectiveMonths);
-  }, [flow, paymentPlan, vehiclePrice, purchasePMT, effectiveMonths, downPayment]);
-=======
-    const n = Math.min(maxMonthsForCategory, Math.max(1, Math.round(mesesPrestacoes)));
-    return downPayment + (purchasePMT * n);
-  }, [flow, paymentPlan, vehiclePrice, purchasePMT, mesesPrestacoes, downPayment, maxMonthsForCategory]);
-
   const clampedMesesPrestacoes = useMemo(
     () => Math.min(maxMonthsForCategory, Math.max(1, Math.round(mesesPrestacoes))),
     [maxMonthsForCategory, mesesPrestacoes],
   );
+
+  const purchasePMT = useMemo(() => {
+    if (flow !== "compra") return 0;
+    if (paymentPlan !== "prestacoes") return 0;
+    const financed = Math.max(0, vehiclePrice - downPayment);
+    return pmtMonthly(financed, clampedMesesPrestacoes, TAXA_MENSAL);
+  }, [flow, paymentPlan, clampedMesesPrestacoes, vehiclePrice, downPayment]);
+
+  const purchaseTotal = useMemo(() => {
+    if (flow !== "compra") return 0;
+    if (paymentPlan === "pronto") return vehiclePrice;
+    return downPayment + (purchasePMT * clampedMesesPrestacoes);
+  }, [flow, paymentPlan, vehiclePrice, purchasePMT, clampedMesesPrestacoes, downPayment]);
+
   const mesesProgress = maxMonthsForCategory <= 1
     ? 0
     : ((clampedMesesPrestacoes - 1) / (maxMonthsForCategory - 1)) * 100;
   const mesesTicks = maxMonthsForCategory <= 12 ? [1, 6, 12] : [1, 12, 24, 48];
->>>>>>> recuperacao
 
   const maxPmt = income * 0.3;
 
@@ -619,15 +600,9 @@ export default function Simulator({
         status: "pendente",
         valorTotal: purchaseTotal,
         deposito: paymentPlan === "prestacoes" ? downPayment : purchaseTotal,
-<<<<<<< HEAD
-        notas: `Compra via plano: ${paymentPlan === "prestacoes" ? `${effectiveMonths} prestações` : "Pronto pagamento"}`,
-        totalPrestacoes: paymentPlan === "prestacoes" ? effectiveMonths : 0,
-        prestacoesPagas: 0,
-=======
         notas: `Compra via plano: ${paymentPlan === "prestacoes" ? `${clampedMesesPrestacoes} prestações` : "Pronto pagamento"}`,
         totalPrestacoes: paymentPlan === "prestacoes" ? clampedMesesPrestacoes : undefined,
         prestacoesPagas: paymentPlan === "prestacoes" ? 0 : undefined,
->>>>>>> recuperacao
       });
       if (!result.ok) {
         setSubmitError(result.error ?? "Não foi possível submeter o pedido de compra.");
@@ -847,7 +822,6 @@ export default function Simulator({
                       onChange={(e) => setPaymentPlan(e.target.value as PaymentPlan)}
                       className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2.5 text-sm text-white font-normal outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 cursor-pointer"
                     >
-<<<<<<< HEAD
                       <option value="pronto">💵 À Vista</option>
                       <option value="prestacoes">📅 Prestações</option>
                     </select>
@@ -858,11 +832,6 @@ export default function Simulator({
                           : "Divida o valor em parcelas mensais de acordo com o plano disponível."}
                       </p>
                     </div>
-=======
-                      <option value="pronto">💵  À Vista</option>
-                      <option value="prestacoes">📅  Prestações</option>
-                    </select>
->>>>>>> recuperacao
                   </div>
                 </div>
 
@@ -912,36 +881,11 @@ export default function Simulator({
                         <div className="flex items-center justify-between mb-2">
                           <label className="text-white text-sm font-normal">Nº de Meses</label>
                           <div className="flex items-baseline gap-1 bg-zinc-800 border border-zinc-700 rounded-md px-2.5 py-1">
-<<<<<<< HEAD
-                            <span className="text-lg font-black text-amber-400 leading-none">{effectiveMonths}</span>
-=======
                             <span className="text-lg font-black text-amber-400 leading-none">{clampedMesesPrestacoes}</span>
->>>>>>> recuperacao
                             <span className="text-xs text-white font-normal">m</span>
                           </div>
                         </div>
                         <input type="range" className="months-slider w-full"
-<<<<<<< HEAD
-                          min={1} max={maxMonthsForCategory} step={1} value={effectiveMonths}
-                          onChange={e => setMesesPrestacoes(Number(e.target.value))}
-                          style={{ background: `linear-gradient(to right, #E4B42E ${((effectiveMonths - 1) / Math.max(1, maxMonthsForCategory - 1)) * 100}%, #3f3f46 ${((effectiveMonths - 1) / Math.max(1, maxMonthsForCategory - 1)) * 100}%)` }}
-                        />
-                        <div className="relative mt-2 pt-3">
-                          <div className="relative h-8">
-                            {(maxMonthsForCategory <= 12 ? [1, 6, 12] : [1, 12, 24, 48])
-                              .filter(v => v <= maxMonthsForCategory).map(v => {
-                                const denom = Math.max(1, maxMonthsForCategory - 1);
-                                const leftPct = denom === 0 ? 0 : ((v - 1) / denom) * 100;
-                                return (
-                                  <button key={v} type="button" onClick={() => setMesesPrestacoes(v)}
-                                    style={{ left: `${leftPct}%`, transform: 'translateX(-50%)' }}
-                                    className={`absolute top-0 text-xs font-medium px-1.5 py-0.5 rounded transition-all ${effectiveMonths === v ? 'text-amber-400 bg-amber-400/10 border border-amber-400/30' : 'text-white'}`}>
-                                    {v}
-                                  </button>
-                                );
-                              })}
-                          </div>
-=======
                           min={1} max={maxMonthsForCategory} step={1} value={clampedMesesPrestacoes}
                           onChange={e => setMesesPrestacoes(Number(e.target.value))}
                           style={{ background: `linear-gradient(to right, #E4B42E ${mesesProgress}%, #3f3f46 ${mesesProgress}%)` }}
@@ -961,7 +905,6 @@ export default function Simulator({
                               </button>
                             );
                           })}
->>>>>>> recuperacao
                         </div>
                       </div>
                     </div>
@@ -1214,11 +1157,7 @@ export default function Simulator({
                 </span>
                 <span className="text-white text-xs font-normal bg-white/5 px-2.5 py-1 rounded-md border border-white/10">
                   {flow === "compra" && paymentPlan === "prestacoes"
-<<<<<<< HEAD
-                    ? `${(TAXA_MENSAL * 100).toFixed(1)}%/mês · ${effectiveMonths} meses`
-=======
                     ? `${(TAXA_MENSAL * 100).toFixed(1)}%/mês · ${Math.min(maxMonthsForCategory, Math.max(1, Math.round(mesesPrestacoes)))} meses`
->>>>>>> recuperacao
                     : flow === "compra"
                       ? "Pagamento à vista."
                       : "Inclui diárias, taxas e caução."}

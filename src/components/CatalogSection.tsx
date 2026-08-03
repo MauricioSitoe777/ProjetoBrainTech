@@ -4,11 +4,7 @@ import VehicleCard from "./VehicleCard";
 import { useScrollTo } from "../hooks";
 import { useVehicles } from "../context/VehiclesContext";
 import { useReservations } from "../context/ReservationsContext";
-<<<<<<< HEAD
-import { getSoldVehicleIds, isSoldVehicle } from "../lib/availability";
-=======
 import { isSoldVehicle } from "../lib/availability";
->>>>>>> recuperacao
 
 const ITEMS_PER_PAGE = 8;
 
@@ -91,58 +87,14 @@ export default function CatalogSection({
   const allVehicles = dynamicVehicles as unknown as Vehicle[];
 
   // Função que gera os números de página com reticências
-  const getPageNums = (total: number, current: number): (number | '...')[] => {
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-    const pages: (number | '...')[] = [];
-    const addRange = (start: number, end: number) => {
-      for (let i = start; i <= end; i++) pages.push(i);
-    };
-    pages.push(1);
-    if (current > 3) pages.push('...');
-    addRange(Math.max(2, current - 1), Math.min(total - 1, current + 1));
-    if (current < total - 2) pages.push('...');
-    pages.push(total);
-    return pages;
-  };
-
-<<<<<<< HEAD
-  // Viaturas vendidas ou em processo de compra — mesma regra do badge "Vendido" nos cards.
-  const soldVehicleIds = useMemo(
-    () => {
-      const byReservations = getSoldVehicleIds(availabilityReservations);
-      // Também considera viaturas com `precoVenda` como vendidas (marcação manual pelo admin).
-      const byMarkedSale = new Set<number>();
-      for (const v of allVehicles) {
-        // precoVenda pode ser number | undefined
-        if ((v as any).precoVenda !== undefined && (v as any).precoVenda !== null) {
-          byMarkedSale.add(Number(v.id));
-        }
-      }
-      // União
-      const union = new Set<number>(byReservations);
-      for (const id of byMarkedSale) union.add(id);
-      return union;
-    },
-    [availabilityReservations, allVehicles],
-  );
-
-  const filtered = useMemo(() => allVehicles.filter((v) => {
-    if (!v) return false;
-
-    const isSold = soldVehicleIds.has(v.id);
-
-    // Carros marcados como vendidos só aparecem no filtro dedicado.
-    if (isSold) return mode === "vendidos";
-    if (mode !== "todos" && v.mode !== mode) return false;
-
-=======
   const filtered = useMemo(() => allVehicles.filter((v) => {
     if (!v) return false;
     const sold = isSoldVehicle(v.id, availabilityReservations);
-    if (mode === "vendidos" && !sold) return false;
-    if (mode !== "vendidos" && sold) return false;
+    if (mode === "vendidos") {
+      return sold;
+    }
+    if (sold) return false;
     if (mode !== "todos" && v.mode !== mode) return false;
->>>>>>> recuperacao
     if (cat && v.cat !== cat) return false;
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
@@ -151,11 +103,7 @@ export default function CatalogSection({
       if (!nameMatch && !brandMatch) return false;
     }
     return true;
-<<<<<<< HEAD
-  }), [allVehicles, mode, cat, searchTerm, soldVehicleIds]);
-=======
   }), [allVehicles, mode, cat, searchTerm, availabilityReservations]);
->>>>>>> recuperacao
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginatedVehicles = useMemo(
@@ -271,11 +219,7 @@ export default function CatalogSection({
         )}
 
         {/* ── Category pills (visible only for Aluguer / Compra) ── */}
-<<<<<<< HEAD
-        {mode !== "todos" && (
-=======
         {mode !== "todos" && mode !== "vendidos" && (
->>>>>>> recuperacao
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 mb-5 items-stretch">
               {/* Reset pill */}
@@ -361,7 +305,6 @@ export default function CatalogSection({
         {filtered.length === 0 && (
           <div className="py-14 text-center bg-zinc-900/30 rounded-2xl border border-zinc-800/50">
             <div className="text-3xl mb-3 grayscale opacity-50">🔍</div>
-<<<<<<< HEAD
             <h3 className="text-white font-bold text-base mb-1.5">
               {mode === "vendidos" ? "Nenhuma viatura vendida recentemente" : "Nenhum veículo encontrado"}
             </h3>
@@ -369,11 +312,6 @@ export default function CatalogSection({
               {mode === "vendidos"
                 ? "Não há viaturas vendidas ou em processo de compra neste momento."
                 : "Tente ajustar os filtros ou a sua pesquisa para encontrar o que procura."}
-=======
-            <h3 className="text-white font-bold text-base mb-1.5">Nenhum veículo encontrado</h3>
-            <p className="text-zinc-500 text-sm max-w-xs mx-auto">
-              Tente ajustar os filtros ou a sua pesquisa para encontrar o que procura.
->>>>>>> recuperacao
             </p>
           </div>
         )}
@@ -391,23 +329,36 @@ export default function CatalogSection({
             </button>
 
             {/* Page numbers */}
-            {getPageNums(totalPages, page).map((p, i) =>
-              p === '...' ? (
-                <span key={`ellipsis-${i}`} className="px-2 text-zinc-600 text-sm select-none">…</span>
-              ) : (
-                <button
-                  key={p}
-                  onClick={() => goToPage(p)}
-                  className={`w-8 h-8 rounded-lg text-sm font-bold transition-all border ${
-                    p === page
-                      ? 'bg-amber-500 text-zinc-950 border-amber-500'
-                      : 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:border-zinc-600 hover:text-white'
-                  }`}
-                >
-                  {p}
-                </button>
-              )
-            )}
+            {Array.from({ length: totalPages }, (_, index) => index + 1)
+              .filter((pageNum) => {
+                if (totalPages <= 7) return true;
+                if (pageNum === 1 || pageNum === totalPages || (pageNum >= page - 1 && pageNum <= page + 1)) return true;
+                return false;
+              })
+              .reduce<number[]>((acc, pageNum, index, arr) => {
+                if (index > 0 && pageNum - arr[index - 1] > 1) {
+                  acc.push(-1);
+                }
+                acc.push(pageNum);
+                return acc;
+              }, [])
+              .map((p, i) =>
+                p === -1 ? (
+                  <span key={`ellipsis-${i}`} className="px-2 text-zinc-600 text-sm select-none">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => goToPage(p)}
+                    className={`w-8 h-8 rounded-lg text-sm font-bold transition-all border ${
+                      p === page
+                        ? 'bg-amber-500 text-zinc-950 border-amber-500'
+                        : 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:border-zinc-600 hover:text-white'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
 
             {/* Próxima */}
             <button

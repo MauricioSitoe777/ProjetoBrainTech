@@ -9,11 +9,7 @@ export default function HowItWorks({
   const scrollTo = useScrollTo();
 
   return (
-<<<<<<< HEAD
     <section id="como-funciona" className="relative overflow-hidden bg-zinc-900 py-12 md:py-14 lg:py-16">
-=======
-    <section id="como-funciona" className="min-h-screen flex flex-col justify-center relative overflow-hidden bg-zinc-900 py-16">
->>>>>>> recuperacao
       {/* Ambient glow */}
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] pointer-events-none"
@@ -23,11 +19,7 @@ export default function HowItWorks({
       <div className="max-w-7xl mx-auto px-5 md:px-8 relative z-10 w-full">
 
         {/* Header */}
-<<<<<<< HEAD
         <div className="text-center mb-6 md:mb-8">
-=======
-        <div className="text-center mb-8 md:mb-10">
->>>>>>> recuperacao
           <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-full px-3 py-1 mb-4">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
             <span className="text-amber-400 text-[10px] font-bold uppercase tracking-widest">Processo Simples</span>
