@@ -15,6 +15,7 @@ export interface Guest {
   telefone: string;
   intent: GuestIntent;
   category?: GuestCategory;
+  withDriver?: boolean;
   status: GuestStatus;
   documentos: Record<string, string>;
   dataCriacao: string;

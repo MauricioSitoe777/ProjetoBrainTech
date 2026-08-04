@@ -241,13 +241,17 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
     const vehicle = allVehicles.find(v => v.id === data.vehicleId) ?? VEHICLES.find(v => v.id === data.vehicleId);
     const isPurchase = vehicle?.mode === 'compra';
 
-    if (!isPurchase) {
-      const dateCheck = validateDates(data.dataInicio, data.dataFim, data.horaLevantamento);
-      if (!dateCheck.valid) return { ok: false, error: dateCheck.errors[0] };
+    const isPresencial = typeof data.notas === 'string' && data.notas.toLowerCase().includes('presencial');
 
-      const avail = checkAvailability(data.vehicleId, data.dataInicio, data.dataFim);
-      if (!avail.available) return { ok: false, error: avail.conflicts[0] ?? 'Viatura indisponível.' };
-    } else if (isSoldVehicle(data.vehicleId, availabilityReservations)) {
+    if (!isPurchase) {
+      if (!isPresencial) {
+        const dateCheck = validateDates(data.dataInicio, data.dataFim, data.horaLevantamento);
+        if (!dateCheck.valid) return { ok: false, error: dateCheck.errors[0] };
+
+        const avail = checkAvailability(data.vehicleId, data.dataInicio, data.dataFim);
+        if (!avail.available) return { ok: false, error: avail.conflicts[0] ?? 'Viatura indisponível.' };
+      }
+    } else if (!isPresencial && isSoldVehicle(data.vehicleId, availabilityReservations)) {
       return { ok: false, error: 'Esta viatura já foi vendida ou tem uma compra em curso.' };
     }
 
@@ -257,19 +261,34 @@ export function ReservationsProvider({ children }: { children: ReactNode }) {
       createdAt: new Date().toISOString().split('T')[0],
     };
     setReservations(prev => [...prev, newRes]);
-    api.post('/reservations', reservationToApi(newRes)).catch(() => {});
+    api.post('/reservations', reservationToApi(newRes)).then(created => {
+      if (created && typeof (created as { id?: string }).id === 'string') {
+        const createdId = (created as { id: string }).id;
+        setReservations(prev => prev.map(r => r.id === newRes.id ? { ...r, id: createdId } : r));
+      }
+    }).catch(() => {});
 
-    // Notificar o Administrador sobre a nova operação pendente
     const operacaoLabel = isPurchase ? 'compra' : 'aluguer';
     const vehicleName = vehicle?.name || `Viatura #${data.vehicleId}`;
-    addNotification(
-      'admin',
-      `Novo pedido de ${operacaoLabel} — ${vehicleName}`,
-      `"${data.clientName}" submeteu um pedido de ${operacaoLabel}. Documentos já verificados — aguarda apenas confirmação de pagamento.`,
-      'warning',
-      newRes.id,
-      isPurchase ? '/admin/compra?tab=acoes' : '/admin/aluguer?tab=acoes'
-    );
+    if (isPresencial) {
+      addNotification(
+        'admin',
+        `Venda presencial registada — ${vehicleName}`,
+        `Venda presencial de "${vehicleName}" a "${data.clientName}" registada pelo administrador.`,
+        'success',
+        newRes.id,
+        isPurchase ? '/admin/compra?tab=presencial' : '/admin/aluguer?tab=presencial'
+      );
+    } else {
+      addNotification(
+        'admin',
+        `Novo pedido de ${operacaoLabel} — ${vehicleName}`,
+        `"${data.clientName}" submeteu um pedido de ${operacaoLabel}. Documentos já verificados — aguarda apenas confirmação de pagamento.`,
+        'warning',
+        newRes.id,
+        isPurchase ? '/admin/compra?tab=acoes' : '/admin/aluguer?tab=acoes'
+      );
+    }
 
     return { ok: true };
   };

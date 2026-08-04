@@ -44,7 +44,7 @@ export default function HowItWorks({
           <div className="hidden lg:block absolute top-[50px] left-[calc(10%+20px)] right-[calc(10%+20px)] h-px">
             <div
               className="h-full rounded-full"
-              style={{ background: "linear-gradient(90deg, #E4B42E 0%, #E4B42E40 50%, #E4B42E 100%)" }}
+              style={{ background: "linear-gradient(90deg, var(--gold) 0%, rgba(228,180,46,0.25) 50%, var(--gold) 100%)" }}
             />
           </div>
 
@@ -67,7 +67,8 @@ export default function HowItWorks({
 
                   {/* Icon */}
                   <div className="relative z-10 w-8 h-8 rounded-lg bg-zinc-800/80 border border-zinc-700/50 flex items-center justify-center mb-3 group-hover:border-amber-500/30 transition-colors duration-300">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E4B42E" strokeWidth="1.8"
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" strokeWidth="1.8"
+                      style={{ stroke: 'var(--gold)' }}
                       className="group-hover:scale-110 transition-transform duration-300">
                       <path d={step.icon} strokeLinecap="round" strokeLinejoin="round" />
                     </svg>

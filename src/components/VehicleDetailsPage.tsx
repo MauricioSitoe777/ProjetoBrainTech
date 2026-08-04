@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { CalendarDays, Fuel, IdCard, UsersRound } from "lucide-react";
 import { useVehicles, type VehicleData } from "../context/VehiclesContext";
-import { useScrollTo } from "../hooks";
 import { useAuth } from "../context/AuthContext";
 import Footer from "./Footer";
 
@@ -23,7 +22,6 @@ export default function VehicleDetailsPage({
   onOpenAdmin: _onOpenAdmin,
 }: VehicleDetailsPageProps) {
   const { vehicles } = useVehicles();
-  const scrollTo = useScrollTo();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [vehicle, setVehicle] = useState<VehicleData | null>(null);
@@ -76,7 +74,6 @@ export default function VehicleDetailsPage({
 
     onShowSimulator?.();
     onExit();
-    setTimeout(() => scrollTo("simulador"), 100);
   };
 
   const suggestedPrice = Number(String(vehicle.price).replace(/[^\d]/g, "")) || 0;

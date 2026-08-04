@@ -1,14 +1,13 @@
 ﻿import { useState, useMemo } from "react";
 import type { Vehicle } from "../data/constants";
 import VehicleCard from "./VehicleCard";
-import { useScrollTo } from "../hooks";
 import { useVehicles } from "../context/VehiclesContext";
 import { useReservations } from "../context/ReservationsContext";
 import { isSoldVehicle } from "../lib/availability";
 
 const ITEMS_PER_PAGE = 8;
 
-type Mode = "todos" | "aluguer" | "compra" | "vendidos";
+type Mode = "todos" | "aluguer" | "compra";
 type SimulatorFlow = "aluguer" | "compra";
 type Cat  = "suv" | "pickup" | "sedan" | "hatchback" | "van" | null;
 
@@ -16,7 +15,6 @@ const MODE_FILTERS: { key: Mode; label: string }[] = [
   { key: "todos", label: "Todos" },
   { key: "compra", label: "Compra" },
   { key: "aluguer", label: "Aluguer" },
-  { key: "vendidos", label: "Vendidos" },
 ];
 
 const CAT_FILTERS: { key: Cat; label: string; img: string; blend?: boolean }[] = [
@@ -59,7 +57,6 @@ export default function CatalogSection({
   onShowSimulator?: () => void;
   onOpenFlowModal?: (lockedFlow?: SimulatorFlow) => void;
 }) {
-  const scrollTo = useScrollTo();
   const { vehicles: dynamicVehicles, searchTerm, setSearchTerm } = useVehicles();
   const { availabilityReservations } = useReservations();
   const [mode, setMode] = useState<Mode>("todos");
@@ -89,11 +86,7 @@ export default function CatalogSection({
   // Função que gera os números de página com reticências
   const filtered = useMemo(() => allVehicles.filter((v) => {
     if (!v) return false;
-    const sold = isSoldVehicle(v.id, availabilityReservations);
-    if (mode === "vendidos") {
-      return sold;
-    }
-    if (sold) return false;
+    if (isSoldVehicle(v.id, availabilityReservations)) return false;
     if (mode !== "todos" && v.mode !== mode) return false;
     if (cat && v.cat !== cat) return false;
     if (searchTerm) {
@@ -145,7 +138,6 @@ export default function CatalogSection({
     }
 
     onShowSimulator?.();
-    scrollTo("simulador");
   };
 
   return (

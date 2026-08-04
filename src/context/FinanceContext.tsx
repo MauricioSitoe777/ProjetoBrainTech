@@ -1,22 +1,20 @@
 import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 import type { Transacao, Divida, TipoTransacao, CategoriaTransacao, StatusTransacao, StatusDivida } from '../types/finance';
+import { api } from '../lib/api';
 
-const TX_KEY    = 'rentcar:finance:transacoes:v1';
-const DIV_KEY   = 'rentcar:finance:dividas:v1';
+const TX_KEY  = 'rentcar:finance:transacoes:v1';
+const DIV_KEY = 'rentcar:finance:dividas:v1';
 
 interface FinanceContextType {
   transacoes: Transacao[];
   dividas: Divida[];
-  // métricas calculadas
   totalEntradas: number;
   totalSaidas: number;
   lucroLiquido: number;
   totalDividasPendentes: number;
-  // transações
   addTransacao: (t: Omit<Transacao, 'id'>) => void;
   updateTransacao: (id: string, data: Partial<Transacao>) => void;
   deleteTransacao: (id: string) => void;
-  // dívidas
   addDivida: (d: Omit<Divida, 'id'>) => void;
   updateDivida: (id: string, data: Partial<Divida>) => void;
   registarPagamentoDivida: (id: string, valor: number) => void;
@@ -36,6 +34,18 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     return s ? JSON.parse(s) : [];
   });
 
+  // Load from API on mount; localStorage stays as fallback
+  useEffect(() => {
+    api.get<Transacao[]>('/finance/transacoes').then(data => {
+      setTransacoes(data);
+    }).catch(() => {});
+
+    api.get<Divida[]>('/finance/dividas').then(data => {
+      setDividas(data);
+    }).catch(() => {});
+  }, []);
+
+  // Keep localStorage in sync as cache
   useEffect(() => { localStorage.setItem(TX_KEY,  JSON.stringify(transacoes)); }, [transacoes]);
   useEffect(() => { localStorage.setItem(DIV_KEY, JSON.stringify(dividas));    }, [dividas]);
 
@@ -50,47 +60,85 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const lucroLiquido = totalEntradas - totalSaidas;
 
   const totalDividasPendentes = useMemo(() =>
-    dividas
-      .filter(d => d.status !== 'quitado')
-      .reduce((s, d) => s + (d.valorTotal - d.valorPago), 0),
+    dividas.filter(d => d.status !== 'quitado').reduce((s, d) => s + (d.valorTotal - d.valorPago), 0),
   [dividas]);
 
   // ── Transações ────────────────────────────────────────────────────────────
 
   const addTransacao = (t: Omit<Transacao, 'id'>) => {
-    setTransacoes(prev => [{ ...t, id: `tx${Date.now()}` }, ...prev]);
+    const tempId = `tx${Date.now()}`;
+    setTransacoes(prev => [{ ...t, id: tempId }, ...prev]);
+    api.post<Transacao>('/finance/transacoes', {
+      tipo: t.tipo,
+      categoria: t.categoria,
+      descricao: t.descricao,
+      valor: t.valor,
+      data: t.data,
+      status: t.status,
+      cliente_nome: t.clienteNome,
+      referencia: t.referencia,
+    }).then(created => {
+      setTransacoes(prev => prev.map(tx => tx.id === tempId ? created : tx));
+    }).catch(() => {});
   };
 
   const updateTransacao = (id: string, data: Partial<Transacao>) => {
     setTransacoes(prev => prev.map(t => t.id === id ? { ...t, ...data } : t));
+    api.put<Transacao>(`/finance/transacoes/${id}`, {
+      status:      data.status,
+      valor:       data.valor,
+      descricao:   data.descricao,
+      cliente_nome: data.clienteNome,
+      referencia:  data.referencia,
+    }).catch(() => {});
   };
 
   const deleteTransacao = (id: string) => {
     setTransacoes(prev => prev.filter(t => t.id !== id));
+    api.delete(`/finance/transacoes/${id}`).catch(() => {});
   };
 
   // ── Dívidas ───────────────────────────────────────────────────────────────
 
   const addDivida = (d: Omit<Divida, 'id'>) => {
-    setDividas(prev => [{ ...d, id: `div${Date.now()}` }, ...prev]);
+    const tempId = `div${Date.now()}`;
+    setDividas(prev => [{ ...d, id: tempId }, ...prev]);
+    api.post<Divida>('/finance/dividas', {
+      cliente_nome:     d.clienteNome,
+      cliente_telefone: d.clienteTelefone,
+      descricao:        d.descricao,
+      valor_total:      d.valorTotal,
+      valor_pago:       d.valorPago,
+      data_vencimento:  d.dataVencimento,
+      status:           d.status,
+    }).then(created => {
+      setDividas(prev => prev.map(dv => dv.id === tempId ? created : dv));
+    }).catch(() => {});
   };
 
   const updateDivida = (id: string, data: Partial<Divida>) => {
     setDividas(prev => prev.map(d => d.id === id ? { ...d, ...data } : d));
+    api.put<Divida>(`/finance/dividas/${id}`, {
+      valor_pago: data.valorPago,
+      status:     data.status,
+      descricao:  data.descricao,
+    }).catch(() => {});
   };
 
   const registarPagamentoDivida = (id: string, valor: number) => {
     setDividas(prev => prev.map(d => {
       if (d.id !== id) return d;
-      const novoPago  = Math.min(d.valorPago + valor, d.valorTotal);
+      const novoPago   = Math.min(d.valorPago + valor, d.valorTotal);
       const novoStatus: StatusDivida = novoPago >= d.valorTotal ? 'quitado'
         : novoPago > 0 ? 'parcial' : 'pendente';
+      api.put<Divida>(`/finance/dividas/${id}`, { valor_pago: novoPago, status: novoStatus }).catch(() => {});
       return { ...d, valorPago: novoPago, status: novoStatus };
     }));
   };
 
   const deleteDivida = (id: string) => {
     setDividas(prev => prev.filter(d => d.id !== id));
+    api.delete(`/finance/dividas/${id}`).catch(() => {});
   };
 
   return (
@@ -111,16 +159,15 @@ export function useFinance() {
   return ctx;
 }
 
-// Labels e cores para uso na UI
 export const CATEGORIA_LABEL: Record<CategoriaTransacao, string> = {
-  aluguer:     'Aluguer',
-  compra_venda:'Compra / Venda',
-  xitique:     'Xitique',
-  manutencao:  'Manutenção',
-  salario:     'Salário',
-  combustivel: 'Combustível',
-  seguro:      'Seguro',
-  outro:       'Outro',
+  aluguer:      'Aluguer',
+  compra_venda: 'Compra / Venda',
+  xitique:      'Xitique',
+  manutencao:   'Manutenção',
+  salario:      'Salário',
+  combustivel:  'Combustível',
+  seguro:       'Seguro',
+  outro:        'Outro',
 };
 
 export const STATUS_TX_LABEL: Record<StatusTransacao, { label: string; className: string }> = {

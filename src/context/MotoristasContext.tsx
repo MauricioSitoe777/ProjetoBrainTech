@@ -1,11 +1,8 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { Motorista } from '../types/motorista';
+import { api } from '../lib/api';
 
-const MOCK: Motorista[] = [
-  { id: 'm1', nome: 'António Cossa',   telefone: '+258 84 123 0001', status: 'disponivel', dataCriacao: '2024-01-10' },
-  { id: 'm2', nome: 'Salomão Nhaca',   telefone: '+258 84 456 0002', status: 'disponivel', dataCriacao: '2024-03-05' },
-  { id: 'm3', nome: 'Feliciano Matos', telefone: '+258 84 789 0003', status: 'em_servico', dataCriacao: '2024-05-20' },
-];
+const LS_KEY = 'rentcar:motoristas';
 
 interface MotoristasContextType {
   motoristas: Motorista[];
@@ -18,27 +15,58 @@ const MotoristasContext = createContext<MotoristasContextType | null>(null);
 
 export function MotoristasProvider({ children }: { children: ReactNode }) {
   const [motoristas, setMotoristas] = useState<Motorista[]>(() => {
-    const saved = localStorage.getItem('rentcar:motoristas');
-    return saved ? JSON.parse(saved) : MOCK;
+    const saved = localStorage.getItem(LS_KEY);
+    return saved ? JSON.parse(saved) : [];
   });
 
-  const persist = (list: Motorista[]) => {
-    setMotoristas(list);
-    localStorage.setItem('rentcar:motoristas', JSON.stringify(list));
-  };
+  // Load from API on mount; localStorage stays as fallback
+  useEffect(() => {
+    api.get<Motorista[]>('/motoristas').then(data => {
+      setMotoristas(data);
+    }).catch(() => {});
+  }, []);
+
+  // Keep localStorage in sync as cache
+  useEffect(() => {
+    localStorage.setItem(LS_KEY, JSON.stringify(motoristas));
+  }, [motoristas]);
 
   const addMotorista = (data: Omit<Motorista, 'id' | 'dataCriacao'>): Motorista => {
-    const novo: Motorista = { ...data, id: `m${Date.now()}`, dataCriacao: new Date().toISOString().split('T')[0] };
-    persist([...motoristas, novo]);
-    return novo;
+    const tempId = `m${Date.now()}`;
+    const optimistic: Motorista = {
+      ...data,
+      id: tempId,
+      dataCriacao: new Date().toISOString().split('T')[0],
+    };
+    setMotoristas(prev => [...prev, optimistic]);
+    api.post<Motorista>('/motoristas', {
+      nome:        data.nome,
+      telefone:    data.telefone,
+      bi:          data.bi,
+      carta:       data.carta,
+      status:      data.status,
+      observacoes: data.observacoes,
+    }).then(created => {
+      setMotoristas(prev => prev.map(m => m.id === tempId ? created : m));
+    }).catch(() => {});
+    return optimistic;
   };
 
   const updateMotorista = (id: string, data: Partial<Motorista>) => {
-    persist(motoristas.map(m => m.id === id ? { ...m, ...data } : m));
+    setMotoristas(prev => prev.map(m => m.id === id ? { ...m, ...data } : m));
+    api.put<Motorista>(`/motoristas/${id}`, {
+      nome:        data.nome,
+      telefone:    data.telefone,
+      bi:          data.bi,
+      carta:       data.carta,
+      status:      data.status,
+      observacoes: data.observacoes,
+    }).catch(() => {});
   };
 
   const deleteMotorista = (id: string) => {
-    persist(motoristas.filter(m => m.id !== id));
+    setMotoristas(prev => prev.filter(m => m.id !== id));
+    api.delete(`/motoristas/${id}`).catch(() => {});
   };
 
   return (

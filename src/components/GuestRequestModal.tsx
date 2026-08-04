@@ -14,9 +14,10 @@ interface Props {
 
 const inputClass = 'w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500 transition-colors placeholder:text-zinc-500';
 
-export function GuestRequestModal({ intent: initialIntent = 'aluguer', vehicleName, prefill, preCategory, onClose }: Props) {
+export function GuestRequestModal({ intent: initialIntent = 'aluguer', vehicleName, prefill, preCategory, withDriver, onClose }: Props) {
   const { addGuest } = useGuests();
   const [done, setDone] = useState(false);
+  const lockedIntent = initialIntent === 'compra';
   const [form, setForm] = useState({
     nome: prefill?.nome ?? '',
     email: '',
@@ -49,6 +50,7 @@ export function GuestRequestModal({ intent: initialIntent = 'aluguer', vehicleNa
       telefone: form.telefone.trim(),
       intent: form.intent,
       category: form.intent === 'compra' ? form.category : undefined,
+      withDriver: form.intent === 'aluguer' ? withDriver : undefined,
       documentos: {},
       vehicleName,
     });
@@ -107,29 +109,39 @@ export function GuestRequestModal({ intent: initialIntent = 'aluguer', vehicleNa
 
               <div>
                 <label className="block text-xs text-white font-bold mb-1">Tipo de pedido</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(['aluguer', 'compra'] as GuestIntent[]).map(t => (
-                    <button key={t} onClick={() => setForm(p => ({ ...p, intent: t }))}
-                      className={`py-2.5 rounded-lg text-sm font-bold border transition-colors ${
-                        form.intent === t
-                          ? 'bg-amber-500 text-zinc-950 border-amber-500'
-                          : 'bg-zinc-800 text-white border-zinc-700 hover:border-amber-500/50'
-                      }`}>
-                      <span className="flex items-center justify-center gap-1.5">
-                        {t === 'aluguer' ? <><IconKey size={13} /> Aluguer</> : <><IconCar size={13} /> Compra</>}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+                {lockedIntent ? (
+                  <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2.5">
+                    <IconCar size={14} />
+                    <span className="text-amber-400 text-sm font-bold">Compra</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['aluguer', 'compra'] as GuestIntent[]).map(t => (
+                      <button key={t} onClick={() => setForm(p => ({ ...p, intent: t }))}
+                        className={`py-2.5 rounded-lg text-sm font-bold border transition-colors ${
+                          form.intent === t
+                            ? 'bg-amber-500 text-zinc-950 border-amber-500'
+                            : 'bg-zinc-800 text-white border-zinc-700 hover:border-amber-500/50'
+                        }`}>
+                        <span className="flex items-center justify-center gap-1.5">
+                          {t === 'aluguer' ? <><IconKey size={13} /> Aluguer</> : <><IconCar size={13} /> Compra</>}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {form.intent === 'compra' && (
                 <div>
-                  <label className="block text-xs text-white font-bold mb-1">Categoria</label>
+                  <label className="block text-xs text-white font-bold mb-1">
+                    Categoria
+                    {lockedIntent && <span className="ml-1.5 text-[10px] font-normal text-zinc-400">(definida no simulador)</span>}
+                  </label>
                   <select value={form.category}
-                    onChange={e => !preCategory && setForm(p => ({ ...p, category: e.target.value as GuestCategory }))}
-                    className={`${inputClass} ${preCategory ? 'opacity-70 cursor-not-allowed' : ''}`}
-                    disabled={!!preCategory}>
+                    onChange={e => !lockedIntent && !preCategory && setForm(p => ({ ...p, category: e.target.value as GuestCategory }))}
+                    className={`${inputClass} ${lockedIntent || preCategory ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    disabled={lockedIntent || !!preCategory}>
                     <option value="func_publico">Funcionário Público</option>
                     <option value="func_privado">Funcionário Privado</option>
                     <option value="empreendedor">Empreendedor</option>

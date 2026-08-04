@@ -19,7 +19,7 @@ const ROLES: { id: UserRole; label: string; desc: string; icon: React.ReactNode 
   },
 ];
 
-export function LoginPage({ onCancel, onRecuperar }: { onCancel?: () => void; onRecuperar?: () => void }) {
+export function LoginPage({ onCancel, onRecuperar, onRegister }: { onCancel?: () => void; onRecuperar?: () => void; onRegister?: () => void }) {
   const { login, isLoading, allUsers } = useAuth();
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
@@ -132,10 +132,12 @@ export function LoginPage({ onCancel, onRecuperar }: { onCancel?: () => void; on
               ))}
             </div>
 
-            {/* Contas rápidas */}
-            {selectedRole && filteredAccounts.length > 0 && (
+            {/* Contas rápidas — só em desenvolvimento */}
+            {import.meta.env.DEV && selectedRole && filteredAccounts.length > 0 && (
               <div className="mb-6">
-                <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-2.5">Contas rápidas</p>
+                <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-2.5">
+                  Contas rápidas <span className="text-amber-500/60">(só em DEV)</span>
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {filteredAccounts.map(acc => (
                     <button
@@ -278,8 +280,18 @@ export function LoginPage({ onCancel, onRecuperar }: { onCancel?: () => void; on
           </div>
         </div>
 
+        {/* Registo */}
+        {onRegister && (
+          <p className="text-center text-zinc-500 text-sm mt-5">
+            Não tem conta?{' '}
+            <button type="button" onClick={onRegister} className="text-amber-500 hover:text-amber-400 font-bold transition-colors">
+              Criar conta
+            </button>
+          </p>
+        )}
+
         {/* Rodapé */}
-        <p className="text-center text-zinc-600 text-xs mt-6">
+        <p className="text-center text-zinc-600 text-xs mt-4">
           &copy; 2026 SOS Motors · Todos os direitos reservados.
         </p>
       </div>

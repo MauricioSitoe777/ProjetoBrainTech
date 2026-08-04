@@ -2,6 +2,7 @@
 import { useGuests } from '../context/GuestsContext';
 import { useNotifications } from '../context/NotificationsContext';
 import type { Guest } from '../types/guest';
+import { uploadFile } from '../lib/upload';
 
 const DOC_LABELS: Record<string, string> = {
   bi: 'Bilhete de Identidade (BI)',
@@ -11,6 +12,22 @@ const DOC_LABELS: Record<string, string> = {
   declaracao_bairro: 'Declaração de Bairro',
   carta_conducao: 'Carta de Condução',
 };
+
+const DOCS_FOR_COMPRA: Record<string, string[]> = {
+  func_publico: ['bi', 'nuit', 'declaracao_rendimento'],
+  func_privado: ['bi', 'nuit', 'declaracao_rendimento', 'contrato_trabalho', 'declaracao_bairro'],
+  empreendedor: ['bi', 'nuit', 'declaracao_bairro'],
+};
+
+function getRequiredDocs(intent: string, category?: string, withDriver?: boolean): string[] {
+  if (intent === 'compra' && category && DOCS_FOR_COMPRA[category]) {
+    return DOCS_FOR_COMPRA[category];
+  }
+  // aluguer: carta de condução só se não tiver motorista
+  const base = ['bi', 'nuit'];
+  if (!withDriver) base.push('carta_conducao');
+  return base;
+}
 
 const STATUS_STYLE: Record<string, string> = {
   aguarda_documentos:    'text-zinc-400 bg-zinc-700/50 border-zinc-600',
@@ -45,18 +62,21 @@ export function GuestReviewModal({ guest, onClose }: Props) {
   const { updateGuest, deleteGuest } = useGuests();
   const { addNotification } = useNotifications();
   const [action, setAction] = useState<'idle' | 'aprovar' | 'rejeitar'>('idle');
+  const [justRegistered, setJustRegistered] = useState(false);
   const [senha, setSenha] = useState(generatePassword);
   const [motivo, setMotivo] = useState('');
   const [motivoError, setMotivoError] = useState(false);
   const [approved, setApproved] = useState(guest.status === 'aprovado');
   const [copied, setCopied] = useState<string | null>(null);
   const [docs, setDocs] = useState<Record<string, string>>(guest.documentos ?? {});
+  const [uploading, setUploading] = useState<Record<string, boolean>>({});
 
   const isResolved = approved || guest.status === 'rejeitado';
 
   const handleAnalise = () => {
     updateGuest(guest.id, { status: 'em_analise' });
     addNotification('admin', 'Visitante registado', `${guest.nome} foi movido para "Registrar".`, 'info');
+    setJustRegistered(true);
   };
 
   const handleAprovar = () => {
@@ -138,7 +158,8 @@ export function GuestReviewModal({ guest, onClose }: Props) {
                 <span className="text-[9px] text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-full font-bold">Registo pelo admin</span>
               </div>
               <div className="space-y-1.5">
-                {Object.entries(DOC_LABELS).map(([key, label]) => {
+                {getRequiredDocs(guest.intent, guest.category, guest.withDriver).map(key => {
+                  const label = DOC_LABELS[key];
                   const saved = docs[key];
                   return (
                     <div key={key} className={`flex items-center justify-between gap-3 px-3 py-2 rounded-lg border transition-colors ${saved ? 'bg-emerald-500/8 border-emerald-500/25' : 'bg-zinc-800/50 border-zinc-700/50'}`}>
@@ -153,17 +174,32 @@ export function GuestReviewModal({ guest, onClose }: Props) {
                             ✕
                           </button>
                         )}
-                        <label className={`text-[10px] font-bold px-2.5 py-1 rounded-lg cursor-pointer transition-colors ${saved ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-700 text-white hover:bg-zinc-600'}`}>
-                          {saved ? '✓ OK' : 'Registrar'}
+                        <label className={`text-[10px] font-bold px-2.5 py-1 rounded-lg cursor-pointer transition-colors ${
+                          uploading[key] ? 'bg-amber-500/20 text-amber-400 cursor-wait'
+                          : saved ? 'bg-emerald-500/20 text-emerald-400'
+                          : 'bg-zinc-700 text-white hover:bg-zinc-600'
+                        }`}>
+                          {uploading[key] ? '…' : saved ? '✓ OK' : 'Registrar'}
                           <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={e => {
+                            disabled={uploading[key]}
+                            onChange={async e => {
                               const file = e.target.files?.[0];
-                              if (file) {
+                              if (!file) return;
+                              e.target.value = '';
+                              setUploading(prev => ({ ...prev, [key]: true }));
+                              try {
+                                const result = await uploadFile(file, key);
+                                const next = { ...docs, [key]: result.url };
+                                setDocs(next);
+                                updateGuest(guest.id, { documentos: next, status: 'documentos_submetidos' });
+                              } catch {
+                                // fallback: store filename so the UI still shows something
                                 const next = { ...docs, [key]: file.name };
                                 setDocs(next);
                                 updateGuest(guest.id, { documentos: next, status: 'documentos_submetidos' });
+                              } finally {
+                                setUploading(prev => ({ ...prev, [key]: false }));
                               }
-                              e.target.value = '';
                             }} />
                         </label>
                       </div>
@@ -209,11 +245,18 @@ export function GuestReviewModal({ guest, onClose }: Props) {
           {/* Acções */}
           {!isResolved && (
             <div className="space-y-2 pt-1">
-              {guest.status !== 'em_analise' && action === 'idle' && (
+              {guest.status !== 'em_analise' && action === 'idle' && !justRegistered && (
                 <button onClick={handleAnalise}
                   className="w-full bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 font-bold rounded-lg py-2.5 text-sm transition-colors">
                   Registrar
                 </button>
+              )}
+
+              {justRegistered && (
+                <div className="w-full flex items-center justify-center gap-2 bg-emerald-500/10 border border-emerald-500/25 rounded-lg py-2.5">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span className="text-emerald-400 text-sm font-bold">Cliente registado</span>
+                </div>
               )}
 
               {guest.status === 'em_analise' && action !== 'rejeitar' && (
@@ -303,7 +346,7 @@ export function GuestReviewModal({ guest, onClose }: Props) {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4">
-      <span className="text-zinc-500 text-xs shrink-0">{label}</span>
+      <span className="text-white text-xs shrink-0 font-normal">{label}</span>
       <span className="text-white text-sm font-semibold text-right truncate">{value}</span>
     </div>
   );

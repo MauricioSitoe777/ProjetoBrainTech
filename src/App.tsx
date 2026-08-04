@@ -46,6 +46,7 @@ import { SectionReveal } from "./components/SectionReveal";
 import { XitiqueInfoPage } from "./pages/XitiqueInfoPage";
 import { useClientReminders } from "./hooks/useClientReminders";
 import { useAdminNotifier } from "./hooks/useAdminNotifier";
+import { RegisterModal } from "./components/RegisterModal";
 
 type SimulatorFlow = "aluguer" | "compra";
 
@@ -69,14 +70,18 @@ function AppInner() {
   // Sidebar drawer (admin mobile)
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Register modal
+  const [showRegister, setShowRegister] = useState(false);
+
   // Password change (client)
   const [passwordChanged, setPasswordChanged] = useState(false);
 
   // Shared modal state (dispatched via window events)
   const [showXitiqueModal,  setShowXitiqueModal]  = useState(false);
   const [showXitiqueRegs,   setShowXitiqueRegs]   = useState(false);
-  const [flowModalOpen,     setFlowModalOpen]      = useState(false);
-  const [simulatorFlowLock, setSimulatorFlowLock]  = useState<SimulatorFlow | undefined>();
+  const [flowModalOpen,         setFlowModalOpen]         = useState(false);
+  const [simulatorFlowLock,     setSimulatorFlowLock]     = useState<SimulatorFlow | undefined>();
+  const [simulatorCategoryLock, setSimulatorCategoryLock] = useState<string | undefined>();
 
   // ── Route flags ────────────────────────────────────────────────────────────
   const currentPath = path.split("?")[0];
@@ -110,10 +115,21 @@ function AppInner() {
     const onXitique   = () => setShowXitiqueModal(true);
     const onRegs      = () => setShowXitiqueRegs(true);
     const onFlow      = (e: Event) => {
-      setSimulatorFlowLock((e as CustomEvent<SimulatorFlow | undefined>).detail);
+      const detail = (e as CustomEvent).detail;
+      if (detail && typeof detail === 'object' && ('flow' in detail || 'category' in detail)) {
+        setSimulatorFlowLock((detail as { flow?: SimulatorFlow }).flow);
+        setSimulatorCategoryLock((detail as { category?: string }).category);
+      } else {
+        setSimulatorFlowLock(detail as SimulatorFlow | undefined);
+        setSimulatorCategoryLock(undefined);
+      }
       setFlowModalOpen(true);
     };
-    const onCloseFlow = () => { setFlowModalOpen(false); setSimulatorFlowLock(undefined); };
+    const onCloseFlow = () => {
+      setFlowModalOpen(false);
+      setSimulatorFlowLock(undefined);
+      setSimulatorCategoryLock(undefined);
+    };
 
     window.addEventListener("rentcar:open-about",         onAbout);
     window.addEventListener("rentcar:open-xitique-modal", onXitique);
@@ -155,7 +171,17 @@ function AppInner() {
       if (!user) {
         return (
           <div className="pt-16 min-h-screen bg-zinc-950">
-            <LoginPage onCancel={goBack} onRecuperar={() => navigate("/recuperar-senha")} />
+            <LoginPage
+              onCancel={goBack}
+              onRecuperar={() => navigate("/recuperar-senha")}
+              onRegister={() => setShowRegister(true)}
+            />
+            {showRegister && (
+              <RegisterModal
+                onClose={() => setShowRegister(false)}
+                onLoginInstead={() => setShowRegister(false)}
+              />
+            )}
           </div>
         );
       }
@@ -277,6 +303,7 @@ function AppInner() {
       {showHeader && (
         <AppHeader
           onToggleSidebar={isAdminPath && isAdmin ? () => setSidebarOpen(v => !v) : undefined}
+          onRegister={!user ? () => setShowRegister(true) : undefined}
         />
       )}
 
@@ -320,7 +347,7 @@ function AppInner() {
                 </button>
               </div>
               <div className="max-h-[calc(90vh-64px)] overflow-auto">
-                <Simulator showClose={false} lockedFlow={simulatorFlowLock} />
+                <Simulator showClose={false} lockedFlow={simulatorFlowLock} initialCategory={simulatorCategoryLock} />
               </div>
             </div>
           </div>

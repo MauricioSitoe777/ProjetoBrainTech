@@ -312,9 +312,8 @@ const CARD_SIMULATOR_NAV: Record<string, { category?: string; flow?: "compra" | 
 
 function navigateToSimulator(cardId: string) {
   window.dispatchEvent(
-    new CustomEvent("rentcar:open-simulator-category", { detail: CARD_SIMULATOR_NAV[cardId] })
+    new CustomEvent("rentcar:open-flow-modal", { detail: CARD_SIMULATOR_NAV[cardId] })
   );
-  window.dispatchEvent(new CustomEvent("rentcar:open-flow-modal"));
 }
 
 function ShufflingCards() {

@@ -381,9 +381,16 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
   const [gerarData,        setGerarData]        = useState('');
   const [gerarNum,         setGerarNum]         = useState(12);
   const [cancelConfirmId,  setCancelConfirmId]  = useState<string | null>(null);
+  const [detalheVenda,     setDetalheVenda]     = useState<Reservation | null>(null);
   const [cancelMotivo,     setCancelMotivo]     = useState('');
   const [pagamentoModal,   setPagamentoModal]   = useState<{ reservationId: string; prestacao: Prestacao } | null>(null);
   const selectedPresencialVehicle = compraVehicles.find(v => v.id === presencialVehicleId) ?? compraVehicles[0] ?? null;
+
+  const [presencialModal,      setPresencialModal]      = useState(false);
+  const [presencialValorInput, setPresencialValorInput] = useState('');
+  const [presencialForma,      setPresencialForma]      = useState('dinheiro');
+  const [presencialData,       setPresencialData]       = useState(() => new Date().toISOString().split('T')[0]);
+  const [presencialError,      setPresencialError]      = useState('');
 
   // Sync tab + status with URL on navigation
   React.useEffect(() => {
@@ -408,6 +415,111 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
   }, [tab, highlightStatus]);
 
   const today = new Date().toISOString().split('T')[0];
+
+  const openPresencialModal = () => {
+    if (!selectedPresencialVehicle || !presencialClientName.trim()) return;
+    const priceNum = parseInt(String(selectedPresencialVehicle.price).replace(/\D/g, ''), 10) || 0;
+    setPresencialValorInput(priceNum > 0 ? String(priceNum) : '');
+    setPresencialForma('dinheiro');
+    setPresencialData(today);
+    setPresencialError('');
+    setPresencialModal(true);
+  };
+
+  const registarCompraPresencial = () => {
+    if (!selectedPresencialVehicle) return;
+    setPresencialError('');
+    const valor = parseInt(presencialValorInput, 10) || 0;
+    const result = createReservation({
+      vehicleId: selectedPresencialVehicle.id,
+      clientName: presencialClientName.trim(),
+      clientEmail: presencialClientEmail.trim() || undefined,
+      clientPhone: presencialClientPhone.trim() || undefined,
+      dataInicio: presencialData,
+      dataFim: presencialData,
+      horaLevantamento: '09:00',
+      horaDevolucao: '09:00',
+      status: 'compra_aprovada',
+      valorTotal: valor,
+      deposito: 0,
+      totalPrestacoes: 1,
+      formaPagamento: presencialForma,
+      notas: 'Compra presencial',
+    });
+    if (!result.ok) {
+      setPresencialError(result.error ?? 'Erro ao registar a compra.');
+      return;
+    }
+    setPresencialModal(false);
+    setPresencialClientName('');
+    setPresencialClientPhone('');
+    setPresencialClientEmail('');
+    setPresencialVehicleId(null);
+    setTab('compras');
+  };
+
+  const gerarComprativoCompra = (r: Reservation) => {
+    const vName = vehicleName(r.vehicleId);
+    const vMat  = vehicleMatricula(r.vehicleId);
+    const isPresencial = r.notas?.toLowerCase().includes('presencial');
+    const w = window.open('', '_blank', 'width=800,height=900');
+    if (!w) return;
+    w.document.write(`<!DOCTYPE html><html lang="pt"><head>
+<meta charset="utf-8"/>
+<title>Comprovativo de Compra — ${r.clientName}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#111;padding:40px;max-width:680px;margin:auto}
+  .logo{font-size:22px;font-weight:900;letter-spacing:2px;color:#B8960C;margin-bottom:4px}
+  .subtitle{font-size:11px;color:#666;margin-bottom:32px;letter-spacing:1px}
+  .title{font-size:18px;font-weight:800;margin-bottom:4px}
+  .badge{display:inline-block;background:#f5f0dc;color:#8a6a00;border:1px solid #d4af37;font-size:10px;font-weight:700;padding:2px 10px;border-radius:20px;letter-spacing:1px;vertical-align:middle;margin-left:8px}
+  .badge-presencial{background:#e8f5e9;color:#1b5e20;border-color:#4caf50}
+  .section{margin-bottom:20px}
+  .section-title{font-size:10px;font-weight:700;color:#999;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;border-bottom:1px solid #eee;padding-bottom:4px}
+  .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f5f5f5;font-size:13px}
+  .row .label{color:#555}
+  .row .value{font-weight:600;text-align:right}
+  .total{font-size:15px;font-weight:900;color:#B8960C}
+  .footer{margin-top:40px;border-top:1px solid #ddd;padding-top:16px;font-size:11px;color:#999;text-align:center}
+  .ref{font-size:10px;color:#bbb;margin-top:24px;text-align:right}
+  @media print{body{padding:20px}button{display:none}}
+</style></head><body>
+<div class="logo">SOS MOTORS</div>
+<div class="subtitle">COMPROVATIVO DE VENDA DE VIATURA</div>
+<div class="title">Comprovativo de Compra ${isPresencial ? '<span class="badge badge-presencial">PRESENCIAL</span>' : ''}</div>
+<div style="font-size:12px;color:#999;margin-bottom:28px">Emitido em ${new Date().toLocaleDateString('pt-MZ', { day: '2-digit', month: 'long', year: 'numeric' })} · Ref: ${r.id.toUpperCase()}</div>
+
+<div class="section">
+  <div class="section-title">Dados do Cliente</div>
+  <div class="row"><span class="label">Nome</span><span class="value">${r.clientName}</span></div>
+  ${r.clientPhone ? `<div class="row"><span class="label">Telefone</span><span class="value">${r.clientPhone}</span></div>` : ''}
+  ${r.clientEmail ? `<div class="row"><span class="label">Email</span><span class="value">${r.clientEmail}</span></div>` : ''}
+</div>
+
+<div class="section">
+  <div class="section-title">Dados da Viatura</div>
+  <div class="row"><span class="label">Viatura</span><span class="value">${vName}</span></div>
+  ${vMat ? `<div class="row"><span class="label">Matrícula</span><span class="value">${vMat}</span></div>` : ''}
+</div>
+
+<div class="section">
+  <div class="section-title">Dados da Venda</div>
+  <div class="row"><span class="label">Data de Venda</span><span class="value">${fmtDate(r.dataInicio)}</span></div>
+  <div class="row"><span class="label">Forma de Pagamento</span><span class="value">${r.formaPagamento ?? 'Dinheiro'}</span></div>
+  <div class="row"><span class="label">Estado</span><span class="value">${STATUS_CFG[r.status].label}</span></div>
+  <div class="row" style="margin-top:8px"><span class="label total">VALOR TOTAL</span><span class="value total">${fmt(r.valorTotal)}</span></div>
+</div>
+
+<div class="footer">
+  SOS Motors — Compra e Aluguer de Viaturas · Maputo, Moçambique<br/>
+  Este comprovativo é válido como documento de venda. Obrigado pela sua preferência.
+</div>
+<div class="ref">Documento gerado automaticamente pelo sistema SOS Motors</div>
+<br/><button onclick="window.print()" style="margin-top:16px;padding:10px 24px;background:#B8960C;color:#fff;border:none;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer">Imprimir</button>
+</body></html>`);
+    w.document.close();
+  };
 
   const advance = (id: string, toStatus: ReservationStatus) => {
     if (updating === id) return;
@@ -651,7 +763,7 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                       <span className={`text-xs border rounded-md px-2 py-0.5 font-semibold ${st.className}`}>{st.label}</span>
                     </td>
                     <td className="px-5 py-4">
-                      <button type="button" onClick={() => navigate(`/veiculo/${r.vehicleId}`)}
+                      <button type="button" onClick={() => setDetalheVenda(r)}
                         className="text-xs font-bold text-white bg-zinc-900 border border-zinc-700 px-3 py-2 rounded-xl hover:bg-zinc-800 transition-all">
                         Detalhes
                       </button>
@@ -985,10 +1097,6 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                   <p className="text-lg text-amber-400 uppercase font-black tracking-[0.15em]">COMPRA PRESENCIAL</p>
                   <p className="text-white/70 text-sm mt-1 max-w-xl">Painel de acompanhamento profissional para vendas físicas. Selecione uma viatura, valide os dados do cliente e avance para as ações de gestão.</p>
                 </div>
-                <button onClick={() => navigate('/admin/compra?tab=acoes')}
-                  className="shrink-0 text-sm font-black uppercase tracking-widest px-6 py-3 rounded-full bg-amber-500 text-zinc-950 hover:bg-amber-400 hover:scale-105 transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)]">
-                  Ver Ações
-                </button>
               </div>
 
               {/* Form Content */}
@@ -1004,11 +1112,11 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                 {/* Inputs */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <input value={presencialClientName} onChange={e => setPresencialClientName(e.target.value)}
-                    placeholder="Nome do cliente" className="w-full bg-zinc-950/80 border border-zinc-800 rounded-full px-6 py-3.5 text-sm text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-zinc-600" />
+                    placeholder="Nome do cliente" className="w-full bg-zinc-950/80 border border-zinc-800 rounded-full px-6 py-3.5 text-sm text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-white/40" />
                   <input value={presencialClientPhone} onChange={e => setPresencialClientPhone(e.target.value)}
-                    placeholder="Telefone" className="w-full bg-zinc-950/80 border border-zinc-800 rounded-full px-6 py-3.5 text-sm text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-zinc-600" />
+                    placeholder="Telefone" className="w-full bg-zinc-950/80 border border-zinc-800 rounded-full px-6 py-3.5 text-sm text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-white/40" />
                   <input value={presencialClientEmail} onChange={e => setPresencialClientEmail(e.target.value)}
-                    placeholder="Email" className="w-full bg-zinc-950/80 border border-zinc-800 rounded-full px-6 py-3.5 text-sm text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-zinc-600" />
+                    placeholder="Email" className="w-full bg-zinc-950/80 border border-zinc-800 rounded-full px-6 py-3.5 text-sm text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-white/40" />
                 </div>
 
                 {/* Selected Vehicle Card */}
@@ -1031,16 +1139,95 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
 
                 {/* Confirm Button */}
                 <div className="pt-4">
-                  <button 
-                    onClick={() => navigate(`/admin/compra?tab=acoes&vehicle=${selectedPresencialVehicle?.id ?? ''}`)}
-                    disabled={!selectedPresencialVehicle}
+                  {selectedPresencialVehicle && !presencialClientName.trim() && (
+                    <p className="text-center text-xs text-red-400/70 mb-2">Preencha o nome do cliente para avançar</p>
+                  )}
+                  <button
+                    onClick={openPresencialModal}
+                    disabled={!selectedPresencialVehicle || !presencialClientName.trim()}
                     className="w-full p-4 rounded-2xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:hover:scale-100 disabled:cursor-not-allowed text-zinc-950 font-black text-lg tracking-widest uppercase transition-all flex items-center justify-center gap-3"
                   >
-                    [ CONFIRMAR SELEÇÃO E IR PARA AÇÕES ]
+                    [ CONFIRMAR SELEÇÃO E REGISTAR ]
                   </button>
                 </div>
               </div>
             </div>
+
+            {/* Presencial Payment Modal */}
+            {presencialModal && selectedPresencialVehicle && (
+              <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setPresencialModal(false)}>
+                <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+                  <div className="p-6 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-between">
+                    <div>
+                      <p className="text-amber-400 text-xs font-bold uppercase tracking-widest mb-0.5">Compra Presencial</p>
+                      <h3 className="text-lg font-black text-white">Registar Compra</h3>
+                    </div>
+                    <button onClick={() => setPresencialModal(false)} className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                  <div className="p-6 space-y-4 max-h-[65vh] overflow-y-auto">
+                    {/* Vehicle summary */}
+                    <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-4 flex items-center gap-4">
+                      <img src={selectedPresencialVehicle.img} alt={selectedPresencialVehicle.name} className="w-20 h-14 object-cover rounded-xl shrink-0" />
+                      <div>
+                        <p className="text-white font-black">{selectedPresencialVehicle.name}</p>
+                        <p className="text-zinc-400 text-xs">{selectedPresencialVehicle.brand} · {selectedPresencialVehicle.year}</p>
+                        <p className="text-amber-400 text-sm font-bold mt-0.5">{selectedPresencialVehicle.price}</p>
+                      </div>
+                    </div>
+                    {/* Client summary */}
+                    <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-4">
+                      <p className="text-white text-xs uppercase tracking-widest font-bold mb-2">Cliente</p>
+                      <p className="text-white text-sm font-bold">{presencialClientName}</p>
+                      {presencialClientPhone && <p className="text-zinc-400 text-xs mt-0.5">{presencialClientPhone}</p>}
+                      {presencialClientEmail && <p className="text-zinc-400 text-xs">{presencialClientEmail}</p>}
+                    </div>
+                    {/* Fields */}
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs text-white font-bold mb-1.5 uppercase tracking-wider">Data da Compra</label>
+                        <input type="date" value={presencialData} onChange={e => setPresencialData(e.target.value)}
+                          className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-amber-500 transition-all" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-white font-bold mb-1.5 uppercase tracking-wider">Valor Total (MZN)</label>
+                        <input type="number" value={presencialValorInput} onChange={e => setPresencialValorInput(e.target.value)}
+                          placeholder="0" className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-amber-500 transition-all" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-white font-bold mb-1.5 uppercase tracking-wider">Forma de Pagamento</label>
+                        <select value={presencialForma} onChange={e => setPresencialForma(e.target.value)}
+                          className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-amber-500 transition-all">
+                          <option value="dinheiro">Dinheiro</option>
+                          <option value="transferencia">Transferência</option>
+                          <option value="cheque">Cheque</option>
+                          <option value="cartao">Cartão</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="px-6 pb-6 space-y-3">
+                    {presencialError && (
+                      <div className="bg-red-500/10 border border-red-500/25 rounded-xl px-4 py-3 text-sm text-red-400 text-center">
+                        {presencialError}
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-3">
+                      <button onClick={() => setPresencialModal(false)}
+                        className="py-3 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-black uppercase tracking-wider transition-colors">
+                        Cancelar
+                      </button>
+                      <button onClick={registarCompraPresencial}
+                        disabled={!presencialValorInput || !presencialData}
+                        className="py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-zinc-950 text-sm font-black uppercase tracking-wider transition-colors">
+                        Registar Compra
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Modal for Vehicle Selection */}
             {showVehicleModal && (
@@ -1114,9 +1301,136 @@ export function CompraPage({ onExit }: { onExit?: () => void }) {
                 </div>
               </div>
             )}
+
+            {/* Presencial Registrations List */}
+            {(() => {
+              const lista = reservations
+                .filter(r => compraIds.has(r.vehicleId) && r.notas === 'Compra presencial')
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+              if (lista.length === 0) return null;
+              return (
+                <div className="mt-6 max-w-4xl mx-auto px-5 sm:px-8 pb-4">
+                  <p className="text-white font-black text-sm uppercase tracking-widest mb-4">Registos Presenciais</p>
+                  <div className="space-y-3">
+                    {lista.map(r => (
+                      <div key={r.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E4B42E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+                          </div>
+                          <div>
+                            <p className="text-white text-sm font-bold">{r.clientName}</p>
+                            <p className="text-zinc-400 text-xs">{vehicleName(r.vehicleId)} · {new Date(r.dataInicio).toLocaleDateString('pt-MZ')}</p>
+                            {r.clientPhone && <p className="text-zinc-500 text-xs">{r.clientPhone}</p>}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <p className="text-amber-400 text-sm font-black">{r.valorTotal.toLocaleString('pt-MZ')} MZN</p>
+                            <p className="text-zinc-500 text-xs">
+                              {r.totalPrestacoes && r.totalPrestacoes > 1 ? `${r.totalPrestacoes} prestações` : 'Pagamento único'}
+                              {r.deposito ? ` · Entrada: ${r.deposito.toLocaleString('pt-MZ')}` : ''}
+                            </p>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase shrink-0 ${
+                            r.status === 'pendente'  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                            r.status === 'aprovado'  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                            r.status === 'cancelado' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+                            'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                          }`}>{r.status}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>
     </div>
+
+    {/* Modal de Detalhes da Venda */}
+    {detalheVenda && (() => {
+      const r = detalheVenda;
+      const vName = vehicleName(r.vehicleId);
+      const vMat  = vehicleMatricula(r.vehicleId);
+      const vData = compraVehicles.find(v => v.id === r.vehicleId);
+      const isPresencial = r.notas?.toLowerCase().includes('presencial');
+      const prestacoes   = r.prestacoes ?? [];
+      const pagas        = prestacoes.filter(p => p.paga).length;
+      const total        = prestacoes.length || (r.totalPrestacoes ?? 0);
+      const st           = STATUS_CFG[r.status];
+      return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm" onClick={() => setDetalheVenda(null)}>
+          <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="p-6 border-b border-zinc-800 bg-zinc-900/60 flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <p className="text-white font-black text-lg">{r.clientName}</p>
+                  {isPresencial && (
+                    <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">Presencial</span>
+                  )}
+                  <span className={`text-xs border rounded-md px-2 py-0.5 font-semibold ${st.className}`}>{st.label}</span>
+                </div>
+                <p className="text-zinc-400 text-xs">{r.clientPhone ?? ''}{r.clientPhone && r.clientEmail ? ' · ' : ''}{r.clientEmail ?? ''}</p>
+              </div>
+              <button onClick={() => setDetalheVenda(null)} className="w-9 h-9 flex items-center justify-center rounded-full bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors shrink-0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5 max-h-[65vh] overflow-y-auto">
+              {vData ? (
+                <div className="flex items-center gap-4 bg-zinc-900/70 border border-zinc-800 rounded-2xl p-4">
+                  <img src={vData.img} alt={vData.name} className="w-24 h-16 object-cover rounded-xl shrink-0" />
+                  <div>
+                    <p className="text-white font-black">{vData.name}</p>
+                    <p className="text-zinc-400 text-xs">{vData.brand} · {vData.year}</p>
+                    {vMat && <p className="text-zinc-500 text-xs mt-0.5">Matrícula: {vMat}</p>}
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-4">
+                  <p className="text-white font-bold">{vName}</p>
+                  {vMat && <p className="text-zinc-400 text-xs mt-0.5">Matrícula: {vMat}</p>}
+                </div>
+              )}
+
+              <div className="bg-zinc-900/40 border border-zinc-800/60 rounded-2xl divide-y divide-zinc-800/60">
+                {([
+                  { label: 'Data de Venda',      value: fmtDate(r.dataInicio) },
+                  { label: 'Forma de Pagamento', value: r.formaPagamento ?? 'Dinheiro' },
+                  { label: 'Valor Total',        value: fmt(r.valorTotal), highlight: true },
+                  ...(total > 1 ? [
+                    { label: 'Prestações', value: `${pagas}/${total} pagas` },
+                    ...(r.deposito ? [{ label: 'Entrada', value: fmt(r.deposito) }] : []),
+                  ] : []),
+                  ...(isPresencial ? [{ label: 'Tipo de Venda', value: 'Presencial (balcão)' }] : []),
+                ] as { label: string; value: string; highlight?: boolean }[]).map(({ label, value, highlight }) => (
+                  <div key={label} className="flex items-center justify-between px-4 py-3">
+                    <span className="text-zinc-400 text-sm">{label}</span>
+                    <span className={`text-sm font-bold ${highlight ? 'text-amber-400' : 'text-white'}`}>{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-6 pt-0 flex gap-3">
+              <button onClick={() => setDetalheVenda(null)}
+                className="flex-1 py-3 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-black uppercase tracking-wider transition-colors">
+                Fechar
+              </button>
+              <button onClick={() => gerarComprativoCompra(r)}
+                className="flex-1 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-zinc-950 text-sm font-black uppercase tracking-wider transition-colors flex items-center justify-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Comprovativo
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
   );
 }

@@ -58,7 +58,7 @@ const ALUGUER_ACTIONABLE_STATUSES = new Set(GRUPOS.map(g => g.status));
 
 export function AluguerPage({ onExit }: { onExit?: () => void }) {
   const { navigate } = useRoute();
-  const { reservations, blocks, updateReservation, cancelReservation, removeBlock, marcarPrestacao, alterarDataVencimento, rules } = useReservations();
+  const { reservations, blocks, updateReservation, cancelReservation, createReservation, removeBlock, marcarPrestacao, alterarDataVencimento, rules } = useReservations();
   const { motoristas } = useMotoristas();
   const { vehicles: allVehicles } = useVehicles();
   const { addNotification } = useNotifications();
@@ -269,10 +269,131 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
 
   const selectedPresencialVehicle = aluguerVehicles.find(v => v.id === presencialVehicleId) ?? aluguerVehicles[0] ?? null;
 
+  const [presencialModal,       setPresencialModal]       = useState(false);
+  const [presencialValorInput,  setPresencialValorInput]  = useState('');
+  const [presencialEntrada,     setPresencialEntrada]     = useState('');
+  const [presencialForma,       setPresencialForma]       = useState('dinheiro');
+  const [presencialDataInicio,  setPresencialDataInicio]  = useState(() => new Date().toISOString().split('T')[0]);
+  const [presencialDataFim,     setPresencialDataFim]     = useState(() => new Date().toISOString().split('T')[0]);
+  const [presencialHoraLev,     setPresencialHoraLev]     = useState('09:00');
+  const [presencialHoraDev,     setPresencialHoraDev]     = useState('18:00');
+
+  const openPresencialModal = () => {
+    if (!selectedPresencialVehicle || !presencialClientName.trim()) return;
+    const todayStr = new Date().toISOString().split('T')[0];
+    const tmr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+    setPresencialValorInput('');
+    setPresencialEntrada('');
+    setPresencialForma('dinheiro');
+    setPresencialDataInicio(todayStr);
+    setPresencialDataFim(tmr);
+    setPresencialHoraLev('09:00');
+    setPresencialHoraDev('18:00');
+    setPresencialModal(true);
+  };
+
+  const registarAluguerPresencial = () => {
+    if (!selectedPresencialVehicle) return;
+    const valor = parseInt(presencialValorInput.replace(/\D/g, ''), 10) || 0;
+    const entrada = parseInt(presencialEntrada.replace(/\D/g, ''), 10) || 0;
+    createReservation({
+      vehicleId: selectedPresencialVehicle.id,
+      clientName: presencialClientName.trim(),
+      clientEmail: presencialClientEmail.trim(),
+      clientPhone: presencialClientPhone.trim(),
+      dataInicio: presencialDataInicio,
+      dataFim: presencialDataFim,
+      horaLevantamento: presencialHoraLev,
+      horaDevolucao: presencialHoraDev,
+      status: 'pendente',
+      valorTotal: valor,
+      deposito: entrada,
+      formaPagamento: presencialForma,
+      notas: 'Aluguer presencial',
+    });
+    setPresencialModal(false);
+    setPresencialClientName('');
+    setPresencialClientPhone('');
+    setPresencialClientEmail('');
+    setPresencialVehicleId(null);
+  };
+
   useEffect(() => {
     if (presencialVehicleId !== null) return;
     if (aluguerVehicles.length > 0) setPresencialVehicleId(aluguerVehicles[0].id);
   }, [aluguerVehicles, presencialVehicleId]);
+
+  const gerarComprativoAluguer = (r: Reservation) => {
+    const vName = vehicleName(r.vehicleId);
+    const vMat  = vehicleMatricula(r.vehicleId);
+    const vData = aluguerVehicles.find(v => v.id === r.vehicleId);
+    const isPresencial = r.notas?.toLowerCase().includes('presencial');
+    const dias = Math.max(1, Math.ceil((new Date(r.dataFim).getTime() - new Date(r.dataInicio).getTime()) / 86400000));
+    const fmtPT = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('pt-MZ', { day: '2-digit', month: 'long', year: 'numeric' });
+    const fmtVal = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',00 MT';
+    const w = window.open('', '_blank', 'width=800,height=900');
+    if (!w) return;
+    w.document.write(`<!DOCTYPE html><html lang="pt"><head>
+<meta charset="utf-8"/>
+<title>Comprovativo de Aluguer — ${r.clientName}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#111;padding:40px;max-width:680px;margin:auto}
+  .logo{font-size:22px;font-weight:900;letter-spacing:2px;color:#B8960C;margin-bottom:4px}
+  .subtitle{font-size:11px;color:#666;margin-bottom:32px;letter-spacing:1px}
+  .title{font-size:18px;font-weight:800;margin-bottom:4px}
+  .badge-presencial{display:inline-block;background:#e8f5e9;color:#1b5e20;border:1px solid #4caf50;font-size:10px;font-weight:700;padding:2px 10px;border-radius:20px;letter-spacing:1px;vertical-align:middle;margin-left:8px}
+  .section{margin-bottom:20px}
+  .section-title{font-size:10px;font-weight:700;color:#999;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;border-bottom:1px solid #eee;padding-bottom:4px}
+  .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f5f5f5;font-size:13px}
+  .row .label{color:#555}
+  .row .value{font-weight:600;text-align:right}
+  .total{font-size:15px;font-weight:900;color:#B8960C}
+  .footer{margin-top:40px;border-top:1px solid #ddd;padding-top:16px;font-size:11px;color:#999;text-align:center}
+  @media print{body{padding:20px}button{display:none}}
+</style></head><body>
+<div class="logo">SOS MOTORS</div>
+<div class="subtitle">COMPROVATIVO DE ALUGUER DE VIATURA</div>
+<div class="title">Comprovativo de Aluguer ${isPresencial ? '<span class="badge-presencial">PRESENCIAL</span>' : ''}</div>
+<div style="font-size:12px;color:#999;margin-bottom:28px">Emitido em ${new Date().toLocaleDateString('pt-MZ', { day: '2-digit', month: 'long', year: 'numeric' })} · Ref: ${r.id.toUpperCase()}</div>
+
+<div class="section">
+  <div class="section-title">Dados do Cliente</div>
+  <div class="row"><span class="label">Nome</span><span class="value">${r.clientName}</span></div>
+  ${r.clientPhone ? `<div class="row"><span class="label">Telefone</span><span class="value">${r.clientPhone}</span></div>` : ''}
+  ${r.clientEmail ? `<div class="row"><span class="label">Email</span><span class="value">${r.clientEmail}</span></div>` : ''}
+</div>
+
+<div class="section">
+  <div class="section-title">Dados da Viatura</div>
+  <div class="row"><span class="label">Viatura</span><span class="value">${vData ? vData.name : vName}</span></div>
+  ${vMat ? `<div class="row"><span class="label">Matrícula</span><span class="value">${vMat}</span></div>` : ''}
+</div>
+
+<div class="section">
+  <div class="section-title">Período do Aluguer</div>
+  <div class="row"><span class="label">Data de Início</span><span class="value">${fmtPT(r.dataInicio)}</span></div>
+  <div class="row"><span class="label">Data de Fim</span><span class="value">${fmtPT(r.dataFim)}</span></div>
+  <div class="row"><span class="label">Hora de Levantamento</span><span class="value">${r.horaLevantamento}</span></div>
+  <div class="row"><span class="label">Hora de Devolução</span><span class="value">${r.horaDevolucao}</span></div>
+  <div class="row"><span class="label">Total de Dias</span><span class="value">${dias} dia${dias !== 1 ? 's' : ''}</span></div>
+</div>
+
+<div class="section">
+  <div class="section-title">Dados do Pagamento</div>
+  <div class="row"><span class="label">Forma de Pagamento</span><span class="value">${r.formaPagamento ?? 'Dinheiro'}</span></div>
+  ${r.deposito ? `<div class="row"><span class="label">Depósito</span><span class="value">${fmtVal(r.deposito)}</span></div>` : ''}
+  <div class="row" style="margin-top:8px"><span class="label total">VALOR TOTAL</span><span class="value total">${fmtVal(r.valorTotal)}</span></div>
+</div>
+
+<div class="footer">
+  SOS Motors — Compra e Aluguer de Viaturas · Maputo, Moçambique<br/>
+  Este comprovativo é válido como documento de aluguer. Obrigado pela sua preferência.
+</div>
+<br/><button onclick="window.print()" style="margin-top:16px;padding:10px 24px;background:#B8960C;color:#fff;border:none;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer">Imprimir</button>
+</body></html>`);
+    w.document.close();
+  };
 
   const tabList: { key: Tab; label: string; urgent?: boolean }[] = [
     { key: 'reservas',   label: `Histórico (${historico.length})` },
@@ -1713,11 +1834,11 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                 {/* Inputs */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <input value={presencialClientName} onChange={e => setPresencialClientName(e.target.value)}
-                    placeholder="Nome do cliente" className="w-full bg-zinc-950/80 border border-zinc-800 rounded-full px-6 py-3.5 text-sm text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-zinc-600" />
+                    placeholder="Nome do cliente" className="w-full bg-zinc-950/80 border border-zinc-800 rounded-full px-6 py-3.5 text-sm text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-white/40" />
                   <input value={presencialClientPhone} onChange={e => setPresencialClientPhone(e.target.value)}
-                    placeholder="Telefone" className="w-full bg-zinc-950/80 border border-zinc-800 rounded-full px-6 py-3.5 text-sm text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-zinc-600" />
+                    placeholder="Telefone" className="w-full bg-zinc-950/80 border border-zinc-800 rounded-full px-6 py-3.5 text-sm text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-white/40" />
                   <input value={presencialClientEmail} onChange={e => setPresencialClientEmail(e.target.value)}
-                    placeholder="Email" className="w-full bg-zinc-950/80 border border-zinc-800 rounded-full px-6 py-3.5 text-sm text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-zinc-600" />
+                    placeholder="Email" className="w-full bg-zinc-950/80 border border-zinc-800 rounded-full px-6 py-3.5 text-sm text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-white/40" />
                 </div>
 
                 {/* Selected Vehicle Card */}
@@ -1740,16 +1861,122 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
 
                 {/* Confirm Button */}
                 <div className="pt-4">
-                  <button 
-                    onClick={() => navigate(`/admin/aluguer?tab=acoes&vehicle=${selectedPresencialVehicle?.id ?? ''}`)}
-                    disabled={!selectedPresencialVehicle}
+                  {selectedPresencialVehicle && !presencialClientName.trim() && (
+                    <p className="text-center text-xs text-red-400/70 mb-2">Preencha o nome do cliente para avançar</p>
+                  )}
+                  <button
+                    onClick={openPresencialModal}
+                    disabled={!selectedPresencialVehicle || !presencialClientName.trim()}
                     className="w-full p-4 rounded-2xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:hover:scale-100 disabled:cursor-not-allowed text-zinc-950 font-black text-lg tracking-widest uppercase transition-all flex items-center justify-center gap-3"
                   >
-                    [ CONFIRMAR SELEÇÃO E IR PARA AÇÕES ]
+                    [ CONFIRMAR SELEÇÃO E REGISTAR ]
                   </button>
                 </div>
               </div>
             </div>
+
+            {/* Presencial Payment Modal */}
+            {presencialModal && selectedPresencialVehicle && (
+              <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setPresencialModal(false)}>
+                <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+                  <div className="p-6 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-between">
+                    <div>
+                      <p className="text-amber-400 text-xs font-bold uppercase tracking-widest mb-0.5">Aluguer Presencial</p>
+                      <h3 className="text-lg font-black text-white">Registar Aluguer</h3>
+                    </div>
+                    <button onClick={() => setPresencialModal(false)} className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                  <div className="p-6 space-y-4 max-h-[65vh] overflow-y-auto">
+                    {/* Vehicle summary */}
+                    <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-4 flex items-center gap-4">
+                      <img src={selectedPresencialVehicle.img} alt={selectedPresencialVehicle.name} className="w-20 h-14 object-cover rounded-xl shrink-0" />
+                      <div>
+                        <p className="text-white font-black">{selectedPresencialVehicle.name}</p>
+                        <p className="text-zinc-400 text-xs">{selectedPresencialVehicle.brand} · {selectedPresencialVehicle.year}</p>
+                        <p className="text-amber-400 text-sm font-bold mt-0.5">{selectedPresencialVehicle.price}</p>
+                      </div>
+                    </div>
+                    {/* Client summary */}
+                    <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-4">
+                      <p className="text-zinc-500 text-xs uppercase tracking-widest font-bold mb-2">Cliente</p>
+                      <p className="text-white text-sm font-bold">{presencialClientName}</p>
+                      {presencialClientPhone && <p className="text-zinc-400 text-xs mt-0.5">{presencialClientPhone}</p>}
+                      {presencialClientEmail && <p className="text-zinc-400 text-xs">{presencialClientEmail}</p>}
+                    </div>
+                    {/* Fields */}
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-zinc-400 font-bold mb-1.5 uppercase tracking-wider">Data de Início</label>
+                          <input type="date" value={presencialDataInicio} onChange={e => setPresencialDataInicio(e.target.value)}
+                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-amber-500 transition-all" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-zinc-400 font-bold mb-1.5 uppercase tracking-wider">Data de Fim</label>
+                          <input type="date" value={presencialDataFim} onChange={e => setPresencialDataFim(e.target.value)}
+                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-amber-500 transition-all" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-zinc-400 font-bold mb-1.5 uppercase tracking-wider">Hora Levantamento</label>
+                          <input type="time" value={presencialHoraLev} onChange={e => setPresencialHoraLev(e.target.value)}
+                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-amber-500 transition-all" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-zinc-400 font-bold mb-1.5 uppercase tracking-wider">Hora Devolução</label>
+                          <input type="time" value={presencialHoraDev} onChange={e => setPresencialHoraDev(e.target.value)}
+                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-amber-500 transition-all" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-zinc-400 font-bold mb-1.5 uppercase tracking-wider">Valor Total (MZN)</label>
+                          <input type="number" value={presencialValorInput} onChange={e => setPresencialValorInput(e.target.value)}
+                            placeholder="0" className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-amber-500 transition-all" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-zinc-400 font-bold mb-1.5 uppercase tracking-wider">Depósito (MZN)</label>
+                          <input type="number" value={presencialEntrada} onChange={e => setPresencialEntrada(e.target.value)}
+                            placeholder="0" className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-amber-500 transition-all" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-zinc-400 font-bold mb-1.5 uppercase tracking-wider">Forma de Pagamento</label>
+                        <select value={presencialForma} onChange={e => setPresencialForma(e.target.value)}
+                          className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-amber-500 transition-all">
+                          <option value="dinheiro">Dinheiro</option>
+                          <option value="transferencia">Transferência</option>
+                          <option value="cheque">Cheque</option>
+                          <option value="cartao">Cartão</option>
+                        </select>
+                      </div>
+                      {presencialDataInicio && presencialDataFim && presencialDataFim > presencialDataInicio && (
+                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 text-sm">
+                          <span className="text-zinc-400">Período: </span>
+                          <span className="text-amber-400 font-black">
+                            {Math.ceil((new Date(presencialDataFim).getTime() - new Date(presencialDataInicio).getTime()) / 86400000)} dias
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="p-6 pt-0 grid grid-cols-2 gap-3">
+                    <button onClick={() => setPresencialModal(false)}
+                      className="py-3 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-black uppercase tracking-wider transition-colors">
+                      Cancelar
+                    </button>
+                    <button onClick={registarAluguerPresencial}
+                      disabled={!presencialValorInput || !presencialDataInicio || !presencialDataFim}
+                      className="py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-zinc-950 text-sm font-black uppercase tracking-wider transition-colors">
+                      Registar Aluguer
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Modal for Vehicle Selection */}
             {showVehicleModal && (
@@ -1823,6 +2050,52 @@ export function AluguerPage({ onExit }: { onExit?: () => void }) {
                 </div>
               </div>
             )}
+
+            {/* Presencial Registrations List */}
+            {(() => {
+              const lista = reservations
+                .filter(r => aluguerIds.has(r.vehicleId) && r.notas === 'Aluguer presencial')
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+              if (lista.length === 0) return null;
+              return (
+                <div className="mt-6 max-w-4xl mx-auto px-5 sm:px-8 pb-4">
+                  <p className="text-white font-black text-sm uppercase tracking-widest mb-4">Registos Presenciais</p>
+                  <div className="space-y-3">
+                    {lista.map(r => (
+                      <div key={r.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E4B42E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                          </div>
+                          <div>
+                            <p className="text-white text-sm font-bold">{r.clientName}</p>
+                            <p className="text-zinc-400 text-xs">{vehicleName(r.vehicleId)} · {new Date(r.dataInicio).toLocaleDateString('pt-MZ')} → {new Date(r.dataFim).toLocaleDateString('pt-MZ')}</p>
+                            {r.clientPhone && <p className="text-zinc-500 text-xs">{r.clientPhone}</p>}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="text-amber-400 text-sm font-black">{r.valorTotal.toLocaleString('pt-MZ')} MZN</p>
+                            {r.deposito ? <p className="text-zinc-500 text-xs">Depósito: {r.deposito.toLocaleString('pt-MZ')}</p> : null}
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase shrink-0 ${
+                            r.status === 'pendente'   ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                            r.status === 'confirmada' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                            r.status === 'cancelada'  ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+                            'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                          }`}>{STATUS_CFG[r.status]?.label ?? r.status}</span>
+                          <button onClick={() => gerarComprativoAluguer(r)}
+                            title="Gerar comprovativo"
+                            className="w-8 h-8 flex items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500 hover:text-zinc-950 transition-colors shrink-0">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 

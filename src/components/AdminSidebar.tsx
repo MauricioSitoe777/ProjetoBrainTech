@@ -248,7 +248,7 @@ function NavLink({ active, onClick, label, icon, badge, urgent }: {
       onClick={onClick}
       className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
         active
-          ? 'bg-amber-500/15 text-amber-400 font-bold'
+          ? 'bg-amber-500/25 text-amber-400 font-bold ring-1 ring-amber-500/40 shadow-sm shadow-amber-500/10'
           : 'text-white hover:bg-zinc-800 font-medium'
       }`}
     >

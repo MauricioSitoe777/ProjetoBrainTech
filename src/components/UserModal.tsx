@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from 'react';
 import type { User, UserRole, UserStatus, UserCategory, UserRegularity, UserRestriction } from '../types/user';
 import { CATEGORY_LABEL, DOC_LABEL } from '../data/constants';
+import { uploadFile } from '../lib/upload';
 
 interface UserModalProps {
   user?: User | null;
@@ -62,6 +63,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
     motivoSuspensao: '',
   });
   const [docFiles, setDocFiles] = useState<Partial<Record<string, string>>>({});
+  const [uploadingDocs, setUploadingDocs] = useState<Partial<Record<string, boolean>>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -116,11 +118,19 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
     onSave({ ...form, documentos, salario: form.salario.trim() ? Number(form.salario) : undefined });
   };
 
-  const handleDocFile = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDocFile = (key: string) => async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+    e.target.value = '';
+    setUploadingDocs(prev => ({ ...prev, [key]: true }));
+    try {
+      const result = await uploadFile(file, key);
+      setDocFiles(prev => ({ ...prev, [key]: result.url }));
+    } catch {
+      // fallback: store filename so the UI reflects the selection
       setDocFiles(prev => ({ ...prev, [key]: file.name }));
-      e.target.value = '';
+    } finally {
+      setUploadingDocs(prev => ({ ...prev, [key]: false }));
     }
   };
 
@@ -143,6 +153,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
 
   const InlineUpload = ({ docKey, existingValue }: { docKey: string; existingValue?: string | boolean }) => {
     const fileName = docFiles[docKey];
+    const isUploading = uploadingDocs[docKey];
     const hasFile = !!fileName || !!existingValue;
     return (
       <>
@@ -151,18 +162,24 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
           id={`modal-file-${docKey}`}
           className="hidden"
           accept=".pdf,.jpg,.jpeg,.png"
+          disabled={isUploading}
           onChange={handleDocFile(docKey)}
         />
         <label
           htmlFor={`modal-file-${docKey}`}
           title={fileName || (typeof existingValue === 'string' ? existingValue : '') || 'Fazer upload'}
-          className={`flex items-center justify-center w-9 shrink-0 rounded-lg border cursor-pointer transition-colors ${
-            hasFile
-              ? 'border-emerald-500 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
-              : 'border-zinc-700 bg-zinc-800 text-white hover:border-amber-500 hover:text-amber-500'
+          className={`flex items-center justify-center w-9 h-9 shrink-0 rounded-lg border cursor-pointer transition-colors ${
+            isUploading
+              ? 'border-amber-500/40 bg-amber-500/10 text-amber-400 cursor-wait animate-pulse'
+              : hasFile
+                ? 'border-emerald-500 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
+                : 'border-zinc-700 bg-zinc-800 text-white hover:border-amber-500 hover:text-amber-500'
           }`}
         >
-          <UploadIcon />
+          {isUploading
+            ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+            : <UploadIcon />
+          }
         </label>
       </>
     );

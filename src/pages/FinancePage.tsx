@@ -87,44 +87,28 @@ export function FinancePage() {
   const totalEntradasOp = receitaTotal + totalEntradasFiltradas;
   const valorArrecadado = totalEntradasOp - totalSaidasFiltradas;
 
-  // Generate monthly data based on actual filtered data
+  // Apenas meses com dados reais (sem pré-população de zeros)
   const dadosMensais = useMemo(() => {
     const mapa: Record<string, { aluguerVal: number; compraVal: number; saidasVal: number }> = {};
-    const startYear = new Date(startDate).getFullYear();
-    const endYear = new Date(endDate).getFullYear();
+    const entry = (key: string) => {
+      if (!mapa[key]) mapa[key] = { aluguerVal: 0, compraVal: 0, saidasVal: 0 };
+      return mapa[key];
+    };
 
-    for (let year = startYear; year <= endYear; year++) {
-      for (let month = 0; month < 12; month++) {
-        const key = `${year}-${String(month + 1).padStart(2, '0')}`;
-        mapa[key] = { aluguerVal: 0, compraVal: 0, saidasVal: 0 };
-      }
-    }
-
-    // Add aluguer and compra values from filtered reservations
     for (const r of resFiltradas) {
       const key = r.dataInicio.slice(0, 7);
-      if (!mapa[key]) continue;
-      if (compraIds.has(r.vehicleId)) {
-        mapa[key].compraVal += r.valorTotal;
-      } else {
-        mapa[key].aluguerVal += r.valorTotal;
-      }
+      if (compraIds.has(r.vehicleId)) entry(key).compraVal += r.valorTotal;
+      else                             entry(key).aluguerVal += r.valorTotal;
     }
 
-    // Add saidas from filtered transactions
     for (const t of transacoesFiltradas) {
-      if (t.tipo === 'saida') {
-        const key = t.data.slice(0, 7);
-        if (mapa[key]) {
-          mapa[key].saidasVal += t.valor;
-        }
-      }
+      if (t.tipo === 'saida') entry(t.data.slice(0, 7)).saidasVal += t.valor;
     }
 
     return Object.entries(mapa)
       .map(([key, d]) => ({ key, year: parseInt(key.slice(0, 4)), month: parseInt(key.slice(5, 7)) - 1, totalReceita: d.aluguerVal + d.compraVal, ...d }))
       .sort((a, b) => a.year - b.year || a.month - b.month);
-  }, [resFiltradas, transacoesFiltradas, startDate, endDate]);
+  }, [resFiltradas, transacoesFiltradas]);
 
   const canais = useMemo(() => {
     let canaisList = [
@@ -315,6 +299,11 @@ export function FinancePage() {
             </div>
           </div>
 
+          {dadosMensais.length === 0 ? (
+            <div className="flex items-center justify-center h-[180px] text-zinc-500 text-sm">
+              Sem dados no período seleccionado
+            </div>
+          ) : (
           <div className="flex gap-2">
             <div className="flex flex-col justify-between text-right shrink-0" style={{ height: '150px' }}>
               <span className="text-[9px] text-white leading-none">{fmtK(maxTotal)}</span>
@@ -387,7 +376,7 @@ export function FinancePage() {
                     return path;
                   })()}
                   fill="none"
-                  stroke="#E4B42E"
+                  stroke="var(--gold)"
                   strokeWidth="3"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -397,7 +386,7 @@ export function FinancePage() {
                 {dadosMensais.map((d, i) => {
                   const x = dadosMensais.length > 1 ? (i / (dadosMensais.length - 1)) * 600 : 300;
                   const y = 200 - (d.totalReceita / maxTotal) * 180;
-                  return <circle key={i} cx={x} cy={y} r="4" fill="#E4B42E" />;
+                  return <circle key={i} cx={x} cy={y} r="4" fill="var(--gold)" />;
                 })}
               </svg>
               <div className="flex justify-between mt-2">
@@ -405,6 +394,7 @@ export function FinancePage() {
               </div>
             </div>
           </div>
+          )}
         </div>
 
         {/* Distribuição de Receita e Balanço Consolidado */}

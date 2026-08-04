@@ -121,9 +121,11 @@ function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) 
 export default function Simulator({
   showClose = true,
   lockedFlow,
+  initialCategory,
 }: {
   showClose?: boolean;
   lockedFlow?: FlowType;
+  initialCategory?: string;
 }) {
   const fmt = useCurrencyFormatter();
   const { user: authUser, allUsers, addUser } = useAuth();
@@ -146,7 +148,7 @@ export default function Simulator({
   const isAdmin = authUser?.role === "admin";
 
   const [flow, setFlow] = useState<FlowType>(lockedFlow ?? "compra");
-  const [category, setCategory] = useState<Category>("func_publico");
+  const [category, setCategory] = useState<Category>((initialCategory as Category) ?? "func_publico");
 
   const maxMonthsForCategory = useMemo(() => {
     if (category === "func_publico" || category === "func_privado") {
@@ -362,7 +364,7 @@ export default function Simulator({
   const mesesProgress = maxMonthsForCategory <= 1
     ? 0
     : ((clampedMesesPrestacoes - 1) / (maxMonthsForCategory - 1)) * 100;
-  const mesesTicks = maxMonthsForCategory <= 12 ? [1, 6, 12] : [1, 12, 24, 48];
+  const mesesTicks = [1, 12, 24, 36, 48];
 
   const maxPmt = income * 0.3;
 
@@ -703,7 +705,14 @@ export default function Simulator({
                     <select
                       value={category}
                       disabled={locked}
-                      onChange={(e) => !locked && setCategory(e.target.value as Category)}
+                      onChange={(e) => {
+                        if (locked) return;
+                        const chosen = e.target.value as Category;
+                        setCategory(chosen);
+                        if (authUser && !isAdmin && !currentUser?.category) {
+                          updateUser(authUser.id, { category: chosen });
+                        }
+                      }}
                       className={`w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-1.5 text-sm text-white font-normal outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 ${locked ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
                     >
                       {PROFILES.map(p => (
@@ -812,8 +821,7 @@ export default function Simulator({
                     zeroAsEmpty placeholder="Insira o valor" />
                   {paymentPlan === "prestacoes" && (
                     <NumberField label="O Meu Salário" value={income}
-                      onChange={(v) => setIncome(Math.min(100_000_000, Math.max(0, v)))} min={0} suffix="MT/mês"
-                      disabled={!isAdmin} />
+                      onChange={(v) => setIncome(Math.min(100_000_000, Math.max(0, v)))} min={0} suffix="MT/mês" />
                   )}
                   <div>
                     <label className="text-white text-sm font-normal block mb-1.5">Como pagar?</label>
@@ -825,13 +833,6 @@ export default function Simulator({
                       <option value="pronto">💵 À Vista</option>
                       <option value="prestacoes">📅 Prestações</option>
                     </select>
-                    <div className="mt-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-2.5 py-2">
-                      <p className="text-[11px] leading-relaxed text-amber-200">
-                        {paymentPlan === "pronto"
-                          ? "Pagamento total de uma vez, sem parcelas mensais."
-                          : "Divida o valor em parcelas mensais de acordo com o plano disponível."}
-                      </p>
-                    </div>
                   </div>
                 </div>
 
@@ -888,7 +889,7 @@ export default function Simulator({
                         <input type="range" className="months-slider w-full"
                           min={1} max={maxMonthsForCategory} step={1} value={clampedMesesPrestacoes}
                           onChange={e => setMesesPrestacoes(Number(e.target.value))}
-                          style={{ background: `linear-gradient(to right, #E4B42E ${mesesProgress}%, #3f3f46 ${mesesProgress}%)` }}
+                          style={{ background: `linear-gradient(to right, var(--gold) ${mesesProgress}%, #3f3f46 ${mesesProgress}%)` }}
                         />
                         <div className="relative mt-2 h-7">
                           {mesesTicks.filter(v => v <= maxMonthsForCategory).map(v => {

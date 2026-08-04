@@ -12,9 +12,10 @@ function getInitials(nome: string) {
 
 interface AppHeaderProps {
   onToggleSidebar?: () => void;
+  onRegister?: () => void;
 }
 
-export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
+export function AppHeader({ onToggleSidebar, onRegister }: AppHeaderProps) {
   const { user, allUsers, logout } = useAuth();
   const { path, navigate } = useRoute();
   const scrollTo   = useScrollTo();
@@ -52,7 +53,6 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
 
   const isAdmin  = user?.role === "admin";
   const isClient = user?.role === "cliente";
-
   const fullUser = user ? allUsers.find(u => u.id === user.id) : null;
   const initials  = user ? getInitials(user.nome) : "";
 
@@ -129,7 +129,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
         <div className="hidden md:flex items-center gap-2">
           <button
             onClick={() => navigate("/admin")}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-base font-semibold text-white border border-zinc-700 hover:border-zinc-500 hover:text-white transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:text-white transition-all"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
@@ -137,10 +137,24 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
             </svg>
             Entrar
           </button>
+          {onRegister && (
+            <button
+              onClick={onRegister}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold text-amber-400 border border-amber-500/40 hover:border-amber-500/70 hover:text-amber-300 hover:bg-amber-500/8 transition-all"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <line x1="19" y1="8" x2="19" y2="14"/>
+                <line x1="22" y1="11" x2="16" y2="11"/>
+              </svg>
+              Criar conta
+            </button>
+          )}
           <div className="w-px h-5 bg-zinc-800 mx-1" />
           <button
             onClick={handleSimular}
-            className="px-5 py-2 text-base font-semibold rounded-full bg-amber-500 text-zinc-950 hover:bg-amber-400 transition-all hover:scale-105 active:scale-95"
+            className="px-5 py-2 text-sm font-semibold rounded-full bg-amber-500 text-zinc-950 hover:bg-amber-400 transition-all hover:scale-105 active:scale-95"
           >
             Simular agora
           </button>
@@ -192,11 +206,6 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
     /* ── ADMIN LOGGED IN ── */
     return (
       <div className="hidden md:flex items-center gap-2">
-        {/* Role badge */}
-        <span className="text-[11px] font-bold border rounded-md px-2 py-0.5 bg-amber-400/10 text-amber-400 border-amber-400/20 hidden lg:inline">
-          Administrador
-        </span>
-        <div className="w-px h-4 bg-zinc-800" />
         <NotificationBell />
         <div className="w-px h-4 bg-zinc-800" />
         {/* Avatar */}
@@ -305,6 +314,16 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
             </svg>
             Entrar
           </button>
+          {onRegister && (
+            <button onClick={() => { onRegister(); setMenuOpen(false); }}
+              className="flex items-center gap-2 text-left text-sm font-bold py-2.5 text-amber-400 hover:text-amber-300 transition-colors">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                <line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+              </svg>
+              Criar conta
+            </button>
+          )}
         </>
       )}
 

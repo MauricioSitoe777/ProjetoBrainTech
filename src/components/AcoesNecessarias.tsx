@@ -162,6 +162,14 @@ export function AcoesNecessarias() {
     if (visitantesPendentes > 0)
       items.push({ label: `${p(visitantesPendentes, 'visitante')} à espera que os documentos sejam verificados`, route: '/admin', urgency: visitantesPendentes > 2 ? 'media' : 'info' });
 
+    const aprovadosCompra = guests.filter(g => g.status === 'aprovado' && g.intent === 'compra').length;
+    if (aprovadosCompra > 0)
+      items.push({ label: `${p(aprovadosCompra, 'pedido')} de compra de visitante${aprovadosCompra > 1 ? 's' : ''} aprovado${aprovadosCompra > 1 ? 's' : ''} — iniciar processo de venda`, route: '/admin/compra', urgency: 'media' });
+
+    const aprovadosAluguer = guests.filter(g => g.status === 'aprovado' && g.intent === 'aluguer').length;
+    if (aprovadosAluguer > 0)
+      items.push({ label: `${p(aprovadosAluguer, 'pedido')} de aluguer de visitante${aprovadosAluguer > 1 ? 's' : ''} aprovado${aprovadosAluguer > 1 ? 's' : ''} — iniciar reserva`, route: '/admin/aluguer', urgency: 'media' });
+
     const manutencaoIds = new Set<number>();
     blocks
       .filter(b => b.motivo === 'manutencao' && b.dataInicio <= today && b.dataFim >= today)
