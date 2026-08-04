@@ -1,8 +1,11 @@
-import { useState } from "react";
+﻿import { useState, useMemo } from "react";
 import type { Vehicle } from "../data/constants";
 import VehicleCard from "./VehicleCard";
-import { useScrollTo } from "../hooks";
 import { useVehicles } from "../context/VehiclesContext";
+import { useReservations } from "../context/ReservationsContext";
+import { isSoldVehicle } from "../lib/availability";
+
+const ITEMS_PER_PAGE = 8;
 
 type Mode = "todos" | "aluguer" | "compra";
 type SimulatorFlow = "aluguer" | "compra";
@@ -30,8 +33,8 @@ const CAT_FILTERS: { key: Cat; label: string; img: string; blend?: boolean }[] =
   {
     key: "sedan",
     label: "Sedans",
-    img: "https://www.freeiconspng.com/uploads/black-sedan-car-png-2.png",
-    blend: true,
+    img: "/sedan_transparent.png",
+    blend: false,
   },
   {
     key: "hatchback",
@@ -54,69 +57,64 @@ export default function CatalogSection({
   onShowSimulator?: () => void;
   onOpenFlowModal?: (lockedFlow?: SimulatorFlow) => void;
 }) {
-  const scrollTo = useScrollTo();
   const { vehicles: dynamicVehicles, searchTerm, setSearchTerm } = useVehicles();
+  const { availabilityReservations } = useReservations();
   const [mode, setMode] = useState<Mode>("todos");
   const [cat,  setCat]  = useState<Cat>(null);
-
-  // New filters state
-  const [brand, setBrand] = useState("todos");
-  const [maxPrice, setMaxPrice] = useState<number>(10000000); // High default
-  const [onlyDiscount, setOnlyDiscount] = useState(false);
-  const [onlyAvailable, setOnlyAvailable] = useState(false);
+  const [page, setPage] = useState(1);
 
   const handleMode = (m: Mode) => {
     setMode(m);
     setCat(null);
     setSearchTerm("");
-    setBrand("todos");
-    setOnlyDiscount(false);
-    setOnlyAvailable(false);
-    setMaxPrice(m === "aluguer" ? 20000 : 15000000);
+    setPage(1);
+  };
+
+  // Volta à página 1 sempre que o filtro de categoria ou a pesquisa mudam
+  const handleCat = (c: Cat) => {
+    setCat(c);
+    setPage(1);
+  };
+
+  const handleSearch = (v: string) => {
+    setSearchTerm(v);
+    setPage(1);
   };
 
   const allVehicles = dynamicVehicles as unknown as Vehicle[];
 
-  const uniqueBrands = Array.from(new Set(
-    allVehicles
-      .filter(v => v && (mode === "todos" || v.mode === mode))
-      .map(v => v.brand)
-      .filter(Boolean) // Remove null/undefined/empty brands
-  )).sort();
-
-  const filtered = allVehicles.filter((v) => {
-    // Safety check for vehicle data
+  // Função que gera os números de página com reticências
+  const filtered = useMemo(() => allVehicles.filter((v) => {
     if (!v) return false;
-
-    // Mode filter
+    if (isSoldVehicle(v.id, availabilityReservations)) return false;
     if (mode !== "todos" && v.mode !== mode) return false;
-
-    // Type filter
     if (cat && v.cat !== cat) return false;
-
-    // Brand filter
-    if (brand !== "todos" && v.brand !== brand) return false;
-
-    // Search filter (name or brand) - Added safety checks with optional chaining and fallback
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       const nameMatch = (v.name || "").toLowerCase().includes(searchLower);
       const brandMatch = (v.brand || "").toLowerCase().includes(searchLower);
       if (!nameMatch && !brandMatch) return false;
     }
-
-    // Price filter
-    const priceValue = Number(String(v.price || "0").replace(/[^\d]/g, "")) || 0;
-    if (maxPrice > 0 && priceValue > maxPrice) return false;
-
-    // Discount filter
-    if (onlyDiscount && (!v.discount || v.discount <= 0)) return false;
-
-    // Availability filter (only for rental)
-    if (mode === "aluguer" && onlyAvailable && v.available === false) return false;
-
     return true;
-  });
+  }), [allVehicles, mode, cat, searchTerm, availabilityReservations]);
+
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const paginatedVehicles = useMemo(
+    () => filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE),
+    [filtered, page]
+  );
+
+  const goToPage = (p: number) => {
+    setPage(p);
+    // Espera o DOM reflectir a nova página (que pode ter muito menos cartões,
+    // encolhendo a secção) antes de calcular o alvo do scroll — caso contrário
+    // o alvo é medido com a altura antiga e a animação ultrapassa a secção.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  };
 
   const handleAction = (vehicle: Vehicle) => {
     const mt = Number(String(vehicle.price).replace(/[^\d]/g, "")) || 0;
@@ -129,6 +127,7 @@ export default function CatalogSection({
 
     try {
       sessionStorage.setItem("rentcar:selectedVehicle:v1", JSON.stringify(payload));
+      window.dispatchEvent(new CustomEvent("rentcar:vehicle-selected", { detail: payload }));
     } catch {
       // ignore
     }
@@ -139,67 +138,85 @@ export default function CatalogSection({
     }
 
     onShowSimulator?.();
-    scrollTo("simulador");
   };
 
   return (
-    <section id="catalogo" className="py-12 bg-zinc-950">
-      <div className="max-w-7xl mx-auto px-6">
+    <section id="catalogo" className="min-h-screen bg-zinc-950 py-16 flex flex-col justify-center">
+      <div className="max-w-7xl mx-auto px-5 md:px-8">
 
         {/* ── Header ── */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
           <div>
-            <div className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-3">
+            <div className="text-amber-500 text-[10px] font-bold uppercase tracking-widest mb-2">
               Catálogo
             </div>
-            <h2
-              className="text-white text-4xl md:text-5xl font-black leading-tight"
-            >
+            <h2 className="text-white text-3xl md:text-4xl font-black leading-tight tracking-tight">
               Frota Disponível
             </h2>
-            <p className="text-white text-base mt-3 max-w-md">
+            <p className="text-white text-base mt-1.5 max-w-md">
               Defina o destino, nós tratamos do caminho. Comece aqui.
             </p>
           </div>
 
-          {/* Mode pills */}
-          <div className="flex flex-wrap gap-2">
+          {/* Mode pills + pesquisa */}
+          <div className="flex flex-wrap items-center gap-2">
             {MODE_FILTERS.map((f) => (
               <button
                 key={f.key}
                 onClick={() => handleMode(f.key)}
-                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
+                className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 ${
                   mode === f.key
                     ? "bg-amber-500 text-zinc-950"
-                    : "bg-zinc-900 text-white border border-zinc-800 hover:border-zinc-600 hover:text-white"
+                    : "bg-zinc-900 text-zinc-300 border border-zinc-800 hover:border-zinc-600 hover:text-white"
                 }`}
               >
                 {f.label}
               </button>
             ))}
+
+            {/* Barra de pesquisa */}
+            <div className="flex items-center gap-2 bg-zinc-900 border border-amber-500/20 rounded-full px-3 py-1.5 min-w-[160px] focus-within:border-zinc-600 transition-colors">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-500 shrink-0">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Pesquisar..."
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="bg-transparent border-none outline-none text-xs text-white placeholder:text-zinc-500 w-full"
+              />
+              {searchTerm && (
+                <button onClick={() => handleSearch("")} className="text-zinc-500 hover:text-white transition-colors shrink-0">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
         {/* ── Category description ── */}
         {cat && (
-          <div className="mb-6 p-4 rounded-2xl bg-zinc-900/30 border border-zinc-800/50">
-            <h3 className="text-white font-bold text-lg mb-1 capitalize">
+          <div className="mb-4 px-4 py-3 rounded-xl bg-zinc-900/30 border border-zinc-800/50">
+            <h3 className="text-white font-semibold text-sm mb-0.5 capitalize">
               {CAT_FILTERS.find(f => f.key === cat)?.label}
             </h3>
-            <p className="text-white text-xs leading-relaxed">
-              Explore a nossa seleção premium de {CAT_FILTERS.find(f => f.key === cat)?.label.toLowerCase()}. 
-              Veículos mantidos com os mais altos padrões de qualidade e segurança para a sua jornada.
+            <p className="text-zinc-500 text-[13px] leading-relaxed">
+              Explore a nossa seleção de {CAT_FILTERS.find(f => f.key === cat)?.label.toLowerCase()} — mantidos com os mais altos padrões de qualidade.
             </p>
           </div>
         )}
 
         {/* ── Category pills (visible only for Aluguer / Compra) ── */}
-        {mode !== "todos" && (
+        {mode !== "todos" && mode !== "vendidos" && (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6 items-stretch">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 mb-5 items-stretch">
               {/* Reset pill */}
               <button
-                onClick={() => setCat(null)}
+                onClick={() => handleCat(null)}
                 className={`w-full flex items-center gap-2 px-4 sm:px-5 py-3 rounded-2xl text-xs font-bold transition-all duration-200 border h-14 ${
                   cat === null
                     ? "bg-zinc-700 text-white border-zinc-500 shadow-lg shadow-zinc-900/50"
@@ -232,7 +249,7 @@ export default function CatalogSection({
               {CAT_FILTERS.map((f) => (
                 <button
                   key={f.key}
-                  onClick={() => setCat(f.key)}
+                  onClick={() => handleCat(f.key)}
                   className={`w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 rounded-2xl text-xs font-bold transition-all duration-200 border h-14 overflow-hidden relative ${
                     cat === f.key
                       ? "bg-zinc-700/80 text-white border-amber-500/60 shadow-lg shadow-amber-500/10"
@@ -254,109 +271,95 @@ export default function CatalogSection({
               ))}
             </div>
 
-            {/* Advanced Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 p-6 bg-zinc-900/40 rounded-3xl border border-zinc-800/50">
-              {/* Brand Select */}
-              <div className="flex flex-col gap-2">
-                <label className="text-white text-[10px] uppercase font-bold tracking-wider ml-1">Marca</label>
-                <div className="relative">
-                  <select
-                    value={brand}
-                    onChange={(e) => setBrand(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500/50 outline-none transition-all appearance-none"
-                  >
-                    <option value="todos">Todas as marcas</option>
-                    {uniqueBrands.map(b => (
-                      <option key={b} value={b}>{b}</option>
-                    ))}
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white text-[10px]">▼</div>
-                </div>
-              </div>
-
-              {/* Price Range */}
-              <div className="flex flex-col gap-2">
-                <label className="text-white text-[10px] uppercase font-bold tracking-wider ml-1">
-                  Preço Máximo {mode === "aluguer" ? "(MT/dia)" : "(MT)"}
-                </label>
-                <input
-                  type="range"
-                  min={mode === "aluguer" ? "500" : "500000"}
-                  max={mode === "aluguer" ? "20000" : "15000000"}
-                  step={mode === "aluguer" ? "500" : "250000"}
-                  value={maxPrice}
-                  onChange={(e) => setMaxPrice(Number(e.target.value))}
-                  className="w-full accent-amber-500 h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer mt-3"
-                />
-                <div className="flex justify-between text-[10px] text-white font-mono mt-1">
-                  <span>{mode === "aluguer" ? "500" : "500k"}</span>
-                  <span className="text-amber-500 font-bold">{maxPrice >= (mode === "aluguer" ? 20000 : 15000000) ? "Qualquer" : maxPrice.toLocaleString() + " MT"}</span>
-                  <span>{mode === "aluguer" ? "20k" : "15M"}</span>
-                </div>
-              </div>
-
-              {/* Toggles */}
-              <div className="flex flex-col justify-end gap-3">
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <div className="relative">
-                    <input
-                      type="checkbox"
-                      checked={onlyDiscount}
-                      onChange={(e) => setOnlyDiscount(e.target.checked)}
-                      className="sr-only"
-                    />
-                    <div className={`w-10 h-5 rounded-full transition-colors ${onlyDiscount ? "bg-amber-500" : "bg-zinc-800"}`} />
-                    <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${onlyDiscount ? "translate-x-5" : ""}`} />
-                  </div>
-                  <span className="text-xs font-semibold text-white group-hover:text-white transition-colors">Com Desconto</span>
-                </label>
-
-                {mode === "aluguer" && (
-                  <label className="flex items-center gap-3 cursor-pointer group">
-                    <div className="relative">
-                      <input
-                        type="checkbox"
-                        checked={onlyAvailable}
-                        onChange={(e) => setOnlyAvailable(e.target.checked)}
-                        className="sr-only"
-                      />
-                      <div className={`w-10 h-5 rounded-full transition-colors ${onlyAvailable ? "bg-amber-500" : "bg-zinc-800"}`} />
-                      <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${onlyAvailable ? "translate-x-5" : ""}`} />
-                    </div>
-                    <span className="text-xs font-semibold text-white group-hover:text-white transition-colors">Disponível Agora</span>
-                  </label>
-                )}
-              </div>
-            </div>
           </>
         )}
 
         {/* ── Results count ── */}
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-white text-xs uppercase tracking-widest">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-white text-[11px] uppercase tracking-widest">
             {filtered.length} veículo{filtered.length !== 1 ? "s" : ""} encontrado{filtered.length !== 1 ? "s" : ""}
           </p>
         </div>
 
         {/* ── Grid ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filtered.map((v) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {paginatedVehicles.map((v) => (
             <VehicleCard
               key={v.id}
               vehicle={v}
               onAction={handleAction}
+              isSold={isSoldVehicle(v.id, availabilityReservations)}
             />
           ))}
         </div>
 
         {/* ── Empty state ── */}
         {filtered.length === 0 && (
-          <div className="py-20 text-center bg-zinc-900/30 rounded-3xl border border-zinc-800/50">
-            <div className="text-4xl mb-4 grayscale opacity-50">🔍</div>
-            <h3 className="text-white font-bold text-xl mb-2">Nenhum veículo encontrado</h3>
-            <p className="text-white text-sm max-w-xs mx-auto">
-              Tente ajustar os filtros ou a sua pesquisa para encontrar o que procura.
+          <div className="py-14 text-center bg-zinc-900/30 rounded-2xl border border-zinc-800/50">
+            <div className="text-3xl mb-3 grayscale opacity-50">🔍</div>
+            <h3 className="text-white font-bold text-base mb-1.5">
+              {mode === "vendidos" ? "Nenhuma viatura vendida recentemente" : "Nenhum veículo encontrado"}
+            </h3>
+            <p className="text-zinc-500 text-sm max-w-xs mx-auto">
+              {mode === "vendidos"
+                ? "Não há viaturas vendidas ou em processo de compra neste momento."
+                : "Tente ajustar os filtros ou a sua pesquisa para encontrar o que procura."}
             </p>
+          </div>
+        )}
+
+        {/* ── Pagination ── */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-1.5 mt-8 flex-wrap">
+            {/* Anterior */}
+            <button
+              onClick={() => goToPage(page - 1)}
+              disabled={page === 1}
+              className="px-4 py-1.5 rounded-lg text-sm font-bold transition-all bg-zinc-800 border border-zinc-700 text-white hover:bg-zinc-700 hover:border-zinc-500 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              ← Anterior
+            </button>
+
+            {/* Page numbers */}
+            {Array.from({ length: totalPages }, (_, index) => index + 1)
+              .filter((pageNum) => {
+                if (totalPages <= 7) return true;
+                if (pageNum === 1 || pageNum === totalPages || (pageNum >= page - 1 && pageNum <= page + 1)) return true;
+                return false;
+              })
+              .reduce<number[]>((acc, pageNum, index, arr) => {
+                if (index > 0 && pageNum - arr[index - 1] > 1) {
+                  acc.push(-1);
+                }
+                acc.push(pageNum);
+                return acc;
+              }, [])
+              .map((p, i) =>
+                p === -1 ? (
+                  <span key={`ellipsis-${i}`} className="px-2 text-zinc-600 text-sm select-none">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => goToPage(p)}
+                    className={`w-8 h-8 rounded-lg text-sm font-bold transition-all border ${
+                      p === page
+                        ? 'bg-amber-500 text-zinc-950 border-amber-500'
+                        : 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:border-zinc-600 hover:text-white'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+
+            {/* Próxima */}
+            <button
+              onClick={() => goToPage(page + 1)}
+              disabled={page === totalPages}
+              className="px-4 py-1.5 rounded-lg text-sm font-bold transition-all bg-zinc-800 border border-zinc-700 text-white hover:bg-zinc-700 hover:border-zinc-500 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Próxima →
+            </button>
           </div>
         )}
 

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import type { User, UserRole, UserStatus, UserCategory, UserRegularity, UserRestriction } from '../types/user';
 import { CATEGORY_LABEL, DOC_LABEL } from '../data/constants';
+import { uploadFile } from '../lib/upload';
 
 interface UserModalProps {
   user?: User | null;
@@ -14,8 +15,8 @@ const ROLES: { value: UserRole; label: string }[] = [
 ];
 
 const STATUSES: { value: UserStatus; label: string }[] = [
-  { value: 'ativo', label: 'Ativo' },
-  { value: 'inativo', label: 'Inativo' },
+  { value: 'ativo', label: 'Activo' },
+  { value: 'inativo', label: 'Inactivo' },
   { value: 'suspenso', label: 'Suspenso' },
   { value: 'pendente', label: 'Pendente' },
 ];
@@ -55,12 +56,14 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
     regularity: 'regular' as UserRegularity,
     restriction: 'nenhuma' as UserRestriction,
     category: 'func_publico' as UserCategory,
+    salario: '',
     bi: '',
     nuit: '',
     endereco: '',
     motivoSuspensao: '',
   });
   const [docFiles, setDocFiles] = useState<Partial<Record<string, string>>>({});
+  const [uploadingDocs, setUploadingDocs] = useState<Partial<Record<string, boolean>>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -74,6 +77,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
         regularity: user.regularity || 'regular',
         restriction: user.restriction || 'nenhuma',
         category: user.category || 'func_publico',
+        salario: user.salario !== undefined ? String(user.salario) : '',
         bi: user.bi || '',
         nuit: user.nuit || '',
         endereco: user.endereco || '',
@@ -97,6 +101,8 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
     if (!form.telefone.trim()) e.telefone = 'Telefone é obrigatório';
     if (form.status === 'suspenso' && !form.motivoSuspensao.trim())
       e.motivoSuspensao = 'Obrigatório indicar o motivo da suspensão';
+    if (form.salario.trim() && (Number.isNaN(Number(form.salario)) || Number(form.salario) < 0))
+      e.salario = 'Salário inválido';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -109,14 +115,22 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
     Object.entries(docFiles).forEach(([k, v]) => {
       if (v) (documentos as Record<string, string | boolean>)[k] = v;
     });
-    onSave({ ...form, documentos });
+    onSave({ ...form, documentos, salario: form.salario.trim() ? Number(form.salario) : undefined });
   };
 
-  const handleDocFile = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDocFile = (key: string) => async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+    e.target.value = '';
+    setUploadingDocs(prev => ({ ...prev, [key]: true }));
+    try {
+      const result = await uploadFile(file, key);
+      setDocFiles(prev => ({ ...prev, [key]: result.url }));
+    } catch {
+      // fallback: store filename so the UI reflects the selection
       setDocFiles(prev => ({ ...prev, [key]: file.name }));
-      e.target.value = '';
+    } finally {
+      setUploadingDocs(prev => ({ ...prev, [key]: false }));
     }
   };
 
@@ -139,6 +153,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
 
   const InlineUpload = ({ docKey, existingValue }: { docKey: string; existingValue?: string | boolean }) => {
     const fileName = docFiles[docKey];
+    const isUploading = uploadingDocs[docKey];
     const hasFile = !!fileName || !!existingValue;
     return (
       <>
@@ -147,18 +162,24 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
           id={`modal-file-${docKey}`}
           className="hidden"
           accept=".pdf,.jpg,.jpeg,.png"
+          disabled={isUploading}
           onChange={handleDocFile(docKey)}
         />
         <label
           htmlFor={`modal-file-${docKey}`}
           title={fileName || (typeof existingValue === 'string' ? existingValue : '') || 'Fazer upload'}
-          className={`flex items-center justify-center w-9 shrink-0 rounded-lg border cursor-pointer transition-colors ${
-            hasFile
-              ? 'border-emerald-500 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
-              : 'border-zinc-700 bg-zinc-800 text-white hover:border-amber-500 hover:text-amber-500'
+          className={`flex items-center justify-center w-9 h-9 shrink-0 rounded-lg border cursor-pointer transition-colors ${
+            isUploading
+              ? 'border-amber-500/40 bg-amber-500/10 text-amber-400 cursor-wait animate-pulse'
+              : hasFile
+                ? 'border-emerald-500 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
+                : 'border-zinc-700 bg-zinc-800 text-white hover:border-amber-500 hover:text-amber-500'
           }`}
         >
-          <UploadIcon />
+          {isUploading
+            ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+            : <UploadIcon />
+          }
         </label>
       </>
     );
@@ -166,7 +187,7 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg shadow-2xl">
+      <div className="bg-zinc-900 border border-amber-500/20 rounded-2xl w-full max-w-lg shadow-2xl">
         <div className="flex items-center justify-between p-6 border-b border-zinc-800">
           <h2 className="text-lg font-semibold text-white">
             {user ? 'Editar utilizador' : 'Novo utilizador'}
@@ -278,7 +299,13 @@ export function UserModal({ user, onSave, onClose }: UserModalProps) {
             </div>
 
             <div className="col-span-2">
-              <label className="block text-xs text-white mb-1">Endereço</label>
+              <label className="block text-xs text-white mb-1">Salário (MT)</label>
+              <input type="number" min="0" step="0.01" placeholder="Ex: 45000" {...field('salario')} className={inputClass} />
+              {errors.salario && <p className="text-red-400 text-xs mt-1">{errors.salario}</p>}
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-xs text-white mb-1">Morada</label>
               <input {...field('endereco')} placeholder="Av. ..., Maputo" className={inputClass} />
             </div>
 

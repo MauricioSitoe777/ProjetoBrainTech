@@ -30,7 +30,7 @@ export function useScrollTo(): (id: string) => void {
  */
 export function useCurrencyFormatter(): (n: number) => string {
   return useCallback(
-    (n: number) => new Intl.NumberFormat("pt-PT").format(Math.round(n)),
+    (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',00',
     []
   );
 }

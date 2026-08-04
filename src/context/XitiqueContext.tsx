@@ -1,80 +1,53 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import type { MembroXitique, RegistoSorteio, EstadoGrupo, InscricaoXitique, EstadoMembroXitique } from '../types/xitique';
+import type { GrupoXitique, MembroXitique, EstadoGrupo, InscricaoXitique, EstadoMembroXitique } from '../types/xitique';
+import { useNotifications } from './NotificationsContext';
+import { api } from '../lib/api';
 
-const STORAGE_KEY    = 'rentcar:xitique:v1';
-const INSCRICOES_KEY = 'rentcar:xitique:inscricoes:v1';
-const NUM_MEMBROS    = 10;
-const QUOTA_MT       = 30_000;
-const PREMIO_MT      = NUM_MEMBROS * QUOTA_MT; // 300 000 MT
+const GRUPOS_KEY     = 'rentcar:xitique:v2';
+const INSCRICOES_KEY = 'rentcar:xitique:inscricoes:v2';
 
-interface XitiqueState {
-  membros: MembroXitique[];
-  sorteios: RegistoSorteio[];
-  estadoGrupo: EstadoGrupo;
-  mesAtual: number;
-}
-
-interface XitiqueContextType {
-  membros: MembroXitique[];
-  sorteios: RegistoSorteio[];
-  estadoGrupo: EstadoGrupo;
-  mesAtual: number;
-  quotaMT: number;
-  premioMT: number;
-  numMembros: number;
-  // grupo
-  addMembro: (nome: string) => void;
-  removeMembro: (id: string) => void;
-  confirmarPagamento: (id: string) => void;
-  realizarSorteio: () => string | null;
-  reiniciarGrupo: () => void;
-  // lista de espera
-  inscricoes: InscricaoXitique[];
-  adicionarInscricao: (dados: Pick<InscricaoXitique, 'nome' | 'telefone' | 'email'>) => void;
-  aprovarInscricao: (id: string, userId?: string) => void;
-  rejeitarInscricao: (id: string) => void;
-}
-
-const defaultState: XitiqueState = {
-  membros: [],
-  sorteios: [],
-  estadoGrupo: 'Aberto',
-  mesAtual: 1,
-};
-
-const XitiqueContext = createContext<XitiqueContextType | null>(null);
-
-type StoredMembroXitique = MembroXitique & {
-  jaSorteado?: boolean;
-  pagamentoConfirmado?: boolean;
-};
+const DEFAULT_MAX   = 10;
+const DEFAULT_QUOTA = 30_000;
 
 const estadosMembro: EstadoMembroXitique[] = ['Pendente', 'Aceite', 'Sorteado'];
 
-const normalizeMembro = (membro: StoredMembroXitique): MembroXitique => {
-  const estado: EstadoMembroXitique = estadosMembro.includes(membro.estado)
-    ? membro.estado
-    : membro.jaSorteado ? 'Sorteado' : membro.pagamentoConfirmado ? 'Aceite' : 'Pendente';
-  return {
-    id: membro.id,
-    nome: membro.nome,
-    estado,
-    pagamentoMes: (membro as MembroXitique).pagamentoMes ?? false,
-    mesesPagos: (membro as MembroXitique).mesesPagos ?? [],
-    userId: (membro as MembroXitique).userId,
-  };
-};
+function normalizeMembro(raw: MembroXitique & { jaSorteado?: boolean; pagamentoConfirmado?: boolean }): MembroXitique {
+  const estado: EstadoMembroXitique = estadosMembro.includes(raw.estado)
+    ? raw.estado
+    : raw.jaSorteado ? 'Sorteado' : raw.pagamentoConfirmado ? 'Aceite' : 'Pendente';
+  return { id: raw.id, nome: raw.nome, estado, pagamentoMes: raw.pagamentoMes ?? false, mesesPagos: raw.mesesPagos ?? [], pagamentos: raw.pagamentos ?? {}, userId: raw.userId };
+}
 
-const normalizeState = (saved: XitiqueState): XitiqueState => ({
-  ...defaultState,
-  ...saved,
-  membros: (saved.membros || []).map(membro => normalizeMembro(membro as StoredMembroXitique)),
-});
+function normalizeGrupo(g: GrupoXitique): GrupoXitique {
+  return { ...g, membros: (g.membros ?? []).map(m => normalizeMembro(m as MembroXitique & { jaSorteado?: boolean; pagamentoConfirmado?: boolean })) };
+}
+
+// ── Context type ─────────────────────────────────────────────────────────────
+interface XitiqueContextType {
+  grupos: GrupoXitique[];
+  inscricoes: InscricaoXitique[];
+  criarGrupo: (nome: string, maxMembros: number, quotaMT: number, dataInicio?: string) => void;
+  definirDataInicio: (grupoId: string, dataInicio: string) => void;
+  addMembro: (grupoId: string, nome: string, userId?: string) => void;
+  removeMembro: (grupoId: string, id: string) => void;
+  confirmarPagamento: (grupoId: string, id: string, metodo: string, referencia?: string) => void;
+  realizarSorteio: (grupoId: string) => string | null;
+  reiniciarGrupo: (grupoId: string) => void;
+  adicionarInscricao: (dados: Pick<InscricaoXitique, 'nome' | 'telefone' | 'email' | 'grupoId'> & { userId?: string }) => 'aprovado' | 'rejeitado';
+  aprovarInscricao: (id: string, userId?: string) => void;
+  rejeitarInscricao: (id: string, motivo?: string) => void;
+  gerarSequencia: (grupoId: string) => void;
+  eliminarGrupo: (grupoId: string) => void;
+}
+
+const XitiqueContext = createContext<XitiqueContextType | null>(null);
 
 export function XitiqueProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<XitiqueState>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? normalizeState(JSON.parse(saved)) : defaultState;
+  const { addNotification } = useNotifications();
+
+  const [grupos, setGrupos] = useState<GrupoXitique[]>(() => {
+    const saved = localStorage.getItem(GRUPOS_KEY);
+    return saved ? (JSON.parse(saved) as GrupoXitique[]).map(normalizeGrupo) : [];
   });
 
   const [inscricoes, setInscricoes] = useState<InscricaoXitique[]>(() => {
@@ -82,150 +55,328 @@ export function XitiqueProvider({ children }: { children: ReactNode }) {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Load from API on mount
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [state]);
+    api.get<GrupoXitique[]>('/xitique/grupos').then(data => {
+      setGrupos(data.map(normalizeGrupo));
+    }).catch(() => {});
 
-  useEffect(() => {
-    localStorage.setItem(INSCRICOES_KEY, JSON.stringify(inscricoes));
-  }, [inscricoes]);
+    api.get<InscricaoXitique[]>('/xitique/inscricoes').then(data => {
+      setInscricoes(data);
+    }).catch(() => {});
+  }, []);
 
-  // ── Grupo ──────────────────────────────────────────────────────────────────
+  // Keep localStorage in sync as cache
+  useEffect(() => { localStorage.setItem(GRUPOS_KEY,     JSON.stringify(grupos));     }, [grupos]);
+  useEffect(() => { localStorage.setItem(INSCRICOES_KEY, JSON.stringify(inscricoes)); }, [inscricoes]);
 
-  const addMembro = (nome: string, userId?: string) => {
-    if (state.estadoGrupo !== 'Aberto') return;
-    if (state.membros.length >= NUM_MEMBROS) return;
+  const patchGrupo = (grupoId: string, fn: (g: GrupoXitique) => GrupoXitique) =>
+    setGrupos(prev => prev.map(g => g.id === grupoId ? fn(g) : g));
 
-    const novo: MembroXitique = {
-      id: `m${Date.now()}`,
-      nome: nome.trim(),
-      estado: 'Pendente',
-      pagamentoMes: false,
-      mesesPagos: [],
-      userId,
+  // ── Grupos ────────────────────────────────────────────────────────────────
+
+  const criarGrupo = (nome: string, maxMembros: number, quotaMT: number, dataInicio?: string) => {
+    const nomeFinal = nome.trim() || `Grupo ${String.fromCharCode(65 + grupos.length)}`;
+    const tempId = `g${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const optimistic: GrupoXitique = {
+      id: tempId,
+      nome: nomeFinal,
+      maxMembros,
+      quotaMT,
+      premioMT: maxMembros * quotaMT,
+      membros: [],
+      sorteios: [],
+      estadoGrupo: 'Aberto',
+      mesAtual: 1,
+      dataInicio,
     };
+    setGrupos(prev => [...prev, optimistic]);
+    api.post<GrupoXitique>('/xitique/grupos', {
+      nome:         nomeFinal,
+      max_membros:  maxMembros,
+      quota_mt:     quotaMT,
+      premio_mt:    maxMembros * quotaMT,
+      estado_grupo: 'Aberto',
+      data_inicio:  dataInicio,
+    }).then(created => {
+      setGrupos(prev => prev.map(g => g.id === tempId ? normalizeGrupo(created) : g));
+    }).catch(() => {});
+  };
 
-    setState(prev => {
-      const novosMembros = [...prev.membros, novo];
-      const novoEstado = novosMembros.length >= NUM_MEMBROS ? 'EmAndamento' : 'Aberto';
-      return { ...prev, membros: novosMembros, estadoGrupo: novoEstado };
+  const definirDataInicio = (grupoId: string, dataInicio: string) => {
+    patchGrupo(grupoId, g => ({ ...g, dataInicio }));
+    api.put(`/xitique/grupos/${grupoId}`, { data_inicio: dataInicio }).catch(() => {});
+  };
+
+  const eliminarGrupo = (grupoId: string) => {
+    const g = grupos.find(g => g.id === grupoId);
+    if (!g || g.estadoGrupo !== 'Concluido') return;
+    setGrupos(prev => prev.filter(g => g.id !== grupoId));
+    setInscricoes(prev => prev.filter(i => i.grupoId !== grupoId));
+    api.delete(`/xitique/grupos/${grupoId}`).catch(() => {});
+  };
+
+  // ── Membros ───────────────────────────────────────────────────────────────
+
+  const addMembro = (grupoId: string, nome: string, userId?: string) => {
+    patchGrupo(grupoId, g => {
+      if (g.estadoGrupo !== 'Aberto' || g.membros.length >= g.maxMembros) return g;
+      const novo: MembroXitique = {
+        id: `m${Date.now()}`,
+        nome: nome.trim(),
+        estado: 'Pendente',
+        pagamentoMes: false,
+        mesesPagos: [],
+        userId,
+      };
+      const novosMembros = [...g.membros, novo];
+      const novoEstado: EstadoGrupo = novosMembros.length >= g.maxMembros ? 'EmAndamento' : 'Aberto';
+
+      api.post<MembroXitique>(`/xitique/grupos/${grupoId}/membros`, {
+        nome,
+        estado: 'Pendente',
+        user_id: userId ? (parseInt(userId, 10) || undefined) : undefined,
+      }).then(created => {
+        // Replace temp member with real one (real ID from DB)
+        setGrupos(prev => prev.map(gr => {
+          if (gr.id !== grupoId) return gr;
+          return { ...gr, membros: gr.membros.map(m => m.id === novo.id ? normalizeMembro(created) : m) };
+        }));
+      }).catch(() => {});
+
+      if (novoEstado !== g.estadoGrupo) {
+        api.put(`/xitique/grupos/${grupoId}`, { estado_grupo: novoEstado }).catch(() => {});
+      }
+
+      return { ...g, membros: novosMembros, estadoGrupo: novoEstado };
     });
   };
 
-  const removeMembro = (id: string) => {
-    if (state.estadoGrupo !== 'Aberto') return;
-    setState(prev => ({ ...prev, membros: prev.membros.filter(m => m.id !== id) }));
+  const removeMembro = (grupoId: string, id: string) => {
+    patchGrupo(grupoId, g => {
+      if (g.estadoGrupo !== 'Aberto') return g;
+      api.delete(`/xitique/grupos/${grupoId}/membros/${id}`).catch(() => {});
+      return { ...g, membros: g.membros.filter(m => m.id !== id) };
+    });
   };
 
-  const confirmarPagamento = (id: string) => {
-    if (state.estadoGrupo !== 'EmAndamento') return;
-    setState(prev => ({
-      ...prev,
-      membros: prev.membros.map(m => {
+  const confirmarPagamento = (grupoId: string, id: string, metodo: string, referencia?: string) => {
+    patchGrupo(grupoId, g => {
+      if (g.estadoGrupo !== 'EmAndamento') return g;
+      const registo = { metodo, referencia, data: new Date().toISOString().split('T')[0] };
+      const novosMembros = g.membros.map(m => {
         if (m.id !== id) return m;
-        const jaRegistado = m.mesesPagos.includes(prev.mesAtual);
-        return {
+        const jaRegistado = m.mesesPagos.includes(g.mesAtual);
+        const updated: MembroXitique = {
           ...m,
           pagamentoMes: true,
           estado: m.estado === 'Sorteado' ? 'Sorteado' : 'Aceite',
-          mesesPagos: jaRegistado ? m.mesesPagos : [...m.mesesPagos, prev.mesAtual],
+          mesesPagos: jaRegistado ? m.mesesPagos : [...m.mesesPagos, g.mesAtual],
+          pagamentos: { ...(m.pagamentos ?? {}), [g.mesAtual]: registo },
         };
-      }),
-    }));
+        api.put(`/xitique/grupos/${grupoId}/membros/${id}`, {
+          estado:       updated.estado,
+          pagamento_mes: true,
+          meses_pagos:  updated.mesesPagos,
+          pagamentos:   updated.pagamentos,
+        }).catch(() => {});
+        return updated;
+      });
+      return { ...g, membros: novosMembros };
+    });
   };
 
-  const realizarSorteio = (): string | null => {
-    if (state.estadoGrupo !== 'EmAndamento') return null;
-    // TODOS os membros (incluindo já sorteados) devem ter pagamentoMes = true
-    if (!state.membros.every(m => m.pagamentoMes === true)) return null;
+  const gerarSequencia = (grupoId: string) => {
+    patchGrupo(grupoId, g => {
+      let sequencia: string[];
+      let novoEstado = g.estadoGrupo;
 
-    // Passo 1 — Filtragem estrita: apenas elegíveis (ainda não sorteados)
-    const elegiveis = state.membros.filter(m => m.estado !== 'Sorteado');
-    if (elegiveis.length === 0) return null;
+      if (g.estadoGrupo === 'EmAndamento' && !g.sequencia) {
+        const feitos = [...g.sorteios].sort((a, b) => a.mes - b.mes)
+          .map(s => g.membros.find(m => m.nome === s.vencedor)?.id ?? '');
+        const restantes = g.membros.filter(m => m.estado !== 'Sorteado').map(m => m.id);
+        for (let i = restantes.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [restantes[i], restantes[j]] = [restantes[j], restantes[i]];
+        }
+        sequencia = [...feitos, ...restantes];
+      } else if (g.estadoGrupo === 'Aberto' && g.membros.length >= g.maxMembros) {
+        const ids = g.membros.map(m => m.id);
+        for (let i = ids.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [ids[i], ids[j]] = [ids[j], ids[i]];
+        }
+        sequencia = ids;
+        novoEstado = 'EmAndamento';
+      } else {
+        return g;
+      }
 
-    // Passo 2 — Cálculo aleatório dentro do universo elegível
-    const indice = Math.floor(Math.random() * elegiveis.length);
-    const vencedor = elegiveis[indice];
+      api.put(`/xitique/grupos/${grupoId}`, { sequencia, estado_grupo: novoEstado }).catch(() => {});
+      return { ...g, sequencia, estadoGrupo: novoEstado };
+    });
+  };
 
-    const novoRegisto: RegistoSorteio = {
-      mes: state.mesAtual,
-      vencedor: vencedor.nome,
-      valorPremio: PREMIO_MT,
-    };
+  const realizarSorteio = (grupoId: string): string | null => {
+    const g = grupos.find(g => g.id === grupoId);
+    if (!g || g.estadoGrupo !== 'EmAndamento') return null;
+    if (!g.membros.every(m => m.pagamentoMes)) return null;
+    if (!g.sequencia || g.sequencia.length === 0) return null;
 
-    // Gatilho de finalização: o sorteio do mês 10 foi computado
-    const grupoConcluido = state.mesAtual === NUM_MEMBROS;
-    const proximoMes = grupoConcluido ? NUM_MEMBROS : state.mesAtual + 1;
+    const vencedorId = g.sequencia[g.mesAtual - 1];
+    const vencedor = g.membros.find(m => m.id === vencedorId);
+    if (!vencedor) return null;
 
-    // Passo 3 — Imutabilidade: marca o vencedor como Sorteado;
-    // reset pagamentoMes = false para TODOS (incluindo já sorteados — continuam a pagar)
-    setState(prev => ({
-      ...prev,
-      membros: prev.membros.map(m => ({
-        ...m,
-        estado: m.id === vencedor.id ? 'Sorteado' : m.estado,
-        pagamentoMes: false,
-      })),
-      sorteios: [...prev.sorteios, novoRegisto],
-      mesAtual: proximoMes,
-      estadoGrupo: grupoConcluido ? 'Concluido' : 'EmAndamento',
+    const grupoConcluido = g.mesAtual === g.maxMembros;
+    const novoMesAtual   = grupoConcluido ? g.maxMembros : g.mesAtual + 1;
+    const novoEstado: EstadoGrupo = grupoConcluido ? 'Concluido' : 'EmAndamento';
+    const novosSorteios  = [...g.sorteios, { mes: g.mesAtual, vencedor: vencedor.nome, valorPremio: g.premioMT }];
+
+    patchGrupo(grupoId, gr => ({
+      ...gr,
+      membros: gr.membros.map(m => ({ ...m, estado: m.id === vencedorId ? 'Sorteado' : m.estado, pagamentoMes: false })),
+      sorteios: novosSorteios,
+      mesAtual: novoMesAtual,
+      estadoGrupo: novoEstado,
     }));
+
+    // Sync grupo state
+    api.put(`/xitique/grupos/${grupoId}`, {
+      sorteios:     novosSorteios,
+      mes_atual:    novoMesAtual,
+      estado_grupo: novoEstado,
+    }).catch(() => {});
+
+    // Sync winner member
+    api.put(`/xitique/grupos/${grupoId}/membros/${vencedorId}`, {
+      estado:        'Sorteado',
+      pagamento_mes: false,
+    }).catch(() => {});
+
+    // Sync all other members (reset pagamentoMes)
+    g.membros.forEach(m => {
+      if (m.id !== vencedorId) {
+        api.put(`/xitique/grupos/${grupoId}/membros/${m.id}`, { pagamento_mes: false }).catch(() => {});
+      }
+    });
 
     return vencedor.nome;
   };
 
-  const reiniciarGrupo = () => setState(defaultState);
+  const reiniciarGrupo = (grupoId: string) => {
+    const g = grupos.find(g => g.id === grupoId);
+    if (!g) return;
+    const memberIds = g.membros.map(m => m.id);
 
-  // ── Lista de espera ────────────────────────────────────────────────────────
+    patchGrupo(grupoId, gr => ({
+      ...gr,
+      membros: [],
+      sorteios: [],
+      estadoGrupo: 'Aberto',
+      mesAtual: 1,
+      sequencia: undefined,
+    }));
 
-  const adicionarInscricao = (dados: Pick<InscricaoXitique, 'nome' | 'telefone' | 'email'>) => {
+    api.put(`/xitique/grupos/${grupoId}`, {
+      estado_grupo: 'Aberto',
+      mes_atual:    1,
+      sorteios:     [],
+      sequencia:    null,
+    }).catch(() => {});
+
+    memberIds.forEach(mid => {
+      api.delete(`/xitique/grupos/${grupoId}/membros/${mid}`).catch(() => {});
+    });
+  };
+
+  // ── Inscrições ────────────────────────────────────────────────────────────
+
+  const adicionarInscricao = (dados: Pick<InscricaoXitique, 'nome' | 'telefone' | 'email' | 'grupoId'> & { userId?: string }): 'aprovado' | 'rejeitado' => {
+    const grupo = grupos.find(g => g.id === dados.grupoId);
+    const podeEntrar = !!(grupo && grupo.estadoGrupo === 'Aberto' && grupo.membros.length < grupo.maxMembros);
+    const motivo = !grupo
+      ? 'Grupo não encontrado.'
+      : grupo.estadoGrupo !== 'Aberto'
+        ? 'O grupo já está em andamento ou foi concluído.'
+        : 'O grupo atingiu o número máximo de membros.';
+
+    const status: InscricaoXitique['status'] = podeEntrar ? 'aprovado' : 'rejeitado';
+    const tempId = `insc${Date.now()}`;
     const nova: InscricaoXitique = {
-      id: `insc${Date.now()}`,
+      id: tempId,
+      grupoId: dados.grupoId,
       nome: dados.nome.trim(),
       telefone: dados.telefone.trim(),
       email: dados.email.trim(),
-      status: 'aguarda_validacao',
+      status,
       dataCriacao: new Date().toISOString().split('T')[0],
+      motivoRejeicao: podeEntrar ? undefined : motivo,
     };
     setInscricoes(prev => [...prev, nova]);
+
+    api.post<InscricaoXitique>('/xitique/inscricoes', {
+      grupo_id: dados.grupoId,
+      nome:     nova.nome,
+      telefone: nova.telefone,
+      email:    nova.email,
+    }).then(created => {
+      setInscricoes(prev => prev.map(i => i.id === tempId ? { ...created, status } : i));
+      // Set final status on the created inscricao
+      if (status !== 'aguarda_validacao') {
+        api.put(`/xitique/inscricoes/${created.id}`, {
+          status,
+          motivo_rejeicao: podeEntrar ? undefined : motivo,
+        }).catch(() => {});
+      }
+    }).catch(() => {});
+
+    if (podeEntrar && grupo) {
+      addMembro(dados.grupoId, dados.nome.trim(), dados.userId);
+      addNotification(
+        dados.userId ?? 'client',
+        'Inscrição Confirmada no Xitique',
+        `Bem-vindo ao grupo "${grupo.nome}"! Aguarde as instruções de pagamento do administrador.`,
+        'success',
+        undefined,
+        '/cliente/xitique',
+      );
+    } else {
+      addNotification(
+        dados.userId ?? 'client',
+        'Inscrição Recusada',
+        `Não foi possível inscrevê-lo no grupo "${grupo?.nome ?? ''}": ${motivo}`,
+        'alert',
+        undefined,
+        '/cliente/xitique',
+      );
+    }
+
+    return podeEntrar ? 'aprovado' : 'rejeitado';
   };
 
   const aprovarInscricao = (id: string, userId?: string) => {
     const insc = inscricoes.find(i => i.id === id);
     if (!insc) return;
-    // Promove para membro do grupo se ainda houver vaga
-    if (state.estadoGrupo === 'Aberto' && state.membros.length < NUM_MEMBROS) {
-      addMembro(insc.nome, userId);
+    const g = grupos.find(g => g.id === insc.grupoId);
+    if (g && g.estadoGrupo === 'Aberto' && g.membros.length < g.maxMembros) {
+      addMembro(insc.grupoId, insc.nome, userId);
     }
-    setInscricoes(prev =>
-      prev.map(i => i.id === id ? { ...i, status: 'aprovado' } : i)
-    );
+    setInscricoes(prev => prev.map(i => i.id === id ? { ...i, status: 'aprovado' } : i));
+    api.put(`/xitique/inscricoes/${id}`, { status: 'aprovado' }).catch(() => {});
   };
 
-  const rejeitarInscricao = (id: string) => {
-    setInscricoes(prev =>
-      prev.map(i => i.id === id ? { ...i, status: 'rejeitado' } : i)
-    );
+  const rejeitarInscricao = (id: string, motivo?: string) => {
+    setInscricoes(prev => prev.map(i => i.id === id ? { ...i, status: 'rejeitado', motivoRejeicao: motivo ?? '' } : i));
+    api.put(`/xitique/inscricoes/${id}`, { status: 'rejeitado', motivo_rejeicao: motivo ?? '' }).catch(() => {});
   };
 
   return (
     <XitiqueContext.Provider value={{
-      membros: state.membros,
-      sorteios: state.sorteios,
-      estadoGrupo: state.estadoGrupo,
-      mesAtual: state.mesAtual,
-      quotaMT: QUOTA_MT,
-      premioMT: PREMIO_MT,
-      numMembros: NUM_MEMBROS,
-      addMembro,
-      removeMembro,
-      confirmarPagamento,
-      realizarSorteio,
-      reiniciarGrupo,
-      inscricoes,
-      adicionarInscricao,
-      aprovarInscricao,
-      rejeitarInscricao,
+      grupos, inscricoes,
+      criarGrupo, definirDataInicio, addMembro, removeMembro,
+      confirmarPagamento, realizarSorteio, reiniciarGrupo,
+      adicionarInscricao, aprovarInscricao, rejeitarInscricao,
+      gerarSequencia, eliminarGrupo,
     }}>
       {children}
     </XitiqueContext.Provider>

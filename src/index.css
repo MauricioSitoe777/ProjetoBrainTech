@@ -1,36 +1,239 @@
-@import url('https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap');
-
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   TONGOGARA DESIGN SYSTEM — tokens globais v2.0
+   Fonte: Tongogara Microcrédito — Design Specification (2026)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Fontes & Paleta (@theme Tailwind) ────────────────────────────────── */
 @theme {
-  --color-zinc-950: #353535;
-  --color-amber-50: #fff8df;
-  --color-amber-100: #fff0b8;
-  --color-amber-200: #f9df7a;
-  --color-amber-300: #f0c840;
-  --color-amber-400: #e8b830;
-  --color-amber-500: #d8a020;
-  --color-amber-600: #b87d13;
-  --color-amber-700: #8f5d0d;
-  --color-amber-800: #6e470d;
-  --color-amber-900: #56380e;
-  --color-amber-950: #2f1c05;
+  /* Famílias */
+  --font-sans:    'DM Sans', system-ui, sans-serif;
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-mono:    'DM Mono', 'Courier New', monospace;
+
+  /* ── Família Dourada → amber (gold ★ extraído do logo SOS Motors) ───── */
+  --color-amber-50:  #FEFAE8;
+  --color-amber-100: #FDF3C2;
+  --color-amber-200: #FAE47A;
+  --color-amber-300: #F5D452;
+  --color-amber-400: #F0CD49;   /* gold-light  — highlight do logo  */
+  --color-amber-500: #E4B42E;   /* gold ★ logo — tom médio saturado */
+  --color-amber-600: #C28A18;   /* gold-dark   — sombra do logo     */
+  --color-amber-700: #9A6A10;
+  --color-amber-800: #74500C;
+  --color-amber-900: #4E3608;
+  --color-amber-950: #2A1C03;
+
+  /* ── Fundos Escuros → zinc ─────────────────────────────────────────────── */
+  --color-zinc-950: #0D0D0D;   /* --black                  */
+  --color-zinc-900: #1A1A1A;   /* --black-mid (dashboard)  */
+  --color-zinc-800: #252525;   /* --black-soft (dashboard) */
+  --color-zinc-700: #333333;
+  --color-zinc-600: #424242;
+  --color-zinc-500: #5A5A5A;
+  --color-zinc-400: #808080;
+  --color-zinc-300: #A0A0A0;
+  --color-zinc-200: #C4C4C4;
+  --color-zinc-100: #E8E8E8;
+  --color-zinc-50:  #F5F5F5;
+
+  /* ── Acento — Success / accent-green ──────────────────────────────────── */
+  --color-emerald-50:  #F0FDF4;
+  --color-emerald-100: #DCFCE7;
+  --color-emerald-200: #BBF7D0;
+  --color-emerald-300: #86EFAC;
+  --color-emerald-400: #4ADE80;   /* accent-green */
+  --color-emerald-500: #22C55E;
+  --color-emerald-600: #16A34A;
+  --color-emerald-700: #15803D;
+
+  /* ── Acento — Danger / accent-red ─────────────────────────────────────── */
+  --color-red-300: #FCA5A5;
+  --color-red-400: #F87171;       /* accent-red */
+  --color-red-500: #EF4444;
+  --color-red-600: #DC2626;
+
+  /* ── Acento — Info / accent-blue ──────────────────────────────────────── */
+  --color-blue-300: #93C5FD;      /* accent-blue-lt */
+  --color-blue-400: #60A5FA;      /* accent-blue    */
+  --color-blue-500: #3B82F6;
+  --color-sky-300:  #BAE6FD;
+  --color-sky-400:  #93C5FD;
+  --color-sky-500:  #60A5FA;
+
+  /* ── Acento — Warning / accent-amber ──────────────────────────────────── */
+  --color-yellow-400: #FBBF24;    /* accent-amber */
+  --color-yellow-500: #F59E0B;
+
+  /* ── Teal ─────────────────────────────────────────────────────────────── */
+  --color-teal-400: #2DD4BF;
+  --color-teal-500: #14B8A6;
 }
 
-/* Smooth scrolling for anchor navigation */
+/* ── 2. Variáveis CSS globais ────────────────────────────────────────────── */
+:root {
+  /* Família dourada — extraída do logo SOS Motors */
+  --gold:        #E4B42E;
+  --gold-light:  #F0CD49;
+  --gold-dark:   #C28A18;
+  --gold-muted:  rgba(228, 180, 46, 0.10);
+  --gold-border: rgba(228, 180, 46, 0.22);
+
+  /* Fundos escuros — dashboard */
+  --black:           #0D0D0D;
+  --black-mid:       #1A1A1A;
+  --black-soft:      #252525;
+
+  /* Fundos escuros — admin (tom quente) */
+  --black-mid-admin:  #141209;
+  --black-soft-admin: #1E1A0F;
+
+  /* Painel glass */
+  --black-panel: rgba(255, 255, 255, 0.04);
+
+  /* Texto */
+  --text-light:  rgba(255, 255, 255, 0.80);
+  --text-faint:  rgba(255, 255, 255, 0.38);
+  --text-dark:   #1C1A14;
+  --text-mid:    #6B6350;
+  --cream:       #FAFAF7;
+  --cream-dark:  #F2F0EA;
+
+  /* Estados */
+  --status-green-bg:       rgba(16, 185, 129, 0.15);
+  --status-green-txt:      #0D9E6A;   /* admin */
+  --status-green-txt-dash: #1A7A3C;   /* dashboard */
+  --status-amber-bg:       rgba(228, 180, 46, 0.14);
+  --status-amber-txt:      #8A6010;
+  --status-red-bg:         rgba(239, 68, 68, 0.15);
+  --status-red-txt:        #C0392B;
+
+  /* Transições */
+  --transition:      all 0.3s ease;
+  --transition-fast: all 0.2s ease;
+
+  /* Efeitos */
+  --glass-border: 1px solid rgba(228, 180, 46, 0.22);
+  --overlay:      rgba(0, 0, 0, 0.88);
+}
+
+/* ── 3. Base ─────────────────────────────────────────────────────────────── */
+html {
+  font-size: 16px;
+}
+
+/* Escala progressiva para ecrãs grandes — todos os valores rem crescem juntos */
+@media (min-width: 1920px) {
+  html { font-size: 18px; }
+}
+@media (min-width: 2560px) {
+  html { font-size: 21px; }
+}
+@media (min-width: 3200px) {
+  html { font-size: 24px; }
+}
+
 html, body {
   scroll-behavior: smooth;
-  background-color: #353535;
-  font-family: 'Archivo', sans-serif;
+  background-color: #0D0D0D;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.80);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom range slider track */
+/* ── Ícone do calendário nos inputs date — dourado do logótipo ───────────── */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23E4B42E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: 15px 15px;
+  background-position: center;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  opacity: 0.85;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* ── 4. Famílias tipográficas ────────────────────────────────────────────── */
+.font-display {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+}
+.font-mono {
+  font-family: 'DM Mono', 'Courier New', monospace;
+}
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 5. Escala tipográfica — Tongogara spec ──────────────────────────────── */
+/*
+  Referência:
+  ts-hero       2.4–2.8rem  38–45px  Números hero / display máximo
+  ts-value-lg   1.9–2.2rem  30–35px  Valores de card grandes
+  ts-heading    1.6rem      25px     Headings de secção / título admin
+  ts-subheading 1.3–1.45rem 21–23px  Sub-headings / títulos de card
+  ts-body       1rem        16px     Corpo padrão / botões
+  ts-input      0.92–0.95rem 15px   Inputs / botões primários
+  ts-table      0.85–0.88rem 14px   Corpo de tabela / sidebar links
+  ts-cell       0.78–0.82rem 13px   Células BI / datas / notas
+  ts-badge      0.7–0.75rem 11–12px Badges / chips / tooltips
+  ts-label      0.62–0.68rem 10–11px Labels de campos / headers de tabela
+  ts-micro      0.58rem     9px     Micro-labels / sub-notas
+*/
+.ts-hero       { font-size: clamp(2.4rem, 4vw, 2.8rem); line-height: 1.1; }
+.ts-value-lg   { font-size: clamp(1.9rem, 3vw, 2.2rem); line-height: 1.15; }
+.ts-heading    { font-size: 1.6rem;                      line-height: 1.2; }
+.ts-subheading { font-size: clamp(1.3rem, 2vw, 1.45rem); line-height: 1.25; }
+.ts-body       { font-size: 1rem;                         line-height: 1.5; }
+.ts-input      { font-size: clamp(0.92rem, 1.2vw, 0.95rem); line-height: 1.4; }
+.ts-table      { font-size: clamp(0.85rem, 1vw, 0.88rem);   line-height: 1.4; }
+.ts-cell       { font-size: clamp(0.78rem, 0.9vw, 0.82rem); line-height: 1.35; }
+.ts-badge      { font-size: clamp(0.7rem, 0.85vw, 0.75rem); line-height: 1.3; }
+.ts-label      {
+  font-size: clamp(0.62rem, 0.75vw, 0.68rem);
+  line-height: 1.2;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.ts-micro      {
+  font-size: 0.58rem;
+  line-height: 1.2;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+/* ── 6. Espaçamento de letras — Tongogara spec ───────────────────────────── */
+/*
+  Labels uppercase:   1.2px / 1.5px / 2px / 3px
+  Brand / logo:       1.5px
+  Display headings:   -0.3px (tight)
+*/
+.tracking-label-xs  { letter-spacing: 1.2px; }
+.tracking-label-sm  { letter-spacing: 1.5px; }
+.tracking-label     { letter-spacing: 2px; }
+.tracking-label-lg  { letter-spacing: 3px; }
+.tracking-brand     { letter-spacing: 1.5px; }
+.tracking-display   { letter-spacing: -0.3px; }
+
+/* ── 7. Borda dourada glass-card ─────────────────────────────────────────── */
+.border-gold {
+  border: var(--glass-border);
+}
+
+/* ── 8. Range slider ─────────────────────────────────────────────────────── */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   height: 4px;
   border-radius: 2px;
-  background: #3f3f46; /* zinc-700 */
+  background: #333333;
   outline: none;
   cursor: pointer;
 }
@@ -41,9 +244,9 @@ input[type="range"]::-webkit-slider-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #d8a020; /* logo gold */
+  background: #E4B42E;
   cursor: pointer;
-  border: 2px solid #18181b;
+  border: 2px solid #0D0D0D;
   transition: transform 0.15s ease;
 }
 
@@ -55,12 +258,11 @@ input[type="range"]::-moz-range-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #d8a020;
+  background: #E4B42E;
   cursor: pointer;
-  border: 2px solid #18181b;
+  border: 2px solid #0D0D0D;
 }
 
-/* Months slider — pista mais grossa + thumb com glow */
 input[type="range"].months-slider {
   height: 6px;
   border-radius: 9999px;
@@ -69,43 +271,113 @@ input[type="range"].months-slider {
 input[type="range"].months-slider::-webkit-slider-thumb {
   width: 22px;
   height: 22px;
-  box-shadow: 0 0 0 4px rgba(216,160,32,0.18);
+  box-shadow: 0 0 0 4px rgba(228, 180, 46, 0.18);
 }
 
 input[type="range"].months-slider::-webkit-slider-thumb:hover {
-  box-shadow: 0 0 0 7px rgba(216,160,32,0.22);
+  box-shadow: 0 0 0 7px rgba(228, 180, 46, 0.22);
   transform: scale(1.1);
 }
 
 input[type="range"].months-slider::-moz-range-thumb {
   width: 22px;
   height: 22px;
-  box-shadow: 0 0 0 4px rgba(216,160,32,0.18);
+  box-shadow: 0 0 0 4px rgba(228, 180, 46, 0.18);
 }
 
-/* Subtle scrollbar */
-::-webkit-scrollbar        { width: 6px; }
-::-webkit-scrollbar-track  { background: #09090b; }
-::-webkit-scrollbar-thumb  { background: #3f3f46; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #52525b; }
+/* Align tick labels placed absolutely above the range track */
+.months-slider-tick-label {
+  pointer-events: auto;
+}
+.months-slider-tick-label[style] {
+  position: absolute;
+  top: 0;
+}
 
-/* Fade-in animation for category descriptions */
+/* ── 9. Scrollbar ────────────────────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 5px; }
+::-webkit-scrollbar-track  { background: #0D0D0D; border-radius: 3px; }
+::-webkit-scrollbar-thumb  { background: rgba(228, 180, 46, 0.30); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(228, 180, 46, 0.55); }
+
+/* ── 10. Animações ───────────────────────────────────────────────────────── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes dropdownFade {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(8px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .dropdown-animate {
   animation: dropdownFade 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateX(110%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes toastSlideOut {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(110%); }
+}
+
+.toast-in  { animation: toastSlideIn  0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.toast-out { animation: toastSlideOut 0.3s  ease-in forwards; }
+
+@keyframes toastProgress {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+.toast-progress { animation: toastProgress 4.5s linear forwards; }
+
+/* ── 11. Hover lift — cards e ícones de acção ────────────────────────────── */
+/* ── 12. Admin/Cliente UI — escala tipográfica responsiva ───────────────────
+   Todos os tamanhos aumentam progressivamente por breakpoint.
+   Os valores arbitrários sub-mínimos (text-[9px], text-[10px], text-[11px])
+   são forçados para text-xs como piso.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* Piso em mobile: valores arbitrários sub-mínimos → 12px */
+.app-ui .text-\[8px\]  { font-size: 0.75rem; }
+.app-ui .text-\[9px\]  { font-size: 0.75rem; }
+.app-ui .text-\[10px\] { font-size: 0.75rem; }
+.app-ui .text-\[11px\] { font-size: 0.75rem; }
+
+/* md (≥768px): +1px em cada nível */
+@media (min-width: 768px) {
+  .app-ui .text-\[9px\]  { font-size: 0.75rem;   }  /* 12px */
+  .app-ui .text-\[10px\] { font-size: 0.8125rem; }  /* 13px */
+  .app-ui .text-\[11px\] { font-size: 0.8125rem; }  /* 13px */
+  .app-ui .text-xs       { font-size: 0.8125rem; }  /* 13px  (era 12px) */
+  .app-ui .text-sm       { font-size: 0.9375rem; }  /* 15px  (era 14px) */
+  .app-ui .text-base     { font-size: 1.0625rem; }  /* 17px  (era 16px) */
+  .app-ui .text-lg       { font-size: 1.1875rem; }  /* 19px  (era 18px) */
+}
+
+/* lg (≥1024px): +1px adicional — máximo */
+@media (min-width: 1024px) {
+  .app-ui .text-\[10px\] { font-size: 0.8125rem; }  /* 13px */
+  .app-ui .text-\[11px\] { font-size: 0.875rem;  }  /* 14px */
+  .app-ui .text-xs       { font-size: 0.875rem;  }  /* 14px  (era 12px) */
+  .app-ui .text-sm       { font-size: 1rem;       }  /* 16px  (era 14px) */
+  .app-ui .text-base     { font-size: 1.125rem;  }  /* 18px  (era 16px) */
+  .app-ui .text-lg       { font-size: 1.25rem;   }  /* 20px  (era 18px) */
+}
+
+
+.hover-lift {
+  transition: transform 0.2s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-3px);
+}
+.hover-lift-icon {
+  transition: transform 0.2s ease;
+}
+.hover-lift-icon:hover {
+  transform: scale(1.18);
 }

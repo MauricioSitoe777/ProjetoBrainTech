@@ -24,8 +24,8 @@ export function InvitePage({ token, onSuccess }: InvitePageProps) {
   }, [token, validateInvite]);
 
   const validate = (): string => {
-    if (password.length < 6) return 'A senha deve ter pelo menos 6 caracteres.';
-    if (password !== confirm) return 'As senhas não coincidem.';
+    if (password.length < 6) return 'A palavra-passe deve ter pelo menos 6 caracteres.';
+    if (password !== confirm) return 'As palavras-passe não coincidem.';
     return '';
   };
 
@@ -108,7 +108,7 @@ export function InvitePage({ token, onSuccess }: InvitePageProps) {
               Olá, {invite.userName.split(' ')[0]}!
             </h2>
             <p className="text-white text-sm mt-2">
-              Crie a sua senha para activar a conta.
+              Crie a sua palavra-passe para activar a conta.
             </p>
           </div>
 
@@ -132,10 +132,10 @@ export function InvitePage({ token, onSuccess }: InvitePageProps) {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Password */}
+            {/* Palavra-passe */}
             <div>
               <label className="text-white text-sm font-medium block mb-2">
-                Nova senha
+                Nova palavra-passe
               </label>
               <div className="flex items-center rounded-xl bg-zinc-950/60 border border-zinc-700 focus-within:border-amber-500 transition-colors overflow-hidden">
                 <input
@@ -188,17 +188,17 @@ export function InvitePage({ token, onSuccess }: InvitePageProps) {
               )}
             </div>
 
-            {/* Confirm */}
+            {/* Confirmar */}
             <div>
               <label className="text-white text-sm font-medium block mb-2">
-                Confirmar senha
+                Confirmar palavra-passe
               </label>
               <div className="flex items-center rounded-xl bg-zinc-950/60 border border-zinc-700 focus-within:border-amber-500 transition-colors overflow-hidden">
                 <input
                   type={showConfirm ? 'text' : 'password'}
                   value={confirm}
                   onChange={(e) => { setConfirm(e.target.value); setError(''); }}
-                  placeholder="Repita a senha"
+                  placeholder="Repita a palavra-passe"
                   required
                   className="flex-1 bg-transparent px-4 py-3 text-sm text-white placeholder:text-zinc-500 outline-none"
                 />
@@ -225,7 +225,7 @@ export function InvitePage({ token, onSuccess }: InvitePageProps) {
               {/* Match indicator */}
               {confirm.length > 0 && (
                 <p className={`text-xs mt-1.5 ${password === confirm ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {password === confirm ? '✓ As senhas coincidem' : '✗ As senhas não coincidem'}
+                  {password === confirm ? '✓ As palavras-passe coincidem' : '✗ As palavras-passe não coincidem'}
                 </p>
               )}
             </div>
